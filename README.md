@@ -50,7 +50,7 @@ Another methodological distinction in AD is the one between source code
 transformation, which involves generating source code for the computation of 
 the derivatives, and operator overloading, which overloads the usual arithmetic 
 operators in order to perform arithmetic on ordered pairs (called dual 
-numbers), with ordinary arithmetic on the first elemnent and first order 
+numbers), with ordinary arithmetic on the first element and first order 
 differentiation arithmetic on the second element of the pairs. The preferred 
 approach in the AutoDiff package is operator overloading at least at the first 
 stage of development, since it is the easiest implementation in Julia.
@@ -58,7 +58,7 @@ stage of development, since it is the easiest implementation in Julia.
 ### Initial Julia code for AD
 
 The initial code of AutoDiff was written by Jonas Rauch and was forwarded to 
-the Julia community by Keving Squire. Several members of the community have 
+the Julia community by Kevin Squire. Several members of the community have 
 expressed interest in developing the code furthermore. If you are interested in 
 contributing, please feel free to do so via a pull request.
 
