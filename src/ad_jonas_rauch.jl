@@ -1,3 +1,5 @@
+importall Base
+
 typealias ADForwardBase Real
 
 type ADForward{T<:ADForwardBase,n}<:ADForwardBase
@@ -9,8 +11,9 @@ Value(x::ADForward) = x.x
 Value{T<:ADForwardBase,n,m}(X::Array{ADForward{T,n},m}) = convert(Array{T,m}, X)
 Gradient(x::ADForward) = x.d
 function Gradient{T<:ADForwardBase,n,m}(X::Array{ADForward{T,n},m})
-    D = reshape([ x.d[i] | x=X,i=1:n ], tuple(arraysize(X)...,n))
+    D = reshape([ x.d[i] for x=X,i=1:n ], tuple(arraysize(X)...,n))
 end
+zero{T,n}(::Type{ADForward{T,n}}) = ADForward{T,n}(zero(T), zeros(T, n))
 
 function float{T<:ADForwardBase,n}(x::ADForward{T,n}) 
     S=typeof(float(x.x))
