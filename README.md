@@ -11,11 +11,11 @@ rely on the chain rule of calculus. They are used for evaluating
 * Hessians,
 * tensor coefficients,
 * Taylor coefficients,
-* numerical solution of differential equations.
+* numerical solutions of differential equations.
 It is envisaged that the AutoDiff Julia package will provide all the above 
 functionality incrementally as its development progresses.
 
-### Advantages of Automatic Differentiation
+### Advantages of automatic differentiation
 
 Automatic, symbolic and numerical differentiation are three distinct approaches 
 to the evaluation of derivatives.
@@ -29,8 +29,9 @@ analysis for the calculation of derivatives. Some of its techniques are for
 example
 * finite differences,
 * polynomial interpolation and
-* the method of undetermined coefficients
-Numerical differentiation unfortunately incurs truncation errors.
+* the method of undetermined coefficients.
+
+Numerical differentiation incurs truncation errors.
 
 Automatic differentiation resolves the deficiencies of speed and round-off 
 errors.
@@ -50,13 +51,13 @@ transformation, which involves generating source code for the computation of
 the derivatives, and operator overloading, which overloads the usual arithmetic 
 operators in order to perform arithmetic on ordered pairs (called dual 
 numbers), with ordinary arithmetic on the first elemnent and first order 
-dierentiation arithmetic on the second element of the pairs. The prefered 
+differentiation arithmetic on the second element of the pairs. The preferred 
 approach in the AutoDiff package is operator overloading at least at the first 
 stage of development, since it is the easiest implementation in Julia.
 
 ### Initial Julia code for AD
 
-The initial code of AutoDiff was written by Jonas Rauch and was re-forwarded to 
+The initial code of AutoDiff was written by Jonas Rauch and was forwarded to 
 the Julia community by Keving Squire. Several members of the community have 
 expressed interest in developing the code furthermore. If you are interested in 
 contributing, please feel free to do so via a pull request.
@@ -67,7 +68,7 @@ https://groups.google.com/forum/#!msg/julia-dev/tXBR04t31vI/Q30VCKAq8o0J
 
 https://groups.google.com/forum/?fromgroups=#!topic/julia-dev/zQFlX1CGfeo
 
-Furthermore, the `src/diff.jl` file of the simpleMCMC package in
+Furthermore, the `src/diff.jl` file of the simple-mcmc package in
 
 https://github.com/fredo-dedup/simple-mcmc
 
