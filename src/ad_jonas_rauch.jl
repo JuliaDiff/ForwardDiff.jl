@@ -2,13 +2,9 @@ importall Base
 
 export ad, 
     ADForward, 
-    real_valued,
-    integer_valued,
-    real,
+    value,
     deriv,
     gradient,
-    isfinite,
-    re_ep,
     show,
     float,
     convert,
@@ -75,14 +71,8 @@ const ad = ADForward
 zero{T,n}(::Type{ADForward{T,n}}) = ADForward{T,n}(zero(T), zeros(T, n))
 one{T,n}(::Type{ADForward{T,n}}) = ADForward{T,n}(one(T), zeros(T, n))
 
-isdual(x::ADForward) = true
-isdual(x::Number) = false
-
-real_valued{T<:Real}(z::ADForward{T}) = deriv(z) == 0
-integer_valued(z::ADForward) = real_valued(z) && integer_valued(real(z))
-
-real(x::ADForward) = x.x
-real{T<:Real,n,m}(X::Array{ADForward{T,n},m}) = convert(Array{T,m}, X)
+value(x::ADForward) = x.x
+value{T<:Real,n,m}(X::Array{ADForward{T,n},m}) = convert(Array{T,m}, X)
 
 gradient{T}(x::ADForward{T}) = x.d
 function gradient{T<:Real,n,m}(X::Array{ADForward{T,n},m})
@@ -91,32 +81,7 @@ end
 gradient(x::Real) = zero(x)
 const deriv = gradient
 
-isfinite(z::ADForward) = isfinite(real(z)) && isfinite(deriv(z))
-re_ep(z) = (real(z), deriv(z))
-
-function dual_show{T}(io::IO, z::ADForward{T,1}, compact::Bool)
-    r, i = re_ep(z)
-    if isnan(r) || isfinite(i)
-        compact ? showcompact(io,r) : show(io,r)
-        if signbit(i)==1 && !isnan(i)
-            i = -i
-            print(io, compact ? "-" : " - ")
-        else
-            print(io, compact ? "+" : " + ")
-        end
-        compact ? showcompact(io, i) : show(io, i)
-        if !(isa(i,Integer) || isa(i,Rational) ||
-             isa(i,Float) && isfinite(i))
-            print(io, "*")
-        end
-        print(io, "ep")
-    else
-        print(io, "ADForward(",r,",",i,")")
-    end
-end
-dual_show(io::IO, z::ADForward, compact::Bool) = print(io, "ADForward(",real(z),",",deriv(z),")")
-show(io::IO, z::ADForward) = dual_show(io, z, false)
-showcompact(io::IO, z::ADForward) = dual_show(io, z, true)
+show(io::IO, z::ADForward) = print(io, "ADForward(",value(z),",",deriv(z),")")
 
 function float{T<:Real,n}(x::ADForward{T,n}) 
     S = typeof(float(x.x))
