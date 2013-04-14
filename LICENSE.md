@@ -1,7 +1,7 @@
 AutoDiff.jl is licensed under the MIT License:
 
-> Copyright (c) 2013: Jonas Rauch, Kevin Squire, Theodore Papamarkou and other 
-> contributors.
+> Copyright (c) 2013: Jonas Rauch, Kevin Squire, Tom Short, Theodore Papamarkou 
+> and other contributors.
 >
 > Permission is hereby granted, free of charge, to any person obtaining
 > a copy of this software and associated documentation files (the
