@@ -1,3 +1,4 @@
+using AutoDiff
 using NLopt
 
 ## Rosenbrock Banana function
@@ -26,7 +27,7 @@ xtol_rel!(opt,1e-8)
 function f_ad(x::Vector, grad::Vector)
     res = f1(ad(x))
     if length(grad) > 0
-        grad[:] = Gradient(res)
+        grad[:] = gradient(res)
     end
     return Value(res)
 end
