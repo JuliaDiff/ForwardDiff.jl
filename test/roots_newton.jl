@@ -1,4 +1,4 @@
-
+using AutoDiff
 using Roots
 
 f(x) = exp(x) - sin(x)
@@ -10,6 +10,6 @@ println(f(root))
 
 function fp_ad(x)
     res = f(ad(x, 1.))
-    return Gradient(res)[1]
+    return gradient(res)[1]
 end
 root2 = newton(f, fp_ad, 3.0)
