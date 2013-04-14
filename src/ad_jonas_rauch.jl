@@ -28,16 +28,17 @@ ad{T<:ADForwardBase}(x::T, d::Vector{T})=ADForward{T,length(d)}(x, d)
 ad{T<:ADForwardBase,S<:ADForwardBase}(x::T, d::S)=ad(x,zero(x))+ad(zero(d),  d )
 ad{T<:ADForwardBase,S<:ADForwardBase}(x::T, d::Vector{S})=ADForward{length(d)}(x,zeros(T, length(d)))+ADForward{length(d)}(zero(S), d)
 ad{T<:ADForwardBase}(x::T) = constant_ad(x)
+function unitvec{T}(x::Vector{T}, i)
+    n = length(x)
+    x=zeros(T,n)
+    x[i]=one(T)
+    return x
+end
 function ad{T<:ADForwardBase}(x::Vector{T}) 
     n=length(x)
-    function unitvec(i)
-        x=zeros(T,n)
-        x[i]=one(T)
-        return x
-    end
     X=Array(ADForward{T,n},n)
     for i=1:n
-        X[i]=ad(x[i], unitvec(i))
+        X[i]=ad(x[i], unitvec(x, i))
     end
     return X
 end
