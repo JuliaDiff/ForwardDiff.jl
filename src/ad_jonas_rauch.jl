@@ -4,41 +4,9 @@ export ad,
     ADForward, 
     value,
     deriv,
-    gradient,
-    show,
-    float,
-    convert,
-    promote_rule,
-    /,
-    +,
-    -,
-    *,
-    ^,
-    isless,
-    #<,
-    ==,
-    #<=,
-    abs,
-    max,
-    min,
-    sqrt,
-    cbrt,
-    sin,
-    cos,
-    tan,
-    sinh,
-    cosh,
-    tanh,
-    asin,
-    acos,
-    atan,
-    log,
-    log2,
-    log10,
-    exp,
-    conj
+    gradient
 
-immutable type ADForward{T<:Real,n} <: Number
+immutable ADForward{T<:Real,n} <: Number
     x::T
     d::Vector{T}
 end
@@ -53,6 +21,7 @@ ADForward{T<:Real,S<:Real}(x::T, d::Vector{S}) = ADForward{length(d)}(x,zeros(T,
 ADForward{T<:Real}        (x::T)               = constant_ad(x)
 
 function unitvec{T}(x::Vector{T},i)
+    n = length(x)
     x = zeros(T,n)
     x[i] = one(T)
     return x
