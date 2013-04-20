@@ -14,10 +14,17 @@ function fp_ad(x)
 end
 root2 = newton(f, fp_ad, 3.0)
 
-autodiff_transform(f, Float64)  # creates the function `f_der`
+
+# Source-code transformation
+
+function f1(x)
+    z = x    # to add a wrinkle
+    exp(z) - sin(x)
+end
+autodiff_transform(f1, (Float64,)) 
 
 function fp_sct(x)
-    res = f_der(ad(x, 1.))
+    res = f1(ad(x, 1.))
     return gradient(res)[1]
 end
 
