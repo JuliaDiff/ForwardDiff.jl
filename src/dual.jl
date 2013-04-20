@@ -1,6 +1,6 @@
 immutable Dual{T<:Real} <: Number
     re::T
-    im::T
+    du::T
 end
 Dual(x::Real, y::Real) = Dual(promote(x,y)...)
 Dual(x::Real) = Dual(x, zero(x))
@@ -10,7 +10,7 @@ typealias Dual64  Dual{Float32}
 typealias DualPair Dual
 
 real(z::Dual) = z.re
-imag(z::Dual) = z.im
+imag(z::Dual) = z.du
 
 convert{T<:Real}(::Type{Dual{T}}, x::Real) =
   Dual{T}(convert(T, x), convert(T, 0))
@@ -122,10 +122,10 @@ cbrt(z::Dual) = dual(cbrt(real(z)), imag(z)/(3*square(cbrt(real(z)))))
 function ^{T<:Dual}(z::T, w::T)
   re = real(z)^real(w)
   
-  im =
+  du =
     imag(z)*real(w)*(real(z)^(real(w)-1))+imag(w)*(real(z)^real(w))*log(real(z))
     
-  dual(re, im)
+  dual(re, du)
 end
 
 exp(z::Dual) = dual(exp(real(z)), exp(real(z))*imag(z))
