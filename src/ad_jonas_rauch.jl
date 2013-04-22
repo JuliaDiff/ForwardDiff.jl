@@ -1,4 +1,3 @@
-importall Base
 
 export ad, 
     ADForward, 

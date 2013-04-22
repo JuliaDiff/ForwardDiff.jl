@@ -50,32 +50,35 @@ function find_dependents(e::Expr, arg::Symbol, vars, isactive::Dict{Symbol,Bool}
     end
 end
 
+value(x) = x
+value{T<:Real}(x::Dual{T}) = real(x)
 
-wrap_value(x) = x
-wrap_value(s::Symbol) = :(value($s))
+wrap_value(x, isactive::Dict{Symbol, Bool}) = x
+wrap_value(s::Symbol, isactive::Dict{Symbol, Bool}) = get(isactive, s, false) ? :(value($s)) : s
 
-function wrap_value(e::Expr)
+function wrap_value(e::Expr, isactive::Dict{Symbol, Bool})
     for i in 1:length(e.args)
-        e.args[i] = wrap_value(e.args[i])
+        e.args[i] = wrap_value(e.args[i], isactive)
     end
     return e
 end
 
 
-add_derivatives(x, var::Symbol) = nothing
+add_derivatives(x, var::Symbol, isactive::Dict{Symbol, Bool}) = x
 
 function add_derivatives(e::Expr, var::Symbol, isactive::Dict{Symbol, Bool})
-    if  e.head == :(=) && anyactive(e, isactive)
+    if  (e.head == :(=) || e.head == :return) && anyactive(e, isactive)
         # replace the assignment equation with an assignment including derivatives
-        deriv = Calculus.differentiate(e.args[2], var)
+        deriv = Calculus.differentiate(e.args[end], var)
         # need to convert `z` to `value(z)` where z is any symbol
-        e.args[2] = :(ADForward($(e.args[2]), [$deriv]))
-        wrap_value(e.args[2])
+        e.args[end] = :(Dual($(e.args[end]), $deriv))
+        e.args[end] = wrap_value(e.args[end], isactive)
     else
-        for ea in e.args
-            add_derivatives(ea, var)
+        for i in 1:length(e.args)
+            e.args[i]  = add_derivatives(e.args[i], var, isactive)
         end
     end
+    return e
 end
 
 
@@ -85,8 +88,10 @@ function autodiff_transform(f::Function, funname::Symbol, types)
     m = methods(f, types)[1][3]
     e, arg, vars = get_expr(m)
     isactive = Dict{Symbol,Bool}(vars, fill(false, length(vars)))
+    isactive[arg] = true
     find_dependents(e, arg, vars, isactive)
     add_derivatives(e, arg, isactive)
-    eval(m.module, :(function $funname($arg::ADForward) $e end))
+    eval(m.module, :(function $funname($arg::Dual) $e end))
 end
 autodiff_transform(f::Function, types) = autodiff_transform(f, methods(f).defs.func.code.name, types)
+
