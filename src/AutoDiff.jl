@@ -3,7 +3,7 @@ module AutoDiff
   
   importall Base
   
-  include("ad_jonas_rauch.jl")
+  include("gradual.jl")
   include("source_transformation.jl")
   
   export
@@ -15,5 +15,14 @@ module AutoDiff
     dual128,
     dual64,
     isdual,
-    dual_show
+    dual_show,
+    
+    GraDual,
+    gradual,
+    value,
+    grad,
+    jacobian,
+    isgradual,
+    isconstant,
+    iszero
 end # module Autodiff
