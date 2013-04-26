@@ -4,6 +4,7 @@ module AutoDiff
   importall Base
   
   include("gradual.jl")
+  include("fad_hessian.jl")
   include("source_transformation.jl")
   
   export
@@ -24,5 +25,9 @@ module AutoDiff
     jacobian,
     isgradual,
     isconstant,
-    iszero
+    iszero,
+    
+    FADHessian,
+    hessian,
+    isfadhessian
 end # module Autodiff

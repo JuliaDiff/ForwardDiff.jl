@@ -25,10 +25,10 @@ zero{T, n}(::Type{GraDual{T, n}}) = GraDual{T, n}(zero(T), zeros(T, n))
 one{T, n}(::Type{GraDual{T, n}}) = GraDual{T, n}(one(T), zeros(T, n))
 
 value(x::GraDual) = x.v
-value{T<:Real, n}(X::Array{GraDual{T, n}, 1}) = [x.v for x in X]
+value{T<:Real, n}(X::Vector{GraDual{T, n}}) = [x.v for x in X]
 
 grad(x::GraDual) = x.g
-function grad{T<:Real, n}(X::Array{GraDual{T, n}, 1})
+function grad{T<:Real, n}(X::Vector{GraDual{T, n}})
   m = length(X)
   reshape([x.g[i] for x in X, i in 1:n], m, n)
 end
@@ -92,7 +92,7 @@ end
 inv{T<:Real, n}(x::GraDual{T, n})  = conj(x)/(x.v*x.v)
 
 +{T<:Real,n}(x1::GraDual{T,n}, x2::GraDual{T,n}) =
-  GraDual{T,n}(x1.v+x2.v, x2.g+x2.g)
+  GraDual{T,n}(x1.v+x2.v, x1.g+x2.g)
 
 -{T<:Real, n}(x::GraDual{T, n}) = GraDual{T,n}(-x.v, -x.g)
 -{T<:Real, n}(x::GraDual{T, n}, y::GraDual{T,n}) =
