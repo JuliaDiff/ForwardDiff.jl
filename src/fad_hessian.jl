@@ -154,7 +154,7 @@ function cbrt{T<:Real, n}(x::FADHessian{T, n})
       k += 1
     end
   end
-  FADHessian{T, n}(sqrt(x.d), h)
+  FADHessian{T, n}(cbrt(x.d), h)
 end
 
 function ^{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
@@ -171,5 +171,55 @@ function ^{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
       k += 1
     end
   end
-  FADHessian{T, n}(x1.d/x2.d, h)
+  FADHessian{T, n}(x1.d^x2.d, h)
+end
+
+function exp{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = exp(x.d.v)*(x.d.g[i]*x.d.g[j]+x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(exp(x.d), h)
+end
+
+function log{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = (x.d.v*x.h[k]-x.d.g[i]*x.d.g[j])/(x.d.v*x.d.v)
+      k += 1
+    end
+  end
+  FADHessian{T, n}(log(x.d), h)
+end
+
+function log2{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = ((x.d.v*x.h[k]-x.d.g[i]*x.d.g[j])
+      /(x.d.v*x.d.v*oftype(T, 0.6931471805599453)))
+      k += 1
+    end
+  end
+  FADHessian{T, n}(log2(x.d), h)
+end
+
+function log10{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = ((x.d.v*x.h[k]-x.d.g[i]*x.d.g[j])
+      /(x.d.v*x.d.v*oftype(T, 2.302585092994046)))
+      k += 1
+    end
+  end
+  FADHessian{T, n}(log10(x.d), h)
 end
