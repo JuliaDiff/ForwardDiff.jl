@@ -173,31 +173,3 @@ function ^{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
   end
   FADHessian{T, n}(x1.d/x2.d, h)
 end
-
-# exp{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(exp(x.v), exp(x.v)*x.g)
-# log{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(log(x.v), x.g/x.v)
-# log2{T<:Real, n}(x::GraDual{T, n}) = log(x)/oftype(T, 0.6931471805599453)
-# log10{T<:Real, n}(x::GraDual{T, n}) = log(x)/oftype(T, 2.302585092994046)
-# 
-# sin{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sin(x.v), cos(x.v)*x.g)
-# cos{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cos(x.v), -sin(x.v)*x.g)
-# tan{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(tan(x.v), square(sec(x.v))*x.g)
-# 
-# asin{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(asin(x.v), x.g/sqrt(1-square(x.v)))
-# acos{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(acos(x.v), -x.g/sqrt(1-square(x.v)))
-# atan{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(atan(x.v), x.g/(1+square(x.v)))
-# 
-# sinh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sinh(x.v), cosh(x.v)*x.g)
-# cosh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cosh(x.v), sinh(x.v)*x.g)
-# tanh{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(tanh(x.v), 1-square(tanh(x.v))*x.g)
-# 
-# asinh{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(asinh(x.v), x.g/sqrt(x.v*x.v+1))
-# acosh{T<:Real, n}(x::GraDual{T, n}) =
-#   GraDual{T, n}(acosh(x.v), x.g/sqrt(x.v*x.v-1))
-# atanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atanh(x.v), x.g/(1-x.v*x.v))
