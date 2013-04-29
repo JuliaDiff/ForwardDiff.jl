@@ -223,3 +223,39 @@ function log10{T<:Real, n}(x::FADHessian{T, n})
   end
   FADHessian{T, n}(log10(x.d), h)
 end
+
+function sin{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = (-sin(x.d.v)*x.d.g[i]*x.d.g[j]+cos(x.d.v)*x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(sin(x.d), h)
+end
+
+function cos{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = (-cos(x.d.v)*x.d.g[i]*x.d.g[j]-sin(x.d.v)*x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(cos(x.d), h)
+end
+
+function tan{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = sec(x.d.v)*sec(x.d.v)*(2*tan(x.d.v)*x.d.g[i]*x.d.g[j]+x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(tan(x.d), h)
+end
