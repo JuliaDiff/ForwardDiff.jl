@@ -259,3 +259,42 @@ function tan{T<:Real, n}(x::FADHessian{T, n})
   end
   FADHessian{T, n}(tan(x.d), h)
 end
+
+function asin{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = ((x.d.v*x.d.g[i]*x.d.g[j]-(x.d.v*x.d.v-1)*h[k])
+        /((1-x.d.v*x.d.v)^1.5))
+      k += 1
+    end
+  end
+  FADHessian{T, n}(asin(x.d), h)
+end
+
+function acos{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = ((-x.d.v*x.d.g[i]*x.d.g[j]+(x.d.v*x.d.v-1)*h[k])
+        /((1-x.d.v*x.d.v)^1.5))
+      k += 1
+    end
+  end
+  FADHessian{T, n}(acos(x.d), h)
+end
+
+function atan{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = ((-2*x.d.v*x.d.g[i]*x.d.g[j]+(x.d.v*x.d.v+1)*h[k])
+        /((1+x.d.v*x.d.v)^2))
+      k += 1
+    end
+  end
+  FADHessian{T, n}(atan(x.d), h)
+end
