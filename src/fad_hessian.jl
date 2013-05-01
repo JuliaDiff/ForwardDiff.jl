@@ -298,3 +298,39 @@ function atan{T<:Real, n}(x::FADHessian{T, n})
   end
   FADHessian{T, n}(atan(x.d), h)
 end
+
+function sinh{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = (sinh(x.d.v)*x.d.g[i]*x.d.g[j]+cosh(x.d.v)*x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(sinh(x.d), h)
+end
+
+function cosh{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = (cosh(x.d.v)*x.d.g[i]*x.d.g[j]+sinh(x.d.v)*x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(cosh(x.d), h)
+end
+
+function tanh{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = sech(x.d.v)*sech(x.d.v)*(-2*tanh(x.d.v)*x.d.g[i]*x.d.g[j]+x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T, n}(tanh(x.d), h)
+end
