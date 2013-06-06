@@ -11,14 +11,14 @@ FADHessian{T<:Real, n} (d::GraDual{T, n}) =
 
 function FADHessian{T<:Real}(v::Vector{T})
   n = length(v)
-  H = Array(FADHessian{T, n}, n)
+  Hessian = Array(FADHessian{T, n}, n)
   for i=1:n
     g = zeros(T, n)
     g[i] = one(T)
-    H[i] =
+    Hessian[i] =
       FADHessian(GraDual{T, n}(v[i], g), zeros(T, convert(Int, n*(n+1)/2)))
   end
-  return H
+  return Hessian
 end
 
 zero{T, n}(::Type{FADHessian{T, n}}) =
