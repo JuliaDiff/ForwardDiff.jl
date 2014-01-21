@@ -3,9 +3,9 @@ module AutoDiff
   
   importall Base
   
-  include("gradual.jl")
-  include("fad_hessian.jl")
-  include("source_transformation.jl")
+  include(joinpath("forward", "gradual.jl"))
+  include(joinpath("forward", "fad_hessian.jl"))
+  # include(joinpath("source_transformation", "source_transformation.jl"))
   
   export
     Dual,
