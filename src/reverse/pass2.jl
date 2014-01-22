@@ -7,7 +7,7 @@ function preCalculate(m::ParsingStruct)
     body = Expr[ [ :( $(p[1]) = $(p[2]) ) for p in zip(m.insyms, m.init)]..., 
                  m.exprs...]
     
-    vl = Autodiff.getSymbols(body)  # list of all vars (external, parameters, set by model, and accumulator)
+    vl = getSymbols(body)  # list of all vars (external, parameters, set by model, and accumulator)
     body = vcat(body, 
     			[ :(vhint[$(Expr(:quote, v))] = $v) for v in vl ])
 
