@@ -6,6 +6,7 @@ module AutoDiff
   include(joinpath("forward", "gradual.jl"))
   include(joinpath("forward", "fad_hessian.jl"))
   # include(joinpath("source_transformation", "source_transformation.jl"))
+  include(joinpath("reverse", "reversediff.jl"))
   
   export
     Dual,
@@ -30,4 +31,11 @@ module AutoDiff
     FADHessian,
     hessian,
     isfadhessian
+
+# Exports for reverse AD
+export 
+  reversediff, 
+  @deriv_rule, deriv_rule, declareType
+
+
 end # module Autodiff
