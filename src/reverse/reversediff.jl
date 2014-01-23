@@ -3,7 +3,7 @@
 #  Reverse mode automatic differentiation
 #
 #  main entry point = reversediff(ex, out::Symbol, in as keyword-args)
-#  returns an expression + var allocation expressions
+#  returns (var allocation expressions, value + gradient expression, symbol of value in expression)
 #
 ############################################################################
 
@@ -171,8 +171,10 @@ function reversediff(model::Expr, out::Symbol, skipgradient=false; init...)
 			# elseif 	isa(vh, LLAcc)
 			# 	push!(body, :($(symbol("$dsym.1")) = 0.) )
 			elseif 	isa(vh, Array{Float64})
-				push!(header, :( local $dsym = Array(Float64, $(Expr(:tuple,size(vh)...)))) )
-				push!(body, :( fill!($dsym, 0.) ) )
+				#  FIXME : inactivated to avoid having gradient vars rewritten on each call
+				# push!(header, :( local $dsym = Array(Float64, $(Expr(:tuple,size(vh)...)))) )
+				# push!(body, :( fill!($dsym, 0.) ) )
+				push!(body, :( $dsym = zeros( $(Expr(:tuple,size(vh)...)))) )
 			elseif 	isa(vh, Distribution)  #  TODO : find real equivalent vector size
 				push!(body, :( $(symbol("$dsym.1")) = 0. ) )
 				push!(body, :( $(symbol("$dsym.2")) = 0. ) )

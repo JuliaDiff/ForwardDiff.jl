@@ -2,7 +2,6 @@
 #    testing script for gradients calculated by reversediff()
 #########################################################################
 
-include("../src/AutoDiff.jl")
 using AutoDiff
 
 include("helper_functions.jl")
@@ -30,7 +29,6 @@ v2ref = [-1. 3 0 ; 0 5 -2]
 @test_combin    log(x)    x->x<=0 ? 0.1 : x
 
 @test_combin    transpose(x)
-deriv1( :(transpose(x)), [1., 2, 3] )
 @test_combin    x' 
 
 @test_combin    max(x,y)  x->x+0.001  size(x)==size(y) || ndims(x)==0 || ndims(y)==0 
