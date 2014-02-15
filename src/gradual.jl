@@ -106,7 +106,9 @@ function *{T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n})
   GraDual{T, n}(x1.v*x2.v, g)
 end
 
+*{T<:Real, n}(x1::Bool, x2::GraDual{T, n}) = GraDual{T, n}(x1*x2.v, x1*x2.g)
 *{T<:Real, n}(x1::T, x2::GraDual{T, n}) = GraDual{T, n}(x1*x2.v, x1*x2.g)
+*{n}(x1::GraDual{Bool, n}, x2::Bool) = GraDual{Bool, n}(x2*x1.v, x2*x1.g)
 *{T<:Real, n}(x1::GraDual{T, n}, x2::T) = GraDual{T, n}(x2*x1.v, x2*x1.g)
 
 function /{T<:Real,n}(x1::GraDual{T,n}, x2::GraDual{T,n})
