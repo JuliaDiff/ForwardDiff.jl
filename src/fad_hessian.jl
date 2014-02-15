@@ -115,7 +115,9 @@ function *{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
   FADHessian{T, n}(x1.d*x2.d, h)
 end
 
+*{T<:Real, n}(x1::Bool, x2::FADHessian{T, n}) = FADHessian{T, n}(x1*x2.d, x1*x2.h)
 *{T<:Real, n}(x1::T, x2::FADHessian{T, n}) = FADHessian{T, n}(x1*x2.d, x1*x2.h)
+*{n}(x1::FADHessian{Bool, n}, x2::Bool) = FADHessian{Bool, n}(x2*x1.d, x2*x1.h)
 *{T<:Real, n}(x1::FADHessian{T, n}, x2::T) = FADHessian{T, n}(x2*x1.d, x2*x1.h)
 
 function /{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
