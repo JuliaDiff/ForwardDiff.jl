@@ -3,8 +3,8 @@ module ForwardDiff
   
   importall Base
   
-  include("gradual.jl")
-  include("fad_hessian.jl")
+  include("GraDual.jl")
+  include("FADHessian.jl")
   
   export
     Dual,
