@@ -1,7 +1,7 @@
 module ForwardDiff
   using DualNumbers
   
-  # importall Base
+  importall Base
   
   export
     # exports for dual_fad
