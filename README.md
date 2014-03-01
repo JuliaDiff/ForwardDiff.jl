@@ -20,3 +20,5 @@ prospective implementation, which will probably make use of the `Polynomial` pac
 in a sense the most archaic approach; it offers yet another FAD implementation, useful for benchmarking purposes
 and as an alternative tool for the user. This approach allows already to evaluate gradients, Jacobians and Hessians. It
 will be extended to support tensors.
+
+A tutorial will be provided soon. In the meantime, the `test` folder contains some examples.
