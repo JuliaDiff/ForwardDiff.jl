@@ -1,12 +1,12 @@
 module ForwardDiff
   using DualNumbers
   
-  importall Base
-  
-  include("GraDual.jl")
-  include("FADHessian.jl")
+  # importall Base
   
   export
+    # exports for dual_fad
+    autodiff,
+    # exports for typespecific_fad
     Dual,
     Dual128,
     Dual64,
@@ -30,4 +30,8 @@ module ForwardDiff
     hessian,
     isfadhessian
 
+  include(joinpath("dual_fad", "univariate_range.jl"))
+  include(joinpath("dual_fad", "multivariate_range.jl"))
+  include(joinpath("typespecific_fad", "GraDual.jl"))
+  include(joinpath("typespecific_fad", "FADHessian.jl"))
 end # module ForwardDiff

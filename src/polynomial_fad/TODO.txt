@@ -1,0 +1,3 @@
+Implement forward mode automatic differentiation of high order derivatives based on these blog posts:
+http://jliszka.github.io/2013/10/24/exact-numeric-nth-derivatives.html
+http://duaeliststudios.com/automatic-differentiation-with-dual-numbers/
