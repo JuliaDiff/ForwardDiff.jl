@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/scidom/ForwardDiff.jl.png)](https://travis-ci.org/scidom/ForwardDiff.jl)
+
+## Overview of package's scope
+
 The `ForwardDiff` package provides an implementation of forward mode automatic differentiation (FAD) in Julia.
 
 The package is undergoing development. Four different approaches for performing FAD will be made available
