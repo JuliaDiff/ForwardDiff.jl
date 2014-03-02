@@ -1,13 +1,11 @@
 immutable FADHessian{T<:Real, n} <: Number
-    d::GraDual{T, n} 
-    h::Vector{T}
+  d::GraDual{T, n} 
+  h::Vector{T}
 end
 
-FADHessian{T<:Real, n} (d::GraDual{T, n}, h::Vector{T}) =
-  FADHessian{T, length(d.g)}(d, h)
+FADHessian{T<:Real, n} (d::GraDual{T, n}, h::Vector{T}) = FADHessian{T, length(d.g)}(d, h)
 
-FADHessian{T<:Real, n} (d::GraDual{T, n}) =
-  FADHessian{T, length(d.g)}(d, zeros(T, convert(Int, n*(n+1)/2)))
+FADHessian{T<:Real, n} (d::GraDual{T, n}) = FADHessian{T, length(d.g)}(d, zeros(T, convert(Int, n*(n+1)/2)))
 
 function FADHessian{T<:Real}(v::Vector{T})
   n = length(v)
@@ -15,18 +13,13 @@ function FADHessian{T<:Real}(v::Vector{T})
   for i=1:n
     g = zeros(T, n)
     g[i] = one(T)
-    Hessian[i] =
-      FADHessian(GraDual{T, n}(v[i], g), zeros(T, convert(Int, n*(n+1)/2)))
+    Hessian[i] = FADHessian(GraDual{T, n}(v[i], g), zeros(T, convert(Int, n*(n+1)/2)))
   end
   return Hessian
 end
 
-zero{T, n}(::Type{FADHessian{T, n}}) =
-  FADHessian(GraDual{T, n}(zero(T), zeros(T, n)),
-  zeros(T, convert(Int, n*(n+1)/2)))
-one{T, n}(::Type{FADHessian{T, n}}) =
-  FADHessian(GraDual{T, n}(one(T), zeros(T, n)),
-  zeros(T, convert(Int, n*(n+1)/2)))
+zero{T, n}(::Type{FADHessian{T, n}}) = FADHessian(zero(GraDual{T, n}), zeros(T, convert(Int, n*(n+1)/2)))
+one{T, n}(::Type{FADHessian{T, n}}) = FADHessian(one(GraDual{T, n}), zeros(T, convert(Int, n*(n+1)/2)))
 
 value(x::FADHessian) = x.d.v
 value{T<:Real, n}(X::Vector{FADHessian{T, n}}) = [x.d.v for x in X]
