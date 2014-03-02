@@ -5,7 +5,8 @@ module ForwardDiff
   
   export
     # exports for dual_fad
-    autodiff,
+    forwarddiff_gradient,
+    forwarddiff_jacobian,
     # exports for typespecific_fad    
     GraDual,
     gradual,
