@@ -61,7 +61,7 @@ isfinite{T<:Real, n}(x::GraDual{T, n}) =
 =={T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n}) = 
   (x1.v == x2.v) && (x1.g == x2.g)
   
-show(io::IO, x::GraDual) = print(io, "GraDual(", value(x), ",", grad(x), ")")
+show(io::IO, x::GraDual) = print(io, "GraDual(", value(x), ",\n", grad(x), ")")
 
 function conj{T<:Real, n}(x::GraDual{T, n})
   g = Array(T, n)

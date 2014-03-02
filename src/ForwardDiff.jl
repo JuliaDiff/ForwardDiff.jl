@@ -6,17 +6,7 @@ module ForwardDiff
   export
     # exports for dual_fad
     autodiff,
-    # exports for typespecific_fad
-    Dual,
-    Dual128,
-    Dual64,
-    DualPair,
-    dual,
-    dual128,
-    dual64,
-    isdual,
-    dual_show,
-    
+    # exports for typespecific_fad    
     GraDual,
     gradual,
     value,
@@ -25,7 +15,6 @@ module ForwardDiff
     isgradual,
     isconstant,
     iszero,
-    
     FADHessian,
     hessian,
     isfadhessian
