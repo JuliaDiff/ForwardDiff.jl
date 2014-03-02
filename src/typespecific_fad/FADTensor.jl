@@ -21,5 +21,13 @@ end
 zero{T, n}(::Type{FADTensor{T, n}}) = FADTensor(zero(FADHessian{T, n}), zeros(T, convert(Int, n^3)))
 one{T, n}(::Type{FADTensor{T, n}}) = FADTensor(one(FADHessian{T, n}), zeros(T, convert(Int, n^3)))
 
-value(x::FADTensor) = x.h.d.v
+value(x::FADTensor) = value(x.h)
 value{T<:Real, n}(X::Vector{FADTensor{T, n}}) = [x.h.d.v for x in X]
+
+grad(x::FADTensor) = grad(x.h)
+function grad{T<:Real, n}(X::Vector{FADTensor{T, n}})
+  m = length(X)
+  reshape([x.h.d.g[i] for x in X, i in 1:n], m, n)
+end
+
+hessian{T<:Real, n}(x::FADTensor{T, n}) = hessian(x.h)

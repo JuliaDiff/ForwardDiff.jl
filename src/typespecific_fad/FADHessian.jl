@@ -21,10 +21,10 @@ end
 zero{T, n}(::Type{FADHessian{T, n}}) = FADHessian(zero(GraDual{T, n}), zeros(T, convert(Int, n*(n+1)/2)))
 one{T, n}(::Type{FADHessian{T, n}}) = FADHessian(one(GraDual{T, n}), zeros(T, convert(Int, n*(n+1)/2)))
 
-value(x::FADHessian) = x.d.v
+value(x::FADHessian) = value(x.d)
 value{T<:Real, n}(X::Vector{FADHessian{T, n}}) = [x.d.v for x in X]
 
-grad(x::FADHessian) = x.d.g
+grad(x::FADHessian) = grad(x.d)
 function grad{T<:Real, n}(X::Vector{FADHessian{T, n}})
   m = length(X)
   reshape([x.d.g[i] for x in X, i in 1:n], m, n)
