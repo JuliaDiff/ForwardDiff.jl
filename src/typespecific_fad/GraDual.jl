@@ -36,7 +36,7 @@ end
 const jacobian = grad
 
 convert{T<:Real, n}(::Type{GraDual{T, n}}, x::GraDual{T, n}) = x
-convert{T<:Real, n}(::Type{GraDual{T, n}}, x::T) = GraDual{T, n}(x, zeros(T,n))
+convert{T<:Real, n}(::Type{GraDual{T, n}}, x::T) = GraDual{T, n}(x, zeros(T, n))
 convert{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, x::S) = 
   GraDual{T, n}(convert(T, x), zeros(T, n))
 convert{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, x::GraDual{S, n}) = 
@@ -56,7 +56,7 @@ isgradual(x::Number) = false
 isconstant{T<:Real, n}(x::GraDual{T, n}) = (grad(x) == zeros(T, n))
 iszero{T<:Real, n}(x::GraDual{T, n}) = isconstant(x) && (x.v == zero(T))
 isfinite{T<:Real, n}(x::GraDual{T, n}) =
-  isfinite(x.v) && (isfinite(x.g) == ones(n))
+  isfinite(x.v) && (isfinite(x.g) == ones(T, n))
 
 =={T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n}) = 
   (x1.v == x2.v) && (x1.g == x2.g)

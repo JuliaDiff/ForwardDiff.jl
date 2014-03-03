@@ -61,7 +61,7 @@ convert{T<:Real, S<:Real, n}(::Type{FADHessian{T, n}}, x::FADHessian{S, n}) =
   convert(Vector{T}, x.h))
 convert{T<:Real, S<:Real, n}(::Type{T}, x::FADHessian{S, n}) =
   ((x.d.g == zeros(S, n) && x.h == zeros(S, convert(Int, n*(n+1)/2))) ? 
-  convert(T, x.v) : throw(InexactError()))
+  convert(T, x.d.v) : throw(InexactError()))
 
 promote_rule{T<:Real, n}(::Type{FADHessian{T, n}}, ::Type{T}) = FADHessian{T, n}
 promote_rule{T<:Real, S<:Real, n}(::Type{FADHessian{T, n}}, ::Type{S}) = 
@@ -72,15 +72,11 @@ promote_rule{T<:Real, S<:Real, n}(::Type{FADHessian{T, n}},
 isfadhessian(x::FADHessian) = true
 isfadhessian(x::Number) = false
 
-isconstant{T<:Real, n}(x::FADHessian{T, n}) =
-  (x.d.g == zeros(T, n) && x.h == zeros(T, convert(Int, n*(n+1)/2)))
+isconstant{T<:Real, n}(x::FADHessian{T, n}) = (isconstant(x.d) && x.h == zeros(T, convert(Int, n*(n+1)/2)))
 iszero{T<:Real, n}(x::FADHessian{T, n}) = isconstant(x) && (x.d.v == zero(T))
-isfinite{T<:Real, n}(x::FADHessian{T, n}) =
-  (isfinite(x.d.v) && isfinite(x.d.g) == ones(n) &&
-  x.h == ones(convert(Int, n*(n+1)/2)))
+isfinite{T<:Real, n}(x::FADHessian{T, n}) = (isfinite(x.d) && x.h == ones(T, convert(Int, n*(n+1)/2)))
 
-=={T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n}) = 
-  (x1.d.v == x2.d.v) && (x1.d.g == x2.d.g) && (x1.h == x2.h)
+=={T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n}) = ((x1.d == x2.d) && (x1.h == x2.h))
   
 show(io::IO, x::FADHessian) =
   print(io, "FADHessian(\nvalue:\n", value(x),

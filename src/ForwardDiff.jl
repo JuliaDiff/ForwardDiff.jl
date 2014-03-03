@@ -19,7 +19,9 @@ module ForwardDiff
     FADHessian,
     hessian,
     isfadhessian,
-    FADTensor
+    FADTensor,
+    tensor,
+    isfadtensor
 
   include(joinpath("dual_fad", "univariate_range.jl"))
   include(joinpath("dual_fad", "multivariate_range.jl"))
