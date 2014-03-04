@@ -5,7 +5,7 @@ end
 
 FADTensor{T<:Real, n} (h::FADHessian{T, n}, t::Vector{T}) = FADTensor{T, length(h.d.g)}(h, t)
 
-FADTensor{T<:Real, n} (h::FADHessian{T, n}) = FADTensor{T, length(h.d.g)}(h, zeros(T, n^3))
+FADTensor{T<:Real, n} (h::FADHessian{T, n}) = FADTensor{T, length(h.d.g)}(h, zeros(T, n*n*(n+1)/2))
 
 function FADTensor{T<:Real}(v::Vector{T})
   n = length(v)
@@ -13,13 +13,14 @@ function FADTensor{T<:Real}(v::Vector{T})
   for i=1:n
     g = zeros(T, n)
     g[i] = one(T)
-    Tensor[i] = FADTensor(FADHessian(GraDual{T, n}(v[i], g), zeros(T, convert(Int, n*(n+1)/2))), zeros(T, n^3))
+    Tensor[i] = FADTensor(FADHessian(GraDual{T, n}(v[i], g), zeros(T, convert(Int, n*(n+1)/2))), 
+      zeros(T, convert(Int, n*n*(n+1)/2)))
   end
   return Tensor
 end
 
-zero{T, n}(::Type{FADTensor{T, n}}) = FADTensor(zero(FADHessian{T, n}), zeros(T, n^3))
-one{T, n}(::Type{FADTensor{T, n}}) = FADTensor(one(FADHessian{T, n}), zeros(T, n^3))
+zero{T, n}(::Type{FADTensor{T, n}}) = FADTensor(zero(FADHessian{T, n}), zeros(T, convert(Int, n*n*(n+1)/2)))
+one{T, n}(::Type{FADTensor{T, n}}) = FADTensor(one(FADHessian{T, n}), zeros(T, convert(Int, n*n*(n+1)/2)))
 
 value(x::FADTensor) = value(x.h)
 value{T<:Real, n}(X::Vector{FADTensor{T, n}}) = [x.h.d.v for x in X]
@@ -56,15 +57,15 @@ end
 
 convert{T<:Real, n}(::Type{FADTensor{T, n}}, x::FADTensor{T, n}) = x
 convert{T<:Real, n}(::Type{FADTensor{T, n}}, x::T) =
-  FADTensor(FADHessian{T, n}(x, zeros(T, convert(Int, n*(n+1)/2))), zeros(T, n^3))
+  FADTensor(FADHessian{T, n}(x, zeros(T, convert(Int, n*(n+1)/2))), zeros(T, convert(Int, n*n*(n+1)/2)))
 convert{T<:Real, S<:Real, n}(::Type{FADTensor{T, n}}, x::S) = 
-  FADTensor(FADHessian{T, n}(convert(T, x), zeros(T, convert(Int, n*(n+1)/2))), zeros(T, n^3))
+  FADTensor(FADHessian{T, n}(convert(T, x), zeros(T, convert(Int, n*(n+1)/2))), zeros(T, convert(Int, n*n*(n+1)/2)))
 convert{T<:Real, S<:Real, n}(::Type{FADTensor{T, n}}, x::FADTensor{S, n}) =
   FADTensor(FADHessian{T, n}(GraDual{T, n}(convert(T, x.h.d.v), convert(Vector{T}, x.h.d.g)),
   convert(Vector{T}, x.h.h)), convert(Vector{T}, x.t))
 convert{T<:Real, S<:Real, n}(::Type{T}, x::FADTensor{S, n}) =
-  ((x.h.d.g == zeros(S, n) && x.h.h == zeros(S, convert(Int, n*(n+1)/2)) && x.h.t == zeros(S, n^3)) ? 
-  convert(T, x.h.d.v) : throw(InexactError()))
+  ((x.h.d.g == zeros(S, n) && x.h.h == zeros(S, convert(Int, n*(n+1)/2)) && 
+    x.h.t == zeros(S, convert(Int, n*n*(n+1)/2))) ? convert(T, x.h.d.v) : throw(InexactError()))
 
 promote_rule{T<:Real, n}(::Type{FADTensor{T, n}}, ::Type{T}) = FADTensor{T, n}
 promote_rule{T<:Real, S<:Real, n}(::Type{FADTensor{T, n}}, ::Type{S}) = FADTensor{promote_type(T, S), n}
@@ -73,9 +74,9 @@ promote_rule{T<:Real, S<:Real, n}(::Type{FADTensor{T, n}}, ::Type{FADTensor{S, n
 isfadtensor(x::FADTensor) = true
 isfadtensor(x::Number) = false
 
-isconstant{T<:Real, n}(x::FADTensor{T, n}) = (isconstant(x.h) && x.t == zeros(T, n^3))
+isconstant{T<:Real, n}(x::FADTensor{T, n}) = (isconstant(x.h) && x.t == zeros(T, convert(Int, n*n*(n+1)/2)))
 iszero{T<:Real, n}(x::FADTensor{T, n}) = isconstant(x) && (x.h.d.v == zero(T))
-isfinite{T<:Real, n}(x::FADTensor{T, n}) = (isfinite(x.h) && x.t == ones(T, n^3))
+isfinite{T<:Real, n}(x::FADTensor{T, n}) = (isfinite(x.h) && x.t == ones(T, convert(Int, n*n*(n+1)/2)))
 
 =={T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n}) = ((x1.h == x2.h) && (x1.t == x2.t))
   
