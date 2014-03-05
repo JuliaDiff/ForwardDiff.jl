@@ -1,4 +1,4 @@
-tests = ["GraDual"]
+tests = ["dual_fad", "GraDual", "FADHessian"]
 
 println("Running tests:")
 
