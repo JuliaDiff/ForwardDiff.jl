@@ -127,7 +127,7 @@ cbrt{T<:Real, n}(x::GraDual{T, n}) =
 
 function ^{T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n})
   g = Array(T, n)
-  v = x1^x2
+  v = x1.v^x2.v
   for i in 1:n
     g[i] = x1.g[i]*x2.v*(x1.v^(x2.v-1))+x2.g[i]*(x1.v^x2.v)*log(x1.v)
   end
