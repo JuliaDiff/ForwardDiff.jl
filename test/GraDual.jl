@@ -4,9 +4,12 @@
 using ForwardDiff
 using Base.Test
 
-args = gradual([2., 5.])
+args = GraDual([2., 5.])
 
 f(x, y) = [3*x*y, y^2]
+#f(x) = [3*x[1]*x[2], x[2]^2] # works too
+
+args = GraDual([2., 5.])
 
 y = f(args...)
 #println("f(x, y) = [3*x*y, y^2]\n")
@@ -16,3 +19,8 @@ y = f(args...)
 
 @test jacobian(y) == [15 6; 0 10]
 #println("Jacobian J(f):\n", jacobian(y))
+
+# Testing the API
+g = forwarddiff_jacobian(f, Float64, n=2, fadtype=:typed)
+out = g([2., 5.])
+@test out == [15 6; 0 10]

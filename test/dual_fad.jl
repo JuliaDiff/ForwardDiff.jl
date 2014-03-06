@@ -3,7 +3,7 @@ using Base.Test
 
 
 f(x) = exp(sin(x[1]*x[2]))
-g! = forwarddiff_gradient(f, Float64, 2)
+g! = forwarddiff_gradient(f, Float64, n=2)
 out = zeros(2)
 xvals = [3.4, 2.1]
 g!(xvals, out)
@@ -13,7 +13,7 @@ q = xvals[1]*xvals[2]
 @test_approx_eq out[2] xvals[1]*cos(q)*exp(sin(q))
 
 f(x) = exp(sin(x[1]*x[2]+x[3]^2)) + 2x[1]*x[1]
-g! = forwarddiff_gradient(f, Float64, 3)
+g! = forwarddiff_gradient(f, Float64, n=3)
 xvals = [3.4,2.1,6.7]
 fval = f(xvals)
 out = zeros(3)
@@ -40,7 +40,7 @@ function jcorrect!(x, fjac)
 end
 
 xvals = [5.6,8.2]
-j! = forwarddiff_jacobian(f!, Float64, 2, 2)
+j! = forwarddiff_jacobian(f!, Float64, n=2, m=2)
 out = zeros(2,2)
 jout = zeros(2,2)
 jcorrect!(xvals, jout)

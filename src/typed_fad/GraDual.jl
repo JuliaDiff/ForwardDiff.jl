@@ -19,8 +19,6 @@ end
 GraDual{T<:Real}(v::T, g::T) = GraDual{T, 1}(v, [g])
 GraDual{T<:Real}(v::T) = GraDual{T, 1}(v, [one(T)])
 
-const gradual = GraDual
-
 zero{T, n}(::Type{GraDual{T, n}}) = GraDual{T, n}(zero(T), zeros(T, n))
 one{T, n}(::Type{GraDual{T, n}}) = GraDual{T, n}(one(T), zeros(T, n))
 
@@ -163,3 +161,10 @@ asinh{T<:Real, n}(x::GraDual{T, n}) =
 acosh{T<:Real, n}(x::GraDual{T, n}) =
   GraDual{T, n}(acosh(x.v), x.g/sqrt(x.v*x.v-1))
 atanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atanh(x.v), x.g/(1-x.v*x.v))
+
+function typed_fad_gradient{T<:Real}(f::Function, ::Type{T})
+  g(x::Vector{T}) = grad(f(GraDual(x)...))
+  return g
+end
+
+const typed_fad_jacobian = typed_fad_gradient
