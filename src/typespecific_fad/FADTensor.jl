@@ -3,9 +3,9 @@ immutable FADTensor{T<:Real, n} <: Number
   t::Vector{T}
 end
 
-FADTensor{T<:Real, n} (h::FADHessian{T, n}, t::Vector{T}) = FADTensor{T, length(h.d.g)}(h, t)
+FADTensor{T<:Real, n}(h::FADHessian{T, n}, t::Vector{T}) = FADTensor{T, length(h.d.g)}(h, t)
 
-FADTensor{T<:Real, n} (h::FADHessian{T, n}) = FADTensor{T, length(h.d.g)}(h, zeros(T, n*n*(n+1)/2))
+FADTensor{T<:Real, n}(h::FADHessian{T, n}) = FADTensor{T, length(h.d.g)}(h, convert(Int, n*n*(n+1)/2))
 
 function FADTensor{T<:Real}(v::Vector{T})
   n = length(v)
@@ -23,7 +23,7 @@ zero{T, n}(::Type{FADTensor{T, n}}) = FADTensor(zero(FADHessian{T, n}), zeros(T,
 one{T, n}(::Type{FADTensor{T, n}}) = FADTensor(one(FADHessian{T, n}), zeros(T, convert(Int, n*n*(n+1)/2)))
 
 value(x::FADTensor) = value(x.h)
-value{T<:Real, n}(X::Vector{FADTensor{T, n}}) = [x.h.d.v for x in X]
+value{T<:Real, n}(X::Vector{FADTensor{T, n}}) = [value(x) for x in X]
 
 grad(x::FADTensor) = grad(x.h)
 function grad{T<:Real, n}(X::Vector{FADTensor{T, n}})
@@ -87,7 +87,32 @@ show(io::IO, x::FADTensor) =
   "\n\nTensor:\n", tensor(x),
   "\n)")
 
+function t2h(i::Int64, j::Int64)
+  m, n = i >= j ? (i, j) : (j, i)
+  int64(m*(m-1)/2+n)
+end
+
 +{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n}) = FADTensor{T, n}(x1.h+x2.h, x1.t+x2.t)
 
 -{T<:Real, n}(x::FADTensor{T, n}) = FADTensor{T,n}(-x.h, -x.t)
 -{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n}) = FADTensor{T, n}(x1.h-x2.h, x1.t-x2.t)
+
+function *{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
+  t = Array(T, convert(Int, n*n*(n+1)/2))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in 1:n
+      for j in 1:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] =
+         (x2.h.d.g[a]*x1.h.h[r]+x1.h.d.g[a]*x2.h.h[r]
+         +x2.h.d.g[i]*x1.h.h[m]+x1.h.d.g[i]*x2.h.h[m]
+         +x2.h.d.g[j]*x1.h.h[l]+x1.h.d.g[j]*x2.h.h[l]
+         +x2.h.d.v*x1.t[q]+x1.h.d.v*x2.t[q])
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(x1.h*x2.h, t)
+end
