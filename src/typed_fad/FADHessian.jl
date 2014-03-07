@@ -104,9 +104,9 @@ function *{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
   FADHessian{T, n}(x1.d*x2.d, h)
 end
 
-*{T<:Real, n}(x1::Bool, x2::FADHessian{T, n}) = FADHessian{T, n}(x1*x2.d, x1*x2.h)
+*{T<:Real, n}(x1::Bool, x2::FADHessian{T, n}) = convert(T, x1)*x2
 *{T<:Real, n}(x1::T, x2::FADHessian{T, n}) = FADHessian{T, n}(x1*x2.d, x1*x2.h)
-*{n}(x1::FADHessian{Bool, n}, x2::Bool) = FADHessian{Bool, n}(x2*x1.d, x2*x1.h)
+*{n}(x1::FADHessian{Bool, n}, x2::Bool) = x1*x2
 *{T<:Real, n}(x1::FADHessian{T, n}, x2::T) = FADHessian{T, n}(x2*x1.d, x2*x1.h)
 
 function /{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
@@ -146,6 +146,21 @@ function cbrt{T<:Real, n}(x::FADHessian{T, n})
     end
   end
   FADHessian{T, n}(cbrt(x.d), h)
+end
+
+^{T1<:Real, T2<:Integer, n}(x::FADHessian{T1, n}, p::T2) = x^convert(Rational{T2}, p)
+^{T1<:Real, T2<:Rational, n}(x::FADHessian{T1, n}, p::T2) = x^convert(FloatingPoint, p)
+
+function ^{T1<:Real, T2<:Real, n}(x::FADHessian{T1, n}, p::T2)
+  h = Array(T1, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = p*x.d.v^(p-2)*((p-1)*x.d.g[i]*x.d.g[j]+x.d.v*x.h[k])
+      k += 1
+    end
+  end
+  FADHessian{T1, n}(x.d^p, h)
 end
 
 function ^{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})

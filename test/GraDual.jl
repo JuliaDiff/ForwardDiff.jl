@@ -12,7 +12,7 @@ dfdy(x, y, z) = -5*y^4+x^4*z-9*x*y^2*z^2+6*x^2*y^2-8*y*z+z^2-2*x*z
 dfdz(x, y, z) = 2*z+x^4*y-6*x*y^3*z-4*y^2+2*y*z-2*x*y
 gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
 
-args = [2., 5., -1.]
+args = [2.3, -1.5, -4.]
 output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)

@@ -29,7 +29,7 @@ function hessianf{T<:Real}(x::T, y::T, z::T)
   w
 end
 
-args = [2., 5., -1.]
+args = [2.3, -1.5, -4.]
 output = f(FADHessian(args)...)
 
 @test_approx_eq value(output) f(args...)

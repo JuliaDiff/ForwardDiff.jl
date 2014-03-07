@@ -104,9 +104,9 @@ function *{T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n})
   GraDual{T, n}(x1.v*x2.v, g)
 end
 
-*{T<:Real, n}(x1::Bool, x2::GraDual{T, n}) = GraDual{T, n}(x1*x2.v, x1*x2.g)
+*{T<:Real, n}(x1::Bool, x2::GraDual{T, n}) = convert(T, x1)*x2
 *{T<:Real, n}(x1::T, x2::GraDual{T, n}) = GraDual{T, n}(x1*x2.v, x1*x2.g)
-*{n}(x1::GraDual{Bool, n}, x2::Bool) = GraDual{Bool, n}(x2*x1.v, x2*x1.g)
+*{n}(x1::GraDual{Bool, n}, x2::Bool) = x1*x2
 *{T<:Real, n}(x1::GraDual{T, n}, x2::T) = GraDual{T, n}(x2*x1.v, x2*x1.g)
 
 function /{T<:Real,n}(x1::GraDual{T,n}, x2::GraDual{T,n})
@@ -124,6 +124,17 @@ end
 sqrt{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sqrt(x.v), x.g/(2*sqrt(x.v)))
 cbrt{T<:Real, n}(x::GraDual{T, n}) =
   GraDual{T, n}(cbrt(x.v), x.g/(3*square(cbrt(x.v))))
+
+^{T1<:Real, T2<:Integer, n}(x::GraDual{T1, n}, p::T2) = x^convert(Rational{T2}, p)
+^{T1<:Real, T2<:Rational, n}(x::GraDual{T1, n}, p::T2) = x^convert(FloatingPoint, p)
+
+function ^{T1<:Real, T2<:Real, n}(x::GraDual{T1, n}, p::T2)
+  g = Array(T1, n)
+  for i in 1:n
+   g[i] = p*x.v^(p-1)*x.g[i]
+  end
+  GraDual{T1, n}(x.v^p, g)
+end
 
 function ^{T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n})
   g = Array(T, n)
