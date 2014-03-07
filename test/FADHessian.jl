@@ -74,3 +74,36 @@ output = f(FADHessian(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
+
+# Testing square roots, qubic roots and rational powers
+
+f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(-5//3)
+
+dfdx(x, y, z) = z^4/(2*sqrt(x)*cbrt(y))-5//3*x^(-8//3)
+dfdy(x, y, z) = -z^4*sqrt(x)/(3*y^(4//3))
+dfdz(x, y, z) = 4*z^3*sqrt(x)/cbrt(y)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+dfdxx(x, y, z) = -z^4/(4*x^(3/2)*cbrt(y))+40/(9*x^(11/3))
+dfdxy(x, y, z) = -z^4/(6*sqrt(x)*y^(4/3))
+dfdyy(x, y, z) = 4*z^4*sqrt(x)/(9*y^(7/3))
+dfdxz(x, y, z) = 2*z^3/(sqrt(x)*cbrt(y))
+dfdyz(x, y, z) = -4*z^3*sqrt(x)/(3*y^(4/3))
+dfdzz(x, y, z) = 12*z^2*sqrt(x)/cbrt(y)
+function hessianf{T<:Real}(x::T, y::T, z::T)
+  w = zeros(T, 3, 3)
+  w[1, 1] = dfdxx(x, y, z)
+  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
+  w[2, 2] = dfdyy(x, y, z)
+  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
+  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
+  w[3, 3] = dfdzz(x, y, z)
+  w
+end
+
+args = [0.75, 2.5, -1.25]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)

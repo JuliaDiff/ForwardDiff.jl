@@ -41,9 +41,9 @@ output = f(GraDual(args)...)
 
 # Testing square roots, qubic roots and rational powers
 
-f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(5//3)
+f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(-5//3)
 
-dfdx(x, y, z) = z^4/(2*sqrt(x)*cbrt(y))+5//3*x^(2//3)
+dfdx(x, y, z) = z^4/(2*sqrt(x)*cbrt(y))-5//3*x^(-8//3)
 dfdy(x, y, z) = -z^4*sqrt(x)/(3*y^(4//3))
 dfdz(x, y, z) = 4*z^3*sqrt(x)/cbrt(y)
 gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
