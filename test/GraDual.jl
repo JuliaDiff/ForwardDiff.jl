@@ -23,3 +23,18 @@ output = f(GraDual(args)...)
 g = forwarddiff_jacobian(f, Float64, fadtype=:typed)
 output = g(args)
 @test_approx_eq output gradf(args...)
+
+# Testing division
+
+f(x, y, z) = x^5*z/y^4-1/z
+
+dfdx(x, y, z) = 5*z*x^4/y^4
+dfdy(x, y, z) = -4*x^5*z/y^5
+dfdz(x, y, z) = x^5/y^4+1/z^2
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+args = [2., 5., -1.]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)

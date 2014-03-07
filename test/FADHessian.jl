@@ -41,3 +41,36 @@ output = f(FADHessian(args)...)
 g = forwarddiff_hessian(f, Float64, fadtype=:typed)
 output = g(args)
 @test_approx_eq output hessianf(args...)
+
+# Testing division
+
+f(x, y, z) = x^5*z/y^4-1/z
+
+dfdx(x, y, z) = 5*z*x^4/y^4
+dfdy(x, y, z) = -4*x^5*z/y^5
+dfdz(x, y, z) = x^5/y^4+1/z^2
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+dfdxx(x, y, z) = 20*z*x^3/y^4
+dfdxy(x, y, z) = -20*z*x^4/y^5
+dfdyy(x, y, z) = 20*x^5*z/y^6
+dfdxz(x, y, z) = 5*x^4/y^4
+dfdyz(x, y, z) = -4*x^5/y^5
+dfdzz(x, y, z) = -2/z^3
+function hessianf{T<:Real}(x::T, y::T, z::T)
+  w = zeros(T, 3, 3)
+  w[1, 1] = dfdxx(x, y, z)
+  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
+  w[2, 2] = dfdyy(x, y, z)
+  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
+  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
+  w[3, 3] = dfdzz(x, y, z)
+  w
+end
+
+args = [2., 5., -1.]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
