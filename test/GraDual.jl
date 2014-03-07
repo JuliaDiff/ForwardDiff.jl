@@ -53,3 +53,19 @@ output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
+
+# Testing floating and functional powers
+
+a = 4.75
+f(x, y, z) = sqrt(x)^(y^4)+cbrt(y)*z^a
+
+dfdx(x, y, z) = x^(y^4/2-1)*y^4/2
+dfdy(x, y, z) = 4*sqrt(x)^(y^4)*y^3*log(sqrt(x))+z^a/(3*y^(2/3))
+dfdz(x, y, z) = a*cbrt(y)*z^(a-1)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+args = [1.25, 0.5, 1.5]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
