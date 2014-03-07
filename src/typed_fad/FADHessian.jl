@@ -364,3 +364,8 @@ function atanh{T<:Real, n}(x::FADHessian{T, n})
   end
   FADHessian{T, n}(atanh(x.d), h)
 end
+
+function typed_fad_hessian{T<:Real}(f::Function, ::Type{T})
+  g(x::Vector{T}) = hessian(f(FADHessian(x)...))
+  return g
+end

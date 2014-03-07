@@ -7,6 +7,7 @@ module ForwardDiff
     # API
     forwarddiff_gradient,
     forwarddiff_jacobian,
+    forwarddiff_hessian,
     # exports for typespecific_fad    
     GraDual,
     value,

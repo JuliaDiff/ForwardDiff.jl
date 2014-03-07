@@ -17,3 +17,11 @@ function forwarddiff_jacobian{T<:Real}(f::Function, ::Type{T}; fadtype::Symbol=:
     error("forwarddiff_jacobian not supported for $fadtype FAD")
   end
 end
+
+function forwarddiff_hessian{T<:Real}(f::Function, ::Type{T}; fadtype::Symbol=:typed, args...)
+  if fadtype == :typed
+    typed_fad_hessian(f, T)
+  else
+    error("forwarddiff_hessian not supported for $fadtype FAD")
+  end
+end
