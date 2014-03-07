@@ -38,3 +38,18 @@ output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
+
+# Testing square roots, qubic roots and rational powers
+
+f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(5//3)
+
+dfdx(x, y, z) = z^4/(2*sqrt(x)*cbrt(y))+5//3*x^(2//3)
+dfdy(x, y, z) = -z^4*sqrt(x)/(3*y^(4//3))
+dfdz(x, y, z) = 4*z^3*sqrt(x)/cbrt(y)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+args = [0.75, 2.5, -1.25]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)

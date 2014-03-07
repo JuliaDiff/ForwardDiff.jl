@@ -122,8 +122,7 @@ end
 /{T<:Real, n}(x1::GraDual{T, n}, x2::T) = GraDual{T, n}(x1.v/x2, x1.g/x2)
 
 sqrt{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sqrt(x.v), x.g/(2*sqrt(x.v)))
-cbrt{T<:Real, n}(x::GraDual{T, n}) =
-  GraDual{T, n}(cbrt(x.v), x.g/(3*square(cbrt(x.v))))
+cbrt{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cbrt(x.v), x.g/(3*cbrt(x.v)*cbrt(x.v)))
 
 ^{T1<:Real, T2<:Integer, n}(x::GraDual{T1, n}, p::T2) = x^convert(Rational{T2}, p)
 ^{T1<:Real, T2<:Rational, n}(x::GraDual{T1, n}, p::T2) = x^convert(FloatingPoint, p)
@@ -152,20 +151,15 @@ log10{T<:Real, n}(x::GraDual{T, n}) = log(x)/oftype(T, 2.302585092994046)
 
 sin{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sin(x.v), cos(x.v)*x.g)
 cos{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cos(x.v), -sin(x.v)*x.g)
-tan{T<:Real, n}(x::GraDual{T, n}) =
-  GraDual{T, n}(tan(x.v), square(sec(x.v))*x.g)
+tan{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(tan(x.v), sec(x.v)*sec(x.v)*x.g)
 
-asin{T<:Real, n}(x::GraDual{T, n}) =
-  GraDual{T, n}(asin(x.v), x.g/sqrt(1-square(x.v)))
-acos{T<:Real, n}(x::GraDual{T, n}) =
-  GraDual{T, n}(acos(x.v), -x.g/sqrt(1-square(x.v)))
-atan{T<:Real, n}(x::GraDual{T, n}) =
-  GraDual{T, n}(atan(x.v), x.g/(1+square(x.v)))
+asin{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(asin(x.v), x.g/sqrt(1-x.v*x.v))
+acos{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(acos(x.v), -x.g/sqrt(1-x.v*x.v))
+atan{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atan(x.v), x.g/(1+x.v*x.v))
 
 sinh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sinh(x.v), cosh(x.v)*x.g)
 cosh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cosh(x.v), sinh(x.v)*x.g)
-tanh{T<:Real, n}(x::GraDual{T, n}) =
-  GraDual{T, n}(tanh(x.v), 1-square(tanh(x.v))*x.g)
+tanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(tanh(x.v), 1-tanh(x.v)*tanh(x.v)*x.g)
 
 asinh{T<:Real, n}(x::GraDual{T, n}) =
   GraDual{T, n}(asinh(x.v), x.g/sqrt(x.v*x.v+1))
