@@ -40,14 +40,14 @@ function tensor{T<:Real, n}(x::FADTensor{T, n})
   for a in 1:n
     for i in 1:n
       for j in 1:i
-        y[a, i, j] = x.t[k]
+        y[i, j, a] = x.t[k]
         k += 1
       end
     end
 
     for i in 1:n
       for j in (i+1):n
-        y[a, i, j] = y[a, j, i]
+        y[i, j, a] = y[j, i, a]
       end
     end
   end
