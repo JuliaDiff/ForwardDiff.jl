@@ -84,3 +84,18 @@ output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
+
+# Testing trigonometric functions
+
+f(x, y, z) = sin(x*y)+cos(y*z)-tan(x+z)
+
+dfdx(x, y, z) = y*cos(x*y)-sec(x+z)^2
+dfdy(x, y, z) = x*cos(x*y)-z*sin(y*z)
+dfdz(x, y, z) = -sec(x+z)^2-y*sin(y*z)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+args = [1.1, -0.23, -2.1]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)

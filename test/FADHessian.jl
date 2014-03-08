@@ -174,3 +174,36 @@ output = f(FADHessian(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
+
+# Testing trigonometric functions
+
+f(x, y, z) = sin(x*y)+cos(y*z)-tan(x+z)
+
+dfdx(x, y, z) = y*cos(x*y)-sec(x+z)^2
+dfdy(x, y, z) = x*cos(x*y)-z*sin(y*z)
+dfdz(x, y, z) = -sec(x+z)^2-y*sin(y*z)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+dfdxx(x, y, z) = -y^2*sin(x*y)-2*sec(x+z)^2*tan(x+z)
+dfdxy(x, y, z) = cos(x*y)-x*y*sin(x*y)
+dfdyy(x, y, z) = -z^2*cos(y*z)-x^2*sin(x*y)
+dfdxz(x, y, z) = -2*sec(x+z)^2*tan(x+z)
+dfdyz(x, y, z) = -y*z*cos(y*z)-sin(y*z)
+dfdzz(x, y, z) = -y^2*cos(y*z)-2*sec(x+z)^2*tan(x+z)
+function hessianf{T<:Real}(x::T, y::T, z::T)
+  w = zeros(T, 3, 3)
+  w[1, 1] = dfdxx(x, y, z)
+  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
+  w[2, 2] = dfdyy(x, y, z)
+  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
+  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
+  w[3, 3] = dfdzz(x, y, z)
+  w
+end
+
+args = [1.1, -0.23, -2.1]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
