@@ -116,3 +116,32 @@ function *{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
   end
   FADTensor{T, n}(x1.h*x2.h, t)
 end
+
+*{T<:Real, n}(x1::Bool, x2::FADTensor{T, n}) = convert(T, x1)*x2
+*{T<:Real, n}(x1::T, x2::FADTensor{T, n}) = FADTensor{T, n}(x1*x2.d, x1*x2.h)
+*{n}(x1::FADTensor{Bool, n}, x2::Bool) = x1*x2
+*{T<:Real, n}(x1::FADTensor{T, n}, x2::T) = FADTensor{T, n}(x2*x1.d, x2*x1.h)
+
+^{T1<:Real, T2<:Integer, n}(x::FADTensor{T1, n}, p::T2) = x^convert(Rational{T2}, p)
+^{T1<:Real, T2<:Rational, n}(x::FADTensor{T1, n}, p::T2) = x^convert(FloatingPoint, p)
+
+function ^{T1<:Real, T2<:Real, n}(x::FADTensor{T1, n}, p::T2)
+  t = Array(T1, convert(Int, n*n*(n+1)/2))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in 1:n
+      for j in 1:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = (p*(
+          (p-1)*x.h.d.v^(p-3)*(
+          (p-2)*x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]
+          +x.h.d.v*(x.h.d.g[a]*x.h.h[r]+x.h.d.g[i]*x.h.h[m]+x.h.d.g[j]*x.h.h[l])
+          )+
+          x.h.d.v^2*x.t[q]))
+        q += 1
+      end
+    end
+  end
+  FADTensor{T1, n}(x.h^p, t)
+end

@@ -3,8 +3,8 @@ using Base.Test
 
 args = FADTensor([1., 2., 3.])
 
-f(x, y, z) = x*x*x+y*y*y+z*z*z+x*y*y+y*z*z+x*z*z
-#f(x, y, z) = x^3+y^3+z^3+x*y^2+y*z^2+x*z^2
+#f(x, y, z) = x*x*x+y*y*y+z*z*z+x*y*y+y*z*z+x*z*z
+f(x, y, z) = x^3+y^3+z^3+x*y^2+y*z^2+x*z^2
 
 z = f(args...)
 #println("f(x, y, z) = x^3+y^3+z^3+x*y^2+y*z^2+x*z^2\n")
