@@ -77,3 +77,9 @@ output = f(FADTensor(args)...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
 @test_approx_eq tensor(output) tensorf(args...)
+
+# Testing the API
+
+g = forwarddiff_tensor(f, Float64, fadtype=:typed)
+output = g(args)
+@test_approx_eq output tensorf(args...)

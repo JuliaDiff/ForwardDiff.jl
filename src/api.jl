@@ -25,3 +25,11 @@ function forwarddiff_hessian{T<:Real}(f::Function, ::Type{T}; fadtype::Symbol=:t
     error("forwarddiff_hessian not supported for $fadtype FAD")
   end
 end
+
+function forwarddiff_tensor{T<:Real}(f::Function, ::Type{T}; fadtype::Symbol=:typed, args...)
+  if fadtype == :typed
+    typed_fad_tensor(f, T)
+  else
+    error("forwarddiff_tensor not supported for $fadtype FAD")
+  end
+end

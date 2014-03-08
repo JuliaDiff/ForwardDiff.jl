@@ -145,3 +145,8 @@ function ^{T1<:Real, T2<:Real, n}(x::FADTensor{T1, n}, p::T2)
   end
   FADTensor{T1, n}(x.h^p, t)
 end
+
+function typed_fad_tensor{T<:Real}(f::Function, ::Type{T})
+  g(x::Vector{T}) = tensor(f(FADTensor(x)...))
+  return g
+end
