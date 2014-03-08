@@ -69,3 +69,18 @@ output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
+
+# Testing exp, log, log2 and and log10 
+
+f(x, y, z) = log2(x)*exp(y*z)+log(x^4*y)/log10(z)
+
+dfdx(x, y, z) = (exp(y*z)/log(2)+4*log(10)/log(z))/x
+dfdy(x, y, z) = exp(y*z)*z*log(x)/log(2)+log(10)/(y*log(z))
+dfdz(x, y, z) = exp(y*z)*y*log(x)/log(2)-log(10)*log(x^4*y)/(z*log(z)^2)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+args = [0.3, 1.1, 2.25]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
