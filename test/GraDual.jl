@@ -114,3 +114,32 @@ output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
+
+# Testing hyperbolic functions
+
+f(x) = sinh(x)
+gradf(x) = cosh(x)
+
+args = [1.5]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+
+f(x) = cosh(x)
+gradf(x) = sinh(x)
+
+args = [2.35]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+
+f(x) = tanh(x)
+gradf(x) = sech(x)^2
+
+args = [3.52]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)

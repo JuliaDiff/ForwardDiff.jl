@@ -240,3 +240,38 @@ output = f(FADHessian(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
+
+# Testing hyperbolic functions
+
+f(x) = sinh(x)
+gradf(x) = cosh(x)
+hessianf(x) = sinh(x)
+
+args = [1.5]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+
+f(x) = cosh(x)
+gradf(x) = sinh(x)
+hessianf(x) = cosh(x)
+
+args = [2.35]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+
+f(x) = tanh(x)
+gradf(x) = sech(x)^2
+hessianf(x) = -2*tanh(x)*sech(x)^2
+
+args = [3.52]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
