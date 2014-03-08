@@ -143,3 +143,32 @@ output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
+
+# Testing inverse hyperbolic functions
+
+f(x) = asinh(x)
+gradf(x) = 1/sqrt(1+x^2)
+
+args = [1.25]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+
+f(x) = acosh(x)
+gradf(x) = 1/(sqrt(x-1)*sqrt(x+1))
+
+args = [1.12]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+
+f(x) = atanh(x)
+gradf(x) = 1/(1-x^2)
+
+args = [-0.57]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)

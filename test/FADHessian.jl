@@ -275,3 +275,38 @@ output = f(FADHessian(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
+
+# Testing inverse hyperbolic functions
+
+f(x) = asinh(x)
+gradf(x) = 1/sqrt(1+x^2)
+hessianf(x) = -x/(1+x^2)^(3/2)
+
+args = [1.25]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+
+f(x) = acosh(x)
+gradf(x) = 1/(sqrt(x-1)*sqrt(x+1))
+hessianf(x) = -1/(2*sqrt(x-1)*(1+x)^(3/2))-1/(2*sqrt(x+1)*(x-1)^(3/2))
+
+args = [1.12]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+
+f(x) = atanh(x)
+gradf(x) = 1/(1-x^2)
+hessianf(x) = 2*x/(1-x^2)^2
+
+args = [-0.57]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
