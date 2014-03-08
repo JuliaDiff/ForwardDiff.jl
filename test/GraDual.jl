@@ -102,14 +102,28 @@ output = f(GraDual(args)...)
 
 # Testing inverse trigonometric functions
 
-f(x, y, z) = x^4*asin(x)+y^8*acos(y)+z^4*atan(z)
+f(x) = asin(x)
+gradf(x) = 1/sqrt(1-x^2)
 
-dfdx(x, y, z) = x^3*(x/sqrt(1-x^2)+4*asin(x))
-dfdy(x, y, z) = -y^8/sqrt(1-y^2)+8*y^7*acos(y)
-dfdz(x, y, z) = z^3*(z/(1+z^2)+4*atan(z))
-gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+args = [-0.51]
+output = f(GraDual(args)...)
 
-args = [-0.51, 0.6, -0.73]
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+
+f(x) = acos(x)
+gradf(x) = -1/sqrt(1-x^2)
+
+args = [0.6]
+output = f(GraDual(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+
+f(x) = atan(x)
+gradf(x) = 1/(1+x^2)
+
+args = [-0.73]
 output = f(GraDual(args)...)
 
 @test_approx_eq value(output) f(args...)

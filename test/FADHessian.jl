@@ -210,31 +210,33 @@ output = f(FADHessian(args)...)
 
 # Testing inverse trigonometric functions
 
-f(x, y, z) = x^4*asin(x)+y^8*acos(y)+z^4*atan(z)
+f(x) = asin(x)
+gradf(x) = 1/sqrt(1-x^2)
+hessianf(x) = x/(1-x^2)^(3/2)
 
-dfdx(x, y, z) = x^3*(x/sqrt(1-x^2)+4*asin(x))
-dfdy(x, y, z) = -y^8/sqrt(1-y^2)+8*y^7*acos(y)
-dfdz(x, y, z) = z^3*(z/(1+z^2)+4*atan(z))
-gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+args = [-0.51]
+output = f(FADHessian(args)...)
 
-dfdxx(x, y, z) = x^2*(12*asin(x)-x*(7*x^2-8)/(1-x^2)^(3/2))
-dfdxy(x, y, z) = 0
-dfdyy(x, y, z) = -y^9/(1-y^2)^(3/2)-16*y^7/sqrt(1-y^2)+56*y^6*acos(y)
-dfdxz(x, y, z) = 0
-dfdyz(x, y, z) = 0
-dfdzz(x, y, z) = 2*z^2*(6*atan(z)+z*(3*z^2+4)/(1+z^2)^2)
-function hessianf{T<:Real}(x::T, y::T, z::T)
-  w = zeros(T, 3, 3)
-  w[1, 1] = dfdxx(x, y, z)
-  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
-  w[2, 2] = dfdyy(x, y, z)
-  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
-  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
-  w[3, 3] = dfdzz(x, y, z)
-  w
-end
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
 
-args = [-0.51, 0.6, -0.73]
+f(x) = acos(x)
+gradf(x) = -1/sqrt(1-x^2)
+hessianf(x) = -x/(1-x^2)^(3/2)
+
+args = [0.6]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+
+f(x) = atan(x)
+gradf(x) = 1/(1+x^2)
+hessianf(x) = -2*x/(1+x^2)^2
+
+args = [-0.73]
 output = f(FADHessian(args)...)
 
 @test_approx_eq value(output) f(args...)
