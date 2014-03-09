@@ -122,6 +122,36 @@ end
 *{n}(x1::FADTensor{Bool, n}, x2::Bool) = x1*x2
 *{T<:Real, n}(x1::FADTensor{T, n}, x2::T) = FADTensor{T, n}(x2*x1.d, x2*x1.h)
 
+function /{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
+  t = Array(T, convert(Int, n*n*(n+1)/2))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in 1:n
+      for j in 1:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = ((x1.t[q]
+          +(-(x1.h.d.g[a]*x2.h.h[r]
+            +x1.h.d.g[i]*x2.h.h[m]
+            +x1.h.d.g[j]*x2.h.h[l]
+            +x2.h.d.g[a]*x1.h.h[r]
+            +x2.h.d.g[i]*x1.h.h[m]
+            +x2.h.d.g[j]*x1.h.h[l]
+            +x1.h.d.v*x2.t[q]
+          )+
+          2*(x1.h.d.g[a]*x2.h.d.g[i]*x2.h.d.g[j]
+            +x2.h.d.g[a]*x1.h.d.g[i]*x2.h.d.g[j]
+            +x2.h.d.g[a]*x2.h.d.g[i]*x1.h.d.g[j]
+            +x1.h.d.v*(x2.h.d.g[a]*x2.h.h[r]+x2.h.d.g[i]*x2.h.h[m]+x2.h.d.g[j]*x2.h.h[l])
+          -3*x1.h.d.v*x2.h.d.g[a]*x2.h.d.g[i]*x2.h.d.g[j]/x2.h.d.v)/x2.h.d.v)/x2.h.d.v
+          )/x2.h.d.v)
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(x1.h/x2.h, t)
+end
+
 ^{T1<:Real, T2<:Integer, n}(x::FADTensor{T1, n}, p::T2) = x^convert(Rational{T2}, p)
 ^{T1<:Real, T2<:Rational, n}(x::FADTensor{T1, n}, p::T2) = x^convert(FloatingPoint, p)
 
