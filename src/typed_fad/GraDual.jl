@@ -159,7 +159,7 @@ atan{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atan(x.v), x.g/(1+x.v*x.v))
 
 sinh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sinh(x.v), cosh(x.v)*x.g)
 cosh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cosh(x.v), sinh(x.v)*x.g)
-tanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(tanh(x.v), 1-tanh(x.v)*tanh(x.v)*x.g)
+tanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(tanh(x.v), 1.-tanh(x.v)*tanh(x.v)*x.g)
 
 asinh{T<:Real, n}(x::GraDual{T, n}) =
   GraDual{T, n}(asinh(x.v), x.g/sqrt(x.v*x.v+1))
