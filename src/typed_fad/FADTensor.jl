@@ -220,6 +220,28 @@ function log{T<:Real, n}(x::FADTensor{T, n})
   FADTensor{T, n}(exp(x.h), t)
 end
 
+function log2{T<:Real, n}(x::FADTensor{T, n})
+  t = Array(T, convert(Int, n*n*(n+1)/2))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in 1:n
+      for j in 1:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = (((2*x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]/x.h.d.v
+          -(x.h.d.g[a]*x.h.h[r]
+           +x.h.d.g[i]*x.h.h[m]
+           +x.h.d.g[j]*x.h.h[l]
+          ))/x.h.d.v
+          +x.t[q])/(x.h.d.v*log(2))
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(exp(x.h), t)
+end
+
 function typed_fad_tensor{T<:Real}(f::Function, ::Type{T})
   g(x::Vector{T}) = tensor(f(FADTensor(x)...))
   return g
