@@ -160,7 +160,7 @@ function sqrt{T<:Real, n}(x::FADTensor{T, n})
     for i in 1:n
       for j in 1:i
         l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
-        t[q] = (((0.375*x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]/(x.h.d.v^2)
+        t[q] = (((0.375*x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]/x.h.d.v
           -0.25*(x.h.d.g[a]*x.h.h[r]
            +x.h.d.g[i]*x.h.h[m]
            +x.h.d.g[j]*x.h.h[l]
@@ -172,6 +172,28 @@ function sqrt{T<:Real, n}(x::FADTensor{T, n})
     end
   end
   FADTensor{T, n}(sqrt(x.h), t)
+end
+
+function cbrt{T<:Real, n}(x::FADTensor{T, n})
+  t = Array(T, convert(Int, n*n*(n+1)/2))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in 1:n
+      for j in 1:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = (((10*x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]/(3*x.h.d.v)
+          -2*(x.h.d.g[a]*x.h.h[r]
+           +x.h.d.g[i]*x.h.h[m]
+           +x.h.d.g[j]*x.h.h[l]
+          ))/(3*x.h.d.v)
+          +x.t[q])/(3*sqrt(x.h.d.v)^(2/3))
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(cbrt(x.h), t)
 end
 
 ^{T1<:Real, T2<:Integer, n}(x::FADTensor{T1, n}, p::T2) = x^convert(Rational{T2}, p)
