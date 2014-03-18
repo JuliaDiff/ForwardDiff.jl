@@ -159,6 +159,81 @@ output = f(FADTensor(args)...)
 @test_approx_eq hessian(output) hessianf(args...)
 @test_approx_eq tensor(output) tensorf(args...)
 
+# Testing square roots, qubic roots and rational powers
+
+f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(-5//3)
+
+dfdx(x, y, z) = z^4/(2*sqrt(x)*cbrt(y))-5//3*x^(-8//3)
+dfdy(x, y, z) = -z^4*sqrt(x)/(3*y^(4//3))
+dfdz(x, y, z) = 4*z^3*sqrt(x)/cbrt(y)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+dfdxx(x, y, z) = -z^4/(4*x^(3/2)*cbrt(y))+40/(9*x^(11/3))
+dfdxy(x, y, z) = -z^4/(6*sqrt(x)*y^(4/3))
+dfdyy(x, y, z) = 4*z^4*sqrt(x)/(9*y^(7/3))
+dfdxz(x, y, z) = 2*z^3/(sqrt(x)*cbrt(y))
+dfdyz(x, y, z) = -4*z^3*sqrt(x)/(3*y^(4/3))
+dfdzz(x, y, z) = 12*z^2*sqrt(x)/cbrt(y)
+function hessianf{T<:Real}(x::T, y::T, z::T)
+  w = Array(T, 3, 3)
+  w[1, 1] = dfdxx(x, y, z)
+  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
+  w[2, 2] = dfdyy(x, y, z)
+  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
+  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
+  w[3, 3] = dfdzz(x, y, z)
+  w
+end
+
+d2fdxxx(x, y, z) = -440/(27*x^(14/3))+3*z^4/(8*x^2.5*cbrt(y))
+d2fdxyx(x, y, z) = z^4/(12*x^1.5*y*cbrt(y))
+d2fdxyy(x, y, z) = 2*z^4/(9*sqrt(x)*y^2*cbrt(y))
+d2fdxzx(x, y, z) = -z^3/(x^1.5*cbrt(y))
+d2fdxzy(x, y, z) = -2*z^3/(3*sqrt(x)*y*cbrt(y))
+d2fdxzz(x, y, z) = 6*z^2/(sqrt(x)*cbrt(y))
+d2fdyxx(x, y, z) = z^4/(12*x^1.5*y*cbrt(y))
+d2fdyyx(x, y, z) = 2*z^4/(9*sqrt(x)*y^2*cbrt(y))
+d2fdyyy(x, y, z) = -28*sqrt(x)*z^4/(27*y^3*cbrt(y))
+d2fdyzx(x, y, z) = -2*z^3/(3*sqrt(x)*y*cbrt(y))
+d2fdyzy(x, y, z) = 16*sqrt(x)*z^3/(9*y^2*cbrt(y))
+d2fdyzz(x, y, z) = -4*sqrt(x)*z^2/(y*cbrt(y))
+d2fdzxx(x, y, z) = -z^3/(x^1.5*cbrt(y))
+d2fdzyx(x, y, z) = -2*z^3/(3*sqrt(x)*y*cbrt(y))
+d2fdzyy(x, y, z) = 16*sqrt(x)*z^3/(9*y^2*cbrt(y))
+d2fdzzx(x, y, z) = 6*z^2/(sqrt(x)*cbrt(y))
+d2fdzzy(x, y, z) = -4*sqrt(x)*z^2/(y*cbrt(y))
+d2fdzzz(x, y, z) = 24*sqrt(x)*z/cbrt(y)
+function tensorf{T<:Real}(x::T, y::T, z::T)
+  w = Array(T, 3, 3, 3)
+  w[1, 1, 1] = d2fdxxx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = d2fdxzz(x, y, z)
+  w[1, 1, 2] = d2fdyxx(x, y, z)
+  w[2, 1, 2] = w[1, 2, 2] = d2fdyyx(x, y, z)
+  w[2, 2, 2] = d2fdyyy(x, y, z)
+  w[3, 1, 2] = w[1, 3, 2] = d2fdyzx(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = d2fdyzz(x, y, z)
+  w[1, 1, 3] = d2fdzxx(x, y, z)
+  w[2, 1, 3] = w[1, 2, 3] = d2fdzyx(x, y, z)
+  w[2, 2, 3] = d2fdzyy(x, y, z)
+  w[3, 1, 3] = w[1, 3, 3] = d2fdzzx(x, y, z)
+  w[3, 2, 3] = w[2, 3, 3] = d2fdzzy(x, y, z)
+  w[3, 3, 3] = d2fdzzz(x, y, z)
+  w
+end
+
+args = [0.75, 2.5, -1.25]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq_eps tensor(output) tensorf(args...) 1e-1
+
 # Testing exp, log, log2 and and log10 
 
 f(x, y, z) = log2(x)*exp(y*z)+log(x^4*y)/log10(z)
