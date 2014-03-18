@@ -158,3 +158,78 @@ output = f(FADTensor(args)...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
 @test_approx_eq tensor(output) tensorf(args...)
+
+# Testing exp, log, log2 and and log10 
+
+f(x, y, z) = log2(x)*exp(y*z)+log(x^4*y)/log10(z)
+
+dfdx(x, y, z) = (exp(y*z)/log(2)+4*log(10)/log(z))/x
+dfdy(x, y, z) = exp(y*z)*z*log(x)/log(2)+log(10)/(y*log(z))
+dfdz(x, y, z) = exp(y*z)*y*log(x)/log(2)-log(10)*log(x^4*y)/(z*log(z)^2)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+dfdxx(x, y, z) = -(exp(y*z)/log(2)+4*log(10)/log(z))/x^2
+dfdxy(x, y, z) = exp(y*z)*z/(x*log(2))
+dfdyy(x, y, z) = exp(y*z)*z^2*log(x)/log(2)-log(10)/(y^2*log(z))
+dfdxz(x, y, z) = (exp(y*z)*y/log(2)-4*log(10)/(z*log(z)^2))/x
+dfdyz(x, y, z) = exp(y*z)*(1+y*z)*log(x)/log(2)-log(10)/(y*z*log(z)^2)
+dfdzz(x, y, z) = exp(y*z)*y^2*log(x)/log(2)+log(10)*log(x^4*y)*(2+log(z))/(z^2*log(z)^3)
+function hessianf{T<:Real}(x::T, y::T, z::T)
+  w = Array(T, 3, 3)
+  w[1, 1] = dfdxx(x, y, z)
+  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
+  w[2, 2] = dfdyy(x, y, z)
+  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
+  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
+  w[3, 3] = dfdzz(x, y, z)
+  w
+end
+
+d2fdxxx(x, y, z) = 2*(exp(y*z)/log(2)+4*log(10)/log(z))/x^3
+d2fdxyx(x, y, z) = -z*exp(y*z)/(log(2)*x^2)
+d2fdxyy(x, y, z) = z^2*exp(y*z)/(log(2)*x)
+d2fdxzx(x, y, z) = (-y*exp(y*z)/log(2)+4*log(10)/(z*log(z)^2))/x^2
+d2fdxzy(x, y, z) = exp(y*z)*(1+y*z)/(log(2)*x)
+d2fdxzz(x, y, z) = (y^2*exp(y*z)/log(2)+4*log(10)*(2+log(z))/(z^2*log(z)^3))/x
+d2fdyxx(x, y, z) = -z*exp(y*z)/(log(2)*x^2)
+d2fdyyx(x, y, z) = z^2*exp(y*z)/(log(2)*x)
+d2fdyyy(x, y, z) = z^3*exp(y*z)*log(x)/log(2)+log(100)/(y^3*log(z))
+d2fdyzx(x, y, z) = exp(y*z)*(1+y*z)/(log(2)*x)
+d2fdyzy(x, y, z) = z*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)/(y^2*z*log(z)^2)
+d2fdyzz(x, y, z) = y*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)*(2+log(z))/(y*z^2*log(z)^3)
+d2fdzxx(x, y, z) = (-y*exp(y*z)/log(2)+4*log(10)/(z*log(z)^2))/x^2
+d2fdzyx(x, y, z) = exp(y*z)*(1+y*z)/(log(2)*x)
+d2fdzyy(x, y, z) = z*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)/(y^2*z*log(z)^2)
+d2fdzzx(x, y, z) = (y^2*exp(y*z)/log(2)+4*log(10)*(2+log(z))/(z^2*log(z)^3))/x
+d2fdzzy(x, y, z) = y*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)*(2+log(z))/(y*z^2*log(z)^3)
+d2fdzzz(x, y, z) = y^3*exp(y*z)*log(x)/log(2)-2*log(10)*log(x^4*y)*(3+log(z)*(3+log(z)))/(z^3*log(z)^4)
+function tensorf{T<:Real}(x::T, y::T, z::T)
+  w = Array(T, 3, 3, 3)
+  w[1, 1, 1] = d2fdxxx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = d2fdxzz(x, y, z)
+  w[1, 1, 2] = d2fdyxx(x, y, z)
+  w[2, 1, 2] = w[1, 2, 2] = d2fdyyx(x, y, z)
+  w[2, 2, 2] = d2fdyyy(x, y, z)
+  w[3, 1, 2] = w[1, 3, 2] = d2fdyzx(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = d2fdyzz(x, y, z)
+  w[1, 1, 3] = d2fdzxx(x, y, z)
+  w[2, 1, 3] = w[1, 2, 3] = d2fdzyx(x, y, z)
+  w[2, 2, 3] = d2fdzyy(x, y, z)
+  w[3, 1, 3] = w[1, 3, 3] = d2fdzzx(x, y, z)
+  w[3, 2, 3] = w[2, 3, 3] = d2fdzzy(x, y, z)
+  w[3, 3, 3] = d2fdzzz(x, y, z)
+  w
+end
+
+args = [0.3, 1.1, 2.25]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
