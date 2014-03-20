@@ -161,6 +161,32 @@ output = f(FADTensor(args)...)
 
 # Testing square roots, qubic roots and rational powers
 
+f(x) = sqrt(x)
+gradf(x) = 1/(2*sqrt(x))
+hessianf(x) = -1/(4*x^1.5)
+tensorf(x) = 3/(8*x^2.5)
+
+args = [1.17]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
+f(x) = cbrt(x)
+gradf(x) = 1/(3*x^(2//3))
+hessianf(x) = -2/(9*x^(5//3))
+tensorf(x) = 10/(27*x^(8//3))
+
+args = [1.61]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq_eps tensor(output) tensorf(args...) 1e-1
+
 f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(-5//3)
 
 dfdx(x, y, z) = z^4/(2*sqrt(x)*cbrt(y))-5//3*x^(-8//3)
