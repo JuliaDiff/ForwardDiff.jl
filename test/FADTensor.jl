@@ -185,7 +185,7 @@ output = f(FADTensor(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
-@test_approx_eq_eps tensor(output) tensorf(args...) 1e-1
+@test_approx_eq tensor(output) tensorf(args...)
 
 f(x, y, z) = z^4*sqrt(x)/cbrt(y)+x^(-5//3)
 
@@ -258,7 +258,7 @@ output = f(FADTensor(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
-@test_approx_eq_eps tensor(output) tensorf(args...) 1e-1
+@test_approx_eq tensor(output) tensorf(args...)
 
 # Testing exp, log, log2 and and log10 
 

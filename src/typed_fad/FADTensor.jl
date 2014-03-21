@@ -187,7 +187,7 @@ function cbrt{T<:Real, n}(x::FADTensor{T, n})
            +x.h.d.g[i]*x.h.h[m]
            +x.h.d.g[j]*x.h.h[l]
           ))/(3*x.h.d.v)
-          +x.t[q])/(3*sqrt(x.h.d.v)^(2/3))
+          +x.t[q])/(3*x.h.d.v^(2/3))
         )
         q += 1
       end
