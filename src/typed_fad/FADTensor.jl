@@ -308,7 +308,6 @@ function log10{T<:Real, n}(x::FADTensor{T, n})
   FADTensor{T, n}(log10(x.h), t)
 end
 
-###
 function sin{T<:Real, n}(x::FADTensor{T, n})
   t = Array(T, convert(Int, n*n*(n+1)/2))
   local l, m, r
@@ -327,7 +326,25 @@ function sin{T<:Real, n}(x::FADTensor{T, n})
   end
   FADTensor{T, n}(sin(x.h), t)
 end
-###
+
+function cos{T<:Real, n}(x::FADTensor{T, n})
+  t = Array(T, convert(Int, n*n*(n+1)/2))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in 1:n
+      for j in 1:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = (
+          sin(x.h.d.v)*(x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]-x.t[q])
+          -cos(x.h.d.v)*(x.h.d.g[a]*x.h.h[r]+x.h.d.g[i]*x.h.h[m]+x.h.d.g[j]*x.h.h[l])
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(cos(x.h), t)
+end
 
 function typed_fad_tensor{T<:Real}(f::Function, ::Type{T})
   g(x::Vector{T}) = tensor(f(FADTensor(x)...))
