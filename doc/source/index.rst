@@ -8,6 +8,8 @@ ForwardDiff Package
 
 The *ForwardDiff* package provides an implementation of forward mode automatic differentiation (FAD) in Julia.
 
+The package will be documented very soon.
+
 Contents:
 
 .. toctree::
