@@ -232,8 +232,6 @@ function ^{T1<:Real, T2<:Real, n}(x::FADTensor{T1, n}, p::T2)
   FADTensor{T1, n}(x.h^p, t)
 end
 
-###
-
 function ^{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
   t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
   local l, m, r
@@ -269,8 +267,6 @@ function ^{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
   end
   FADTensor{T, n}(x1.h^x2.h, t)
 end
-
-###
 
 function exp{T<:Real, n}(x::FADTensor{T, n})
   t = Array(T, convert(Int, n*(n+1)*(n+2)/6))

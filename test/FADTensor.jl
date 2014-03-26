@@ -212,6 +212,21 @@ output = f(FADTensor(args)...)
 @test_approx_eq hessian(output) hessianf(args...)
 @test_approx_eq tensor(output) tensorf(args...)
 
+# Testing floating and functional powers
+
+f(x) = x^x
+gradf(x) = x^x*(1+log(x))
+hessianf(x) = x^x*(1/x+(1+log(x))^2)
+tensorf(x) = x^(x-2)*(-1+x*(3+x)+x*log(x)*(3*(1+x)+x*log(x)*(3+log(x))))
+
+args = [2.73]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
 # Testing exp, log, log2 and and log10 
 
 f(x, y, z) = log2(x)*exp(y*z)+log(x^4*y)/log10(z)
