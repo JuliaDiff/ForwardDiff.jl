@@ -398,6 +398,27 @@ function cos{T<:Real, n}(x::FADTensor{T, n})
   FADTensor{T, n}(cos(x.h), t)
 end
 
+function tan{T<:Real, n}(x::FADTensor{T, n})
+  t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
+  local l, m, r
+  q = 1
+  tanx = tan(x.h.d.v)
+  secxsq = sec(x.h.d.v)^2
+  for a in 1:n
+    for i in a:n
+      for j in a:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = (
+          secxqs*(2*tanx*(x.h.d.g[a]*x.h.h[r]+x.h.d.g[i]*x.h.h[m])
+          +2*x.h.d.g[j]*((3*secxqs-2)*x.h.d.g[a]*x.h.d.g[i]+tanx*x.h.h[l])+x.t[q])
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(tan(x.h), t)
+end
+
 function typed_fad_tensor{T<:Real}(f::Function, ::Type{T})
   g(x::Vector{T}) = tensor(f(FADTensor(x)...))
   return g
