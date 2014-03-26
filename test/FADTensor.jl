@@ -227,6 +227,64 @@ output = f(FADTensor(args)...)
 @test_approx_eq hessian(output) hessianf(args...)
 @test_approx_eq tensor(output) tensorf(args...)
 
+a = 4.75
+f(x, y, z) = sqrt(x)^(y^4)+cbrt(y)*z^a
+
+dfdx(x, y, z) = x^(y^4/2-1)*y^4/2
+dfdy(x, y, z) = 4*sqrt(x)^(y^4)*y^3*log(sqrt(x))+z^a/(3*y^(2/3))
+dfdz(x, y, z) = a*cbrt(y)*z^(a-1)
+gradf(x, y, z) = [dfdx(x, y, z), dfdy(x, y, z), dfdz(x, y, z)]
+
+dfdxx(x, y, z) = x^(y^4/2-2)*y^4*(y^4-2)/4
+dfdxy(x, y, z) = x^(y^4/2-1)*y^3*(2+y^4*log(x))
+dfdyy(x, y, z) = -2*z^a/(9*y^(5/3))+2*x^(y^4/2)*y^2*log(x)*(3+2*y^4*log(x))
+dfdxz(x, y, z) = 0
+dfdyz(x, y, z) = a*z^(a-1)/(3*y^(2/3))
+dfdzz(x, y, z) = a*(a-1)*y^(1/3)*z^(a-2)
+function hessianf{T<:Real}(x::T, y::T, z::T)
+  w = Array(T, 3, 3)
+  w[1, 1] = dfdxx(x, y, z)
+  w[2, 1] = w[1, 2] = dfdxy(x, y, z)
+  w[2, 2] = dfdyy(x, y, z)
+  w[3, 1] = w[1, 3]= dfdxz(x, y, z)
+  w[3, 2] = w[2, 3] = dfdyz(x, y, z)
+  w[3, 3] = dfdzz(x, y, z)
+  w
+end
+
+d2fdxxx(x, y, z) = x^(y^4/2-3)*y^4*(8-6*y^4+y^8)/8
+d2fdxyx(x, y, z) = x^(y^4/2-2)*y^3*(4*(y^4-1)+y^4*(y^4-2)*log(x))/2
+d2fdxyy(x, y, z) = x^(y^4/2-1)*y^2*(6+y^4*log(x)*(11+2*y^4*log(x)))
+d2fdxzx(x, y, z) = 0
+d2fdxzy(x, y, z) = 0
+d2fdxzz(x, y, z) = 0
+d2fdyyy(x, y, z) = 4*x^(y^4/2)*y*log(x)*(3+y^4*log(x)*(9+2*y^4*log(x)))+10*z^a/(27*y^(8/3))
+d2fdyzy(x, y, z) = -2*a*z^(a-1)/(9*y^(5/3))
+d2fdyzz(x, y, z) = (a-1)*a*z^(a-2)/(3*y^(2/3))
+d2fdzzz(x, y, z) = (a-2)*(a-1)*a*z^(a-3)*cbrt(y)
+function tensorf{T<:Real}(x::T, y::T, z::T)
+  w = Array(T, 3, 3, 3)
+  w[1, 1, 1] = d2fdxxx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = w[1, 1, 2] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = w[2, 1, 2] = w[1, 2, 2] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = w[1, 1, 3] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = w[3, 1, 2] = w[1, 3, 2] = w[2, 1, 3] = w[1, 2, 3] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = w[3, 1, 3] = w[1, 3, 3] = d2fdxzz(x, y, z)
+  w[2, 2, 2] = d2fdyyy(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = w[2, 2, 3] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = w[3, 2, 3] = w[2, 3, 3] = d2fdyzz(x, y, z)
+  w[3, 3, 3] = d2fdzzz(x, y, z)
+  w
+end
+
+args = [1.25, 0.5, 1.5]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
 # Testing exp, log, log2 and and log10 
 
 f(x, y, z) = log2(x)*exp(y*z)+log(x^4*y)/log10(z)
