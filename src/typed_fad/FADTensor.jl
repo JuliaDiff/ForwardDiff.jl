@@ -232,6 +232,46 @@ function ^{T1<:Real, T2<:Real, n}(x::FADTensor{T1, n}, p::T2)
   FADTensor{T1, n}(x.h^p, t)
 end
 
+###
+
+function ^{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
+  t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
+  local l, m, r
+  q = 1
+  for a in 1:n
+    for i in a:n
+      for j in a:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        t[q] = (
+          x1.h.d.v^(x2.h.d.v-3)*(x2.h.d.v^3*x1.h.d.g[a]*x1.h.d.g[i]*x1.h.d.g[j]
+          +x2.h.d.v^2*(x1.h.d.v*((log(x1.h.d.v)*x2.h.d.g[j]*x1.h.d.g[i]+x1.h.h[r])*x1.h.d.g[a]+x1.h.d.g[i]*x1.h.h[m])
+          +x1.h.d.g[j]*(x1.h.d.g[i]*(-3*x1.h.d.g[a]+x1.h.d.v*log(x1.h.d.v)*x2.h.d.g[a])
+          +x1.h.d.v*(log(x1.h.d.v)*x2.h.d.g[i]*x1.h.d.g[a]+x1.h.h[l])))
+          +x2.h.d.v*(x1.h.d.g[j]*(x1.h.d.g[i]*(2*x1.h.d.g[a]-x1.h.d.v*(-2+log(x1.h.d.v))*x2.h.d.g[a])
+          +x1.h.d.v*(x2.h.d.g[i]*(-(-2+log(x1.h.d.v))*x1.h.d.g[a]
+          +x1.h.d.v*log(x1.h.d.v)^2*x2.h.d.g[a])-x1.h.h[l]+x1.h.d.v*log(x1.h.d.v)*x2.h.h[l]))
+          +x1.h.d.v*(x1.h.h[r]*(-x1.h.d.g[a]+x1.h.d.v*log(x1.h.d.v)*x2.h.d.g[a])-x1.h.d.g[i]*x1.h.h[m]
+          +x2.h.d.g[j]*(x1.h.d.g[i]*(-(-2+log(x1.h.d.v))*x1.h.d.g[a]
+          +x1.h.d.v*log(x1.h.d.v)^2*x2.h.d.g[a])
+          +x1.h.d.v*log(x1.h.d.v)*(log(x1.h.d.v)*x1.h.d.g[a]*x2.h.d.g[i]+x1.h.h[l]))
+          +x1.h.d.v*(log(x1.h.d.v)*(x1.h.d.g[a]*x2.h.h[r]+x2.h.d.g[i]*x1.h.h[m]+x1.h.d.g[i]*x2.h.h[m])+x1.t[q])))
+          +x1.h.d.v*(x1.h.d.g[j]*(-x1.h.d.g[i]*x2.h.d.g[a]-x2.h.d.g[i]*(x1.h.d.g[a]
+          -2*x1.h.d.v*log(x1.h.d.v)*x2.h.d.g[a])+x1.h.d.v*x2.h.h[l])+x2.h.d.g[j]*(-x1.h.d.g[i]*(x1.h.d.g[a]
+          -2*x1.h.d.v*log(x1.h.d.v)*x2.h.d.g[a])+x1.h.d.v*(x1.h.h[l]+log(x1.h.d.v)*(x2.h.d.g[i]*(2*x1.h.d.g[a]
+          +x1.h.d.v*log(x1.h.d.v)^2*x2.h.d.g[a])+x1.h.d.v*log(x1.h.d.v)*x2.h.h[l])))
+          +x1.h.d.v*(x2.h.d.g[a]*x1.h.h[r]+x2.h.h[r]*(x1.h.d.g[a]+x1.h.d.v*log(x1.h.d.v)^2*x2.h.d.g[a])
+          +x1.h.d.g[i]*x2.h.h[m]+x2.h.d.g[i]*(x1.h.h[m]+x1.h.d.v*log(x1.h.d.v)^2*x2.h.h[m])
+          +x1.h.d.v*log(x1.h.d.v)*x2.t[q])))
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(x1.h^x2.h, t)
+end
+
+###
+
 function exp{T<:Real, n}(x::FADTensor{T, n})
   t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
   local l, m, r
