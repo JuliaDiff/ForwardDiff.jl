@@ -35,37 +35,21 @@ d2fdxyy(x, y, z) = 6*y*(4*x-3*z^2)
 d2fdxzx(x, y, z) = 12*x^2*y
 d2fdxzy(x, y, z) = -2+4*x^3-18*y^2*z
 d2fdxzz(x, y, z) = -6*y^3
-d2fdyxx(x, y, z) = 12*(y^2+x^2*z)
-d2fdyyx(x, y, z) = 6*y*(4*x-3*z^2)
 d2fdyyy(x, y, z) = 6*(2*x^2-10*y^2-3*x*z^2)
-d2fdyzx(x, y, z) = -2+4*x^3-18*y^2*z
 d2fdyzy(x, y, z) = -4*(2+9*x*y*z)
 d2fdyzz(x, y, z) = 2-18*x*y^2
-d2fdzxx(x, y, z) = 12*x^2*y
-d2fdzyx(x, y, z) = -2+4*x^3-18*y^2*z
-d2fdzyy(x, y, z) = -4*(2+9*x*y*z)
-d2fdzzx(x, y, z) = -6*y^3
-d2fdzzy(x, y, z) = 2-18*x*y^2
 d2fdzzz(x, y, z) = 0
 function tensorf{T<:Real}(x::T, y::T, z::T)
   w = Array(T, 3, 3, 3)
   w[1, 1, 1] = d2fdxxx(x, y, z)
-  w[2, 1, 1] = w[1, 2, 1] = d2fdxyx(x, y, z)
-  w[2, 2, 1] = d2fdxyy(x, y, z)
-  w[3, 1, 1] = w[1, 3, 1] = d2fdxzx(x, y, z)
-  w[3, 2, 1] = w[2, 3, 1] = d2fdxzy(x, y, z)
-  w[3, 3, 1] = d2fdxzz(x, y, z)
-  w[1, 1, 2] = d2fdyxx(x, y, z)
-  w[2, 1, 2] = w[1, 2, 2] = d2fdyyx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = w[1, 1, 2] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = w[2, 1, 2] = w[1, 2, 2] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = w[1, 1, 3] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = w[3, 1, 2] = w[1, 3, 2] = w[2, 1, 3] = w[1, 2, 3] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = w[3, 1, 3] = w[1, 3, 3] = d2fdxzz(x, y, z)
   w[2, 2, 2] = d2fdyyy(x, y, z)
-  w[3, 1, 2] = w[1, 3, 2] = d2fdyzx(x, y, z)
-  w[3, 2, 2] = w[2, 3, 2] = d2fdyzy(x, y, z)
-  w[3, 3, 2] = d2fdyzz(x, y, z)
-  w[1, 1, 3] = d2fdzxx(x, y, z)
-  w[2, 1, 3] = w[1, 2, 3] = d2fdzyx(x, y, z)
-  w[2, 2, 3] = d2fdzyy(x, y, z)
-  w[3, 1, 3] = w[1, 3, 3] = d2fdzzx(x, y, z)
-  w[3, 2, 3] = w[2, 3, 3] = d2fdzzy(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = w[2, 2, 3] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = w[3, 2, 3] = w[2, 3, 3] = d2fdyzz(x, y, z)
   w[3, 3, 3] = d2fdzzz(x, y, z)
   w
 end
@@ -116,37 +100,21 @@ d2fdxyy(x, y, z) = 100*x^4*z/y^6
 d2fdxzx(x, y, z) = 20*x^3/y^4
 d2fdxzy(x, y, z) = -20*x^4/y^5
 d2fdxzz(x, y, z) = 0
-d2fdyxx(x, y, z) = -80*x^3*z/y^5
-d2fdyyx(x, y, z) = 100*x^4*z/y^6
 d2fdyyy(x, y, z) = -120*x^5*z/y^7
-d2fdyzx(x, y, z) = -20*x^4/y^5
 d2fdyzy(x, y, z) = 20*x^5/y^6
 d2fdyzz(x, y, z) = 0
-d2fdzxx(x, y, z) = 20*x^3/y^4
-d2fdzyx(x, y, z) = -20*x^4/y^5
-d2fdzyy(x, y, z) = 20*x^5/y^6
-d2fdzzx(x, y, z) = 0
-d2fdzzy(x, y, z) = 0
 d2fdzzz(x, y, z) = 6/z^4
 function tensorf{T<:Real}(x::T, y::T, z::T)
   w = Array(T, 3, 3, 3)
   w[1, 1, 1] = d2fdxxx(x, y, z)
-  w[2, 1, 1] = w[1, 2, 1] = d2fdxyx(x, y, z)
-  w[2, 2, 1] = d2fdxyy(x, y, z)
-  w[3, 1, 1] = w[1, 3, 1] = d2fdxzx(x, y, z)
-  w[3, 2, 1] = w[2, 3, 1] = d2fdxzy(x, y, z)
-  w[3, 3, 1] = d2fdxzz(x, y, z)
-  w[1, 1, 2] = d2fdyxx(x, y, z)
-  w[2, 1, 2] = w[1, 2, 2] = d2fdyyx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = w[1, 1, 2] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = w[2, 1, 2] = w[1, 2, 2] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = w[1, 1, 3] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = w[3, 1, 2] = w[1, 3, 2] = w[2, 1, 3] = w[1, 2, 3] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = w[3, 1, 3] = w[1, 3, 3] = d2fdxzz(x, y, z)
   w[2, 2, 2] = d2fdyyy(x, y, z)
-  w[3, 1, 2] = w[1, 3, 2] = d2fdyzx(x, y, z)
-  w[3, 2, 2] = w[2, 3, 2] = d2fdyzy(x, y, z)
-  w[3, 3, 2] = d2fdyzz(x, y, z)
-  w[1, 1, 3] = d2fdzxx(x, y, z)
-  w[2, 1, 3] = w[1, 2, 3] = d2fdzyx(x, y, z)
-  w[2, 2, 3] = d2fdzyy(x, y, z)
-  w[3, 1, 3] = w[1, 3, 3] = d2fdzzx(x, y, z)
-  w[3, 2, 3] = w[2, 3, 3] = d2fdzzy(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = w[2, 2, 3] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = w[3, 2, 3] = w[2, 3, 3] = d2fdyzz(x, y, z)
   w[3, 3, 3] = d2fdzzz(x, y, z)
   w
 end
@@ -217,37 +185,21 @@ d2fdxyy(x, y, z) = 2*z^4/(9*sqrt(x)*y^2*cbrt(y))
 d2fdxzx(x, y, z) = -z^3/(x^1.5*cbrt(y))
 d2fdxzy(x, y, z) = -2*z^3/(3*sqrt(x)*y*cbrt(y))
 d2fdxzz(x, y, z) = 6*z^2/(sqrt(x)*cbrt(y))
-d2fdyxx(x, y, z) = z^4/(12*x^1.5*y*cbrt(y))
-d2fdyyx(x, y, z) = 2*z^4/(9*sqrt(x)*y^2*cbrt(y))
 d2fdyyy(x, y, z) = -28*sqrt(x)*z^4/(27*y^3*cbrt(y))
-d2fdyzx(x, y, z) = -2*z^3/(3*sqrt(x)*y*cbrt(y))
 d2fdyzy(x, y, z) = 16*sqrt(x)*z^3/(9*y^2*cbrt(y))
 d2fdyzz(x, y, z) = -4*sqrt(x)*z^2/(y*cbrt(y))
-d2fdzxx(x, y, z) = -z^3/(x^1.5*cbrt(y))
-d2fdzyx(x, y, z) = -2*z^3/(3*sqrt(x)*y*cbrt(y))
-d2fdzyy(x, y, z) = 16*sqrt(x)*z^3/(9*y^2*cbrt(y))
-d2fdzzx(x, y, z) = 6*z^2/(sqrt(x)*cbrt(y))
-d2fdzzy(x, y, z) = -4*sqrt(x)*z^2/(y*cbrt(y))
 d2fdzzz(x, y, z) = 24*sqrt(x)*z/cbrt(y)
 function tensorf{T<:Real}(x::T, y::T, z::T)
   w = Array(T, 3, 3, 3)
   w[1, 1, 1] = d2fdxxx(x, y, z)
-  w[2, 1, 1] = w[1, 2, 1] = d2fdxyx(x, y, z)
-  w[2, 2, 1] = d2fdxyy(x, y, z)
-  w[3, 1, 1] = w[1, 3, 1] = d2fdxzx(x, y, z)
-  w[3, 2, 1] = w[2, 3, 1] = d2fdxzy(x, y, z)
-  w[3, 3, 1] = d2fdxzz(x, y, z)
-  w[1, 1, 2] = d2fdyxx(x, y, z)
-  w[2, 1, 2] = w[1, 2, 2] = d2fdyyx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = w[1, 1, 2] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = w[2, 1, 2] = w[1, 2, 2] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = w[1, 1, 3] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = w[3, 1, 2] = w[1, 3, 2] = w[2, 1, 3] = w[1, 2, 3] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = w[3, 1, 3] = w[1, 3, 3] = d2fdxzz(x, y, z)
   w[2, 2, 2] = d2fdyyy(x, y, z)
-  w[3, 1, 2] = w[1, 3, 2] = d2fdyzx(x, y, z)
-  w[3, 2, 2] = w[2, 3, 2] = d2fdyzy(x, y, z)
-  w[3, 3, 2] = d2fdyzz(x, y, z)
-  w[1, 1, 3] = d2fdzxx(x, y, z)
-  w[2, 1, 3] = w[1, 2, 3] = d2fdzyx(x, y, z)
-  w[2, 2, 3] = d2fdzyy(x, y, z)
-  w[3, 1, 3] = w[1, 3, 3] = d2fdzzx(x, y, z)
-  w[3, 2, 3] = w[2, 3, 3] = d2fdzzy(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = w[2, 2, 3] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = w[3, 2, 3] = w[2, 3, 3] = d2fdyzz(x, y, z)
   w[3, 3, 3] = d2fdzzz(x, y, z)
   w
 end
@@ -292,37 +244,21 @@ d2fdxyy(x, y, z) = z^2*exp(y*z)/(log(2)*x)
 d2fdxzx(x, y, z) = (-y*exp(y*z)/log(2)+4*log(10)/(z*log(z)^2))/x^2
 d2fdxzy(x, y, z) = exp(y*z)*(1+y*z)/(log(2)*x)
 d2fdxzz(x, y, z) = (y^2*exp(y*z)/log(2)+4*log(10)*(2+log(z))/(z^2*log(z)^3))/x
-d2fdyxx(x, y, z) = -z*exp(y*z)/(log(2)*x^2)
-d2fdyyx(x, y, z) = z^2*exp(y*z)/(log(2)*x)
 d2fdyyy(x, y, z) = z^3*exp(y*z)*log(x)/log(2)+log(100)/(y^3*log(z))
-d2fdyzx(x, y, z) = exp(y*z)*(1+y*z)/(log(2)*x)
 d2fdyzy(x, y, z) = z*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)/(y^2*z*log(z)^2)
 d2fdyzz(x, y, z) = y*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)*(2+log(z))/(y*z^2*log(z)^3)
-d2fdzxx(x, y, z) = (-y*exp(y*z)/log(2)+4*log(10)/(z*log(z)^2))/x^2
-d2fdzyx(x, y, z) = exp(y*z)*(1+y*z)/(log(2)*x)
-d2fdzyy(x, y, z) = z*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)/(y^2*z*log(z)^2)
-d2fdzzx(x, y, z) = (y^2*exp(y*z)/log(2)+4*log(10)*(2+log(z))/(z^2*log(z)^3))/x
-d2fdzzy(x, y, z) = y*(2+y*z)*exp(y*z)*log(x)/log(2)+log(10)*(2+log(z))/(y*z^2*log(z)^3)
 d2fdzzz(x, y, z) = y^3*exp(y*z)*log(x)/log(2)-2*log(10)*log(x^4*y)*(3+log(z)*(3+log(z)))/(z^3*log(z)^4)
 function tensorf{T<:Real}(x::T, y::T, z::T)
   w = Array(T, 3, 3, 3)
   w[1, 1, 1] = d2fdxxx(x, y, z)
-  w[2, 1, 1] = w[1, 2, 1] = d2fdxyx(x, y, z)
-  w[2, 2, 1] = d2fdxyy(x, y, z)
-  w[3, 1, 1] = w[1, 3, 1] = d2fdxzx(x, y, z)
-  w[3, 2, 1] = w[2, 3, 1] = d2fdxzy(x, y, z)
-  w[3, 3, 1] = d2fdxzz(x, y, z)
-  w[1, 1, 2] = d2fdyxx(x, y, z)
-  w[2, 1, 2] = w[1, 2, 2] = d2fdyyx(x, y, z)
+  w[2, 1, 1] = w[1, 2, 1] = w[1, 1, 2] = d2fdxyx(x, y, z)
+  w[2, 2, 1] = w[2, 1, 2] = w[1, 2, 2] = d2fdxyy(x, y, z)
+  w[3, 1, 1] = w[1, 3, 1] = w[1, 1, 3] = d2fdxzx(x, y, z)
+  w[3, 2, 1] = w[2, 3, 1] = w[3, 1, 2] = w[1, 3, 2] = w[2, 1, 3] = w[1, 2, 3] = d2fdxzy(x, y, z)
+  w[3, 3, 1] = w[3, 1, 3] = w[1, 3, 3] = d2fdxzz(x, y, z)
   w[2, 2, 2] = d2fdyyy(x, y, z)
-  w[3, 1, 2] = w[1, 3, 2] = d2fdyzx(x, y, z)
-  w[3, 2, 2] = w[2, 3, 2] = d2fdyzy(x, y, z)
-  w[3, 3, 2] = d2fdyzz(x, y, z)
-  w[1, 1, 3] = d2fdzxx(x, y, z)
-  w[2, 1, 3] = w[1, 2, 3] = d2fdzyx(x, y, z)
-  w[2, 2, 3] = d2fdzyy(x, y, z)
-  w[3, 1, 3] = w[1, 3, 3] = d2fdzzx(x, y, z)
-  w[3, 2, 3] = w[2, 3, 3] = d2fdzzy(x, y, z)
+  w[3, 2, 2] = w[2, 3, 2] = w[2, 2, 3] = d2fdyzy(x, y, z)
+  w[3, 3, 2] = w[3, 2, 3] = w[2, 3, 3] = d2fdyzz(x, y, z)
   w[3, 3, 3] = d2fdzzz(x, y, z)
   w
 end
