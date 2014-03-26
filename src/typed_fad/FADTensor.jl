@@ -409,8 +409,8 @@ function tan{T<:Real, n}(x::FADTensor{T, n})
       for j in a:i
         l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
         t[q] = (
-          secxqs*(2*tanx*(x.h.d.g[a]*x.h.h[r]+x.h.d.g[i]*x.h.h[m])
-          +2*x.h.d.g[j]*((3*secxqs-2)*x.h.d.g[a]*x.h.d.g[i]+tanx*x.h.h[l])+x.t[q])
+          secxsq*(2*tanx*(x.h.d.g[a]*x.h.h[r]+x.h.d.g[i]*x.h.h[m])
+          +2*x.h.d.g[j]*((3*secxsq-2)*x.h.d.g[a]*x.h.d.g[i]+tanx*x.h.h[l])+x.t[q])
         )
         q += 1
       end
