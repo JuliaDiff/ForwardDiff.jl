@@ -410,7 +410,7 @@ gradf(x) = 1/sqrt(1-x^2)
 hessianf(x) = x/(1-x^2)^(3/2)
 tensorf(x) = (3*x^2/(1-x^2)+1)/(1-x^2)^(3/2)
 
-args = [-0.75]
+args = [-0.99]
 output = f(FADTensor(args)...)
 
 @test_approx_eq value(output) f(args...)
@@ -423,7 +423,7 @@ gradf(x) = -1/sqrt(1-x^2)
 hessianf(x) = -x/(1-x^2)^(3/2)
 tensorf(x) = -(3*x^2/(1-x^2)+1)/(1-x^2)^(3/2)
 
-args = [0.69]
+args = [0.98]
 output = f(FADTensor(args)...)
 
 @test_approx_eq value(output) f(args...)

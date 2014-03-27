@@ -214,7 +214,7 @@ f(x) = asin(x)
 gradf(x) = 1/sqrt(1-x^2)
 hessianf(x) = x/(1-x^2)^(3/2)
 
-args = [-0.75]
+args = [-0.99]
 output = f(FADHessian(args)...)
 
 @test_approx_eq value(output) f(args...)
@@ -225,7 +225,7 @@ f(x) = acos(x)
 gradf(x) = -1/sqrt(1-x^2)
 hessianf(x) = -x/(1-x^2)^(3/2)
 
-args = [0.69]
+args = [0.98]
 output = f(FADHessian(args)...)
 
 @test_approx_eq value(output) f(args...)
