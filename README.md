@@ -8,7 +8,7 @@ The `ForwardDiff` package provides an implementation of forward mode automatic d
 `ForwardDiff` is undergoing development. It currently implements and will include:
 
 1. FAD of gradients, Jacobians, Hessians and tensors, i.e. up to third-order derivatives of univariate and multivariate
-functions. This feature is already available.
+functions. This feature is available.
 
 2. FAD of matrix expressions. This feature will be added in the future.
 
