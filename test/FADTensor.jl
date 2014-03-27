@@ -410,7 +410,7 @@ gradf(x) = 1/sqrt(1-x^2)
 hessianf(x) = x/(1-x^2)^(3/2)
 tensorf(x) = (3*x^2/(1-x^2)+1)/(1-x^2)^(3/2)
 
-args = [-0.51]
+args = [-0.75]
 output = f(FADTensor(args)...)
 
 @test_approx_eq value(output) f(args...)
@@ -423,7 +423,7 @@ gradf(x) = -1/sqrt(1-x^2)
 hessianf(x) = -x/(1-x^2)^(3/2)
 tensorf(x) = -(3*x^2/(1-x^2)+1)/(1-x^2)^(3/2)
 
-args = [0.6]
+args = [0.69]
 output = f(FADTensor(args)...)
 
 @test_approx_eq value(output) f(args...)
@@ -437,6 +437,47 @@ hessianf(x) = -2*x/(1+x^2)^2
 tensorf(x) = (8*x^2/(1+x^2)-2)/(1+x^2)^2
 
 args = [-0.73]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
+# Testing hyperbolic functions
+
+f(x) = sinh(x)
+gradf(x) = cosh(x)
+hessianf(x) = sinh(x)
+tensorf(x) = cosh(x)
+
+args = [1.5]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
+f(x) = cosh(x)
+gradf(x) = sinh(x)
+hessianf(x) = cosh(x)
+tensorf(x) = sinh(x)
+
+args = [2.35]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
+f(x) = tanh(x)
+gradf(x) = sech(x)^2
+hessianf(x) = -2*tanh(x)*sech(x)^2
+tensorf(x) = -2*sech(x)^4+4*sech(x)^2*tanh(x)^2
+
+args = [3.52]
 output = f(FADTensor(args)...)
 
 @test_approx_eq value(output) f(args...)
