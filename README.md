@@ -4,20 +4,15 @@
 
 The `ForwardDiff` package provides an implementation of forward mode automatic differentiation (FAD) in Julia.
 
-The package is undergoing development. Four different approaches for performing FAD will be made available
-progressively:
+`ForwardDiff` is undergoing development. It currently implements and will include:
 
-1. FAD using dual numbers. This approach has been already implemented.
+1. FAD of gradients, Jacobians, Hessians and tensors, i.e. up to third-order derivatives of univariate and multivariate
+functions. This feature is already available.
 
-2. FAD using generalized dual numbers. Dual numbers can be generalized to facilitate the exact computation of higher
-order derivatives. [This](http://jliszka.github.io/2013/10/24/exact-numeric-nth-derivatives.html) and
-[this](http://duaeliststudios.com/automatic-differentiation-with-dual-numbers/) blog post give an idea of the
-prospective implementation, which will probably make use of the `Polynomial` package.
+2. A range of different FAD implementations, each with varying racing merits such as range of applicability and
+efficiency. Two FAD approaches are available, one of which is typed-based and one based on dual numbers. Two more
+FAD approaches will be provided, one using the box product for matrices and another one using power series.
 
-3. FAD of matrix functions based on [this](http://link.springer.com/chapter/10.1007%2F978-3-642-30023-3_7) publication.
+3. FAD of matrix expressions. This feature will be added in the future.
 
-4. FAD using a number of Julia types introduced solely for the purpose of performing automatic differentiation. This
-approach allows already to evaluate gradients, Jacobians and Hessians. It is currently being extended to support
-tensors.
-
-A tutorial will be provided soon. In the meantime, the `test` folder contains some examples.
+Please refer to [the package documentation](http://forwarddiffjl.readthedocs.org/en/latest/) for details.
