@@ -130,9 +130,9 @@ function *{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
 end
 
 *{T<:Real, n}(x1::Bool, x2::FADTensor{T, n}) = convert(T, x1)*x2
-*{T<:Real, n}(x1::T, x2::FADTensor{T, n}) = FADTensor{T, n}(x1*x2.d, x1*x2.h)
+*{T<:Real, n}(x1::T, x2::FADTensor{T, n}) = FADTensor{T, n}(x1*x2.h, x1*x2.t)
 *{n}(x1::FADTensor{Bool, n}, x2::Bool) = x1*x2
-*{T<:Real, n}(x1::FADTensor{T, n}, x2::T) = FADTensor{T, n}(x2*x1.d, x2*x1.h)
+*{T<:Real, n}(x1::FADTensor{T, n}, x2::T) = FADTensor{T, n}(x2*x1.h, x2*x1.t)
 
 function /{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
   t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
@@ -419,8 +419,6 @@ function tan{T<:Real, n}(x::FADTensor{T, n})
   FADTensor{T, n}(tan(x.h), t)
 end
 
-###
-
 function asin{T<:Real, n}(x::FADTensor{T, n})
   t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
   local l, m, r, gprod
@@ -446,7 +444,30 @@ function asin{T<:Real, n}(x::FADTensor{T, n})
   FADTensor{T, n}(asin(x.h), t)
 end
 
-###
+function acos{T<:Real, n}(x::FADTensor{T, n})
+  t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
+  local l, m, r, gprod
+  q = 1
+  xsq = x.h.d.v^2
+  oneminusxsq = 1-xsq
+  for a in 1:n
+    for i in a:n
+      for j in a:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        gprod = x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]
+        t[q] = (
+          -((3*xsq*gprod/oneminusxsq+gprod+(
+          +x.h.d.g[a]*x.h.h[r]
+          +x.h.d.g[i]*x.h.h[m]
+          +x.h.d.g[j]*x.h.h[l]
+          )*x.h.d.v)/oneminusxsq+x.t[q])/oneminusxsq^0.5
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(acos(x.h), t)
+end
 
 function typed_fad_tensor{T<:Real}(f::Function, ::Type{T})
   g(x::Vector{T}) = tensor(f(FADTensor(x)...))
