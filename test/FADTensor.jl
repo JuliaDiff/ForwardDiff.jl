@@ -402,3 +402,22 @@ output = f(FADTensor(args)...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
 @test_approx_eq tensor(output) tensorf(args...)
+
+###
+
+# Testing inverse trigonometric functions
+
+f(x) = asin(x)
+gradf(x) = 1/sqrt(1-x^2)
+hessianf(x) = x/(1-x^2)^(3/2)
+tensorf(x) = (3*x^2/(1-x^2)+1)/(1-x^2)^(3/2)
+
+args = [-0.51]
+output = f(FADTensor(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+@test_approx_eq tensor(output) tensorf(args...)
+
+###
