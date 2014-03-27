@@ -5,7 +5,9 @@ module ForwardDiff
   
   export
     # API
+    forwarddiff_gradient!,
     forwarddiff_gradient,
+    forwarddiff_jacobian!,
     forwarddiff_jacobian,
     forwarddiff_hessian,
     forwarddiff_tensor,    
