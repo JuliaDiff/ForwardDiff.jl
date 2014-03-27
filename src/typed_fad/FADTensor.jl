@@ -469,6 +469,31 @@ function acos{T<:Real, n}(x::FADTensor{T, n})
   FADTensor{T, n}(acos(x.h), t)
 end
 
+function atan{T<:Real, n}(x::FADTensor{T, n})
+  t = Array(T, convert(Int, n*(n+1)*(n+2)/6))
+  local l, m, r, gprod
+  q = 1
+  xsq = x.h.d.v^2
+  oneplusxsq = 1+xsq
+  for a in 1:n
+    for i in a:n
+      for j in a:i
+        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
+        gprod = x.h.d.g[a]*x.h.d.g[i]*x.h.d.g[j]
+        t[q] = (
+          ((4*xsq*gprod/oneplusxsq-gprod-(
+          +x.h.d.g[a]*x.h.h[r]
+          +x.h.d.g[i]*x.h.h[m]
+          +x.h.d.g[j]*x.h.h[l]
+          )*x.h.d.v)*2/oneplusxsq+x.t[q])/oneplusxsq
+        )
+        q += 1
+      end
+    end
+  end
+  FADTensor{T, n}(atan(x.h), t)
+end
+
 function typed_fad_tensor{T<:Real}(f::Function, ::Type{T})
   g(x::Vector{T}) = tensor(f(FADTensor(x)...))
   return g
