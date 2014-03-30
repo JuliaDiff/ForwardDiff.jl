@@ -167,9 +167,19 @@ acosh{T<:Real, n}(x::GraDual{T, n}) =
   GraDual{T, n}(acosh(x.v), x.g/sqrt(x.v*x.v-1))
 atanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atanh(x.v), x.g/(1-x.v*x.v))
 
+function typed_fad_gradient!{T<:Real}(f::Function, ::Type{T})
+  function g!(x::Vector{T}, gradient_output::Vector{T})
+    fvalue = f(GraDual(x))
+    for i = 1:length(gradient_output)
+      gradient_output[i] = fvalue.g[i]
+    end
+  end
+  return g!
+end
+
 function typed_fad_gradient{T<:Real}(f::Function, ::Type{T})
-  g(x::Vector{T}) = grad(f(GraDual(x)...))
+  g(x::Vector{T}) = grad(f(GraDual(x)))
   return g
 end
 
-const typed_fad_jacobian = typed_fad_gradient
+# const typed_fad_jacobian = typed_fad_gradient

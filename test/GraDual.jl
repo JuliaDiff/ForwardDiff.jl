@@ -20,9 +20,23 @@ output = f(GraDual(args)...)
 
 # Testing the API
 
-g = forwarddiff_jacobian(f, Float64, fadtype=:typed)
+f(x) =
+  x[1]^6-x[2]^5+x[3]^2+x[1]^4*x[2]*x[3]-3*x[1]*x[2]^3*x[3]^2+2*x[1]^2*x[2]^3-4*x[2]^2*x[3]+x[2]*x[3]^2-2*x[1]*x[2]*x[3]
+
+dfdx(x) = 6*x[1]^5+4*x[1]^3*x[2]*x[3]-3*x[2]^3*x[3]^2+4*x[1]*x[2]^3-2*x[2]*x[3]
+dfdy(x) = -5*x[2]^4+x[1]^4*x[3]-9*x[1]*x[2]^2*x[3]^2+6*x[1]^2*x[2]^2-8*x[2]*x[3]+x[3]^2-2*x[1]*x[3]
+dfdz(x) = 2*x[3]+x[1]^4*x[2]-6*x[1]*x[2]^3*x[3]-4*x[2]^2+2*x[2]*x[3]-2*x[1]*x[2]
+gradf(x) = [dfdx(x), dfdy(x), dfdz(x)]
+
+args = [2.3, -1.5, -4.]
+output = f(GraDual(args))
+
+@test_approx_eq value(output) f(args)
+@test_approx_eq grad(output) gradf(args)
+
+g = forwarddiff_gradient(f, Float64, fadtype=:typed)
 output = g(args)
-@test_approx_eq output gradf(args...)
+@test_approx_eq output gradf(args)
 
 # Testing division
 
