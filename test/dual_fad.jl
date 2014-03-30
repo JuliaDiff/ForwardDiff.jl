@@ -3,10 +3,20 @@ using Base.Test
 
 
 f(x) = exp(sin(x[1]*x[2]))
+
 g! = forwarddiff_gradient!(f, Float64, n=2)
 out = zeros(2)
 xvals = [3.4, 2.1]
 g!(xvals, out)
+q = xvals[1]*xvals[2]
+@test_approx_eq f(xvals) exp(sin(q))
+@test_approx_eq out[1] xvals[2]*cos(q)*exp(sin(q))
+@test_approx_eq out[2] xvals[1]*cos(q)*exp(sin(q))
+
+g = forwarddiff_gradient(f, Float64, n=2)
+out = zeros(2)
+xvals = [3.4, 2.1]
+out = g(xvals)
 q = xvals[1]*xvals[2]
 @test_approx_eq f(xvals) exp(sin(q))
 @test_approx_eq out[1] xvals[2]*cos(q)*exp(sin(q))

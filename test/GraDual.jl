@@ -29,10 +29,11 @@ dfdz(x) = 2*x[3]+x[1]^4*x[2]-6*x[1]*x[2]^3*x[3]-4*x[2]^2+2*x[2]*x[3]-2*x[1]*x[2]
 gradf(x) = [dfdx(x), dfdy(x), dfdz(x)]
 
 args = [2.3, -1.5, -4.]
-output = f(GraDual(args))
 
-@test_approx_eq value(output) f(args)
-@test_approx_eq grad(output) gradf(args)
+g! = forwarddiff_gradient!(f, Float64, fadtype=:typed)
+output = zeros(3)
+g!(args, output)
+@test_approx_eq output gradf(args)
 
 g = forwarddiff_gradient(f, Float64, fadtype=:typed)
 output = g(args)
