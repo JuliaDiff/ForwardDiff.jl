@@ -9,6 +9,7 @@ module ForwardDiff
     forwarddiff_gradient,
     forwarddiff_jacobian!,
     forwarddiff_jacobian,
+    forwarddiff_hessian!,
     forwarddiff_hessian,
     forwarddiff_tensor,    
     # exports for typespecific_fad    

@@ -38,9 +38,41 @@ output = f(FADHessian(args)...)
 
 # Testing the API
 
+f(x) =
+  x[1]^6-x[2]^5+x[3]^2+x[1]^4*x[2]*x[3]-3*x[1]*x[2]^3*x[3]^2+2*x[1]^2*x[2]^3-4*x[2]^2*x[3]+x[2]*x[3]^2-2*x[1]*x[2]*x[3]
+
+dfdx(x) = 6*x[1]^5+4*x[1]^3*x[2]*x[3]-3*x[2]^3*x[3]^2+4*x[1]*x[2]^3-2*x[2]*x[3]
+dfdy(x) = -5*x[2]^4+x[1]^4*x[3]-9*x[1]*x[2]^2*x[3]^2+6*x[1]^2*x[2]^2-8*x[2]*x[3]+x[3]^2-2*x[1]*x[3]
+dfdz(x) = 2*x[3]+x[1]^4*x[2]-6*x[1]*x[2]^3*x[3]-4*x[2]^2+2*x[2]*x[3]-2*x[1]*x[2]
+gradf(x) = [dfdx(x), dfdy(x), dfdz(x)]
+
+dfdxx(x) = 30*x[1]^4+12*x[1]^2*x[2]*x[3]+4*x[2]^3
+dfdxy(x) = 4*x[1]^3*x[3]-9*x[2]^2*x[3]^2+12*x[1]*x[2]^2-2*x[3]
+dfdyy(x) = -20*x[2]^3-18*x[1]*x[2]*x[3]^2+12*x[1]^2*x[2]-8*x[3]
+dfdxz(x) = 4*x[1]^3*x[2]-6*x[2]^3*x[3]-2*x[2]
+dfdyz(x) = x[1]^4-18*x[1]*x[2]^2*x[3]-8*x[2]+2*x[3]-2*x[1]
+dfdzz(x) = 2-6*x[1]*x[2]^3+2*x[2]
+function hessianf{T<:Real}(x::Vector{T})
+  w = Array(T, 3, 3)
+  w[1, 1] = dfdxx(x)
+  w[2, 1] = w[1, 2] = dfdxy(x)
+  w[2, 2] = dfdyy(x)
+  w[3, 1] = w[1, 3]= dfdxz(x)
+  w[3, 2] = w[2, 3] = dfdyz(x)
+  w[3, 3] = dfdzz(x)
+  w
+end
+
+args = [2.3, -1.5, -4.]
+
+g! = forwarddiff_hessian!(f, Float64, fadtype=:typed)
+output = zeros(3, 3)
+g!(args, output)
+@test_approx_eq output hessianf(args)
+
 g = forwarddiff_hessian(f, Float64, fadtype=:typed)
 output = g(args)
-@test_approx_eq output hessianf(args...)
+@test_approx_eq output hessianf(args)
 
 # Testing division
 

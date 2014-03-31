@@ -380,7 +380,29 @@ function atanh{T<:Real, n}(x::FADHessian{T, n})
   FADHessian{T, n}(atanh(x.d), h)
 end
 
+function typed_fad_hessian!{T<:Real}(f::Function, ::Type{T})
+  function g!(x::Vector{T}, hessian_output::Matrix{T})
+    fvalue = f(FADHessian(x))
+    n, k = size(hessian_output, 1), 1
+
+    for i in 1:n
+      for j in 1:i
+        hessian_output[i, j] = fvalue.h[k]
+       k += 1
+      end
+    end
+
+    for i in 1:n
+      for j in (i+1):n
+        hessian_output[i, j] = hessian_output[j, i]
+      end
+    end
+  end
+
+  return g!
+end
+
 function typed_fad_hessian{T<:Real}(f::Function, ::Type{T})
-  g(x::Vector{T}) = hessian(f(FADHessian(x)...))
+  g(x::Vector{T}) = hessian(f(FADHessian(x)))
   return g
 end

@@ -182,4 +182,5 @@ function typed_fad_gradient{T<:Real}(f::Function, ::Type{T})
   return g
 end
 
-# const typed_fad_jacobian = typed_fad_gradient
+const typed_fad_jacobian! = typed_fad_gradient!
+const typed_fad_jacobian = typed_fad_gradient
