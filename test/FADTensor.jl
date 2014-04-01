@@ -64,9 +64,66 @@ output = f(FADTensor(args)...)
 
 # Testing the API
 
+f(x) =
+  x[1]^6-x[2]^5+x[3]^2+x[1]^4*x[2]*x[3]-3*x[1]*x[2]^3*x[3]^2+2*x[1]^2*x[2]^3-4*x[2]^2*x[3]+x[2]*x[3]^2-2*x[1]*x[2]*x[3]
+
+dfdx(x) = 6*x[1]^5+4*x[1]^3*x[2]*x[3]-3*x[2]^3*x[3]^2+4*x[1]*x[2]^3-2*x[2]*x[3]
+dfdy(x) = -5*x[2]^4+x[1]^4*x[3]-9*x[1]*x[2]^2*x[3]^2+6*x[1]^2*x[2]^2-8*x[2]*x[3]+x[3]^2-2*x[1]*x[3]
+dfdz(x) = 2*x[3]+x[1]^4*x[2]-6*x[1]*x[2]^3*x[3]-4*x[2]^2+2*x[2]*x[3]-2*x[1]*x[2]
+gradf(x) = [dfdx(x), dfdy(x), dfdz(x)]
+
+dfdxx(x) = 30*x[1]^4+12*x[1]^2*x[2]*x[3]+4*x[2]^3
+dfdxy(x) = 4*x[1]^3*x[3]-9*x[2]^2*x[3]^2+12*x[1]*x[2]^2-2*x[3]
+dfdyy(x) = -20*x[2]^3-18*x[1]*x[2]*x[3]^2+12*x[1]^2*x[2]-8*x[3]
+dfdxz(x) = 4*x[1]^3*x[2]-6*x[2]^3*x[3]-2*x[2]
+dfdyz(x) = x[1]^4-18*x[1]*x[2]^2*x[3]-8*x[2]+2*x[3]-2*x[1]
+dfdzz(x) = 2-6*x[1]*x[2]^3+2*x[2]
+function hessianf{T<:Real}(x::Vector{T})
+  w = Array(T, 3, 3)
+  w[1, 1] = dfdxx(x)
+  w[2, 1] = w[1, 2] = dfdxy(x)
+  w[2, 2] = dfdyy(x)
+  w[3, 1] = w[1, 3]= dfdxz(x)
+  w[3, 2] = w[2, 3] = dfdyz(x)
+  w[3, 3] = dfdzz(x)
+  w
+end
+
+d2fdxxx(x) = 24*(5*x[1]^3+x[1]*x[2]*x[3])
+d2fdxyx(x) = 12*(x[2]^2+x[1]^2*x[3])
+d2fdxyy(x) = 6*x[2]*(4*x[1]-3*x[3]^2)
+d2fdxzx(x) = 12*x[1]^2*x[2]
+d2fdxzy(x) = -2+4*x[1]^3-18*x[2]^2*x[3]
+d2fdxzz(x) = -6*x[2]^3
+d2fdyyy(x) = 6*(2*x[1]^2-10*x[2]^2-3*x[1]*x[3]^2)
+d2fdyzy(x) = -4*(2+9*x[1]*x[2]*x[3])
+d2fdyzz(x) = 2-18*x[1]*x[2]^2
+d2fdzzz(x) = 0
+function tensorf{T<:Real}(x::Vector{T})
+  w = Array(T, 3, 3, 3)
+  w[1, 1, 1] = d2fdxxx(x)
+  w[2, 1, 1] = w[1, 2, 1] = w[1, 1, 2] = d2fdxyx(x)
+  w[2, 2, 1] = w[2, 1, 2] = w[1, 2, 2] = d2fdxyy(x)
+  w[3, 1, 1] = w[1, 3, 1] = w[1, 1, 3] = d2fdxzx(x)
+  w[3, 2, 1] = w[2, 3, 1] = w[3, 1, 2] = w[1, 3, 2] = w[2, 1, 3] = w[1, 2, 3] = d2fdxzy(x)
+  w[3, 3, 1] = w[3, 1, 3] = w[1, 3, 3] = d2fdxzz(x)
+  w[2, 2, 2] = d2fdyyy(x)
+  w[3, 2, 2] = w[2, 3, 2] = w[2, 2, 3] = d2fdyzy(x)
+  w[3, 3, 2] = w[3, 2, 3] = w[2, 3, 3] = d2fdyzz(x)
+  w[3, 3, 3] = d2fdzzz(x)
+  w
+end
+
+args = [2.3, -1.5, -4.]
+
+g! = forwarddiff_tensor!(f, Float64, fadtype=:typed)
+output = zeros(3, 3, 3)
+g!(args, output)
+@test_approx_eq output tensorf(args)
+
 g = forwarddiff_tensor(f, Float64, fadtype=:typed)
 output = g(args)
-@test_approx_eq output tensorf(args...)
+@test_approx_eq output tensorf(args)
 
 # Testing division
 
