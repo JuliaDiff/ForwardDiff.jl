@@ -17,8 +17,8 @@ Contents:
    :maxdepth: 2
 
    intro.rst
-   dual_fad.rst
    typed_fad.rst
+   dual_fad.rst
    matrix_fad.rst
    powerseries_fad.rst
 
