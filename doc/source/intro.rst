@@ -8,19 +8,18 @@ the different coding approaches to FAD.
 FAD Implementations
 ---------------------------------------------------------------------------------
 
-A synopsis of the FAD implementations of the package is set out below. To appear soon.
+A synopsis of the FAD implementations of the package is set out below.
 
-FAD Using Dual Numbers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**FAD Using Dual Numbers**
 
-Type-Based FAD
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+One available FAD approach makes use of dual numbers, which are represented by the *Dual* type in the *DualNumbers*
+package.
 
-Matrix FAD Using Kronecker and Box Products
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Type-Based FAD**
 
-Power Series FAD Using Generalized Dual Numbers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+**Matrix FAD Using Kronecker and Box Products**
+
+**Power Series FAD Using Generalized Dual Numbers**
 
 The Main API
 ---------------------------------------------------------------------------------
