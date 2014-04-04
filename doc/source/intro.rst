@@ -15,9 +15,9 @@ A synopsis of the FAD implementations of the package is set out below.
 One FAD implementation of the package defines the types *GraDual*, *FADHessian* and *FADTensor* to compute the 
 respective first, second and third-order derivatives of functions :math:`f:\mathbb{R}^n\rightarrow\mathbb{R}^m`. More
 specifically, *GraDual* is used for deriving via FAD gradients and Jacobians, *FADHessian* for Hessians and *FADTensor*
-for tensors, that is derivatives of Hessians. Despite its relatively slow speed, the type-based FAD finds its utility
-in the computation of up to third-order derivatives and, being a well-tested FAD suite itself, in the cross-testing of
-the other FAD methods.
+for tensors, that is derivatives of Hessians. Despite its relatively slow speed, type-based FAD finds its utility in the
+computation of up to third-order derivatives and, being a well-tested FAD suite itself, in the cross-testing of other
+FAD methods.
 
 The *GraDual*, *FADHessian* and *FADTensor* types are used internally by the package. The user is not required to
 instantiate them, since the interface operates at a higher level requiring to define the function to be differentiated.
