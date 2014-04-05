@@ -35,9 +35,38 @@ differentiable function to be inputted.
 
 **Matrix FAD Using Kronecker and Box Products**
 
+To be implemented.
+
 **Power Series FAD Using Generalized Dual Numbers**
+
+To be implemented.
 
 The Main API
 ---------------------------------------------------------------------------------
 
-To appear soon.
+The API consists of functions that in principle take a differentiable function as input and return the k-th order
+derivative of the function.
+
+Input Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To appear.
+
+Output Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To appear.
+
+API Naming Convention
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Three components synthesize the API function names:
+
+- All API routines start with the common prefix *forwarddiff\_*.
+- The second part determines the order k of the outputted derivative function. In particular, valid choices for the
+  second component include *gradient*, *jacobian*, *hessian* and *tensor*.
+- The third and final part of an API function name is an exclamation mark *!*, which may or may not be present. This
+  does not indicate if any API input is modified, but instead informs whether the returned derivative function modifies
+  its input.
+
+Examples
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To appear.
