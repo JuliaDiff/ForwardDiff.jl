@@ -10,7 +10,8 @@ FAD Implementations
 
 A synopsis of the FAD implementations of the package is set out below.
 
-**Type-Based FAD**
+Type-Based FAD
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 One FAD implementation of the package defines the types *GraDual*, *FADHessian* and *FADTensor* to compute the 
 respective first, second and third-order derivatives of functions :math:`f:\mathbb{R}^n\rightarrow\mathbb{R}^m`. More
@@ -22,7 +23,8 @@ FAD methods.
 The *GraDual*, *FADHessian* and *FADTensor* types are used internally by the package. The user is not required to
 instantiate them, since the interface operates at a higher level requiring to define the function to be differentiated.
 
-**FAD Using Dual Numbers**
+FAD Using Dual Numbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Another available FAD approach makes use of dual numbers, which are represented by the *Dual* type in the *DualNumbers*
 package. This approach is suitable for computing only first-order derivatives of functions
@@ -33,11 +35,13 @@ for FAD of gradients and Jacobians. Benchmarks will be provided once all four FA
 The user does not have to interfere with `Dual` numbers given that the higher-level of the API mainly requires the
 differentiable function to be inputted.
 
-**Matrix FAD Using Kronecker and Box Products**
+Matrix FAD Using Kronecker and Box Products
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To be implemented.
 
-**Power Series FAD Using Generalized Dual Numbers**
+Power Series FAD Using Generalized Dual Numbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To be implemented.
 
@@ -45,15 +49,8 @@ The Main API
 ---------------------------------------------------------------------------------
 
 The API consists of functions that in principle take a differentiable function as input and return the k-th order
-derivative of the function.
-
-Input Format
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To appear.
-
-Output Format
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To appear.
+derivative of the function. An abstract description of the API is provided, followed by examples illustrating the
+concepts and usage.
 
 API Naming Convention
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,6 +63,56 @@ Three components synthesize the API function names:
 - The third and final part of an API function name is an exclamation mark *!*, which may or may not be present. This
   does not indicate if any API input is modified, but instead informs whether the returned derivative function modifies
   its input.
+
+Table 1 displays all the API functions, demonstrating which of the available FAD approaches provide the relevant
+functionality.
+
++-----------------------+-------------------------+ 
+| API Function          | FAD Method              | 
+|                       +-------------+-----------+
+|                       | Type-Based  | Dual      | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_gradient! | Yes         | Yes       | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_gradient  | Yes         | Yes       | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_jacobian! | Yes         | Yes       | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_jacobian  | Yes         | Yes       | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_hessian!  | Yes         | No        | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_hessian   | Yes         | No        | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_tensor!   | Yes         | No        | 
++-----------------------+-------------+-----------+ 
+| forwarddiff_tensor    | Yes         | No        | 
++-----------------------+-------------+-----------+ 
+
+**Table 1**: Available API functions and their availability via the package's various FAD implementations.
+
+Input Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every API function takes two required arguments:
+
+- The first required argument is the function to be differentiated and is therefore of type *Function*. The anticipated
+  format of the input function varies depending on the FAD approach. In general the input function can take two possible
+  forms; it can be either *f(x::Vector)* with one vector argument representing the function input or *f!(x::Vector, y)*,
+  in which case *x* holds the function input and y is a dummy variable meant to receive the function output.
+- The second required argument holds the type of the differentiable function's domain and range, and consequently the
+  type of the returned derivatives. For example, it can take values such such *Real* or *Float64*.
+
+The keyword argument *fadtype* succeeds the two required ones. *fadtype* can take one of the values *:typed*, *:dual*,
+*:box* or *:pseries* to indicate the preferred FAD method. It is noted that each API function restricts the available
+values for *fadtype* as explained in Table 1. Furthermore, the *:box* and *:pseries* values will become available once
+the associated FAD methods are implemented.
+
+Any options specific to a FAD method are passed to the API as additional keyword arguments.
+
+Output Format
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+To appear.
 
 Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
