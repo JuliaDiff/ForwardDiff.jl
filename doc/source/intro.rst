@@ -26,7 +26,7 @@ instantiate them, since the interface operates at a higher level requiring to de
 FAD Using Dual Numbers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another available FAD approach makes use of dual numbers, which are represented by the *Dual* type in the *DualNumbers*
+Another coded FAD approach makes use of dual numbers, which are represented by the *Dual* type in the *DualNumbers*
 package. This approach is suitable for computing only first-order derivatives of functions
 :math:`f:\mathbb{R}^n\rightarrow\mathbb{R}^m` and does not have the capacity of the type-based approach to compute
 higher-order derivatives. On the other hand, the dual-based approach is thought to be faster than the type-based one 
@@ -64,7 +64,7 @@ Three components synthesize the API function names:
   does not indicate if any API input is modified, but instead informs whether the returned derivative function modifies
   its input.
 
-Table 1 displays all the API functions, demonstrating which of the available FAD approaches provide the relevant
+Table 1 displays all the API functions, demonstrating which of the package FAD approaches provide the relevant
 functionality.
 
 +-----------------------+-------------------------+ 
@@ -89,7 +89,7 @@ functionality.
 | forwarddiff_tensor    | Yes         | No        | 
 +-----------------------+-------------+-----------+ 
 
-**Table 1**: Available API functions and their availability via the package's various FAD implementations.
+**Table 1**: API functions and their availability via the package's various FAD implementations.
 
 Input Format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,21 +98,28 @@ Every API function takes two required arguments:
 
 - The first required argument is the function to be differentiated and is therefore of type *Function*. The anticipated
   format of the input function varies depending on the FAD approach. In general the input function can take two possible
-  forms; it can be either *f(x::Vector)* with one vector argument representing the function input or *f!(x::Vector, y)*,
-  in which case *x* holds the function input and y is a dummy variable meant to receive the function output.
+  forms; it can be either *f(x)* with one argument representing the function input or *f!(x, y)*, in which case *x*
+  holds the function input and y is a dummy variable meant to receive the function output. For instance, for a function
+  :math:`f:\mathbb{R}^n\rightarrow\mathbb{R}^m` the input *x* of *f(x)* is expected to be a vector.
 - The second required argument holds the type of the differentiable function's domain and range, and consequently the
   type of the returned derivatives. For example, it can take values such such *Real* or *Float64*.
 
 The keyword argument *fadtype* succeeds the two required ones. *fadtype* can take one of the values *:typed*, *:dual*,
 *:box* or *:pseries* to indicate the preferred FAD method. It is noted that each API function restricts the available
-values for *fadtype* as explained in Table 1. Furthermore, the *:box* and *:pseries* values will become available once
+values for *fadtype* as explained in Table 1. Furthermore, the *:box* and *:pseries* values will be released once
 the associated FAD methods are implemented.
 
 Any options specific to a FAD method are passed to the API as additional keyword arguments.
 
 Output Format
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To appear.
+
+Every API function returns a derivative as a function. The name of the API method prerscribes the format of the
+returned derivative. To elaborate, presume a function :math:`f:\mathbb{R}^n\rightarrow\mathbb{R}` with gradient
+:math:`g(x):=\nabla f(x)`. Then *forwarddif_gradient* returns the function *g(x::Vector)*, whereas
+*forwarddif_gradient!* returns *g!(x::Vector, y::Vector)*, where *y* is designated to store the FAD value of
+the gradient. In other words, *g(x)* outputs the gradient value via a *return* statement while *g!(x, y)* saves the
+gradient in *y*.
 
 Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
