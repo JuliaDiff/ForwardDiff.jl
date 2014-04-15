@@ -123,4 +123,26 @@ gradient in *y*.
 
 Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-To appear.
+
+As a first illustration of the interface, consider the function :math:`f:\mathbb{R}^2\rightarrow\mathbb{R}^3` defined
+by :math:`f(x, y) = (x^2+y, 3x, x^2y^3)`. Interest is in computing the Jacobian of *f*, which is given
+by
+
+.. math::
+  :label: jac_ex1
+
+  J_f(x, y) =
+  \left(\begin{matrix} 2x & 1 \\
+    3 & 0 \\
+    2xy^3 & 3(xy)^2 \end{matrix}\right)
+
+The code for computing :math:`J_f(2.1,1.5)` using typed-based FAD is provided below:
+
+.. code-block:: julia
+
+  using ForwardDiff
+
+  f(x) = [x[1]^2+x[2], 3*x[1], x[1]^2*x[2]^3]
+  g = forwarddiff_jacobian(f, Float64, fadtype=:typed)
+
+  g([2.1, 1.5])
