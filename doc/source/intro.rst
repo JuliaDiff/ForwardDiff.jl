@@ -129,7 +129,6 @@ by :math:`f(x, y) = (x^2+y, 3x, x^2y^3)`. Interest is in computing the Jacobian 
 by
 
 .. math::
-  :label: jac_ex1
 
   J_f(x, y) =
   \left(\begin{matrix} 2x & 1 \\
