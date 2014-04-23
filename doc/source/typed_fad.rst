@@ -1,8 +1,8 @@
 Type-Based FAD
 ================================================================================
 
-In general, type-based FAD is invoked by setting the keyword argument *fadtype* to *:typed* in the relevant API
-functions of the package.
+Type-based FAD is invoked by setting the keyword argument *fadtype* to *:typed* in the relevant API functions of the
+package. The function *f* to be differentiated has the same signature *f(x::Vector)* across all type-based FAD methods.
 
 First-Order Derivatives
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -16,9 +16,9 @@ The following two API functions are used for computing the gradient of a functio
 - *forwarddiff_gradient(f, ::Type, fadtype=:typed)*,
 - *forwarddiff_gradient!(f, ::Type, fadtype=:typed)*.
 
-The *f* argument of *forwarddiff_gradient* takes a vector argument, i.e. has signature *f(x::Vector)* and returns its
-value via a *return* statement in the body of *f*. On the other hand, the *f* argument of *forwarddiff_gradient!*
-has the signature *f(x::Vector, y::Vector)*, where *x* and *y* hold the input and output vectors respectively.
+*forwarddiff_gradient* returns the gradient in the form of a function *g(x::Vector)*. On the other hand,
+*forwarddiff_gradient!* returns the gradient as a function with signature *g!(x::Vector, y::Vector)*, where *x* and *y*
+hold the input and output vectors respectively.
 
 *::Type* specifies the type of involved arithmetic. Typically, this argument is set to *Float64*.
 
@@ -61,8 +61,8 @@ methods
 - *forwarddiff_hessian(f, ::Type, fadtype=:typed)*,
 - *forwarddiff_hessian!(f, ::Type, fadtype=:typed)*.
 
-The *f* argument of *forwarddiff_hessian* has signature *f(x::Vector)*, while the signature of the *f* argument of
-*forwarddiff_hessian!* is *f(x::Vector, y::Vector)*, *x* and *y* being the input and output vectors respectively.
+*forwarddiff_hessian* returns the Hessian *h(x::Vector)*, while the signature of the Hessian function returned by
+*forwarddiff_hessian!* is *h!(x::Vector, y::Matrix)*, *x* and *y* being the input vector and output matrix respectively.
 
 For example, consider the function :math:`f:\mathbb{R}^2\rightarrow\mathbb{R}` defined as
 :math:`f(x, y) = x^2y^2+x^3`. Its Hessian is given by
@@ -109,7 +109,9 @@ The partial derivatives of a Hessian matrix, commonly referred to as tensors, of
 - *forwarddiff_tensor(f, ::Type, fadtype=:typed)*,
 - *forwarddiff_tensor!(f, ::Type, fadtype=:typed)*.
 
-The function specification of *f* is the same as the one used for Hessians.
+*forwarddiff_tensor* returns the tensor function in the form *t(x::Vector)*, while *forwarddiff_tensor!* returns the
+tensor function with signature *t(x::Vector, y::Array)*, where *x* is the *n*-length input vector and *y* is the
+:math:`n\times n \times n` output array.
 
 For instance, the tensors of :math:`f(x, y) = x^2y^2+x^3` are
 
@@ -125,7 +127,7 @@ For instance, the tensors of :math:`f(x, y) = x^2y^2+x^3` are
     4x & 0
   \end{matrix}\right).
 
-To compute :math:`\frac{\partial H_f(x, y)}{\partial x}` and :math:`\frac{\partial H_f(x, y)}{\partial x}` via
+To compute :math:`\frac{\partial H_f(x, y)}{\partial x}` and :math:`\frac{\partial H_f(x, y)}{\partial y}` via
 typed-based FAD, the API is used as follows:
 
 .. code-block:: julia
