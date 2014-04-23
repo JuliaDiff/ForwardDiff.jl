@@ -16,11 +16,11 @@ The following two API functions are used for computing the gradient of a functio
 - *forwarddiff_gradient(f, ::Type, fadtype=:typed)*,
 - *forwarddiff_gradient!(f, ::Type, fadtype=:typed)*.
 
+*::Type* specifies the type of involved arithmetic. Typically, this argument is set to *Float64*.
+
 *forwarddiff_gradient* returns the gradient in the form of a function *g(x::Vector)*. On the other hand,
 *forwarddiff_gradient!* returns the gradient as a function with signature *g!(x::Vector, y::Vector)*, where *x* and *y*
 hold the input and output vectors respectively.
-
-*::Type* specifies the type of involved arithmetic. Typically, this argument is set to *Float64*.
 
 To exemplify usage, consider computhing the derivative :math:`g(x)=x` of :math:`f(x)=x^2`.
 
@@ -50,8 +50,8 @@ following methods can be used:
 - *forwarddiff_jacobian!(f, ::Type, fadtype=:typed)*.
 
 Note that these functions are aliases of the corresponding *forwarddiff_gradient* and *forwarddiff_gradient*, therefore
-their invocation is not altered. These aliases are provided in order to comply with conventional mathematical
-terminology.
+their invocation is not altered. The Jacobian functions returned by *forwarddiff_jacobian* and *forwarddiff_jacobian!*
+have the respective forms *j(x::Vector)* and *j!(x::Vector, y::Matrix)*, where *y* holds the evaluated Jacobian.
 
 Second-Order Derivatives (Hessians)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

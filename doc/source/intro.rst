@@ -144,10 +144,9 @@ The code for computing :math:`J_f(2.1,1.5)` using typed-based FAD is provided be
   using ForwardDiff
 
   f(x) = [x[1]^2+x[2], 3*x[1], x[1]^2*x[2]^3]
-  g = forwarddiff_jacobian(f, Float64, fadtype=:typed)
+  j = forwarddiff_jacobian(f, Float64, fadtype=:typed)
 
-  g([2.1, 1.5])
-
+  j([2.1, 1.5])
   # 3x2 Array{Float64,2}:
   #   4.2     1.0   
   #   3.0     0.0   
@@ -157,8 +156,8 @@ A few points are noted about the Julia code of this first example:
 
 - If the range of *f* is in :math:`\mathbb{R}^m,~m>1`, then *f* returns a vector, not a tuple. If :math:`m=1`, then
   *f* returns a scalar.
-- *g* holds the Jacobian of *f*. So *g* is the function defined by equation :eq:`jacobianex01`.
+- *j* holds the Jacobian of *f*. So *g* is the function defined by equation :eq:`jacobianex01`.
 - *forwarddiff_jacobian* is called rather than *forwarddiff_jacobian!*, which means that *g(x::Vector)* takes a single
   vector argument and returns the evaluated Jacobian matrix :math:`J_f(x[1], x[2])`.
-- To compute the Jacobian :math:`J_f(x,y)~,(x,y)\in\mathbb{R}^2`, the function call *g([x, y])* is made as exemplified
+- To compute the Jacobian :math:`J_f(x,y)~,(x,y)\in\mathbb{R}^2`, the function call *j([x, y])* is made as exemplified
   in line 6 of the above code.
