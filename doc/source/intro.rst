@@ -129,7 +129,7 @@ by :math:`f(x, y) = (x^2+y, 3x, x^2y^3)`. Interest is in computing the Jacobian 
 by
 
 .. math::
-  :label: jacobianex01
+  :label: `jacobianex01`
 
   J_f(x, y) =
   \left(\begin{matrix} 2x & 1 \\
@@ -147,6 +147,11 @@ The code for computing :math:`J_f(2.1,1.5)` using typed-based FAD is provided be
   g = forwarddiff_jacobian(f, Float64, fadtype=:typed)
 
   g([2.1, 1.5])
+
+  # 3x2 Array{Float64,2}:
+  #   4.2     1.0   
+  #   3.0     0.0   
+  #  14.175  29.7675
 
 A few points are noted about the Julia code of this first example:
 
