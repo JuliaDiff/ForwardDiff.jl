@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/scidom/ForwardDiff.jl.png)](https://travis-ci.org/scidom/ForwardDiff.jl)
+[![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.png)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl)
 
 ForwardDiff.jl
 ================================================================================
