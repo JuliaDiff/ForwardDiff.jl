@@ -35,15 +35,15 @@ const jacobian = grad
 
 convert{T<:Real, n}(::Type{GraDual{T, n}}, x::GraDual{T, n}) = x
 convert{T<:Real, n}(::Type{GraDual{T, n}}, x::T) = GraDual{T, n}(x, zeros(T, n))
-convert{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, x::S) = 
+convert{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, x::S) =
   GraDual{T, n}(convert(T, x), zeros(T, n))
-convert{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, x::GraDual{S, n}) = 
+convert{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, x::GraDual{S, n}) =
   GraDual{T, n}(convert(T, x.v), convert(Vector{T}, x.g))
 convert{T<:Real, S<:Real, n}(::Type{T}, x::GraDual{S, n}) =
   (grad(x) == zeros(S, n) ? convert(T, x.v) : throw(InexactError()))
-  
+
 promote_rule{T<:Real, n}(::Type{GraDual{T, n}}, ::Type{T}) = GraDual{T, n}
-promote_rule{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, ::Type{S}) = 
+promote_rule{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, ::Type{S}) =
   GraDual{promote_type(T, S), n}
 promote_rule{T<:Real, S<:Real, n}(::Type{GraDual{T, n}}, ::Type{GraDual{S,n}}) =
   GraDual{promote_type(T, S), n}
@@ -56,9 +56,9 @@ iszero{T<:Real, n}(x::GraDual{T, n}) = isconstant(x) && (x.v == zero(T))
 isfinite{T<:Real, n}(x::GraDual{T, n}) =
   isfinite(x.v) && (isfinite(x.g) == ones(T, n))
 
-=={T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n}) = 
+=={T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n}) =
   (x1.v == x2.v) && (x1.g == x2.g)
-  
+
 show(io::IO, x::GraDual) = print(io, "GraDual(", value(x), ",\n", grad(x), ")")
 
 function conj{T<:Real, n}(x::GraDual{T, n})
@@ -168,10 +168,11 @@ acosh{T<:Real, n}(x::GraDual{T, n}) =
 atanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atanh(x.v), x.g/(1-x.v*x.v))
 
 function typed_fad_gradient!{T<:Real}(f::Function, ::Type{T})
-  function g!(x::Vector{T}, gradient_output::Vector{T})
+  function g!(x::Vector{T}, gradient_output::Matrix{T})
     fvalue = f(GraDual(x))
-    for i = 1:length(gradient_output)
-      gradient_output[i] = fvalue.g[i]
+    m, n = size(gradient_output)
+    for i in 1:m, j in 1:n
+      gradient_output[i, j] = fvalue[i].g[j]
     end
   end
   return g!
