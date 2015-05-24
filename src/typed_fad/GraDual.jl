@@ -153,8 +153,8 @@ end
 
 exp{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(exp(x.v), exp(x.v)*x.g)
 log{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(log(x.v), x.g/x.v)
-log2{T<:Real, n}(x::GraDual{T, n}) = log(x)/oftype(T, 0.6931471805599453)
-log10{T<:Real, n}(x::GraDual{T, n}) = log(x)/oftype(T, 2.302585092994046)
+log2{T<:Real, n}(x::GraDual{T, n}) = log(x)/convert(T, 0.6931471805599453)
+log10{T<:Real, n}(x::GraDual{T, n}) = log(x)/convert(T, 2.302585092994046)
 
 sin{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(sin(x.v), cos(x.v)*x.g)
 cos{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(cos(x.v), -sin(x.v)*x.g)

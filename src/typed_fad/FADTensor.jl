@@ -101,7 +101,7 @@ show(io::IO, x::FADTensor) =
 
 function t2h(i::Int64, j::Int64)
   m, n = i >= j ? (i, j) : (j, i)
-  int64(m*(m-1)/2+n)
+  round(Int64, m*(m-1)/2+n)
 end
 
 +{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n}) = FADTensor{T, n}(x1.h+x2.h, x1.t+x2.t)
@@ -330,7 +330,7 @@ function log2{T<:Real, n}(x::FADTensor{T, n})
            +x.h.d.g[i]*x.h.h[m]
            +x.h.d.g[j]*x.h.h[l]
           ))/x.h.d.v
-          +x.t[q])/(x.h.d.v*oftype(T, 0.6931471805599453))
+          +x.t[q])/(x.h.d.v*convert(T, 0.6931471805599453))
         )
         q += 1
       end
@@ -352,7 +352,7 @@ function log10{T<:Real, n}(x::FADTensor{T, n})
            +x.h.d.g[i]*x.h.h[m]
            +x.h.d.g[j]*x.h.h[l]
           ))/x.h.d.v
-          +x.t[q])/(x.h.d.v*oftype(T, 2.302585092994046))
+          +x.t[q])/(x.h.d.v*convert(T, 2.302585092994046))
         )
         q += 1
       end

@@ -211,7 +211,7 @@ function log2{T<:Real, n}(x::FADHessian{T, n})
   for i in 1:n
     for j in 1:i
       h[k] = ((x.d.v*x.h[k]-x.d.g[i]*x.d.g[j])
-      /(x.d.v*x.d.v*oftype(T, 0.6931471805599453)))
+      /(x.d.v*x.d.v*convert(T, 0.6931471805599453)))
       k += 1
     end
   end
@@ -224,7 +224,7 @@ function log10{T<:Real, n}(x::FADHessian{T, n})
   for i in 1:n
     for j in 1:i
       h[k] = ((x.d.v*x.h[k]-x.d.g[i]*x.d.g[j])
-      /(x.d.v*x.d.v*oftype(T, 2.302585092994046)))
+      /(x.d.v*x.d.v*convert(T, 2.302585092994046)))
       k += 1
     end
   end
