@@ -59,8 +59,11 @@ isfinite{T<:Real, n}(x::GraDual{T, n}) =
 =={T<:Real, n}(x1::GraDual{T, n}, x2::GraDual{T, n}) = 
   (x1.v == x2.v) && (x1.g == x2.g)
 
-isless(x1::GraDual, x2) = isless(value(x1), x2)
-isless(x1, x2::GraDual) = isless(x1, value(x2))
+isless(x1::GraDual, x2::GraDual) = isless(value(x1), value(x2))
+isless(x1::GraDual, x2::Dual) = isless(value(x1), real(x2))
+isless(x1::GraDual, x2::Number) = isless(value(x1), x2)
+isless(x1::Dual, x2::GraDual) = isless(real(x1), value(x2))
+isless(x1::Number, x2::GraDual) = isless(x1, value(x2))
 
 show(io::IO, x::GraDual) = print(io, "GraDual(", value(x), ",\n", grad(x), ")")
 
