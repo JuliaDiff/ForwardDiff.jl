@@ -104,6 +104,7 @@ function *{T<:Real, n}(x1::FADHessian{T, n}, x2::FADHessian{T, n})
   FADHessian{T, n}(x1.d*x2.d, h)
 end
 
+*{n}(x1::Bool, x2::FADHessian{Bool, n}) = x1*x2
 *{T<:Real, n}(x1::Bool, x2::FADHessian{T, n}) = convert(T, x1)*x2
 *{T<:Real, n}(x1::T, x2::FADHessian{T, n}) = FADHessian{T, n}(x1*x2.d, x1*x2.h)
 *{n}(x1::FADHessian{Bool, n}, x2::Bool) = x1*x2

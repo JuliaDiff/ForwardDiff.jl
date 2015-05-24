@@ -129,6 +129,7 @@ function *{T<:Real, n}(x1::FADTensor{T, n}, x2::FADTensor{T, n})
   FADTensor{T, n}(x1.h*x2.h, t)
 end
 
+*{n}(x1::Bool, x2::FADTensor{Bool, n}) = x1*x2
 *{T<:Real, n}(x1::Bool, x2::FADTensor{T, n}) = convert(T, x1)*x2
 *{T<:Real, n}(x1::T, x2::FADTensor{T, n}) = FADTensor{T, n}(x1*x2.h, x1*x2.t)
 *{n}(x1::FADTensor{Bool, n}, x2::Bool) = x1*x2
