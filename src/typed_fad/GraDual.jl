@@ -67,6 +67,16 @@ isless(x1::Number, x2::GraDual) = isless(x1, value(x2))
 
 show(io::IO, x::GraDual) = print(io, "GraDual(", value(x), ",\n", grad(x), ")")
 
+function transpose{T<:Real, n}(x::GraDual{T, n})
+  g = Array(T, n)
+  for i in 1:n
+    g[i] = x.g[i]
+  end
+  GraDual{T, n}(x.v, g)
+end
+
+ctranspose{T<:Real, n}(x::GraDual{T, n}) = transpose(x)
+
 function conj{T<:Real, n}(x::GraDual{T, n})
   g = Array(T, n)
   for i in 1:n
