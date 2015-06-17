@@ -170,7 +170,7 @@ atanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atanh(x.v), x.g/(1-x.v*x.v))
 function typed_fad_gradient!{T<:Real}(f::Function, ::Type{T})
   function g!(x::Vector{T}, gradient_output::Matrix{T})
     fvalue = f(GraDual(x))
-    m = size(gradient_output)[1]
+    m = length(fvalue)
     for i in 1:m
       gradient_output[i, :] = fvalue[i].g[:]
     end
