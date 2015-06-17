@@ -31,7 +31,7 @@ gradf(x) = [dfdx(x), dfdy(x), dfdz(x)]
 args = [2.3, -1.5, -4.]
 
 g! = forwarddiff_gradient!(f, Float64, fadtype=:typed)
-output = zeros(3)
+output = Array(Float64, 1, 3)
 g!(args, output)
 @test_approx_eq output gradf(args)
 
@@ -85,7 +85,7 @@ output = f(GraDual(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 
-# Testing exp, log, log2 and and log10 
+# Testing exp, log, log2 and and log10
 
 f(x, y, z) = log2(x)*exp(y*z)+log(x^4*y)/log10(z)
 
