@@ -6,16 +6,20 @@ module ForwardDiff
   include("FADNumber.jl")
   include("FADHessian.jl")
   include("FADTensor.jl")
+  include("autodiff_funcs.jl")
 
   export NDualTup,
          NDualVec,
          gradient!,
          gradient,
+         gradient_func,
          jacobian!,
          jacobian,
          hessian!,
          hessian,
+         hessian_func,
          tensor!,
-         tensor
+         tensor,
+         tensor_func
 
 end # module ForwardDiff
