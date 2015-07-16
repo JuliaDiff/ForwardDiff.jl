@@ -1,5 +1,6 @@
 module ForwardDiff
   using DualNumbers
+  using NDuals
   
   importall Base
 
