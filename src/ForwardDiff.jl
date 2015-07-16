@@ -3,6 +3,11 @@ module ForwardDiff
   
   importall Base
 
+  include("GraDual.jl")
+  include("FADHessian.jl")
+  include("FADTensor.jl")
+  include("api.jl")
+
   export
     # API
     forwarddiff_gradient!,
@@ -28,10 +33,4 @@ module ForwardDiff
     tensor,
     isfadtensor
 
-  include(joinpath("dual_fad", "univariate_range.jl"))
-  include(joinpath("dual_fad", "multivariate_range.jl"))
-  include(joinpath("typed_fad", "GraDual.jl"))
-  include(joinpath("typed_fad", "FADHessian.jl"))
-  include(joinpath("typed_fad", "FADTensor.jl"))
-  include("api.jl")
 end # module ForwardDiff
