@@ -344,3 +344,51 @@ output = f(FADHessian(args)...)
 @test_approx_eq value(output) f(args...)
 @test_approx_eq grad(output) gradf(args...)
 @test_approx_eq hessian(output) hessianf(args...)
+
+# Testing log gamma-related functions
+f(x, y) = lgamma(x+2*y)
+dfdx(x, y) = digamma(x+2*y)
+dfdy(x, y) = 2*digamma(x+2.*y)
+gradf(x, y) = [dfdx(x, y), dfdy(x, y)]
+
+dfdxx(x, y) = trigamma(x+2*y)
+dfdxy(x, y) = 2*trigamma(x+2*y)
+dfdyy(x, y) = 4*trigamma(x+2*y)
+function hessianf{T<:Real}(x::T, y::T)
+  w = Array(T, 2, 2)
+  w[1, 1] = dfdxx(x, y)
+  w[2, 1] = w[1, 2] = dfdxy(x, y)
+  w[2, 2] = dfdyy(x, y)
+  w
+end
+
+args = [1.1, 2.1]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
+
+
+f(x, y) = digamma(x+2*y)
+dfdx(x, y) = trigamma(x+2*y)
+dfdy(x, y) = 2*trigamma(x+2.*y)
+gradf(x, y) = [dfdx(x, y), dfdy(x, y)]
+
+dfdxx(x, y) = polygamma(2, x+2*y)
+dfdxy(x, y) = 2*polygamma(2, x+2*y)
+dfdyy(x, y) = 4*polygamma(2, x+2*y)
+function hessianf{T<:Real}(x::T, y::T)
+  w = Array(T, 2, 2)
+  w[1, 1] = dfdxx(x, y)
+  w[2, 1] = w[1, 2] = dfdxy(x, y)
+  w[2, 2] = dfdyy(x, y)
+  w
+end
+
+args = [1.1, 2.1]
+output = f(FADHessian(args)...)
+
+@test_approx_eq value(output) f(args...)
+@test_approx_eq grad(output) gradf(args...)
+@test_approx_eq hessian(output) hessianf(args...)
