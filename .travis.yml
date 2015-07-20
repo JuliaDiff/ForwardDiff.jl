@@ -3,6 +3,7 @@ julia:
     - nightly
 notifications:
     email: false
+sudo: false
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
     - julia -e 'Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.test("ForwardDiff")';
