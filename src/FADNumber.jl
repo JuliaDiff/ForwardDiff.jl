@@ -23,6 +23,9 @@ abstract FADNumber{N,T<:Real,C} <: Number
 halfhesslen(n) = div(n*(n+1),2) # correct length(hess(::FADNumber))
 halftenslen(n) = div(n*(n+1)*(n+2),6) # correct length(tens(::FADNumber))
 
+switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
+switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
+
 grad(fad::FADNumber, i) = partials(grad(fad), i)
 hess(fad::FADNumber, i) = hess(fad)[i]
 tens(fad::FADNumber, i) = tens(fad)[i]

@@ -9,9 +9,6 @@ module ForwardDiff
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
 
-    switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
-    switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
-
     include("FADNumber.jl")
     include("grad/FADGradient.jl")
     include("FADHessian.jl")
