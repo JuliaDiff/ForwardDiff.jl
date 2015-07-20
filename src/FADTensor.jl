@@ -1,38 +1,33 @@
-immutable FADTensor{N,T,D} <: FADNumber{N,T,D}
-    hess::FADHessian{N,T,D}
+immutable FADTensor{N,T,C} <: FADNumber{N,T,C}
+    hess::FADHessian{N,T,C}
     tens::Vector{T}
-    function FADTensor(hess::FADHessian{N,T,D}, tens::Vector{T})
+    function FADTensor(hess::FADHessian{N,T,C}, tens::Vector{T})
         @assert length(tens) == halftenslen(N)
         return new(hess, tens)
     end
 end
 
-function FADTensor{N,T,D}(hess::FADHessian{N,T,D},
+function FADTensor{N,T,C}(hess::FADHessian{N,T,C},
                           tens::Vector=zeros(T, halftenslen(N)))
-    return FADTensor{N,T,D}(hess, tens)
+    return FADTensor{N,T,C}(hess, tens)
 end
 
 ##############################
 # Utility/Accessor Functions #
 ##############################
-zero{N,T,D}(::Type{FADTensor{N,T,D}}) = FADTensor(zero(FADHessian{N,T,D}), zeros(T, halftenslen(n)))
-one{N,T,D}(::Type{FADTensor{N,T,D}}) = FADTensor(one(FADHessian{N,T,D}), zeros(T, halftenslen(n)))
+zero{N,T,C}(::Type{FADTensor{N,T,C}}) = FADTensor(zero(FADHessian{N,T,C}), zeros(T, halftenslen(n)))
+one{N,T,C}(::Type{FADTensor{N,T,C}}) = FADTensor(one(FADHessian{N,T,C}), zeros(T, halftenslen(n)))
 
+grad(t::FADTensor) = grad(hess(t))
 hess(t::FADTensor) = t.hess
 tens(t::FADTensor) = t.tens
-grad(t::FADTensor) = grad(hess(t))
 
-neps{N,T,D}(::Type{FADTensor{N,T,D}}) = N
-eltype{N,T,D}(::Type{FADTensor{N,T,D}}) = T
+npartials{N,T,C}(::Type{FADTensor{N,T,C}}) = N
+eltype{N,T,C}(::Type{FADTensor{N,T,C}}) = T
 
 function isconstant(t::FADTensor)
     zeroT = zero(eltype(t))
     return isconstant(hess(t)) && all(x -> x == zeroT, tens(h))
-end
-
-function isfinite(t::FADTensor)
-    oneT = one(eltype(t))
-    return isfinite(hess(t)) && all(x -> x == oneT, tens(h))
 end
 
 =={N}(a::FADTensor{N}, b::FADTensor{N}) = (hess(a) == hess(b)) && (tens(a) == tens(b))
@@ -40,11 +35,11 @@ end
 ########################
 # Conversion/Promotion #
 ########################
-convert{N,T,D}(::Type{FADTensor{N,T,D}}, t::FADTensor{N,T,D}) = t
-convert{N,T,D}(::Type{FADTensor{N,T,D}}, x::Real) = FADTensor(D(x), zeros(T, halftenslen(N)))
+convert{N,T,C}(::Type{FADTensor{N,T,C}}, t::FADTensor{N,T,C}) = t
+convert{N,T,C}(::Type{FADTensor{N,T,C}}, x::Real) = FADTensor(FADHessian{N,T,C}(x), zeros(T, halftenslen(N)))
 
-function convert{N,T,D}(::Type{FADTensor{N,T,D}}, t::FADTensor{N})
-    return FADTensor(convert(FADHessian{N,T,D}, grad(t)), tens(t))
+function convert{N,T,C}(::Type{FADTensor{N,T,C}}, t::FADTensor{N})
+    return FADTensor(convert(FADHessian{N,T,C}, grad(t)), tens(t))
 end
 
 function convert{T<:Real}(::Type{T}, t::FADTensor)
@@ -55,10 +50,16 @@ function convert{T<:Real}(::Type{T}, t::FADTensor)
     end
 end
 
-promote_rule{N,T,D}(::Type{FADTensor{N,T,D}}, ::Type{T}) = FADTensor{N,T,D}
-promote_rule{N,T,D,S}(::Type{FADTensor{N,T,D}}, ::Type{S}) = FADTensor{N,promote_type(T, S),promote_type(D, S)}
-function promote_rule{N,T1,D1,T2,D2}(::Type{FADTensor{N,T1,D1}}, ::Type{FADTensor{N,T2,D2}})
-    return FADTensor{N,promote_type(T1, T2),promote_type(D1, D2)}
+promote_rule{N,T,C}(::Type{FADTensor{N,T,C}}, ::Type{T}) = FADTensor{N,T,C}
+
+function promote_rule{N,T,C,S}(::Type{FADTensor{N,T,C}}, ::Type{S})
+    R = promote_type(T, S)
+    return FADTensor{N,R,switch_eltype(C, R)}
+end
+
+function promote_rule{N,T1,C1,T2,C2}(::Type{FADTensor{N,T1,C1}}, ::Type{FADTensor{N,T2,C2}})
+    R = promote_type(T1, T2)
+    return FADTensor{N,R,switch_eltype(C1, R)}
 end
 
 ######################

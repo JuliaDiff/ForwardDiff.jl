@@ -1,38 +1,33 @@
-immutable FADHessian{N,T,D} <: FADNumber{N,T,D}
-    grad::D 
+immutable FADHessian{N,T,C} <: FADNumber{N,T,C}
+    grad::FADGradient{N,T,C} 
     hess::Vector{T}
-    function FADHessian(grad::NDual{N,T}, hess::Vector)
+    function FADHessian(grad::FADGradient{N,T,C}, hess::Vector)
         @assert length(hess) == halfhesslen(N)
         return new(grad, hess)
     end
 end
 
-function FADHessian{N,T}(grad::NDual{N,T}, 
-                         hess::Vector=zeros(T, halfhesslen(N)))
-    return FADHessian{N,T,typeof(grad)}(grad, hess)
+function FADHessian{N,T,C}(grad::FADGradient{N,T,C},
+                           hess::Vector=zeros(T, halfhesslen(N)))
+    return FADHessian{N,T,C}(grad, hess)
 end
 
 ##############################
 # Utility/Accessor Functions #
 ##############################
-zero{N,T,D}(::Type{FADHessian{N,T,D}}) = FADHessian(zero(D), zeros(T, halfhesslen(N)))
-one{N,T,D}(::Type{FADHessian{N,T,D}}) = FADHessian(one(D), zeros(T, halfhesslen(N)))
+zero{N,T,C}(::Type{FADHessian{N,T,C}}) = FADHessian(zero(FADGradient{N,T,C}), zeros(T, halfhesslen(N)))
+one{N,T,C}(::Type{FADHessian{N,T,C}}) = FADHessian(one(FADGradient{N,T,C}), zeros(T, halfhesslen(N)))
 
+grad(h::FADHessian) = h.grad
 hess(h::FADHessian) = h.hess
 tens(h::FADHessian) = error("FADHessians do not store tensor values")
-grad(h::FADHessian) = h.grad
 
-neps{N,T,D}(::Type{FADHessian{N,T,D}}) = N
-eltype{N,T,D}(::Type{FADHessian{N,T,D}}) = T
+npartials{N,T,C}(::Type{FADHessian{N,T,C}}) = N
+eltype{N,T,C}(::Type{FADHessian{N,T,C}}) = T
 
 function isconstant(h::FADHessian)
     zeroT = zero(eltype(h))
-    return isreal(grad(h)) && all(x -> x == zeroT, hess(h))
-end
-
-function isfinite(h::FADHessian)
-    oneT = one(eltype(h))
-    return isfinite(grad(h)) && all(x -> x == oneT, hess(h))
+    return isconstant(grad(h)) && all(x -> x == zeroT, hess(h))
 end
 
 =={N}(a::FADHessian{N}, b::FADHessian{N}) = (grad(a) == grad(b)) && (hess(a) == hess(b))
@@ -40,11 +35,11 @@ end
 ########################
 # Conversion/Promotion #
 ########################
-convert{N,T,D}(::Type{FADHessian{N,T,D}}, h::FADHessian{N,T,D}) = h
-convert{N,T,D}(::Type{FADHessian{N,T,D}}, x::Real) = FADHessian(D(x), zeros(T, halfhesslen(N)))
+convert{N,T,C}(::Type{FADHessian{N,T,C}}, h::FADHessian{N,T,C}) = h
+convert{N,T,C}(::Type{FADHessian{N,T,C}}, x::Real) = FADHessian(FADGradient{N,T,C}(x), zeros(T, halfhesslen(N)))
 
-function convert{N,T,D}(::Type{FADHessian{N,T,D}}, h::FADHessian{N})
-    return FADHessian(convert(D, grad(h)), hess(h))
+function convert{N,T,C}(::Type{FADHessian{N,T,C}}, h::FADHessian{N})
+    return FADHessian(convert(C, grad(h)), hess(h))
 end
 
 function convert{T<:Real}(::Type{T}, h::FADHessian)
@@ -55,10 +50,16 @@ function convert{T<:Real}(::Type{T}, h::FADHessian)
     end
 end
 
-promote_rule{N,T,D}(::Type{FADHessian{N,T,D}}, ::Type{T}) = FADHessian{N,T,D}
-promote_rule{N,T,D,S}(::Type{FADHessian{N,T,D}}, ::Type{S}) = FADHessian{N,promote_type(T, S),promote_type(D, S)}
-function promote_rule{N,T1,D1,T2,D2}(::Type{FADHessian{N,T1,D1}}, ::Type{FADHessian{N,T2,D2}})
-    return FADHessian{N,promote_type(T1, T2),promote_type(D1, D2)}
+promote_rule{N,T,C}(::Type{FADHessian{N,T,C}}, ::Type{T}) = FADHessian{N,T,C}
+
+function promote_rule{N,T,C,S}(::Type{FADHessian{N,T,C}}, ::Type{S})
+    R = promote_type(T, S)
+    return FADHessian{N,R,switch_eltype(C, R)}
+end
+
+function promote_rule{N,T1,C1,T2,C2}(::Type{FADHessian{N,T1,C1}}, ::Type{FADHessian{N,T2,C2}})
+    R = promote_type(T1, T2)
+    return FADHessian{N,R,switch_eltype(C1, R)}
 end
 
 #######################
