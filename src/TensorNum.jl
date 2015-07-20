@@ -1,48 +1,48 @@
-immutable FADTensor{N,T,C} <: FADNumber{N,T,C}
-    hess::FADHessian{N,T,C}
+immutable TensorNum{N,T,C} <: AutoDiffNum{N,T,C}
+    hess::HessianNum{N,T,C}
     tens::Vector{T}
-    function FADTensor(hess::FADHessian{N,T,C}, tens::Vector{T})
+    function TensorNum(hess::HessianNum{N,T,C}, tens::Vector{T})
         @assert length(tens) == halftenslen(N)
         return new(hess, tens)
     end
 end
 
-function FADTensor{N,T,C}(hess::FADHessian{N,T,C},
+function TensorNum{N,T,C}(hess::HessianNum{N,T,C},
                           tens::Vector=zeros(T, halftenslen(N)))
-    return FADTensor{N,T,C}(hess, tens)
+    return TensorNum{N,T,C}(hess, tens)
 end
 
 ##############################
 # Utility/Accessor Functions #
 ##############################
-zero{N,T,C}(::Type{FADTensor{N,T,C}}) = FADTensor(zero(FADHessian{N,T,C}), zeros(T, halftenslen(n)))
-one{N,T,C}(::Type{FADTensor{N,T,C}}) = FADTensor(one(FADHessian{N,T,C}), zeros(T, halftenslen(n)))
+zero{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(zero(HessianNum{N,T,C}), zeros(T, halftenslen(n)))
+one{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(one(HessianNum{N,T,C}), zeros(T, halftenslen(n)))
 
-grad(t::FADTensor) = grad(hess(t))
-hess(t::FADTensor) = t.hess
-tens(t::FADTensor) = t.tens
+grad(t::TensorNum) = grad(hess(t))
+hess(t::TensorNum) = t.hess
+tens(t::TensorNum) = t.tens
 
-npartials{N,T,C}(::Type{FADTensor{N,T,C}}) = N
-eltype{N,T,C}(::Type{FADTensor{N,T,C}}) = T
+npartials{N,T,C}(::Type{TensorNum{N,T,C}}) = N
+eltype{N,T,C}(::Type{TensorNum{N,T,C}}) = T
 
-function isconstant(t::FADTensor)
+function isconstant(t::TensorNum)
     zeroT = zero(eltype(t))
     return isconstant(hess(t)) && all(x -> x == zeroT, tens(h))
 end
 
-=={N}(a::FADTensor{N}, b::FADTensor{N}) = (hess(a) == hess(b)) && (tens(a) == tens(b))
+=={N}(a::TensorNum{N}, b::TensorNum{N}) = (hess(a) == hess(b)) && (tens(a) == tens(b))
 
 ########################
 # Conversion/Promotion #
 ########################
-convert{N,T,C}(::Type{FADTensor{N,T,C}}, t::FADTensor{N,T,C}) = t
-convert{N,T,C}(::Type{FADTensor{N,T,C}}, x::Real) = FADTensor(FADHessian{N,T,C}(x), zeros(T, halftenslen(N)))
+convert{N,T,C}(::Type{TensorNum{N,T,C}}, t::TensorNum{N,T,C}) = t
+convert{N,T,C}(::Type{TensorNum{N,T,C}}, x::Real) = TensorNum(HessianNum{N,T,C}(x), zeros(T, halftenslen(N)))
 
-function convert{N,T,C}(::Type{FADTensor{N,T,C}}, t::FADTensor{N})
-    return FADTensor(convert(FADHessian{N,T,C}, grad(t)), tens(t))
+function convert{N,T,C}(::Type{TensorNum{N,T,C}}, t::TensorNum{N})
+    return TensorNum(convert(HessianNum{N,T,C}, grad(t)), tens(t))
 end
 
-function convert{T<:Real}(::Type{T}, t::FADTensor)
+function convert{T<:Real}(::Type{T}, t::TensorNum)
     if isconstant(t)
         return convert(T, value(t))
     else
@@ -50,20 +50,20 @@ function convert{T<:Real}(::Type{T}, t::FADTensor)
     end
 end
 
-promote_rule{N,T,C}(::Type{FADTensor{N,T,C}}, ::Type{T}) = FADTensor{N,T,C}
+promote_rule{N,T,C}(::Type{TensorNum{N,T,C}}, ::Type{T}) = TensorNum{N,T,C}
 
-function promote_rule{N,T,C,S}(::Type{FADTensor{N,T,C}}, ::Type{S})
+function promote_rule{N,T,C,S}(::Type{TensorNum{N,T,C}}, ::Type{S})
     R = promote_type(T, S)
-    return FADTensor{N,R,switch_eltype(C, R)}
+    return TensorNum{N,R,switch_eltype(C, R)}
 end
 
-function promote_rule{N,T1,C1,T2,C2}(::Type{FADTensor{N,T1,C1}}, ::Type{FADTensor{N,T2,C2}})
+function promote_rule{N,T1,C1,T2,C2}(::Type{TensorNum{N,T1,C1}}, ::Type{TensorNum{N,T2,C2}})
     R = promote_type(T1, T2)
-    return FADTensor{N,R,switch_eltype(C1, R)}
+    return TensorNum{N,R,switch_eltype(C1, R)}
 end
 
 ######################
-# Math on FADTensors #
+# Math on TensorNums #
 ######################
 function t2h(i, j)
     if i < j
@@ -73,7 +73,7 @@ function t2h(i, j)
     end
 end
 
-## Bivariate functions on FADTensors ##
+## Bivariate functions on TensorNums ##
 ##-----------------------------------##
 
 const noexpr = Expr(:quote, nothing)
@@ -102,7 +102,7 @@ const t_bivar_funcs = Tuple{Symbol, Expr, Expr}[
 for (fsym, vars, term) in t_bivar_funcs
     loadfsym = symbol(string("loadtens_", fsym, "!"))
     @eval begin
-        function $(loadfsym){N}(t1::FADTensor{N}, t2::FADTensor{N}, output)
+        function $(loadfsym){N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
             q = 1
             $(vars)
             for a in 1:N
@@ -117,29 +117,29 @@ for (fsym, vars, term) in t_bivar_funcs
             return output
         end
 
-        function $(fsym){N,A,B}(t1::FADTensor{N,A}, t2::FADTensor{N,B})
+        function $(fsym){N,A,B}(t1::TensorNum{N,A}, t2::TensorNum{N,B})
             new_tens = Array(promote_type(A, B), halftenslen(N))
-            return FADTensor($(fsym)(hess(t1), hess(t2)), $(loadfsym)(t1, t2, new_tens))
+            return TensorNum($(fsym)(hess(t1), hess(t2)), $(loadfsym)(t1, t2, new_tens))
         end
     end
 end
 
-+{N}(a::FADTensor{N}, b::FADTensor{N}) = FADTensor(hess(a) + hess(b), tens(a) + tens(b))
--{N}(a::FADTensor{N}, b::FADTensor{N}) = FADTensor(hess(a) - hess(b), tens(a) - tens(b))
++{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hess(a) + hess(b), tens(a) + tens(b))
+-{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hess(a) - hess(b), tens(a) - tens(b))
 
 for T in (:Bool, :Real)
     @eval begin
-        *(t::FADTensor, x::$(T)) = FADTensor(hess(t) * x, tens(t) * x)
-        *(x::$(T), t::FADTensor) = FADTensor(x * hess(t), x * tens(t))
+        *(t::TensorNum, x::$(T)) = TensorNum(hess(t) * x, tens(t) * x)
+        *(x::$(T), t::TensorNum) = TensorNum(x * hess(t), x * tens(t))
     end
 end
 
-/(t::FADTensor, x::Real) = FADTensor(hess(t) / x, tens(t) / x)
-#/(x::Real, t::FADTensor) = ?
+/(t::TensorNum, x::Real) = TensorNum(hess(t) / x, tens(t) / x)
+#/(x::Real, t::TensorNum) = ?
 
 for T in (:Rational, :Integer, :Real)
     @eval begin
-        function ^{N}(t::FADTensor{N}, p::$(T))
+        function ^{N}(t::TensorNum{N}, p::$(T))
             new_tens = Array(promote_type(eltype(t), typeof(p)), halftenslen(N))
             q = 1
             for a in 1:N
@@ -152,14 +152,14 @@ for T in (:Rational, :Integer, :Real)
                     end
                 end
             end
-            return FADTensor(hess(t)^p, new_tens)
+            return TensorNum(hess(t)^p, new_tens)
         end
     end
 end
-## Univariate functions on FADHessians ##
+## Univariate functions on HessianNums ##
 ##-------------------------------------##
 
--(t::FADTensor) = FADTensor(-hess(t), -tens(t))
+-(t::TensorNum) = TensorNum(-hess(t), -tens(t))
 
 const t_univar_funcs = Tuple{Symbol, Expr, Expr, Expr}[
     (:sqrt, noexpr, noexpr, :(((0.375*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-0.25*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+0.5*tens(t,q))/sqrt(value(t)))),
@@ -185,7 +185,7 @@ const t_univar_funcs = Tuple{Symbol, Expr, Expr, Expr}[
 for (fsym, funcvars, loopvars, term) in t_univar_funcs
     loadfsym = symbol(string("loadtens_", fsym, "!"))
     @eval begin
-        function $(loadfsym){N}(t::FADTensor{N}, output)
+        function $(loadfsym){N}(t::TensorNum{N}, output)
             q = 1
             $(funcvars)
             for a in 1:N
@@ -201,10 +201,10 @@ for (fsym, funcvars, loopvars, term) in t_univar_funcs
             return output
         end
 
-        function $(fsym){N,T}(t::FADTensor{N,T})
+        function $(fsym){N,T}(t::TensorNum{N,T})
             ResultType = typeof($(fsym)(one(T)))
             new_tens = Array(ResultType, halftenslen(N))
-            return FADTensor($(fsym)(hess(t)), $(loadfsym)(t, new_tens))
+            return TensorNum($(fsym)(hess(t)), $(loadfsym)(t, new_tens))
         end
     end
 end

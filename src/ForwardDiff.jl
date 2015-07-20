@@ -9,14 +9,14 @@ module ForwardDiff
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
 
-    include("FADNumber.jl")
-    include("grad/FADGradient.jl")
-    include("FADHessian.jl")
-    include("FADTensor.jl")
+    include("AutoDiffNum.jl")
+    include("GradientNum.jl")
+    include("HessianNum.jl")
+    include("TensorNum.jl")
     include("autodiff_funcs.jl")
 
-    export GradVec,
-           GradTup,
+    export GradNumVec,
+           GradNumTup,
            gradient!,
            gradient,
            gradient_func,

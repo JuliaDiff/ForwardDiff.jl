@@ -1,48 +1,48 @@
-immutable FADHessian{N,T,C} <: FADNumber{N,T,C}
-    grad::FADGradient{N,T,C} 
+immutable HessianNum{N,T,C} <: AutoDiffNum{N,T,C}
+    grad::GradientNum{N,T,C} 
     hess::Vector{T}
-    function FADHessian(grad::FADGradient{N,T,C}, hess::Vector)
+    function HessianNum(grad::GradientNum{N,T,C}, hess::Vector)
         @assert length(hess) == halfhesslen(N)
         return new(grad, hess)
     end
 end
 
-function FADHessian{N,T,C}(grad::FADGradient{N,T,C},
+function HessianNum{N,T,C}(grad::GradientNum{N,T,C},
                            hess::Vector=zeros(T, halfhesslen(N)))
-    return FADHessian{N,T,C}(grad, hess)
+    return HessianNum{N,T,C}(grad, hess)
 end
 
 ##############################
 # Utility/Accessor Functions #
 ##############################
-zero{N,T,C}(::Type{FADHessian{N,T,C}}) = FADHessian(zero(FADGradient{N,T,C}), zeros(T, halfhesslen(N)))
-one{N,T,C}(::Type{FADHessian{N,T,C}}) = FADHessian(one(FADGradient{N,T,C}), zeros(T, halfhesslen(N)))
+zero{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(zero(GradientNum{N,T,C}), zeros(T, halfhesslen(N)))
+one{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(one(GradientNum{N,T,C}), zeros(T, halfhesslen(N)))
 
-grad(h::FADHessian) = h.grad
-hess(h::FADHessian) = h.hess
-tens(h::FADHessian) = error("FADHessians do not store tensor values")
+grad(h::HessianNum) = h.grad
+hess(h::HessianNum) = h.hess
+tens(h::HessianNum) = error("HessianNums do not store tensor values")
 
-npartials{N,T,C}(::Type{FADHessian{N,T,C}}) = N
-eltype{N,T,C}(::Type{FADHessian{N,T,C}}) = T
+npartials{N,T,C}(::Type{HessianNum{N,T,C}}) = N
+eltype{N,T,C}(::Type{HessianNum{N,T,C}}) = T
 
-function isconstant(h::FADHessian)
+function isconstant(h::HessianNum)
     zeroT = zero(eltype(h))
     return isconstant(grad(h)) && all(x -> x == zeroT, hess(h))
 end
 
-=={N}(a::FADHessian{N}, b::FADHessian{N}) = (grad(a) == grad(b)) && (hess(a) == hess(b))
+=={N}(a::HessianNum{N}, b::HessianNum{N}) = (grad(a) == grad(b)) && (hess(a) == hess(b))
 
 ########################
 # Conversion/Promotion #
 ########################
-convert{N,T,C}(::Type{FADHessian{N,T,C}}, h::FADHessian{N,T,C}) = h
-convert{N,T,C}(::Type{FADHessian{N,T,C}}, x::Real) = FADHessian(FADGradient{N,T,C}(x), zeros(T, halfhesslen(N)))
+convert{N,T,C}(::Type{HessianNum{N,T,C}}, h::HessianNum{N,T,C}) = h
+convert{N,T,C}(::Type{HessianNum{N,T,C}}, x::Real) = HessianNum(GradientNum{N,T,C}(x), zeros(T, halfhesslen(N)))
 
-function convert{N,T,C}(::Type{FADHessian{N,T,C}}, h::FADHessian{N})
-    return FADHessian(convert(C, grad(h)), hess(h))
+function convert{N,T,C}(::Type{HessianNum{N,T,C}}, h::HessianNum{N})
+    return HessianNum(convert(C, grad(h)), hess(h))
 end
 
-function convert{T<:Real}(::Type{T}, h::FADHessian)
+function convert{T<:Real}(::Type{T}, h::HessianNum)
     if isconstant(h)
         return convert(T, value(h))
     else
@@ -50,23 +50,23 @@ function convert{T<:Real}(::Type{T}, h::FADHessian)
     end
 end
 
-promote_rule{N,T,C}(::Type{FADHessian{N,T,C}}, ::Type{T}) = FADHessian{N,T,C}
+promote_rule{N,T,C}(::Type{HessianNum{N,T,C}}, ::Type{T}) = HessianNum{N,T,C}
 
-function promote_rule{N,T,C,S}(::Type{FADHessian{N,T,C}}, ::Type{S})
+function promote_rule{N,T,C,S}(::Type{HessianNum{N,T,C}}, ::Type{S})
     R = promote_type(T, S)
-    return FADHessian{N,R,switch_eltype(C, R)}
+    return HessianNum{N,R,switch_eltype(C, R)}
 end
 
-function promote_rule{N,T1,C1,T2,C2}(::Type{FADHessian{N,T1,C1}}, ::Type{FADHessian{N,T2,C2}})
+function promote_rule{N,T1,C1,T2,C2}(::Type{HessianNum{N,T1,C1}}, ::Type{HessianNum{N,T2,C2}})
     R = promote_type(T1, T2)
-    return FADHessian{N,R,switch_eltype(C1, R)}
+    return HessianNum{N,R,switch_eltype(C1, R)}
 end
 
 #######################
-# Math on FADHessians #
+# Math on HessianNums #
 #######################
 
-## Bivariate functions on FADHessians ##
+## Bivariate functions on HessianNums ##
 ##------------------------------------##
 
 const h_bivar_funcs = Tuple{Symbol, Expr}[
@@ -82,7 +82,7 @@ const h_bivar_funcs = Tuple{Symbol, Expr}[
 for (fsym, term) in h_bivar_funcs
     loadfsym = symbol(string("loadhess_", fsym, "!"))
     @eval begin
-        function $(loadfsym){N}(a::FADHessian{N}, b::FADHessian{N}, output)
+        function $(loadfsym){N}(a::HessianNum{N}, b::HessianNum{N}, output)
             k = 1
             for i in 1:N
                 for j in 1:i
@@ -93,30 +93,30 @@ for (fsym, term) in h_bivar_funcs
             return output
         end
 
-        function $(fsym){N,A,B}(a::FADHessian{N,A}, b::FADHessian{N,B})
+        function $(fsym){N,A,B}(a::HessianNum{N,A}, b::HessianNum{N,B})
             new_hess = Array(promote_type(A, B), halfhesslen(N))
-            return FADHessian($(fsym)(grad(a), grad(b)), $(loadfsym)(a, b, new_hess))
+            return HessianNum($(fsym)(grad(a), grad(b)), $(loadfsym)(a, b, new_hess))
         end
 
     end
 end
 
-+{N}(a::FADHessian{N}, b::FADHessian{N}) = FADHessian(grad(a) + grad(b), hess(a) + hess(b))
--{N}(a::FADHessian{N}, b::FADHessian{N}) = FADHessian(grad(a) - grad(b), hess(a) - hess(b))
++{N}(a::HessianNum{N}, b::HessianNum{N}) = HessianNum(grad(a) + grad(b), hess(a) + hess(b))
+-{N}(a::HessianNum{N}, b::HessianNum{N}) = HessianNum(grad(a) - grad(b), hess(a) - hess(b))
 
 for T in (:Bool, :Real)
     @eval begin
-        *(h::FADHessian, x::$(T)) = FADHessian(grad(h) * x, hess(h) * x)
-        *(x::$(T), h::FADHessian) = FADHessian(x * grad(h), x * hess(h))
+        *(h::HessianNum, x::$(T)) = HessianNum(grad(h) * x, hess(h) * x)
+        *(x::$(T), h::HessianNum) = HessianNum(x * grad(h), x * hess(h))
     end
 end
 
-/(h::FADHessian, x::Real) = FADHessian(grad(h) / x, hess(h) / x)
-#/(x::Real, h::FADHessian) = ?
+/(h::HessianNum, x::Real) = HessianNum(grad(h) / x, hess(h) / x)
+#/(x::Real, h::HessianNum) = ?
 
 for T in (:Rational, :Integer, :Real)
     @eval begin
-        function ^{N}(h::FADHessian{N}, p::$(T))
+        function ^{N}(h::HessianNum{N}, p::$(T))
             new_hess = Array(promote_type(eltype(h), typeof(p)), halfhesslen(N))
             k = 1
             for i in 1:N
@@ -125,15 +125,15 @@ for T in (:Rational, :Integer, :Real)
                     k += 1
                 end
             end
-            return FADHessian(grad(h)^p, new_hess)
+            return HessianNum(grad(h)^p, new_hess)
         end
     end
 end
 
-## Univariate functions on FADHessians ##
+## Univariate functions on HessianNums ##
 ##-------------------------------------##
 
--(h::FADHessian) = FADHessian(-grad(h), -hess(h))
+-(h::HessianNum) = HessianNum(-grad(h), -hess(h))
 
 const h_univar_funcs = Tuple{Symbol, Expr}[
     (:sqrt, :((-grad(h,i)*grad(h,j)+2*value(h)*hess(h,i)) / (4*(value(h)^(1.5))))),
@@ -159,7 +159,7 @@ const h_univar_funcs = Tuple{Symbol, Expr}[
 for (fsym, term) in h_univar_funcs
     loadfsym = symbol(string("loadhess_", fsym, "!"))
     @eval begin
-        function $(loadfsym){N}(h::FADHessian{N}, output)
+        function $(loadfsym){N}(h::HessianNum{N}, output)
             k = 1
             for i in 1:N
                 for j in 1:i
@@ -170,10 +170,10 @@ for (fsym, term) in h_univar_funcs
             return output
         end
 
-        function $(fsym){N,T}(h::FADHessian{N,T})
+        function $(fsym){N,T}(h::HessianNum{N,T})
             ResultType = typeof($(fsym)(one(T)))
             new_hess = Array(ResultType, halfhesslen(N))
-            return FADHessian($(fsym)(grad(h)), $(loadfsym)(h, new_hess))
+            return HessianNum($(fsym)(grad(h)), $(loadfsym)(h, new_hess))
         end
     end
 end
