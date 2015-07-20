@@ -3,7 +3,8 @@ immutable GradientNum{N,T,C} <: AutoDiffNum{N,T,C}
     partials::C
     GradientNum(value::T, partials::NTuple{N,T}) = new(value, partials)
     GradientNum(value::T, partials::Vector{T}) = new(value, partials)
-    GradientNum(value::T) = new(value, zero_partials(GradientNum{N,T,C}))
+    GradientNum(value, partials) = GradientNum{N,T,C}(convert(T, value), convert(C, partials))
+    GradientNum(value) = GradientNum{N,T,C}(convert(T, value), zero_partials(GradientNum{N,T,C}))
 end
 
 typealias GradNumTup{N,T} GradientNum{N,T,NTuple{N,T}}
@@ -26,12 +27,15 @@ hess(g::GradientNum) = error("GradientNums do not store Hessian values")
 tens(g::GradientNum) = error("GradientNums do not store tensor values")
 
 eltype{N,T,C}(::Type{GradientNum{N,T,C}}) = T
+eltype{N,T}(::GradientNum{N,T}) = T
+
 npartials{N,T,C}(::Type{GradientNum{N,T,C}}) = N
+npartials{N}(::GradientNum{N}) = N
 
 include("grad/tuple_funcs.jl")
 
 zero_partials{N,T,C<:Tuple}(::Type{GradientNum{N,T,C}}) = zero_tuple(C)
-zero_partials{N,T,C<:Vector}(::Type{GradientNum{N,T,C}}) = zeros(N, T)
+zero_partials{N,T,C<:Vector}(::Type{GradientNum{N,T,C}}) = zeros(T, N)
 
 #####################
 # Generic Functions #
@@ -46,11 +50,13 @@ isequal(a::GradientNum, b::GradientNum) = isequal(value(a), value(b)) && isequal
 
 hash(g::GradientNum) = isconstant(g) ? hash(value(g)) : hash(value(g), hash(partials(g)))
 
-function read{G<:GradientNum}(io::IO, ::Type{G})
-    T = eltype(G)
+read_partials{N,T}(io::IO, n::Int, ::Type{NTuple{N,T}}) = ntuple(n->read(io, T), Val{N})
+read_partials{T}(io::IO, n::Int, ::Type{Vector{T}}) = [read(io, T) for i in 1:n]
+
+function read{N,T,C}(io::IO, ::Type{GradientNum{N,T,C}})
     value = read(io, T)
-    partials = ntuple(n->read(io, T), npartials(G))
-    return G(value, partials)
+    partials = read_partials(io, N, C)
+    return GradientNum{N,T,C}(value, partials)
 end
 
 function write(io::IO, g::GradientNum)
@@ -72,7 +78,7 @@ one{N,T,C}(::Type{GradientNum{N,T,C}}) = GradientNum{N,T,C}(one(T), zero_partial
 for F in (:GradNumVec, :GradNumTup)
     @eval begin
         convert{N,T}(::Type{$(F){N,T}}, x::Real) = $(F){N,T}(x)
-        convert{N,T}(::Type{$(F){N,T}}, g::$(F){N}) = $(F){N,T}(value(g), partials(g))
+        convert{N,A,B}(::Type{$(F){N,A}}, g::$(F){N,B}) = $(F){N,A}(value(g), partials(g))
         convert{N,T}(::Type{$(F){N,T}}, g::$(F){N,T}) = g
 
         promote_rule{N,A,B}(::Type{$(F){N,A}}, ::Type{$(F){N,B}}) = $(F){N,promote_type(A,B)}

@@ -26,65 +26,65 @@ halftenslen(n) = div(n*(n+1)*(n+2),6) # correct length(tens(::AutoDiffNum))
 switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
 switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
 
-grad(fad::AutoDiffNum, i) = partials(grad(fad), i)
-hess(fad::AutoDiffNum, i) = hess(fad)[i]
-tens(fad::AutoDiffNum, i) = tens(fad)[i]
+grad(adn::AutoDiffNum, i) = partials(grad(adn), i)
+hess(adn::AutoDiffNum, i) = hess(adn)[i]
+tens(adn::AutoDiffNum, i) = tens(adn)[i]
 
-value(fad::AutoDiffNum) = value(grad(fad))
+value(adn::AutoDiffNum) = value(grad(adn))
 
-eps(fad::AutoDiffNum) = eps(value(fad))
+eps(adn::AutoDiffNum) = eps(value(adn))
 eps{F<:AutoDiffNum}(::Type{F}) = eps(eltype(F))
 
-isnan(fad::AutoDiffNum) = isnan(value(fad))
-isfinite(fad::AutoDiffNum) = isfinite(value(fad))
+isnan(adn::AutoDiffNum) = isnan(value(adn))
+isfinite(adn::AutoDiffNum) = isfinite(value(adn))
 
-npartials(fad::AutoDiffNum) = npartials(grad(fad))
-eltype(fad::AutoDiffNum) = eltype(grad(fad))
+npartials(adn::AutoDiffNum) = npartials(grad(adn))
+eltype(adn::AutoDiffNum) = eltype(grad(adn))
 
 npartials{N,T,C}(::Type{AutoDiffNum{N,T,C}}) = N
 eltype{N,T,C}(::Type{AutoDiffNum{N,T,C}}) = T
 
-==(fad::AutoDiffNum, x::Real) = isconstant(fad) && (value(fad) == x)
-==(x::Real, fad::AutoDiffNum) = ==(fad, x)
+==(adn::AutoDiffNum, x::Real) = isconstant(adn) && (value(adn) == x)
+==(x::Real, adn::AutoDiffNum) = ==(adn, x)
 
-isequal(fad::AutoDiffNum, x::Real) = isconstant(fad) && isequal(value(fad), x)
-isequal(x::Real, fad::AutoDiffNum) = isequal(fad, x)
+isequal(adn::AutoDiffNum, x::Real) = isconstant(adn) && isequal(value(adn), x)
+isequal(x::Real, adn::AutoDiffNum) = isequal(adn, x)
 
 isless(a::AutoDiffNum, b::AutoDiffNum) = value(a) < value(b)
-isless(x::Real, fad::AutoDiffNum) = fad < value(g)
-isless(fad::AutoDiffNum, x::Real) = value(g) < fad
+isless(x::Real, adn::AutoDiffNum) = x < value(adn)
+isless(adn::AutoDiffNum, x::Real) = value(adn) < x
 
-copy(fad::AutoDiffNum) = fad # assumes all types of AutoDiffNums are immutable
+copy(adn::AutoDiffNum) = adn # assumes all types of AutoDiffNums are immutable
 
 ##################
 # Math Functions #
 ##################
-conj(fad::AutoDiffNum) = fad
-transpose(fad::AutoDiffNum) = fad
-ctranspose(fad::AutoDiffNum) = fad
+conj(adn::AutoDiffNum) = adn
+transpose(adn::AutoDiffNum) = adn
+ctranspose(adn::AutoDiffNum) = adn
 
 #############################
 # Gradient from a AutoDiffNum #
 #############################
-function gradient!(fad::AutoDiffNum, output)
-    @assert npartials(fad) == length(output)
+function gradient!(adn::AutoDiffNum, output)
+    @assert npartials(adn) == length(output)
     for i in eachindex(output)
-        output[i] = grad(fad, i)
+        output[i] = grad(adn, i)
     end
     return output
 end
 
-gradient{N,T,C}(fad::AutoDiffNum{N,T,C}) = gradient!(fad, Array(T, N))
+gradient{N,T,C}(adn::AutoDiffNum{N,T,C}) = gradient!(adn, Array(T, N))
 
 ############################
 # Hessian from a AutoDiffNum #
 ############################
-function hessian!{N}(fad::AutoDiffNum{N}, output)
+function hessian!{N}(adn::AutoDiffNum{N}, output)
     @assert (N, N) == size(output)
     q = 1
     for i in 1:N
         for j in 1:i
-            val = hess(fad, q)
+            val = hess(adn, q)
             output[i, j] = val
             output[j, i] = val
             q += 1
@@ -93,7 +93,7 @@ function hessian!{N}(fad::AutoDiffNum{N}, output)
     return output
 end
 
-hessian{N,T}(fad::AutoDiffNum{N,T}) = hessian!(fad, Array(T, N, N))
+hessian{N,T}(adn::AutoDiffNum{N,T}) = hessian!(adn, Array(T, N, N))
 
 ####################################
 # Jacobian from a AutoDiffNum Vector #
@@ -112,13 +112,13 @@ jacobian{F<:AutoDiffNum}(v::Vector{F}) = jacobian!(v, Array(eltype(F), length(v)
 ###########################
 # Tensor from a AutoDiffNum #
 ###########################
-function tensor!{N,T,C}(fad::AutoDiffNum{N,T,C}, output)
+function tensor!{N,T,C}(adn::AutoDiffNum{N,T,C}, output)
     @assert (N, N, N) == size(output)
     q = 1
     for k in 1:N
         for i in k:N
             for j in k:i 
-                val = tens(fad, q)
+                val = tens(adn, q)
                 output[i, j, k] = val
                 output[j, i, k] = val
                 output[j, k, i] = val
@@ -129,4 +129,4 @@ function tensor!{N,T,C}(fad::AutoDiffNum{N,T,C}, output)
     return output
 end
 
-tensor{N,T,C}(fad::AutoDiffNum{N,T,C}) = tensor!(fad, Array(T, N, N, N))
+tensor{N,T,C}(adn::AutoDiffNum{N,T,C}) = tensor!(adn, Array(T, N, N, N))

@@ -1,9 +1,4 @@
-tests = ["dual_fad", "GraDual", "FADHessian", "FADTensor"]
+using ForwardDiff
+using Base.Test
 
-println("Running tests:")
-
-for t in tests
-    tfile = "$t.jl"
-    println(" * $tfile")
-    include(tfile)
-end
+include("test_gradnum.jl")

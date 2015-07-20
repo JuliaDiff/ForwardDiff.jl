@@ -5,14 +5,14 @@
 ## Addition/Subtraction ##
 ##----------------------##
 
-+{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B}) = GradNumTup(value(z)+value(w), add_tuples(partials(z), partials(w)))
-+{N,T}(x::Real, z::GradNumTup{N,T}) = GradNumTup(x+value(z), partials(z))
++{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B}) = GradientNum(value(z)+value(w), add_tuples(partials(z), partials(w)))
++{N,T}(x::Real, z::GradNumTup{N,T}) = GradientNum(x+value(z), partials(z))
 +{N,T}(z::GradNumTup{N,T}, x::Real) = x+z
 
--{N,T}(z::GradNumTup{N,T}) = GradNumTup(-value(z), minus_tuple(partials(z)))
--{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B}) = GradNumTup(value(z)-value(w), subtract_tuples(partials(z), partials(w)))
--{N,T}(x::Real, z::GradNumTup{N,T}) = GradNumTup(x-value(z), minus_tuple(partials(z)))
--{N,T}(z::GradNumTup{N,T}, x::Real) = GradNumTup(value(z)-x, partials(z))
+-{N,T}(z::GradNumTup{N,T}) = GradientNum(-value(z), minus_tuple(partials(z)))
+-{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B}) = GradientNum(value(z)-value(w), subtract_tuples(partials(z), partials(w)))
+-{N,T}(x::Real, z::GradNumTup{N,T}) = GradientNum(x-value(z), minus_tuple(partials(z)))
+-{N,T}(z::GradNumTup{N,T}, x::Real) = GradientNum(value(z)-x, partials(z))
 
 ## Multiplication ##
 ##----------------##
@@ -24,26 +24,26 @@
 function *{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B})
     z_r, w_r = value(z), value(w)
     dus =  mul_dus(partials(z), partials(w), z_r, w_r)
-    return GradNumTup(z_r*w_r, dus)
+    return GradientNum(z_r*w_r, dus)
 end
 
-*{N,T}(x::Real, z::GradNumTup{N,T}) = GradNumTup(x*value(z), scale_tuple(x, partials(z)))
+*{N,T}(x::Real, z::GradNumTup{N,T}) = GradientNum(x*value(z), scale_tuple(x, partials(z)))
 *{N,T}(z::GradNumTup{N,T}, x::Real) = x*z
 
 ## Division ##
 ##----------##
 
-/{N,T}(z::GradNumTup{N,T}, x::Real) = GradNumTup(value(z)/x, div_tuple_by_scalar(partials(z), x))
+/{N,T}(z::GradNumTup{N,T}, x::Real) = GradientNum(value(z)/x, div_tuple_by_scalar(partials(z), x))
 
 function /{N,T}(x::Real, z::GradNumTup{N,T})
     z_r = value(z)
-    return GradNumTup(x/z_r, div_real_by_dus(-x, partials(z), z_r^2))
+    return GradientNum(x/z_r, div_real_by_dus(-x, partials(z), z_r^2))
 end
 
 function /{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B})
     z_r, w_r = value(z), value(w)    
     dus = div_dus(partials(z), partials(w), z_r, w_r, w_r^2)
-    return GradNumTup(z_r/w_r, dus)
+    return GradientNum(z_r/w_r, dus)
 end
 
 ## Exponentiation ##
@@ -57,7 +57,7 @@ for f in (:^, :(NaNMath.pow))
         powval = w_r * (($f)(z_r, w_r-1))
         logval = ($f)(z_r, w_r) * log(z_r)
         dus = mul_dus(partials(z), partials(w), logval, powval)
-        return GradNumTup(re, dus)
+        return GradientNum(re, dus)
     end
 
     @eval ($f){N,T}(::Base.MathConst{:e}, z::GradNumTup{N,T}) = exp(z)
@@ -67,13 +67,13 @@ for f in (:^, :(NaNMath.pow))
         @eval function ($f){N,T}(z::GradNumTup{N,T}, x::($R))
             z_r = value(z)
             powval = x*($f)(z_r, x-1)
-            return GradNumTup(($f)(z_r, x), scale_tuple(powval, partials(z)))
+            return GradientNum(($f)(z_r, x), scale_tuple(powval, partials(z)))
         end
 
         @eval function ($f){N,T}(x::($R), z::GradNumTup{N,T})
             z_r = value(z)
             logval = ($f)(x, z_r)*log(x)
-            return GradNumTup(($f)(x, z_r), scale_tuple(logval, partials(z)))
+            return GradientNum(($f)(x, z_r), scale_tuple(logval, partials(z)))
         end
     end
 
@@ -88,7 +88,7 @@ for (funsym, exp) in Calculus.symbolic_derivatives_1arg()
     @eval function $(funsym){N,T}(z::GradNumTup{N,T})
         x = value(z) # `x` is the variable name for $exp
         df = $exp
-        return GradNumTup($(funsym)(x), scale_tuple(df, partials(z)))
+        return GradientNum($(funsym)(x), scale_tuple(df, partials(z)))
     end
 
     # extend corresponding NaNMath methods
@@ -102,7 +102,7 @@ for (funsym, exp) in Calculus.symbolic_derivatives_1arg()
         @eval function $(funsym){N,T}(z::GradNumTup{N,T})
             x = value(z) # `x` is the variable name for $exp
             df = $(to_nanmath(exp))
-            return GradNumTup($(funsym)(x), scale_tuple(df, partials(z)))
+            return GradientNum($(funsym)(x), scale_tuple(df, partials(z)))
         end
 
     end
@@ -110,5 +110,5 @@ end
 
 function exp{N,T}(z::GradNumTup{N,T})
     df = exp(value(z))
-    return GradNumTup(df, scale_tuple(df, partials(z)))
+    return GradientNum(df, scale_tuple(df, partials(z)))
 end
