@@ -36,7 +36,7 @@ function mul_dus!(result, zdus, wdus, z_r, w_r)
 end
 
 function *{N,A}(x::Real, z::GradNumVec{N,A})
-    T = promote_type(typeof(x),T)
+    T = promote_type(typeof(x),A)
     return GradNumVec{N,T}(x*value(z), x*partials(z))
 end
 
