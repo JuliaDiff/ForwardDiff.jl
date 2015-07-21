@@ -15,8 +15,11 @@ module ForwardDiff
     include("TensorNum.jl")
     include("autodiff_funcs.jl")
 
-    export GradNumVec,
-           GradNumTup,
+    typealias PartialsTuple{N,T} GradNumTup{N,T}
+    typealias PartialsVector{N,T} GradNumVec{N,T}
+
+    export PartialsTuple,
+           PartialsVector,
            gradient!,
            gradient,
            gradient_func,
