@@ -73,10 +73,23 @@ function t2h(i, j)
     end
 end
 
+const noexpr = Expr(:quote, nothing)
+
+# In the code-generating loops below (see "Bivariate function construction loop"
+# and "Univariate function construction loop"), we build definitions for math functions
+# on TensorNums in a consistent, uniform manner by utilizing the `t_bivar_funcs` and
+# `t_univar_funcs` arrays. These arrays hold multiple Tuples, each of which provides the
+# necessary information to define a different function. The description of these
+# Tuples' formats can be found in comments above their respective arrays.
+
 ## Bivariate functions on TensorNums ##
 ##-----------------------------------##
 
-const noexpr = Expr(:quote, nothing)
+# The Tuples in `t_bivar_funcs` have the following format:
+#
+# (:function_name,
+#  :(expression defining function-level variables, or `noexpr` if none),
+#  :(expression defining the qth entry of the tensor vector, using any available variables))
 
 const t_bivar_funcs = Tuple{Symbol, Expr, Expr}[
     (:*, noexpr, :(grad(t2,a)*hess(t1,r)+grad(t1,j)*hess(t2,r)+grad(t2,i)*hess(t1,m)+grad(t1,i)*hess(t2,m)+grad(t2,j)*hess(t1,l)
@@ -99,6 +112,7 @@ const t_bivar_funcs = Tuple{Symbol, Expr, Expr}[
            +t1logt1*tens(t2,q))))))
 ]
 
+# Bivariate function construction loop
 for (fsym, vars, term) in t_bivar_funcs
     loadfsym = symbol(string("loadtens_", fsym, "!"))
     @eval begin
@@ -156,10 +170,18 @@ for T in (:Rational, :Integer, :Real)
         end
     end
 end
+
 ## Univariate functions on HessianNums ##
 ##-------------------------------------##
 
 -(t::TensorNum) = TensorNum(-hess(t), -tens(t))
+
+# The Tuples in `t_univar_funcs` have the following format:
+#
+# (:function_name,
+#  :(expression defining function-level variables, or `noexpr` if none),
+#  :(expression defining inner-loop variables, or `noexpr` if none),
+#  :(expression defining the qth entry of the tensor vector, using any available variables))
 
 const t_univar_funcs = Tuple{Symbol, Expr, Expr, Expr}[
     (:sqrt, noexpr, noexpr, :(((0.375*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-0.25*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+0.5*tens(t,q))/sqrt(value(t)))),
@@ -182,6 +204,7 @@ const t_univar_funcs = Tuple{Symbol, Expr, Expr, Expr}[
     (:atanh, :(xsq = value(t)^2; oneminusxsq = 1-xsq), :(gprod = grad(t,a)*grad(t,i)*grad(t,j)), :(((4*xsq*gprod/oneminusxsq+gprod+(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l))*value(t))*2/oneminusxsq+tens(t,q))/oneminusxsq))
 ]
 
+# Univariate function construction loop
 for (fsym, funcvars, loopvars, term) in t_univar_funcs
     loadfsym = symbol(string("loadtens_", fsym, "!"))
     @eval begin
