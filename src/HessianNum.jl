@@ -157,7 +157,7 @@ end
 const h_univar_funcs = Tuple{Symbol, Expr}[
     (:sqrt, :((-grad(h,i)*grad(h,j)+2*value(h)*hess(h,i)) / (4*(value(h)^(1.5))))),
     (:cbrt, :((-2*grad(h,i)*grad(h,j)+3*value(h)*hess(h,k)) / (9*cbrt(value(h)^5)))),
-    (:ehp, :(ehp(value(h))*(grad(h,i)*grad(h,j)+hess(h,k)))),
+    (:exp, :(exp(value(h))*(grad(h,i)*grad(h,j)+hess(h,k)))),
     (:log, :((value(h)*hess(h,k)-grad(h,i)*grad(h,j))/(value(h)^2))),
     (:log2, :((value(h)*hess(h,k)-grad(h,i)*grad(h,j)) / ((value(h)^2)*0.6931471805599453))),
     (:log10, :((value(h)*hess(h,k)-grad(h,i)*grad(h,j)) / ((value(h)^2)*2.302585092994046))),
