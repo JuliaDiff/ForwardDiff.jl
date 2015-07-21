@@ -1,4 +1,4 @@
-immutable TensorNum{N,T,C} <: AutoDiffNum{N,T,C}
+immutable TensorNum{N,T,C} <: ForwardDiffNum{N,T,C}
     hess::HessianNum{N,T,C}
     tens::Vector{T}
     function TensorNum(hess::HessianNum{N,T,C}, tens::Vector{T})

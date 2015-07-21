@@ -1,4 +1,4 @@
-immutable GradientNum{N,T,C} <: AutoDiffNum{N,T,C}
+immutable GradientNum{N,T,C} <: ForwardDiffNum{N,T,C}
     value::T
     partials::C
     GradientNum(value::T, partials::NTuple{N,T}) = new(value, partials)

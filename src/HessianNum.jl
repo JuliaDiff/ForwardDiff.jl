@@ -1,4 +1,4 @@
-immutable HessianNum{N,T,C} <: AutoDiffNum{N,T,C}
+immutable HessianNum{N,T,C} <: ForwardDiffNum{N,T,C}
     grad::GradientNum{N,T,C} 
     hess::Vector{T}
     function HessianNum(grad::GradientNum{N,T,C}, hess::Vector)

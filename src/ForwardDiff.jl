@@ -9,11 +9,11 @@ module ForwardDiff
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
 
-    include("AutoDiffNum.jl")
+    include("ForwardDiffNum.jl")
     include("GradientNum.jl")
     include("HessianNum.jl")
     include("TensorNum.jl")
-    include("autodiff_funcs.jl")
+    include("fad_api.jl")
 
     typealias PartialsTuple{N,T} GradNumTup{N,T}
     typealias PartialsVector{N,T} GradNumVec{N,T}
