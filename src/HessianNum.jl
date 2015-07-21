@@ -172,7 +172,9 @@ const h_univar_funcs = Tuple{Symbol, Expr}[
     (:tanh, :((sech(value(h))^2)*(-2*tanh(value(h))*grad(h,i)*grad(h,j)+hess(h,k)))),
     (:asinh, :((-value(h)*grad(h,i)*grad(h,j)+((1+(value(h)^2))*hess(h,k))) / ((1+(value(h)^2))^1.5))),
     (:acosh, :((-value(h)*grad(h,i)*grad(h,j)+(((value(h)^2)-1)*hess(h,k))) / (((1+value(h))^1.5)*((value(h)-1)^1.5)))),
-    (:atanh, :((2*value(h)*grad(h,i)*grad(h,j)-(((value(h)^2)-1)*hess(h,k)))/(((value(h)^2)-1)^2)))
+    (:atanh, :((2*value(h)*grad(h,i)*grad(h,j)-(((value(h)^2)-1)*hess(h,k)))/(((value(h)^2)-1)^2))),
+    (:lgamma, :(digamma(value(h))*hess(h,k)+trigamma(value(h))*grad(h,i)*grad(h,j))),
+    (:digamma, :(trigamma(value(h))*hess(h,k)+polygamma(2,value(h))*grad(h,i)*grad(h,j)))
 ]
 
 
