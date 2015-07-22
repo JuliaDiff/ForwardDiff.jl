@@ -26,65 +26,65 @@ halftenslen(n) = div(n*(n+1)*(n+2),6) # correct length(tens(::ForwardDiffNum))
 switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
 switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
 
-grad(adn::ForwardDiffNum, i) = partials(grad(adn), i)
-hess(adn::ForwardDiffNum, i) = hess(adn)[i]
-tens(adn::ForwardDiffNum, i) = tens(adn)[i]
+grad(n::ForwardDiffNum, i) = partials(grad(n), i)
+hess(n::ForwardDiffNum, i) = hess(n)[i]
+tens(n::ForwardDiffNum, i) = tens(n)[i]
 
-value(adn::ForwardDiffNum) = value(grad(adn))
+value(n::ForwardDiffNum) = value(grad(n))
 
-eps(adn::ForwardDiffNum) = eps(value(adn))
+eps(n::ForwardDiffNum) = eps(value(n))
 eps{F<:ForwardDiffNum}(::Type{F}) = eps(eltype(F))
 
-isnan(adn::ForwardDiffNum) = isnan(value(adn))
-isfinite(adn::ForwardDiffNum) = isfinite(value(adn))
+isnan(n::ForwardDiffNum) = isnan(value(n))
+isfinite(n::ForwardDiffNum) = isfinite(value(n))
 
-npartials(adn::ForwardDiffNum) = npartials(grad(adn))
-eltype(adn::ForwardDiffNum) = eltype(grad(adn))
+npartials(n::ForwardDiffNum) = npartials(grad(n))
+eltype(n::ForwardDiffNum) = eltype(grad(n))
 
 npartials{N,T,C}(::Type{ForwardDiffNum{N,T,C}}) = N
 eltype{N,T,C}(::Type{ForwardDiffNum{N,T,C}}) = T
 
-==(adn::ForwardDiffNum, x::Real) = isconstant(adn) && (value(adn) == x)
-==(x::Real, adn::ForwardDiffNum) = ==(adn, x)
+==(n::ForwardDiffNum, x::Real) = isconstant(n) && (value(n) == x)
+==(x::Real, n::ForwardDiffNum) = ==(n, x)
 
-isequal(adn::ForwardDiffNum, x::Real) = isconstant(adn) && isequal(value(adn), x)
-isequal(x::Real, adn::ForwardDiffNum) = isequal(adn, x)
+isequal(n::ForwardDiffNum, x::Real) = isconstant(n) && isequal(value(n), x)
+isequal(x::Real, n::ForwardDiffNum) = isequal(n, x)
 
 isless(a::ForwardDiffNum, b::ForwardDiffNum) = value(a) < value(b)
-isless(x::Real, adn::ForwardDiffNum) = x < value(adn)
-isless(adn::ForwardDiffNum, x::Real) = value(adn) < x
+isless(x::Real, n::ForwardDiffNum) = x < value(n)
+isless(n::ForwardDiffNum, x::Real) = value(n) < x
 
-copy(adn::ForwardDiffNum) = adn # assumes all types of ForwardDiffNums are immutable
+copy(n::ForwardDiffNum) = n # assumes all types of ForwardDiffNums are immutable
 
 ##################
 # Math Functions #
 ##################
-conj(adn::ForwardDiffNum) = adn
-transpose(adn::ForwardDiffNum) = adn
-ctranspose(adn::ForwardDiffNum) = adn
+conj(n::ForwardDiffNum) = n
+transpose(n::ForwardDiffNum) = n
+ctranspose(n::ForwardDiffNum) = n
 
 ##################################
 # Gradient from a ForwardDiffNum #
 ##################################
-function gradient!(adn::ForwardDiffNum, output)
-    @assert npartials(adn) == length(output)
+function gradient!(n::ForwardDiffNum, output)
+    @assert npartials(n) == length(output)
     for i in eachindex(output)
-        output[i] = grad(adn, i)
+        output[i] = grad(n, i)
     end
     return output
 end
 
-gradient{N,T,C}(adn::ForwardDiffNum{N,T,C}) = gradient!(adn, Array(T, N))
+gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = gradient!(n, Array(T, N))
 
 #################################
 # Hessian from a ForwardDiffNum #
 #################################
-function hessian!{N}(adn::ForwardDiffNum{N}, output)
+function hessian!{N}(n::ForwardDiffNum{N}, output)
     @assert (N, N) == size(output)
     q = 1
     for i in 1:N
         for j in 1:i
-            val = hess(adn, q)
+            val = hess(n, q)
             output[i, j] = val
             output[j, i] = val
             q += 1
@@ -93,7 +93,7 @@ function hessian!{N}(adn::ForwardDiffNum{N}, output)
     return output
 end
 
-hessian{N,T}(adn::ForwardDiffNum{N,T}) = hessian!(adn, Array(T, N, N))
+hessian{N,T}(n::ForwardDiffNum{N,T}) = hessian!(n, Array(T, N, N))
 
 #########################################
 # Jacobian from a ForwardDiffNum Vector #
@@ -112,13 +112,13 @@ jacobian{F<:ForwardDiffNum}(v::Vector{F}) = jacobian!(v, Array(eltype(F), length
 ################################
 # Tensor from a ForwardDiffNum #
 ################################
-function tensor!{N,T,C}(adn::ForwardDiffNum{N,T,C}, output)
+function tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     @assert (N, N, N) == size(output)
     q = 1
     for k in 1:N
         for i in k:N
             for j in k:i 
-                val = tens(adn, q)
+                val = tens(n, q)
                 output[i, j, k] = val
                 output[j, i, k] = val
                 output[j, k, i] = val
@@ -129,4 +129,4 @@ function tensor!{N,T,C}(adn::ForwardDiffNum{N,T,C}, output)
     return output
 end
 
-tensor{N,T,C}(adn::ForwardDiffNum{N,T,C}) = tensor!(adn, Array(T, N, N, N))
+tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = tensor!(n, Array(T, N, N, N))
