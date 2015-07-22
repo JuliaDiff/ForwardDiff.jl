@@ -2,9 +2,8 @@
 # Math with GradNumVec #
 ########################
 
-## Addition/Subtraction ##
-##----------------------##
-
+# Addition/Subtraction #
+#----------------------#
 +{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B}) = GradNumVec{N,promote_type(A,B)}(value(z)+value(w), grad(z)+grad(w))
 +{N,T}(x::Real, z::GradNumVec{N,T}) = GradNumVec{N,promote_type(typeof(x),T)}(x+value(z), grad(z))
 +{N,T}(z::GradNumVec{N,T}, x::Real) = x+z
@@ -14,9 +13,8 @@
 -{N,T}(x::Real, z::GradNumVec{N,T}) = GradNumVec{N,promote_type(typeof(x),T)}(x-value(z), -grad(z))
 -{N,T}(z::GradNumVec{N,T}, x::Real) = GradNumVec{N,promote_type(T,typeof(x))}(value(z)-x, grad(z))
 
-## Multiplication ##
-##----------------##
-
+# Multiplication #
+#----------------#
 # avoid ambiguous definition with Bool*Number
 *{N,T}(x::Bool, z::GradNumVec{N,T}) = ifelse(x, z, ifelse(signbit(value(z))==0, zero(z), -zero(z)))
 *{N,T}(z::GradNumVec{N,T}, x::Bool) = x*z
@@ -42,9 +40,8 @@ end
 
 *{N,T}(z::GradNumVec{N,T}, x::Real) = x*z
 
-## Division ##
-##----------##
-
+# Division #
+#----------#
 /{N,A,B<:Real}(z::GradNumVec{N,A}, x::B) = GradNumVec{N,promote_type(A,B,Float64)}(value(z)/x, grad(z)/x)
 
 function /{N,A<:Real,B}(x::A, z::GradNumVec{N,B})
@@ -75,9 +72,8 @@ function div_dus!(result, zdus, wdus, z_r, w_r, denom)
     return result
 end
 
-## Exponentiation ##
-##----------------##
-
+# Exponentiation #
+#----------------#
 for f in (:^, :(NaNMath.pow))
 
     @eval function ($f){N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B})
@@ -111,9 +107,8 @@ for f in (:^, :(NaNMath.pow))
 
 end
 
-## from Calculus.jl ##
-##------------------##
-
+# from Calculus.jl #
+#------------------#
 for (funsym, ex) in Calculus.symbolic_derivatives_1arg()
     funsym == :exp && continue
     

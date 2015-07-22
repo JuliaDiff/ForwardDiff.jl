@@ -1,4 +1,5 @@
 abstract ForwardDiffNum{N,T<:Real,C} <: Number
+
 # Subtypes F<:ForwardDiffNum should define:
 #    npartials(::Type{F}) --> N from ForwardDiffNum{N,T,C}
 #    eltype(::Type{F}) --> T from ForwardDiffNum{N,T,C}
@@ -18,6 +19,7 @@ abstract ForwardDiffNum{N,T<:Real,C} <: Number
 #    hash(n::F)
 #    read(io::IO, ::Type{F})
 #    write(io::IO, n::F)
+
 ##############################
 # Utility/Accessor Functions #
 ##############################

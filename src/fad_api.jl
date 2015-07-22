@@ -2,8 +2,8 @@
 # Taking Gradients #
 ####################
 
-## Gradient from ForwardDiffNum ##
-##------------------------------##
+# Gradient from ForwardDiffNum #
+#------------------------------#
 function gradient!(n::ForwardDiffNum, output)
     @assert npartials(n) == length(output)
     @inbounds @simd for i in eachindex(output)
@@ -14,8 +14,8 @@ end
 
 gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = gradient!(n, Array(T, N))
 
-## Gradient from function ##
-##------------------------##
+# Gradient from function #
+#------------------------#
 function gradient!{N,T,C,S}(f::Function,
                             x::Vector{T},
                             output::Vector{S},
@@ -101,8 +101,8 @@ end
 # Taking Jacobians #
 ####################
 
-## Jacobian from Vector{F<:ForwardDiffNum} ##
-##-----------------------------------------##
+# Jacobian from Vector{F<:ForwardDiffNum} #
+#-----------------------------------------#
 function jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
     N = npartials(F)
     @assert (length(v), N) == size(output)
@@ -115,9 +115,8 @@ end
 jacobian{F<:ForwardDiffNum}(v::Vector{F}) = jacobian!(v, Array(eltype(F), length(v), npartials(F)))
 
 
-## Jacobian from function ##
-##------------------------##
-
+# Jacobian from function #
+#------------------------#
 function jacobian!{N,T,C,S}(f::Function,
                             x::Vector{T},
                             output::Matrix{S},
@@ -203,8 +202,8 @@ end
 # Taking Hessians #
 ###################
 
-## Hessian from ForwardDiffNum ##
-##-----------------------------##
+# Hessian from ForwardDiffNum #
+#-----------------------------#
 function hessian!{N}(n::ForwardDiffNum{N}, output)
     @assert (N, N) == size(output)
     q = 1
@@ -221,8 +220,8 @@ end
 
 hessian{N,T}(n::ForwardDiffNum{N,T}) = hessian!(n, Array(T, N, N))
 
-## Hessian from function ##
-##-----------------------##
+# Hessian from function #
+#-----------------------#
 function hessian!{N,T,C,S}(f::Function,
                            x::Vector{T},
                            output::Matrix{S},
@@ -316,8 +315,8 @@ end
 # Taking Tensors #
 ##################
 
-## Tensor from ForwardDiffNum ##
-##----------------------------##
+# Tensor from ForwardDiffNum #
+#----------------------------#
 function tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     @assert (N, N, N) == size(output)
     q = 1
@@ -337,8 +336,8 @@ end
 
 tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = tensor!(n, Array(T, N, N, N))
 
-## Tensor from function ##
-##----------------------##
+# Tensor from function #
+#----------------------#
 function tensor!{N,T,C,S}(f::Function,
                           x::Vector{T},
                           output::Array{S,3},

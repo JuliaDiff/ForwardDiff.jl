@@ -68,6 +68,13 @@ end
 ######################
 # Math on TensorNums #
 ######################
+# In the code-generating loops below (see "Bivariate function construction loop"
+# and "Univariate function construction loop"), we build definitions for math functions
+# on TensorNums in a consistent, uniform manner by utilizing the `t_bivar_funcs` and
+# `t_univar_funcs` arrays. These arrays hold multiple Tuples, each of which provides the
+# necessary information to define a different function. The description of these
+# Tuples' formats can be found in comments above their respective arrays.
+
 function t2h(i, j)
     if i < j
         return div(j*(j-1), 2+i)
@@ -78,22 +85,14 @@ end
 
 const noexpr = Expr(:quote, nothing)
 
-# In the code-generating loops below (see "Bivariate function construction loop"
-# and "Univariate function construction loop"), we build definitions for math functions
-# on TensorNums in a consistent, uniform manner by utilizing the `t_bivar_funcs` and
-# `t_univar_funcs` arrays. These arrays hold multiple Tuples, each of which provides the
-# necessary information to define a different function. The description of these
-# Tuples' formats can be found in comments above their respective arrays.
-
-## Bivariate functions on TensorNums ##
-##-----------------------------------##
+# Bivariate functions on TensorNums #
+#-----------------------------------#
 
 # The Tuples in `t_bivar_funcs` have the following format:
 #
 # (:function_name,
 #  :(expression defining function-level variables, or `noexpr` if none),
 #  :(expression defining the qth entry of the tensor vector, using any available variables))
-
 const t_bivar_funcs = Tuple{Symbol, Expr, Expr}[
     (:*, noexpr, :(grad(t2,a)*hess(t1,r)+grad(t1,j)*hess(t2,r)+grad(t2,i)*hess(t1,m)+grad(t1,i)*hess(t2,m)+grad(t2,j)*hess(t1,l)
                    +grad(t1,j)*hess(t2,l)+value(t2)*tens(t1,q)+value(t1)*tens(t2,q))),
@@ -174,10 +173,8 @@ for T in (:Rational, :Integer, :Real)
     end
 end
 
-## Univariate functions on TensorNums ##
-##------------------------------------##
-
--(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
+# Univariate functions on TensorNums #
+#------------------------------------#
 
 # The Tuples in `t_univar_funcs` have the following format:
 #
@@ -185,7 +182,6 @@ end
 #  :(expression defining function-level variables, or `noexpr` if none),
 #  :(expression defining inner-loop variables, or `noexpr` if none),
 #  :(expression defining the qth entry of the tensor vector, using any available variables))
-
 const t_univar_funcs = Tuple{Symbol, Expr, Expr, Expr}[
     (:sqrt, noexpr, noexpr, :(((0.375*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-0.25*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+0.5*tens(t,q))/sqrt(value(t)))),
     (:cbrt, noexpr, noexpr, :(((10*grad(t,a)*grad(t,i)*grad(t,j)/(3*value(t))-2*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/(3*value(t))+tens(t,q))/(3*value(t)^(2/3)))),
@@ -234,3 +230,6 @@ for (fsym, funcvars, loopvars, term) in t_univar_funcs
         end
     end
 end
+
+-(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
+

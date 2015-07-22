@@ -117,8 +117,8 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     randpartials = map(x -> rand(T), testpartials)
     randgrad = Grad{N,T}(randval, randpartials)
 
-    ## Addition/Subtraction ##
-    ##----------------------##
+    # Addition/Subtraction #
+    #----------------------#
     @test randgrad + testgrad == Grad{N,T}(randval+testval, map(+, randpartials, testpartials))
     @test randgrad + testgrad == testgrad + randgrad
     @test randgrad - testgrad == Grad{N,T}(randval-testval, map(-, randpartials, testpartials))
@@ -126,8 +126,8 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     @test testgrad - randval == Grad{N,T}(testval-randval, testpartials)
     @test -testgrad == Grad{N,T}(-testval, map(-, testpartials))
 
-    ## Multiplication ##
-    ##----------------##
+    # Multiplication #
+    #----------------#
     randxtest = randgrad * testgrad
 
     @test ForwardDiff.value(randxtest) == randval * testval
@@ -144,8 +144,8 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     @test true * testgrad == testgrad * true
     @test false * testgrad == testgrad * false
 
-    ## Division ##
-    ##----------##
+    # Division #
+    #----------#
     randdivtest = randgrad / testgrad
     valdivtest = randval / testgrad
 
@@ -159,8 +159,8 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
 
     @test testgrad / randval == Grad{N,T}(testval/randval, map(x -> x/randval, testpartials))
 
-    ## Exponentiation ##
-    ##----------------##
+    # Exponentiation #
+    #----------------#
     powval = randval * (testval^(randval-1))
     logval = (testval^randval) * log(testval)
 
@@ -179,8 +179,8 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
 
     end
 
-    ## Univariate functions ##
-    ##----------------------##
+    # Univariate functions #
+    #----------------------#
     @test abs(testgrad) == testgrad
     @test abs(-testgrad) == testgrad
     @test abs2(testgrad) == testgrad*testgrad

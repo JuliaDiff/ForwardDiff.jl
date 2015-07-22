@@ -2,9 +2,8 @@
 # Math with GradNumTup #
 ########################
 
-## Addition/Subtraction ##
-##----------------------##
-
+# Addition/Subtraction #
+#----------------------#
 +{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B}) = GradientNum(value(z)+value(w), add_tuples(grad(z), grad(w)))
 +{N,T}(x::Real, z::GradNumTup{N,T}) = GradientNum(x+value(z), grad(z))
 +{N,T}(z::GradNumTup{N,T}, x::Real) = x+z
@@ -14,9 +13,8 @@
 -{N,T}(x::Real, z::GradNumTup{N,T}) = GradientNum(x-value(z), minus_tuple(grad(z)))
 -{N,T}(z::GradNumTup{N,T}, x::Real) = GradientNum(value(z)-x, grad(z))
 
-## Multiplication ##
-##----------------##
-
+# Multiplication #
+#----------------#
 # avoid ambiguous definition with Bool*Number
 *{N,T}(x::Bool, z::GradNumTup{N,T}) = ifelse(x, z, ifelse(signbit(value(z))==0, zero(z), -zero(z)))
 *{N,T}(z::GradNumTup{N,T}, x::Bool) = x*z
@@ -30,9 +28,8 @@ end
 *{N,T}(x::Real, z::GradNumTup{N,T}) = GradientNum(x*value(z), scale_tuple(x, grad(z)))
 *{N,T}(z::GradNumTup{N,T}, x::Real) = x*z
 
-## Division ##
-##----------##
-
+# Division #
+#----------#
 /{N,T}(z::GradNumTup{N,T}, x::Real) = GradientNum(value(z)/x, div_tuple_by_scalar(grad(z), x))
 
 function /{N,T}(x::Real, z::GradNumTup{N,T})
@@ -46,9 +43,8 @@ function /{N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B})
     return GradientNum(z_r/w_r, dus)
 end
 
-## Exponentiation ##
-##----------------##
-
+# Exponentiation #
+#----------------#
 for f in (:^, :(NaNMath.pow))
 
     @eval function ($f){N,A,B}(z::GradNumTup{N,A}, w::GradNumTup{N,B})
@@ -79,9 +75,8 @@ for f in (:^, :(NaNMath.pow))
 
 end
 
-## from Calculus.jl ##
-##------------------##
-
+# from Calculus.jl #
+#------------------#
 for (funsym, exp) in Calculus.symbolic_derivatives_1arg()
     funsym == :exp && continue
     

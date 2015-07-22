@@ -68,23 +68,20 @@ end
 #######################
 # Math on HessianNums #
 #######################
-
 # In the code-generating loops below (see "Bivariate function construction loop"
 # and "Univariate function construction loop"), we build definitions for math functions
 # on HessianNums in a consistent, uniform manner by utilizing the `h_bivar_funcs` and
 # `h_univar_funcs` arrays. These arrays hold multiple Tuples, each of which provides the
 # necessary information to define a different function. The description of these
 # Tuples' formats can be found in comments above their respective arrays.
-#
 
-## Bivariate functions on HessianNums ##
-##------------------------------------##
+# Bivariate functions on HessianNums #
+#------------------------------------#
 
 # The Tuples in `h_bivar_funcs` have the following format:
 #
 # (:function_name,
 #  :(expression defining the kth entry of the hessian vector, using any available variables))
-
 const h_bivar_funcs = Tuple{Symbol, Expr}[
     (:*, :(hess(a,k)*value(b)+grad(a,i)*grad(b,j)+grad(a,j)*grad(b,i)+value(a)*hess(b,k))),
     (:/, :(((2*value(a)*grad(b,j)*grad(b,i)+(value(b)^2)*hess(a,k))-(value(b)*(grad(a,i)*grad(b,j)
@@ -147,16 +144,14 @@ for T in (:Rational, :Integer, :Real)
     end
 end
 
-## Univariate functions on HessianNums ##
-##-------------------------------------##
-
+# Univariate functions on HessianNums #
+#-------------------------------------#
 -(h::HessianNum) = HessianNum(-gradnum(h), -hess(h))
 
 # The Tuples in `h_univar_funcs` have the following format:
 #
 # (:function_name,
 #  :(expression defining the kth entry of the hessian vector, using any available variables))
-
 const h_univar_funcs = Tuple{Symbol, Expr}[
     (:sqrt, :((-grad(h,i)*grad(h,j)+2*value(h)*hess(h,i)) / (4*(value(h)^(1.5))))),
     (:cbrt, :((-2*grad(h,i)*grad(h,j)+3*value(h)*hess(h,k)) / (9*cbrt(value(h)^5)))),
@@ -179,7 +174,6 @@ const h_univar_funcs = Tuple{Symbol, Expr}[
     (:lgamma, :(digamma(value(h))*hess(h,k)+trigamma(value(h))*grad(h,i)*grad(h,j))),
     (:digamma, :(trigamma(value(h))*hess(h,k)+polygamma(2,value(h))*grad(h,i)*grad(h,j)))
 ]
-
 
 # Univariate function construction loop
 for (fsym, term) in h_univar_funcs
