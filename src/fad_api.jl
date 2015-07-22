@@ -16,7 +16,7 @@ function gradient!{N,T,C,S}(f::Function,
     pchunk = partials_chunk(Grad)
 
     # We can do less work filling and
-    # zeroing out dualvec if xlen == N
+    # zeroing out gradvec if xlen == N
     if xlen == N
         @inbounds @simd for i in 1:xlen
             gradvec[i] = Grad(x[i], pchunk[i])
@@ -24,9 +24,7 @@ function gradient!{N,T,C,S}(f::Function,
 
         result::ResultGrad = f(gradvec)
         
-        @inbounds @simd for i in 1:xlen
-            output[i] = partials(result, i)
-        end
+        gradient!(result, output)
     else
         zpartials = zero_partials(Grad)
 
@@ -48,7 +46,7 @@ function gradient!{N,T,C,S}(f::Function,
 
             # load resultant partials components
             # into output, replacing them with 
-            # zeros in dualvec
+            # zeros in gradvec
             @inbounds @simd for j in 0:(N-1)
                 m = i+j
                 output[m] = partials(chunk_result, j+1)
@@ -60,19 +58,111 @@ function gradient!{N,T,C,S}(f::Function,
     return output
 end
 
-gradient!{G<:GradientNum}(f::Function, x::Vector, output::Vector, ::Type{G}) = gradient!(f, x, output, similar(x, G))
-gradient!{G<:GradientNum}(f::Function, x::Vector, gradvec::Vector{G}) = gradient!(f, x, similar(x), gradvec)
+function gradient!{N,T,C}(f::Function, x::Vector{T}, output::Vector, Grad::Type{GradientNum{N,T,C}})
+    return gradient!(f, x, output, similar(x, Grad))
+end
 
-gradient{G<:GradientNum}(f::Function, x::Vector, ::Type{G}) = gradient!(f, x, similar(x), G)
+function gradient!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
+    return gradient!(f, x, similar(x), gradvec)
+end
 
-function gradient_func{G<:GradientNum}(f::Function, xlen::Int, ::Type{G}, mutates=true)
+function gradient{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
+    return gradient!(f, x, similar(x), Grad)
+end
+
+function gradient_func{G<:GradientNum}(f::Function, xlen::Integer, ::Type{G}, mutates=true)
     gradvec = Vector{G}(xlen)
+    T = eltype(G)
     if mutates
-        gradf!(x::Vector, output::Vector) = gradient!(f, x, output, gradvec)
+        gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, gradvec)
         return gradf!
     else
-        gradf(x::Vector) = gradient!(f, x, gradvec)
+        gradf{T}(x::Vector{T}) = gradient!(f, x, gradvec)
         return gradf
+    end
+end
+
+####################
+# Taking Jacobians #
+####################
+function jacobian!{N,T,C,S}(f::Function,
+                            x::Vector{T},
+                            output::Matrix{S},
+                            gradvec::Vector{GradientNum{N,T,C}})
+    xlen = length(x)
+    Grad = eltype(gradvec)
+    ResultGradVec = Vector{GradientNum{N,S,switch_eltype(C,S)}}
+
+    @assert (xlen, N) == size(output) "The output matrix must have size (length(input), npartials(eltype(gradvec)))"
+    @assert xlen == length(gradvec) "The GradientNum vector must be the same length as the input vector"
+    @assert xlen % N == 0 "Length of input vector is indivisible by the number of partials components (length(x) = $k, npartials(eltype(gradvec)) = $N)"
+
+    pchunk = partials_chunk(Grad)
+
+    # We can do less work filling and
+    # zeroing out gradvec if xlen == N
+    if xlen == N
+        @inbounds @simd for i in 1:xlen
+            gradvec[i] = Grad(x[i], pchunk[i])
+        end
+
+        result::ResultGradVec = f(gradvec)
+
+        jacobian!(result, output)
+    else
+        zpartials = zero_partials(Grad)
+
+        # load x[i]-valued GradientNums into gradvec
+        @inbounds @simd for i in 1:xlen
+            gradvec[i] = Grad(x[i], zpartials)
+        end
+
+        for i in 1:N:xlen
+            # load GradientNums with single
+            # partial components into current
+            # chunk of gradvec
+            @inbounds @simd for j in 0:(N-1)
+                m = i+j
+                gradvec[m] = Grad(x[m], pchunk[j+1])
+            end
+
+            chunk_result::ResultGradVec = f(gradvec)
+
+            # load resultant partials components
+            # into output, replacing them with
+            # zeros in gradvec
+            @inbounds @simd for j in 0:(N-1)
+                m = i+j
+                output[i,j] = partials(chunk_result[i], j)
+                gradvec[m] = Grad(x[m], zpartials)
+            end
+        end
+    end
+
+    return output
+end
+
+function jacobian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, Grad::Type{GradientNum{N,T,C}})
+    return jacobian!(f, x, output, similar(x, Grad))
+end
+
+function jacobian!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
+    return jacobian!(f, x, Array(T, length(x), N), gradvec)
+end
+
+function jacobian{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
+    return jacobian!(f, x, Array(T, length(x), N), Grad)
+end
+
+function jacobian_func{G<:GradientNum}(f::Function, xlen::Int, ::Type{G}, mutates=true)
+    gradvec = Vector{G}(xlen)
+    T = eltype(G)
+    if mutates
+        jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, gradvec)
+        return jacf!
+    else
+        jacf{T}(x::Vector{T}) = jacobian!(f, x, gradvec)
+        return jacf
     end
 end
 
@@ -143,7 +233,7 @@ function hessian!{N,T,C,S}(f::Function,
     return output
 end
 
-function hessian!{N,T,C}(f::Function, x::Vector, output::Matrix, ::Type{GradientNum{N,T,C}})
+function hessian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, ::Type{GradientNum{N,T,C}})
     return hessian!(f, x, output, similar(x, HessianNum{N,T,C}))
 end
 
@@ -160,10 +250,10 @@ end
 function hessian_func{N,T,C}(f::Function, xlen::Int, ::Type{GradientNum{N,T,C}}, mutates=true)
     hessvec = Vector{HessianNum{N,T,C}}(xlen)
     if mutates
-        hessf!(x::Vector, output::Matrix) = hessian!(f, x, output, hessvec)
+        hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, hessvec)
         return hessf!
     else
-        hessf(x::Vector) = hessian!(f, x, hessvec)
+        hessf{T}(x::Vector{T}) = hessian!(f, x, hessvec)
         return hessf
     end
 end
@@ -239,7 +329,7 @@ function tensor!{N,T,C,S}(f::Function,
     return output
 end
 
-function tensor!{N,T,C}(f::Function, x::Vector, output::Array{T,3}, ::Type{GradientNum{N,T,C}})
+function tensor!{N,T,C,S}(f::Function, x::Vector{T}, output::Array{S,3}, ::Type{GradientNum{N,T,C}})
     return tensor!(f, x, output, similar(x, TensorNum{N,T,C}))
 end
 
@@ -248,18 +338,18 @@ function tensor!{N,T,C}(f::Function, x::Vector{T}, tensvec::Vector{TensorNum{N,T
     return tensor!(f, x, Array(T, xlen, xlen, xlen), tensvec)
 end
 
-function tensor{N,T,C}(f::Function, x::Vector{T}, ::Type{GradientNum{N,T,C}})
+function tensor{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
     xlen = length(x)
-    return tensor!(f, x, Array(T, xlen, xlen, xlen), GradientNum{N,T,C})
+    return tensor!(f, x, Array(T, xlen, xlen, xlen), Grad)
 end
 
 function tensor_func{N,T,C}(f::Function, xlen::Int, ::Type{GradientNum{N,T,C}}, mutates=true)
     tensvec = Vector{TensorNum{N,T,C}}(xlen)
     if mutates
-        tensf!{T}(x::Vector, output::Array{T,3}) = tensor!(f, x, output, tensvec)
+        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, tensvec)
         return tensf!
     else
-        tensf(x::Vector) = tensor!(f, x, tensvec)
+        tensf{T}(x::Vector{T}) = tensor!(f, x, tensvec)
         return tensf
     end
 end

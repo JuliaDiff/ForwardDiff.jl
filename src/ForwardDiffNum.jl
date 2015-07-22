@@ -68,7 +68,7 @@ ctranspose(n::ForwardDiffNum) = n
 ##################################
 function gradient!(n::ForwardDiffNum, output)
     @assert npartials(n) == length(output)
-    for i in eachindex(output)
+    @inbounds @simd for i in eachindex(output)
         output[i] = grad(n, i)
     end
     return output
