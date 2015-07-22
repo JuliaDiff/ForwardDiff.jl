@@ -5,14 +5,14 @@
 ## Addition/Subtraction ##
 ##----------------------##
 
-+{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B}) = GradNumVec{N,promote_type(A,B)}(value(z)+value(w), partials(z)+partials(w))
-+{N,T}(x::Real, z::GradNumVec{N,T}) = GradNumVec{N,promote_type(typeof(x),T)}(x+value(z), partials(z))
++{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B}) = GradNumVec{N,promote_type(A,B)}(value(z)+value(w), grad(z)+grad(w))
++{N,T}(x::Real, z::GradNumVec{N,T}) = GradNumVec{N,promote_type(typeof(x),T)}(x+value(z), grad(z))
 +{N,T}(z::GradNumVec{N,T}, x::Real) = x+z
 
--{N,T}(z::GradNumVec{N,T}) = GradNumVec{N,T}(-value(z), -partials(z))
--{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B}) = GradNumVec{N,promote_type(A,B)}(value(z)-value(w), partials(z)-partials(w))
--{N,T}(x::Real, z::GradNumVec{N,T}) = GradNumVec{N,promote_type(typeof(x),T)}(x-value(z), -partials(z))
--{N,T}(z::GradNumVec{N,T}, x::Real) = GradNumVec{N,promote_type(T,typeof(x))}(value(z)-x, partials(z))
+-{N,T}(z::GradNumVec{N,T}) = GradNumVec{N,T}(-value(z), -grad(z))
+-{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B}) = GradNumVec{N,promote_type(A,B)}(value(z)-value(w), grad(z)-grad(w))
+-{N,T}(x::Real, z::GradNumVec{N,T}) = GradNumVec{N,promote_type(typeof(x),T)}(x-value(z), -grad(z))
+-{N,T}(z::GradNumVec{N,T}, x::Real) = GradNumVec{N,promote_type(T,typeof(x))}(value(z)-x, grad(z))
 
 ## Multiplication ##
 ##----------------##
@@ -24,7 +24,7 @@
 function *{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B})
     z_r, w_r = value(z), value(w)
     T = promote_type(A,B)
-    dus = mul_dus!(Array(T, N), partials(z), partials(w), z_r, w_r)
+    dus = mul_dus!(Array(T, N), grad(z), grad(w), z_r, w_r)
     return GradNumVec{N,T}(z_r*w_r, dus)
 end
 
@@ -37,7 +37,7 @@ end
 
 function *{N,A}(x::Real, z::GradNumVec{N,A})
     T = promote_type(typeof(x),A)
-    return GradNumVec{N,T}(x*value(z), x*partials(z))
+    return GradNumVec{N,T}(x*value(z), x*grad(z))
 end
 
 *{N,T}(z::GradNumVec{N,T}, x::Real) = x*z
@@ -45,12 +45,12 @@ end
 ## Division ##
 ##----------##
 
-/{N,A,B<:Real}(z::GradNumVec{N,A}, x::B) = GradNumVec{N,promote_type(A,B,Float64)}(value(z)/x, partials(z)/x)
+/{N,A,B<:Real}(z::GradNumVec{N,A}, x::B) = GradNumVec{N,promote_type(A,B,Float64)}(value(z)/x, grad(z)/x)
 
 function /{N,A<:Real,B}(x::A, z::GradNumVec{N,B})
     z_r = value(z)
     T = promote_type(A, B, Float64)
-    dus = div_real_by_dus!(Array(T, N), -x, partials(z), z_r^2)
+    dus = div_real_by_dus!(Array(T, N), -x, grad(z), z_r^2)
     return GradNumVec{N,T}(x/z_r, dus)
 end
 
@@ -64,7 +64,7 @@ end
 function /{N,A,B}(z::GradNumVec{N,A}, w::GradNumVec{N,B})
     z_r, w_r = value(z), value(w)
     T = promote_type(A, B, Float64)
-    dus = div_dus!(Array(T,N), partials(z), partials(w), z_r, w_r, w_r^2)
+    dus = div_dus!(Array(T,N), grad(z), grad(w), z_r, w_r, w_r^2)
     return GradNumVec{N,T}(z_r/w_r, dus)
 end
 
@@ -86,7 +86,7 @@ for f in (:^, :(NaNMath.pow))
         powval = w_r * (($f)(z_r, w_r-1))
         logval = ($f)(z_r, w_r) * log(z_r)
         T = promote_type(A,B)
-        dus = mul_dus!(Array(T, N), partials(z), partials(w), logval, powval)
+        dus = mul_dus!(Array(T, N), grad(z), grad(w), logval, powval)
         return GradNumVec{N,T}(re, dus)
     end
 
@@ -98,14 +98,14 @@ for f in (:^, :(NaNMath.pow))
             z_r = value(z)
             powval = x*($f)(z_r, x-1)
             T = promote_type(A,typeof(x))
-            return GradNumVec{N,T}(($f)(z_r, x), powval*partials(z))
+            return GradNumVec{N,T}(($f)(z_r, x), powval*grad(z))
         end
 
         @eval function ($f){N,A}(x::$R, z::GradNumVec{N,A})
             z_r = value(z)
             logval = ($f)(x, z_r)*log(x)
             T = promote_type(typeof(x), A)
-            return GradNumVec{N,T}(($f)(x, z_r), logval*partials(z))
+            return GradNumVec{N,T}(($f)(x, z_r), logval*grad(z))
         end
     end
 
@@ -121,7 +121,7 @@ for (funsym, ex) in Calculus.symbolic_derivatives_1arg()
         x = value(z) # `x` is the variable name for $exp
         df = $ex
         T = promote_type(A, typeof(df), Float64)
-        return GradNumVec{N,T}($(funsym)(x), df*partials(z))
+        return GradNumVec{N,T}($(funsym)(x), df*grad(z))
     end
 
     # extend corresponding NaNMath methods
@@ -136,7 +136,7 @@ for (funsym, ex) in Calculus.symbolic_derivatives_1arg()
             x = value(z) # `x` is the variable name for $ex
             df = $(to_nanmath(ex))
             T = promote_type(A, typeof(df), Float64)
-            return GradNumVec{N,T}($(nan_funsym)(x), df*partials(z))
+            return GradNumVec{N,T}($(nan_funsym)(x), df*grad(z))
         end
     end
 end
@@ -144,5 +144,5 @@ end
 function exp{N,A}(z::GradNumVec{N,A})
     df = exp(value(z))
     T = promote_type(A, typeof(df), Float64)
-    return GradNumVec{N,T}(df, df*partials(z))
+    return GradNumVec{N,T}(df, df*grad(z))
 end

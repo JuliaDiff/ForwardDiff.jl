@@ -64,7 +64,7 @@ function gradient!{N,T,C,S}(f::Function,
             # zeros in gradvec
             @inbounds @simd for j in 0:(N-1)
                 m = i+j
-                output[m] = partials(chunk_result, j+1)
+                output[m] = grad(chunk_result, j+1)
                 gradvec[m] = Grad(x[m], zpartials)
             end
         end
@@ -166,7 +166,7 @@ function jacobian!{N,T,C,S}(f::Function,
             # zeros in gradvec
             @inbounds @simd for j in 0:(N-1)
                 m = i+j
-                output[i,j] = partials(chunk_result[i], j)
+                output[i,j] = grad(chunk_result[i], j)
                 gradvec[m] = Grad(x[m], zpartials)
             end
         end

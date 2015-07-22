@@ -1,15 +1,15 @@
 immutable HessianNum{N,T,C} <: ForwardDiffNum{N,T,C}
-    grad::GradientNum{N,T,C} 
+    gradnum::GradientNum{N,T,C} 
     hess::Vector{T}
-    function HessianNum(grad::GradientNum{N,T,C}, hess::Vector)
+    function HessianNum(gradnum::GradientNum{N,T,C}, hess::Vector)
         @assert length(hess) == halfhesslen(N)
-        return new(grad, hess)
+        return new(gradnum, hess)
     end
 end
 
-function HessianNum{N,T,C}(grad::GradientNum{N,T,C},
+function HessianNum{N,T,C}(gradnum::GradientNum{N,T,C},
                            hess::Vector=zeros(T, halfhesslen(N)))
-    return HessianNum{N,T,C}(grad, hess)
+    return HessianNum{N,T,C}(gradnum, hess)
 end
 
 ##############################
@@ -18,7 +18,10 @@ end
 zero{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(zero(GradientNum{N,T,C}), zeros(T, halfhesslen(N)))
 one{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(one(GradientNum{N,T,C}), zeros(T, halfhesslen(N)))
 
-grad(h::HessianNum) = h.grad
+gradnum(h::HessianNum) = h.gradnum
+
+value(h::HessianNum) = value(gradnum(h))
+grad(h::HessianNum) = grad(gradnum(h))
 hess(h::HessianNum) = h.hess
 tens(h::HessianNum) = error("HessianNums do not store tensor values")
 
@@ -27,10 +30,10 @@ eltype{N,T,C}(::Type{HessianNum{N,T,C}}) = T
 
 function isconstant(h::HessianNum)
     zeroT = zero(eltype(h))
-    return isconstant(grad(h)) && all(x -> x == zeroT, hess(h))
+    return isconstant(gradnum(h)) && all(x -> x == zeroT, hess(h))
 end
 
-=={N}(a::HessianNum{N}, b::HessianNum{N}) = (grad(a) == grad(b)) && (hess(a) == hess(b))
+=={N}(a::HessianNum{N}, b::HessianNum{N}) = (gradnum(a) == gradnum(b)) && (hess(a) == hess(b))
 
 ########################
 # Conversion/Promotion #
@@ -39,7 +42,7 @@ convert{N,T,C}(::Type{HessianNum{N,T,C}}, h::HessianNum{N,T,C}) = h
 convert{N,T,C}(::Type{HessianNum{N,T,C}}, x::Real) = HessianNum(GradientNum{N,T,C}(x), zeros(T, halfhesslen(N)))
 
 function convert{N,T,C}(::Type{HessianNum{N,T,C}}, h::HessianNum{N})
-    return HessianNum(convert(C, grad(h)), hess(h))
+    return HessianNum(convert(C, gradnum(h)), hess(h))
 end
 
 function convert{T<:Real}(::Type{T}, h::HessianNum)
@@ -109,23 +112,23 @@ for (fsym, term) in h_bivar_funcs
 
         function $(fsym){N,A,B}(a::HessianNum{N,A}, b::HessianNum{N,B})
             new_hess = Array(promote_type(A, B), halfhesslen(N))
-            return HessianNum($(fsym)(grad(a), grad(b)), $(loadfsym)(a, b, new_hess))
+            return HessianNum($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
         end
 
     end
 end
 
-+{N}(a::HessianNum{N}, b::HessianNum{N}) = HessianNum(grad(a) + grad(b), hess(a) + hess(b))
--{N}(a::HessianNum{N}, b::HessianNum{N}) = HessianNum(grad(a) - grad(b), hess(a) - hess(b))
++{N}(a::HessianNum{N}, b::HessianNum{N}) = HessianNum(gradnum(a) + gradnum(b), hess(a) + hess(b))
+-{N}(a::HessianNum{N}, b::HessianNum{N}) = HessianNum(gradnum(a) - gradnum(b), hess(a) - hess(b))
 
 for T in (:Bool, :Real)
     @eval begin
-        *(h::HessianNum, x::$(T)) = HessianNum(grad(h) * x, hess(h) * x)
-        *(x::$(T), h::HessianNum) = HessianNum(x * grad(h), x * hess(h))
+        *(h::HessianNum, x::$(T)) = HessianNum(gradnum(h) * x, hess(h) * x)
+        *(x::$(T), h::HessianNum) = HessianNum(x * gradnum(h), x * hess(h))
     end
 end
 
-/(h::HessianNum, x::Real) = HessianNum(grad(h) / x, hess(h) / x)
+/(h::HessianNum, x::Real) = HessianNum(gradnum(h) / x, hess(h) / x)
 #/(x::Real, h::HessianNum) = ?
 
 for T in (:Rational, :Integer, :Real)
@@ -139,7 +142,7 @@ for T in (:Rational, :Integer, :Real)
                     k += 1
                 end
             end
-            return HessianNum(grad(h)^p, new_hess)
+            return HessianNum(gradnum(h)^p, new_hess)
         end
     end
 end
@@ -147,7 +150,7 @@ end
 ## Univariate functions on HessianNums ##
 ##-------------------------------------##
 
--(h::HessianNum) = HessianNum(-grad(h), -hess(h))
+-(h::HessianNum) = HessianNum(-gradnum(h), -hess(h))
 
 # The Tuples in `h_univar_funcs` have the following format:
 #
@@ -196,7 +199,7 @@ for (fsym, term) in h_univar_funcs
         function $(fsym){N,T}(h::HessianNum{N,T})
             ResultType = typeof($(fsym)(one(T)))
             new_hess = Array(ResultType, halfhesslen(N))
-            return HessianNum($(fsym)(grad(h)), $(loadfsym)(h, new_hess))
+            return HessianNum($(fsym)(gradnum(h)), $(loadfsym)(h, new_hess))
         end
     end
 end

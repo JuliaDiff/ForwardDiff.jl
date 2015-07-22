@@ -1,28 +1,26 @@
 immutable GradientNum{N,T,C} <: ForwardDiffNum{N,T,C}
     value::T
-    partials::C
-    GradientNum(value::T, partials::NTuple{N,T}) = new(value, partials)
-    GradientNum(value::T, partials::Vector{T}) = new(value, partials)
-    GradientNum(value, partials) = GradientNum{N,T,C}(convert(T, value), convert(C, partials))
+    grad::C
+    GradientNum(value::T, grad::NTuple{N,T}) = new(value, grad)
+    GradientNum(value::T, grad::Vector{T}) = new(value, grad)
+    GradientNum(value, grad) = GradientNum{N,T,C}(convert(T, value), convert(C, grad))
     GradientNum(value) = GradientNum{N,T,C}(convert(T, value), zero_partials(GradientNum{N,T,C}))
 end
 
 typealias GradNumTup{N,T} GradientNum{N,T,NTuple{N,T}}
 typealias GradNumVec{N,T} GradientNum{N,T,Vector{T}}
 
-GradientNum{N,T}(value::T, partials::NTuple{N,T}) = GradientNum{N,T,NTuple{N,T}}(value, partials)
+GradientNum{N,T}(value::T, grad::NTuple{N,T}) = GradientNum{N,T,NTuple{N,T}}(value, grad)
 GradientNum{T}(value::T) = GradientNum{0,T,NTuple{0,T}}(value, tuple())
-GradientNum{T}(value::T, partials::T...) = GradientNum(value, partials)
-GradientNum(value::Real, partials::Real...) = GradientNum(promote(value, partials...)...)
+GradientNum{T}(value::T, grad::T...) = GradientNum(value, grad)
+GradientNum(value::Real, grad::Real...) = GradientNum(promote(value, grad...)...)
 
 ##############################
 # Utility/Accessor Functions #
 ##############################
 value(g::GradientNum) = g.value
-partials(g::GradientNum) = g.partials
-partials(g::GradientNum, i) = g.partials[i]
 
-grad(g::GradientNum) = g
+grad(g::GradientNum) = g.grad
 hess(g::GradientNum) = error("GradientNums do not store Hessian values")
 tens(g::GradientNum) = error("GradientNums do not store tensor values")
 
@@ -40,15 +38,15 @@ zero_partials{N,T,C<:Vector}(::Type{GradientNum{N,T,C}}) = zeros(T, N)
 #####################
 # Generic Functions #
 #####################
-isconstant(g::GradientNum) = any(x -> x == 0, partials(g))
+isconstant(g::GradientNum) = any(x -> x == 0, grad(g))
 isconstant(::GradientNum{0}) = true
 isreal(g::GradientNum) = isconstant(g)
 
-==(a::GradientNum, b::GradientNum) = value(a) == value(b) && partials(a) == partials(b)
+==(a::GradientNum, b::GradientNum) = value(a) == value(b) && grad(a) == grad(b)
 
-isequal(a::GradientNum, b::GradientNum) = isequal(value(a), value(b)) && isequal(partials(a), partials(b))
+isequal(a::GradientNum, b::GradientNum) = isequal(value(a), value(b)) && isequal(grad(a), grad(b))
 
-hash(g::GradientNum) = isconstant(g) ? hash(value(g)) : hash(value(g), hash(partials(g)))
+hash(g::GradientNum) = isconstant(g) ? hash(value(g)) : hash(value(g), hash(grad(g)))
 
 read_partials{N,T}(io::IO, n::Int, ::Type{NTuple{N,T}}) = ntuple(n->read(io, T), Val{N})
 read_partials{T}(io::IO, n::Int, ::Type{Vector{T}}) = [read(io, T) for i in 1:n]
@@ -61,7 +59,7 @@ end
 
 function write(io::IO, g::GradientNum)
     write(io, value(g))
-    for du in partials(g)
+    for du in grad(g)
         write(io, du)
     end
 end
@@ -78,7 +76,7 @@ one{N,T,C}(::Type{GradientNum{N,T,C}}) = GradientNum{N,T,C}(one(T), zero_partial
 for F in (:GradNumVec, :GradNumTup)
     @eval begin
         convert{N,T}(::Type{$(F){N,T}}, x::Real) = $(F){N,T}(x)
-        convert{N,A,B}(::Type{$(F){N,A}}, g::$(F){N,B}) = $(F){N,A}(value(g), partials(g))
+        convert{N,A,B}(::Type{$(F){N,A}}, g::$(F){N,B}) = $(F){N,A}(value(g), grad(g))
         convert{N,T}(::Type{$(F){N,T}}, g::$(F){N,T}) = g
 
         promote_rule{N,A,B}(::Type{$(F){N,A}}, ::Type{$(F){N,B}}) = $(F){N,promote_type(A,B)}

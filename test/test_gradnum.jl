@@ -21,10 +21,10 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     # Accessor Functions #
     ######################
     @test ForwardDiff.value(testgrad) == testval
-    @test ForwardDiff.partials(testgrad) == testpartials
+    @test ForwardDiff.grad(testgrad) == testpartials
 
     for i in 1:N
-        @test ForwardDiff.partials(testgrad, i) == testpartials[i]
+        @test ForwardDiff.grad(testgrad, i) == testpartials[i]
     end
 
     @test ForwardDiff.npartials(testgrad) == ForwardDiff.npartials(typeof(testgrad)) == N
@@ -88,7 +88,7 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     @test isnan(Grad{0,Float64}(NaN))
 
     not_const_grad = Grad{N,T}(1, map(one, testpartials))
-    @test !(ForwardDiff.isconstant(not_const_grad) || isreal(not_const_grad) || any(x -> x == 0, ForwardDiff.partials(not_const_grad)))
+    @test !(ForwardDiff.isconstant(not_const_grad) || isreal(not_const_grad) || any(x -> x == 0, ForwardDiff.grad(not_const_grad)))
     @test ForwardDiff.isconstant(const_grad) && isreal(const_grad)
     @test ForwardDiff.isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
 
@@ -133,7 +133,7 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     @test ForwardDiff.value(randxtest) == randval * testval
 
     for i in 1:N
-        @test ForwardDiff.partials(randxtest, i) == (randpartials[i] * testval) + (randval * testpartials[i])
+        @test ForwardDiff.grad(randxtest, i) == (randpartials[i] * testval) + (randval * testpartials[i])
     end
 
     @test randval * testgrad == Grad{N,T}(randval*testval, map(x -> randval*x, testpartials))
@@ -153,8 +153,8 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     @test ForwardDiff.value(valdivtest) == randval/testval
 
     for i in 1:N
-        @test ForwardDiff.partials(randdivtest, i) == ((randpartials[i] * testval) - (randval * testpartials[i])) / testval^2
-        @test ForwardDiff.partials(valdivtest, i) == (-randval * testpartials[i]) / testval^2
+        @test ForwardDiff.grad(randdivtest, i) == ((randpartials[i] * testval) - (randval * testpartials[i])) / testval^2
+        @test ForwardDiff.grad(valdivtest, i) == (-randval * testpartials[i]) / testval^2
     end
 
     @test testgrad / randval == Grad{N,T}(testval/randval, map(x -> x/randval, testpartials))
@@ -173,9 +173,9 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
     @test ForwardDiff.value(testexpval) == testval^randval
 
     for i in 1:N
-        @test_approx_eq ForwardDiff.partials(testexprand, i) (testpartials[i] * powval) + (logval * randpartials[i])
-        @test_approx_eq ForwardDiff.partials(valexptest, i) testpartials[i] * ((randval^testval) * log(randval))
-        @test_approx_eq ForwardDiff.partials(testexpval, i) testpartials[i] * randval * (testval^(randval-1))
+        @test_approx_eq ForwardDiff.grad(testexprand, i) (testpartials[i] * powval) + (logval * randpartials[i])
+        @test_approx_eq ForwardDiff.grad(valexptest, i) testpartials[i] * ((randval^testval) * log(randval))
+        @test_approx_eq ForwardDiff.grad(testexpval, i) testpartials[i] * randval * (testval^(randval-1))
 
     end
 
@@ -214,7 +214,7 @@ for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsV
 
             for i in 1:N
                 try 
-                    @test_approx_eq ForwardDiff.partials(fgrad, i) df*ForwardDiff.partials(orig_grad, i)
+                    @test_approx_eq ForwardDiff.grad(fgrad, i) df*ForwardDiff.grad(orig_grad, i)
                 catch exception
                     info("The exception was thrown while testing function $func at value $orig_grad")
                     throw(exception)

@@ -1,15 +1,15 @@
 immutable TensorNum{N,T,C} <: ForwardDiffNum{N,T,C}
-    hess::HessianNum{N,T,C}
+    hessnum::HessianNum{N,T,C}
     tens::Vector{T}
-    function TensorNum(hess::HessianNum{N,T,C}, tens::Vector{T})
+    function TensorNum(hessnum::HessianNum{N,T,C}, tens::Vector{T})
         @assert length(tens) == halftenslen(N)
-        return new(hess, tens)
+        return new(hessnum, tens)
     end
 end
 
-function TensorNum{N,T,C}(hess::HessianNum{N,T,C},
+function TensorNum{N,T,C}(hessnum::HessianNum{N,T,C},
                           tens::Vector=zeros(T, halftenslen(N)))
-    return TensorNum{N,T,C}(hess, tens)
+    return TensorNum{N,T,C}(hessnum, tens)
 end
 
 ##############################
@@ -18,8 +18,11 @@ end
 zero{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(zero(HessianNum{N,T,C}), zeros(T, halftenslen(n)))
 one{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(one(HessianNum{N,T,C}), zeros(T, halftenslen(n)))
 
-grad(t::TensorNum) = grad(hess(t))
-hess(t::TensorNum) = t.hess
+hessnum(t::TensorNum) = t.hessnum
+
+value(t::TensorNum) = value(hessnum(t))
+grad(t::TensorNum) = grad(hessnum(t))
+hess(t::TensorNum) = hess(hessnum(t))
 tens(t::TensorNum) = t.tens
 
 npartials{N,T,C}(::Type{TensorNum{N,T,C}}) = N
@@ -30,7 +33,7 @@ function isconstant(t::TensorNum)
     return isconstant(hess(t)) && all(x -> x == zeroT, tens(h))
 end
 
-=={N}(a::TensorNum{N}, b::TensorNum{N}) = (hess(a) == hess(b)) && (tens(a) == tens(b))
+=={N}(a::TensorNum{N}, b::TensorNum{N}) = (hessnum(a) == hessnum(b)) && (tens(a) == tens(b))
 
 ########################
 # Conversion/Promotion #
@@ -39,7 +42,7 @@ convert{N,T,C}(::Type{TensorNum{N,T,C}}, t::TensorNum{N,T,C}) = t
 convert{N,T,C}(::Type{TensorNum{N,T,C}}, x::Real) = TensorNum(HessianNum{N,T,C}(x), zeros(T, halftenslen(N)))
 
 function convert{N,T,C}(::Type{TensorNum{N,T,C}}, t::TensorNum{N})
-    return TensorNum(convert(HessianNum{N,T,C}, grad(t)), tens(t))
+    return TensorNum(convert(HessianNum{N,T,C}, hessnum(t)), tens(t))
 end
 
 function convert{T<:Real}(::Type{T}, t::TensorNum)
@@ -133,22 +136,22 @@ for (fsym, vars, term) in t_bivar_funcs
 
         function $(fsym){N,A,B}(t1::TensorNum{N,A}, t2::TensorNum{N,B})
             new_tens = Array(promote_type(A, B), halftenslen(N))
-            return TensorNum($(fsym)(hess(t1), hess(t2)), $(loadfsym)(t1, t2, new_tens))
+            return TensorNum($(fsym)(hessnum(t1), hessnum(t2)), $(loadfsym)(t1, t2, new_tens))
         end
     end
 end
 
-+{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hess(a) + hess(b), tens(a) + tens(b))
--{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hess(a) - hess(b), tens(a) - tens(b))
++{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hessnum(a) + hessnum(b), tens(a) + tens(b))
+-{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hessnum(a) - hessnum(b), tens(a) - tens(b))
 
 for T in (:Bool, :Real)
     @eval begin
-        *(t::TensorNum, x::$(T)) = TensorNum(hess(t) * x, tens(t) * x)
-        *(x::$(T), t::TensorNum) = TensorNum(x * hess(t), x * tens(t))
+        *(t::TensorNum, x::$(T)) = TensorNum(hessnum(t) * x, tens(t) * x)
+        *(x::$(T), t::TensorNum) = TensorNum(x * hessnum(t), x * tens(t))
     end
 end
 
-/(t::TensorNum, x::Real) = TensorNum(hess(t) / x, tens(t) / x)
+/(t::TensorNum, x::Real) = TensorNum(hessnum(t) / x, tens(t) / x)
 #/(x::Real, t::TensorNum) = ?
 
 for T in (:Rational, :Integer, :Real)
@@ -166,15 +169,15 @@ for T in (:Rational, :Integer, :Real)
                     end
                 end
             end
-            return TensorNum(hess(t)^p, new_tens)
+            return TensorNum(hessnum(t)^p, new_tens)
         end
     end
 end
 
-## Univariate functions on HessianNums ##
-##-------------------------------------##
+## Univariate functions on TensorNums ##
+##------------------------------------##
 
--(t::TensorNum) = TensorNum(-hess(t), -tens(t))
+-(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
 
 # The Tuples in `t_univar_funcs` have the following format:
 #
@@ -227,7 +230,7 @@ for (fsym, funcvars, loopvars, term) in t_univar_funcs
         function $(fsym){N,T}(t::TensorNum{N,T})
             ResultType = typeof($(fsym)(one(T)))
             new_tens = Array(ResultType, halftenslen(N))
-            return TensorNum($(fsym)(hess(t)), $(loadfsym)(t, new_tens))
+            return TensorNum($(fsym)(hessnum(t)), $(loadfsym)(t, new_tens))
         end
     end
 end
