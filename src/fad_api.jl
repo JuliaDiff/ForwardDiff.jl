@@ -4,7 +4,7 @@
 
 # Gradient from ForwardDiffNum #
 #------------------------------#
-function gradient!(n::ForwardDiffNum, output)
+function take_gradient!(n::ForwardDiffNum, output)
     @assert npartials(n) == length(output)
     @inbounds @simd for i in eachindex(output)
         output[i] = grad(n, i)
@@ -12,11 +12,11 @@ function gradient!(n::ForwardDiffNum, output)
     return output
 end
 
-gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = gradient!(n, Array(T, N))
+take_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = take_gradient!(n, Array(T, N))
 
 # Gradient from function #
 #------------------------#
-function gradient!{N,T,C,S}(f::Function,
+function take_gradient!{N,T,C,S}(f::Function,
                             x::Vector{T},
                             output::Vector{S},
                             gradvec::Vector{GradientNum{N,T,C}}) 
@@ -39,7 +39,7 @@ function gradient!{N,T,C,S}(f::Function,
 
         result::ResultGrad = f(gradvec)
         
-        gradient!(result, output)
+        take_gradient!(result, output)
     else
         zpartials = zero_partials(Grad)
 
@@ -73,12 +73,13 @@ function gradient!{N,T,C,S}(f::Function,
     return output
 end
 
-function gradient!{N,T,C}(f::Function, x::Vector{T}, output::Vector, Grad::Type{GradientNum{N,T,C}})
-    return gradient!(f, x, output, similar(x, Grad))
+
+function take_gradient!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
+    return take_gradient!(f, x, similar(x), gradvec)
 end
 
-function gradient!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
-    return gradient!(f, x, similar(x), gradvec)
+function gradient!{N,T,C}(f::Function, x::Vector{T}, output::Vector, Grad::Type{GradientNum{N,T,C}})
+    return take_gradient!(f, x, output, similar(x, Grad))
 end
 
 function gradient{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
@@ -89,10 +90,10 @@ function gradient_func{G<:GradientNum}(f::Function, xlen::Integer, ::Type{G}, mu
     gradvec = Vector{G}(xlen)
     T = eltype(G)
     if mutates
-        gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, gradvec)
+        gradf!{T}(x::Vector{T}, output::Vector) = take_gradient!(f, x, output, gradvec)
         return gradf!
     else
-        gradf{T}(x::Vector{T}) = gradient!(f, x, gradvec)
+        gradf{T}(x::Vector{T}) = take_gradient!(f, x, gradvec)
         return gradf
     end
 end
@@ -103,7 +104,7 @@ end
 
 # Jacobian from Vector{F<:ForwardDiffNum} #
 #-----------------------------------------#
-function jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
+function take_jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
     N = npartials(F)
     @assert (length(v), N) == size(output)
     for i in 1:length(v), j in 1:N
@@ -112,14 +113,14 @@ function jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
     return output
 end
 
-jacobian{F<:ForwardDiffNum}(v::Vector{F}) = jacobian!(v, Array(eltype(F), length(v), npartials(F)))
+take_jacobian{F<:ForwardDiffNum}(v::Vector{F}) = take_jacobian!(v, Array(eltype(F), length(v), npartials(F)))
 
 # Jacobian from function #
 #------------------------#
-function jacobian!{N,T,C,S}(f::Function,
-                            x::Vector{T},
-                            output::Matrix{S},
-                            gradvec::Vector{GradientNum{N,T,C}})
+function take_jacobian!{N,T,C,S}(f::Function,
+                                 x::Vector{T},
+                                 output::Matrix{S},
+                                 gradvec::Vector{GradientNum{N,T,C}})
     xlen = length(x)
     resultlen = size(output, 1)
     Grad = eltype(gradvec)
@@ -140,7 +141,7 @@ function jacobian!{N,T,C,S}(f::Function,
 
         result::ResultGradVec = f(gradvec)
 
-        jacobian!(result, output)
+        take_jacobian!(result, output)
     else
         zpartials = zero_partials(Grad)
 
@@ -176,15 +177,15 @@ function jacobian!{N,T,C,S}(f::Function,
     return output
 end
 
+function take_jacobian!{N,T,C}(f::Function, x::Vector{T}, ylen::Int, gradvec::Vector{GradientNum{N,T,C}})
+    return take_jacobian!(f, x, Array(T, ylen, length(x)), gradvec)
+end
+
 function jacobian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, Grad::Type{GradientNum{N,T,C}})
-    return jacobian!(f, x, output, similar(x, Grad))
+    return take_jacobian!(f, x, output, similar(x, Grad))
 end
 
-function jacobian!{N,T,C}(f::Function, x::Vector{T}, ylen::Int, gradvec::Vector{GradientNum{N,T,C}})
-    return jacobian!(f, x, Array(T, ylen, length(x)), gradvec)
-end
-
-function jacobian{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
+function jacobian{N,T,C}(f::Function, x::Vector{T}, ylen::Int, Grad::Type{GradientNum{N,T,C}})
     return jacobian!(f, x, Array(T, ylen, length(x)), Grad)
 end
 
@@ -192,10 +193,10 @@ function jacobian_func{G<:GradientNum}(f::Function, xlen::Int, ylen::Int, ::Type
     gradvec = Vector{G}(xlen)
     T = eltype(G)
     if mutates
-        jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, gradvec)
+        jacf!{T}(x::Vector{T}, output::Matrix) = take_jacobian!(f, x, output, gradvec)
         return jacf!
     else
-        jacf{T}(x::Vector{T}) = jacobian!(f, x, ylen, gradvec)
+        jacf{T}(x::Vector{T}) = take_jacobian!(f, x, ylen, gradvec)
         return jacf
     end
 end
@@ -206,7 +207,7 @@ end
 
 # Hessian from ForwardDiffNum #
 #-----------------------------#
-function hessian!{N}(n::ForwardDiffNum{N}, output)
+function take_hessian!{N}(n::ForwardDiffNum{N}, output)
     @assert (N, N) == size(output)
     q = 1
     for i in 1:N
@@ -220,11 +221,11 @@ function hessian!{N}(n::ForwardDiffNum{N}, output)
     return output
 end
 
-hessian{N,T}(n::ForwardDiffNum{N,T}) = hessian!(n, Array(T, N, N))
+take_hessian{N,T}(n::ForwardDiffNum{N,T}) = take_hessian!(n, Array(T, N, N))
 
 # Hessian from function #
 #-----------------------#
-function hessian!{N,T,C,S}(f::Function,
+function take_hessian!{N,T,C,S}(f::Function,
                            x::Vector{T},
                            output::Matrix{S},
                            hessvec::Vector{HessianNum{N,T,C}}) 
@@ -248,7 +249,7 @@ function hessian!{N,T,C,S}(f::Function,
 
         result::ResultHessian = f(hessvec)
 
-        hessian!(result, output)
+        take_hessian!(result, output)
     else
         zpartials = zero_partials(Grad)
 
@@ -288,13 +289,13 @@ function hessian!{N,T,C,S}(f::Function,
     return output
 end
 
-function hessian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, ::Type{GradientNum{N,T,C}})
-    return hessian!(f, x, output, similar(x, HessianNum{N,T,C}))
+function take_hessian!{N,T,C}(f::Function, x::Vector{T}, hessvec::Vector{HessianNum{N,T,C}})
+    xlen = length(x)
+    return take_hessian!(f, x, Array(T, xlen, xlen), hessvec)
 end
 
-function hessian!{N,T,C}(f::Function, x::Vector{T}, hessvec::Vector{HessianNum{N,T,C}})
-    xlen = length(x)
-    return hessian!(f, x, Array(T, xlen, xlen), hessvec)
+function hessian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, ::Type{GradientNum{N,T,C}})
+    return take_hessian!(f, x, output, similar(x, HessianNum{N,T,C}))
 end
 
 function hessian{N,T,C}(f::Function, x::Vector{T}, ::Type{GradientNum{N,T,C}})
@@ -305,10 +306,10 @@ end
 function hessian_func{N,T,C}(f::Function, xlen::Int, ::Type{GradientNum{N,T,C}}, mutates=true)
     hessvec = Vector{HessianNum{N,T,C}}(xlen)
     if mutates
-        hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, hessvec)
+        hessf!{T}(x::Vector{T}, output::Matrix) = take_hessian!(f, x, output, hessvec)
         return hessf!
     else
-        hessf{T}(x::Vector{T}) = hessian!(f, x, hessvec)
+        hessf{T}(x::Vector{T}) = take_hessian!(f, x, hessvec)
         return hessf
     end
 end
@@ -319,7 +320,7 @@ end
 
 # Tensor from ForwardDiffNum #
 #----------------------------#
-function tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
+function take_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     @assert (N, N, N) == size(output)
     q = 1
     for k in 1:N
@@ -336,11 +337,11 @@ function tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     return output
 end
 
-tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = tensor!(n, Array(T, N, N, N))
+take_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = take_tensor!(n, Array(T, N, N, N))
 
 # Tensor from function #
 #----------------------#
-function tensor!{N,T,C,S}(f::Function,
+function take_tensor!{N,T,C,S}(f::Function,
                           x::Vector{T},
                           output::Array{S,3},
                           tensvec::Vector{TensorNum{N,T,C}}) 
@@ -365,13 +366,13 @@ function tensor!{N,T,C,S}(f::Function,
 
         result::ResultTensor = f(tensvec)
 
-        tensor!(result, output)
+        take_tensor!(result, output)
     else
         zpartials = zero_partials(Grad)
 
         # load x[i]-valued TensorNums into tensvec 
         @inbounds @simd for i in 1:xlen
-            tensvec[i] = TensorNum(HessianNum(Grad(x[i], zpartials[i]), zhess), ztens)
+            tensvec[i] = TensorNum(HessianNum(Grad(x[i], zpartials), zhess), ztens)
         end
 
         for m in 1:N:xlen
@@ -397,7 +398,7 @@ function tensor!{N,T,C,S}(f::Function,
                         output[i, j, k] = val
                         output[j, i, k] = val
                         output[j, k, i] = val
-                        tensvec[n] = HessianNum(Grad(x[n], zpartials), zhess)
+                        tensvec[n] = TensorNum(HessianNum(Grad(x[n], zpartials), zhess), ztens)
                         q += 1
                     end
                 end
@@ -408,13 +409,14 @@ function tensor!{N,T,C,S}(f::Function,
     return output
 end
 
-function tensor!{N,T,C,S}(f::Function, x::Vector{T}, output::Array{S,3}, ::Type{GradientNum{N,T,C}})
-    return tensor!(f, x, output, similar(x, TensorNum{N,T,C}))
+
+function take_tensor!{N,T,C}(f::Function, x::Vector{T}, tensvec::Vector{TensorNum{N,T,C}})
+    xlen = length(x)
+    return take_tensor!(f, x, Array(T, xlen, xlen, xlen), tensvec)
 end
 
-function tensor!{N,T,C}(f::Function, x::Vector{T}, tensvec::Vector{TensorNum{N,T,C}})
-    xlen = length(x)
-    return tensor!(f, x, Array(T, xlen, xlen, xlen), tensvec)
+function tensor!{N,T,C,S}(f::Function, x::Vector{T}, output::Array{S,3}, ::Type{GradientNum{N,T,C}})
+    return take_tensor!(f, x, output, similar(x, TensorNum{N,T,C}))
 end
 
 function tensor{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
@@ -425,10 +427,10 @@ end
 function tensor_func{N,T,C}(f::Function, xlen::Int, ::Type{GradientNum{N,T,C}}, mutates=true)
     tensvec = Vector{TensorNum{N,T,C}}(xlen)
     if mutates
-        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, tensvec)
+        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = take_tensor!(f, x, output, tensvec)
         return tensf!
     else
-        tensf{T}(x::Vector{T}) = tensor!(f, x, tensvec)
+        tensf{T}(x::Vector{T}) = take_tensor!(f, x, tensvec)
         return tensf
     end
 end
