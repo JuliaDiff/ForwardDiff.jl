@@ -60,8 +60,8 @@ function gradient!{N,T,C,S}(f::Function,
             chunk_result::ResultGrad = f(gradvec)
 
             # load resultant partials components
-            # into output, replacing them with 
-            # zeros in gradvec
+            # into output, replacing single partial
+            # components with zeros in gradvec
             @inbounds @simd for j in 0:(N-1)
                 m = i+j
                 output[m] = grad(chunk_result, j+1)
@@ -114,7 +114,6 @@ end
 
 jacobian{F<:ForwardDiffNum}(v::Vector{F}) = jacobian!(v, Array(eltype(F), length(v), npartials(F)))
 
-
 # Jacobian from function #
 #------------------------#
 function jacobian!{N,T,C,S}(f::Function,
@@ -122,10 +121,11 @@ function jacobian!{N,T,C,S}(f::Function,
                             output::Matrix{S},
                             gradvec::Vector{GradientNum{N,T,C}})
     xlen = length(x)
+    resultlen = size(output, 1)
     Grad = eltype(gradvec)
     ResultGradVec = Vector{GradientNum{N,S,switch_eltype(C,S)}}
 
-    @assert (xlen, N) == size(output) "The output matrix must have size (length(input), npartials(eltype(gradvec)))"
+    @assert xlen == size(output, 2) "The number of columns of the output matrix must equal the length of the input vector"
     @assert xlen == length(gradvec) "The GradientNum vector must be the same length as the input vector"
     @assert xlen % N == 0 "Length of input vector is indivisible by the number of partials components (length(x) = $k, npartials(eltype(gradvec)) = $N)"
 
@@ -134,8 +134,8 @@ function jacobian!{N,T,C,S}(f::Function,
     # We can do less work filling and
     # zeroing out gradvec if xlen == N
     if xlen == N
-        @inbounds @simd for i in 1:xlen
-            gradvec[i] = Grad(x[i], pchunk[i])
+        @inbounds @simd for j in 1:xlen
+            gradvec[j] = Grad(x[j], pchunk[j])
         end
 
         result::ResultGradVec = f(gradvec)
@@ -145,28 +145,30 @@ function jacobian!{N,T,C,S}(f::Function,
         zpartials = zero_partials(Grad)
 
         # load x[i]-valued GradientNums into gradvec
-        @inbounds @simd for i in 1:xlen
-            gradvec[i] = Grad(x[i], zpartials)
+        @inbounds @simd for j in 1:xlen
+            gradvec[j] = Grad(x[j], zpartials)
         end
 
-        for i in 1:N:xlen
+        for j in 1:N:xlen
             # load GradientNums with single
             # partial components into current
             # chunk of gradvec
-            @inbounds @simd for j in 0:(N-1)
-                m = i+j
-                gradvec[m] = Grad(x[m], pchunk[j+1])
+            @inbounds @simd for k in 0:(N-1)
+                m = k+j
+                gradvec[m] = Grad(x[m], pchunk[k+1])
             end
 
             chunk_result::ResultGradVec = f(gradvec)
 
             # load resultant partials components
-            # into output, replacing them with
-            # zeros in gradvec
-            @inbounds @simd for j in 0:(N-1)
-                m = i+j
-                output[i,j] = grad(chunk_result[i], j)
+            # into output, replacing single partial
+            # components with zeros in gradvec
+            for k in 0:(N-1)
+                m = k+j
                 gradvec[m] = Grad(x[m], zpartials)
+                for i in 1:resultlen
+                    output[i,m] = grad(chunk_result[i], k+1)
+                end
             end
         end
     end
@@ -178,22 +180,22 @@ function jacobian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, Grad::Type{
     return jacobian!(f, x, output, similar(x, Grad))
 end
 
-function jacobian!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
-    return jacobian!(f, x, Array(T, length(x), N), gradvec)
+function jacobian!{N,T,C}(f::Function, x::Vector{T}, ylen::Int, gradvec::Vector{GradientNum{N,T,C}})
+    return jacobian!(f, x, Array(T, ylen, length(x)), gradvec)
 end
 
 function jacobian{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
-    return jacobian!(f, x, Array(T, length(x), N), Grad)
+    return jacobian!(f, x, Array(T, ylen, length(x)), Grad)
 end
 
-function jacobian_func{G<:GradientNum}(f::Function, xlen::Int, ::Type{G}, mutates=true)
+function jacobian_func{G<:GradientNum}(f::Function, xlen::Int, ylen::Int, ::Type{G}, mutates=true)
     gradvec = Vector{G}(xlen)
     T = eltype(G)
     if mutates
         jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, gradvec)
         return jacf!
     else
-        jacf{T}(x::Vector{T}) = jacobian!(f, x, gradvec)
+        jacf{T}(x::Vector{T}) = jacobian!(f, x, ylen, gradvec)
         return jacf
     end
 end
@@ -267,7 +269,7 @@ function hessian!{N,T,C,S}(f::Function,
             chunk_result::ResultHessian = f(hessvec)
 
             # load resultant hessian components
-            # into output, replacing them with 
+            # into output, replacing partials with 
             # zeros in hessvec
             q = 1
             for i in m:(m+N)
@@ -384,7 +386,7 @@ function tensor!{N,T,C,S}(f::Function,
             chunk_result::ResultTensor = f(tensvec)
 
             # load resultant tensor components
-            # into output, replacing them with 
+            # into output, replacing partials with 
             # zeros in tensvec
             q = 0
             for k in m:(m+N)
