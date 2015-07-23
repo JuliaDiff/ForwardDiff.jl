@@ -2,9 +2,6 @@ using Base.Test
 using ForwardDiff
 using Calculus
 
-#############################################################
-# Test basic, non-math functions on ForwardDiff.GradientNum #
-#############################################################
 floatrange = 0.0:.01:.99
 intrange = 0:10
 N = 3
@@ -14,7 +11,7 @@ testval = rand(floatrange)
 partialtup = tuple(rand(floatrange, N)...)
 partialvec = collect(partialtup)
 
-for (testpartials, Grad) in ((partialtup, PartialsTuple), (partialvec, PartialsVector))
+for (testpartials, Grad) in ((partialtup, ForwardDiff.GradNumTup), (partialvec, ForwardDiff.GradNumVec))
     testgrad = Grad{N,T}(testval, testpartials)
 
     ######################
