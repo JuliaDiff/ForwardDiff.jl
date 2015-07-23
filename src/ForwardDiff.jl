@@ -1,13 +1,18 @@
 module ForwardDiff
 
     importall Base
+    importall Calculus
 
     import NaNMath
-    import Calculus
 
     if VERSION < v"0.4-"
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
+
+    abstract Partials{N,T}
+    
+    npartials{N,T}(::Type{Partials{N,T}}) = N
+    eltype{N,T}(::Type{Partials{N,T}}) = T
 
     include("ForwardDiffNum.jl")
     include("GradientNum.jl")
@@ -15,16 +20,21 @@ module ForwardDiff
     include("TensorNum.jl")
     include("fad_api.jl")
 
-    typealias PartialsTuple{N,T} GradNumTup{N,T}
-    typealias PartialsVector{N,T} GradNumVec{N,T}
+    @generated function pick_implementation{N,T}(::Type{Partials{N,T}})
+        if N > 10
+            return :(Vector{$T})
+        else
+            return :(NTuple{$N,$T})
+        end
+    end
 
-    export PartialsTuple,
-           PartialsVector,
+    export Partials,
            gradient!,
            gradient,
            gradient_func,
            jacobian!,
            jacobian,
+           jacobian_func,
            hessian!,
            hessian,
            hessian_func,

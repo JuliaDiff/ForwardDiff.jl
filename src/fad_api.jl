@@ -17,78 +17,43 @@ take_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = take_gradient!(n, Array(T, N))
 # Gradient from function #
 #------------------------#
 function take_gradient!{N,T,C,S}(f::Function,
-                            x::Vector{T},
-                            output::Vector{S},
-                            gradvec::Vector{GradientNum{N,T,C}}) 
-    xlen = length(x)
+                                 x::Vector{T},
+                                 output::Vector{S},
+                                 gradvec::Vector{GradientNum{N,T,C}}) 
     Grad = eltype(gradvec)
     ResultGrad = GradientNum{N,S,switch_eltype(C,S)}
 
-    @assert xlen == length(output) "The output array must be the same length as x"
-    @assert xlen == length(gradvec) "The GradientNum vector must be the same length as the input vector"
-    @assert xlen % N == 0 "Length of input vector is indivisible by the number of partials components (length(x) = $k, npartials(eltype(gradvec)) = $N)"
+    @assert length(x) == N "Length of input must be equal to the number of partials components used"
+    @assert N == length(output) "The output vector must be the same length as the input vector"
+    @assert N == length(gradvec) "The GradientNum vector must be the same length as the input vector"
 
     pchunk = partials_chunk(Grad)
 
-    # We can do less work filling and
-    # zeroing out gradvec if xlen == N
-    if xlen == N
-        @inbounds @simd for i in 1:xlen
-            gradvec[i] = Grad(x[i], pchunk[i])
-        end
-
-        result::ResultGrad = f(gradvec)
-        
-        take_gradient!(result, output)
-    else
-        zpartials = zero_partials(Grad)
-
-        # load x[i]-valued GradientNums into gradvec 
-        @inbounds @simd for i in 1:xlen
-            gradvec[i] = Grad(x[i], zpartials)
-        end
-
-        for i in 1:N:xlen
-            # load GradientNums with single
-            # partial components into current 
-            # chunk of gradvec
-            @inbounds @simd for j in 0:(N-1)
-                m = i+j
-                gradvec[m] = Grad(x[m], pchunk[j+1])
-            end
-
-            chunk_result::ResultGrad = f(gradvec)
-
-            # load resultant partials components
-            # into output, replacing single partial
-            # components with zeros in gradvec
-            @inbounds @simd for j in 0:(N-1)
-                m = i+j
-                output[m] = grad(chunk_result, j+1)
-                gradvec[m] = Grad(x[m], zpartials)
-            end
-        end
+    @inbounds @simd for i in 1:N
+        gradvec[i] = Grad(x[i], pchunk[i])
     end
+
+    result::ResultGrad = f(gradvec)
+    
+    take_gradient!(result, output)
 
     return output
 end
-
 
 function take_gradient!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
     return take_gradient!(f, x, similar(x), gradvec)
 end
 
-function gradient!{N,T,C}(f::Function, x::Vector{T}, output::Vector, Grad::Type{GradientNum{N,T,C}})
-    return take_gradient!(f, x, output, similar(x, Grad))
+function gradient!{N,T}(f::Function, x::Vector{T}, output::Vector, P::Type{Partials{N,T}})
+    return take_gradient!(f, x, output, similar(x, GradientNum{N,T,pick_implementation(P)}))
 end
 
-function gradient{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
-    return gradient!(f, x, similar(x), Grad)
+function gradient{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}})
+    return gradient!(f, x, similar(x), P)
 end
 
-function gradient_func{G<:GradientNum}(f::Function, xlen::Integer, ::Type{G}, mutates=true)
-    gradvec = Vector{G}(xlen)
-    T = eltype(G)
+function gradient_func{N,T}(f::Function, P::Type{Partials{N,T}}; mutates=true)
+    gradvec = Vector{GradientNum{N,T,pick_implementation(P)}}(N)
     if mutates
         gradf!{T}(x::Vector{T}, output::Vector) = take_gradient!(f, x, output, gradvec)
         return gradf!
@@ -121,58 +86,22 @@ function take_jacobian!{N,T,C,S}(f::Function,
                                  x::Vector{T},
                                  output::Matrix{S},
                                  gradvec::Vector{GradientNum{N,T,C}})
-    xlen = length(x)
-    resultlen = size(output, 1)
     Grad = eltype(gradvec)
     ResultGradVec = Vector{GradientNum{N,S,switch_eltype(C,S)}}
 
-    @assert xlen == size(output, 2) "The number of columns of the output matrix must equal the length of the input vector"
-    @assert xlen == length(gradvec) "The GradientNum vector must be the same length as the input vector"
-    @assert xlen % N == 0 "Length of input vector is indivisible by the number of partials components (length(x) = $k, npartials(eltype(gradvec)) = $N)"
+    @assert length(x) == N "Length of input must be equal to the number of partials components used"
+    @assert N == size(output, 2) "The number of columns of the output matrix must equal the length of the input vector"
+    @assert N == length(gradvec) "The GradientNum vector must be the same length as the input vector"
 
     pchunk = partials_chunk(Grad)
 
-    # We can do less work filling and
-    # zeroing out gradvec if xlen == N
-    if xlen == N
-        @inbounds @simd for j in 1:xlen
-            gradvec[j] = Grad(x[j], pchunk[j])
-        end
-
-        result::ResultGradVec = f(gradvec)
-
-        take_jacobian!(result, output)
-    else
-        zpartials = zero_partials(Grad)
-
-        # load x[i]-valued GradientNums into gradvec
-        @inbounds @simd for j in 1:xlen
-            gradvec[j] = Grad(x[j], zpartials)
-        end
-
-        for j in 1:N:xlen
-            # load GradientNums with single
-            # partial components into current
-            # chunk of gradvec
-            @inbounds @simd for k in 0:(N-1)
-                m = k+j
-                gradvec[m] = Grad(x[m], pchunk[k+1])
-            end
-
-            chunk_result::ResultGradVec = f(gradvec)
-
-            # load resultant partials components
-            # into output, replacing single partial
-            # components with zeros in gradvec
-            for k in 0:(N-1)
-                m = k+j
-                gradvec[m] = Grad(x[m], zpartials)
-                for i in 1:resultlen
-                    output[i,m] = grad(chunk_result[i], k+1)
-                end
-            end
-        end
+    @inbounds @simd for j in 1:N
+        gradvec[j] = Grad(x[j], pchunk[j])
     end
+
+    result::ResultGradVec = f(gradvec)
+
+    take_jacobian!(result, output)
 
     return output
 end
@@ -181,17 +110,16 @@ function take_jacobian!{N,T,C}(f::Function, x::Vector{T}, ylen::Int, gradvec::Ve
     return take_jacobian!(f, x, Array(T, ylen, length(x)), gradvec)
 end
 
-function jacobian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, Grad::Type{GradientNum{N,T,C}})
-    return take_jacobian!(f, x, output, similar(x, Grad))
+function jacobian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N,T}})
+    return take_jacobian!(f, x, output, similar(x, GradientNum{N,T,pick_implementation(P)}))
 end
 
-function jacobian{N,T,C}(f::Function, x::Vector{T}, ylen::Int, Grad::Type{GradientNum{N,T,C}})
-    return jacobian!(f, x, Array(T, ylen, length(x)), Grad)
+function jacobian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}}, ylen::Int)
+    return jacobian!(f, x, Array(T, ylen, length(x)), P)
 end
 
-function jacobian_func{G<:GradientNum}(f::Function, xlen::Int, ylen::Int, ::Type{G}, mutates=true)
-    gradvec = Vector{G}(xlen)
-    T = eltype(G)
+function jacobian_func{N,T}(f::Function, P::Type{Partials{N,T}}, ylen::Int; mutates=true)
+    gradvec = Vector{GradientNum{N,T,pick_implementation(P)}}(N)
     if mutates
         jacf!{T}(x::Vector{T}, output::Matrix) = take_jacobian!(f, x, output, gradvec)
         return jacf!
@@ -208,7 +136,6 @@ end
 # Hessian from ForwardDiffNum #
 #-----------------------------#
 function take_hessian!{N}(n::ForwardDiffNum{N}, output)
-    @assert (N, N) == size(output)
     q = 1
     for i in 1:N
         for j in 1:i
@@ -226,85 +153,44 @@ take_hessian{N,T}(n::ForwardDiffNum{N,T}) = take_hessian!(n, Array(T, N, N))
 # Hessian from function #
 #-----------------------#
 function take_hessian!{N,T,C,S}(f::Function,
-                           x::Vector{T},
-                           output::Matrix{S},
-                           hessvec::Vector{HessianNum{N,T,C}}) 
-    xlen = length(x)
+                                x::Vector{T},
+                                output::Matrix{S},
+                                hessvec::Vector{HessianNum{N,T,C}}) 
     Grad = GradientNum{N,T,C}
     ResultHessian = HessianNum{N,S,switch_eltype(C,S)}
 
-    @assert (xlen, xlen) == size(output) "The output matrix must have size (length(input), length(input))"
-    @assert xlen == length(hessvec) "The HessianNum vector must be the same length as the input vector"
-    @assert xlen % N == 0 "Length of input is indivisible by the number of partials components (length(x) = $k, npartials(eltype(hessvec)) = $N)"
+    @assert length(x) == N "Length of input must be equal to the number of partials components used"
+    @assert (N, N) == size(output) "The output matrix must have size (length(input), length(input))"
+    @assert N == length(hessvec) "The HessianNum vector must be the same length as the input vector"
 
     pchunk = partials_chunk(Grad)
     zhess = zero_partials(eltype(hessvec))
 
-    # We can do less work filling and
-    # zeroing out hessvec if xlen == N
-    if xlen == N
-        @inbounds @simd for i in 1:xlen
-            hessvec[i] = HessianNum(Grad(x[i], pchunk[i]), zhess)
-        end
-
-        result::ResultHessian = f(hessvec)
-
-        take_hessian!(result, output)
-    else
-        zpartials = zero_partials(Grad)
-
-        # load x[i]-valued HessianNums into hessvec 
-        @inbounds @simd for i in 1:xlen
-            hessvec[i] = HessianNum(Grad(x[i], zpartials), zhess)
-        end
-
-        for m in 1:N:xlen
-            # load HessianNums with single
-            # partials components into current
-            # chunk of hessvec
-            @inbounds @simd for i in 0:(N-1)
-                k = m + i
-                hessvec[k] = HessianNum(Grad(x[k], pchunk[i+1]), zhess)
-            end
-
-            chunk_result::ResultHessian = f(hessvec)
-
-            # load resultant hessian components
-            # into output, replacing partials with 
-            # zeros in hessvec
-            q = 1
-            for i in m:(m+N)
-                for j in 1:i
-                    k = m + q
-                    val = hess(chunk_result, q)
-                    output[i, j] = val
-                    output[j, i] = val
-                    hessvec[k] = HessianNum(Grad(x[k], zpartials), zhess)
-                    q += 1
-                end
-            end
-        end
+    @inbounds @simd for i in 1:N
+        hessvec[i] = HessianNum(Grad(x[i], pchunk[i]), zhess)
     end
+
+    result::ResultHessian = f(hessvec)
+
+    take_hessian!(result, output)
 
     return output
 end
 
 function take_hessian!{N,T,C}(f::Function, x::Vector{T}, hessvec::Vector{HessianNum{N,T,C}})
-    xlen = length(x)
-    return take_hessian!(f, x, Array(T, xlen, xlen), hessvec)
+    return take_hessian!(f, x, Array(T, N, N), hessvec)
 end
 
-function hessian!{N,T,C}(f::Function, x::Vector{T}, output::Matrix, ::Type{GradientNum{N,T,C}})
-    return take_hessian!(f, x, output, similar(x, HessianNum{N,T,C}))
+function hessian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N,T}})
+    return take_hessian!(f, x, output, similar(x, HessianNum{N,T,pick_implementation(P)}))
 end
 
-function hessian{N,T,C}(f::Function, x::Vector{T}, ::Type{GradientNum{N,T,C}})
-    xlen = length(x)
-    return hessian!(f, x, Array(T, xlen, xlen), GradientNum{N,T,C})
+function hessian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}})
+    return hessian!(f, x, Array(T, N, N), P)
 end
 
-function hessian_func{N,T,C}(f::Function, xlen::Int, ::Type{GradientNum{N,T,C}}, mutates=true)
-    hessvec = Vector{HessianNum{N,T,C}}(xlen)
+function hessian_func{N,T}(f::Function, P::Type{Partials{N,T}}; mutates=true)
+    hessvec = Vector{HessianNum{N,T,pick_implementation(P)}}(N)
     if mutates
         hessf!{T}(x::Vector{T}, output::Matrix) = take_hessian!(f, x, output, hessvec)
         return hessf!
@@ -321,7 +207,6 @@ end
 # Tensor from ForwardDiffNum #
 #----------------------------#
 function take_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
-    @assert (N, N, N) == size(output)
     q = 1
     for k in 1:N
         for i in k:N
@@ -345,87 +230,44 @@ function take_tensor!{N,T,C,S}(f::Function,
                           x::Vector{T},
                           output::Array{S,3},
                           tensvec::Vector{TensorNum{N,T,C}}) 
-    xlen = length(x)
+    xlen = 
     Grad = GradientNum{N,T,C}
     ResultTensor = TensorNum{N,S,switch_eltype(C,S)}
 
-    @assert (xlen,xlen,xlen) == size(output) "The output array must have size (length(input), length(input), length(input))"
-    @assert xlen == length(tensvec) "The TensorNum vector must be the same length as the input"
-    @assert xlen % N == 0 "Length of input is indivisible by the number of partials components (length(x) = $k, npartials(eltype(tensvec)) = $N)"
+    @assert length(x) == N "Length of input must be equal to the number of partials components used"
+    @assert (N, N, N) == size(output) "The output array must have size (length(input), length(input), length(input))"
+    @assert N == length(tensvec) "The TensorNum vector must be the same length as the input"
 
     pchunk = partials_chunk(Grad)
     zhess = zero_partials(HessianNum{N,T,C})
     ztens = zero_partials(eltype(tensvec))
 
-    # We can do less work filling and
-    # zeroing out tensvec if xlen == N
-    if xlen == N
-        @inbounds @simd for i in 1:xlen
-            tensvec[i] = TensorNum(HessianNum(Grad(x[i], pchunk[i]), zhess), ztens)
-        end
-
-        result::ResultTensor = f(tensvec)
-
-        take_tensor!(result, output)
-    else
-        zpartials = zero_partials(Grad)
-
-        # load x[i]-valued TensorNums into tensvec 
-        @inbounds @simd for i in 1:xlen
-            tensvec[i] = TensorNum(HessianNum(Grad(x[i], zpartials), zhess), ztens)
-        end
-
-        for m in 1:N:xlen
-            # load TensorNums with single
-            # partials components into current
-            # chunk of tensvec
-            @inbounds @simd for i in 0:(N-1)
-                k = m + i
-                tensvec[k] = TensorNum(HessianNum(Grad(x[k], pchunk[i+1]), zhess), ztens)
-            end
-
-            chunk_result::ResultTensor = f(tensvec)
-
-            # load resultant tensor components
-            # into output, replacing partials with 
-            # zeros in tensvec
-            q = 0
-            for k in m:(m+N)
-                for i in k:(m+N)
-                    for j in k:i 
-                        n = m + q
-                        val = tens(chunk_result, q+1)
-                        output[i, j, k] = val
-                        output[j, i, k] = val
-                        output[j, k, i] = val
-                        tensvec[n] = TensorNum(HessianNum(Grad(x[n], zpartials), zhess), ztens)
-                        q += 1
-                    end
-                end
-            end
-        end
+    @inbounds @simd for i in 1:N
+        tensvec[i] = TensorNum(HessianNum(Grad(x[i], pchunk[i]), zhess), ztens)
     end
 
+    result::ResultTensor = f(tensvec)
+
+    take_tensor!(result, output)
+    
     return output
 end
 
 
 function take_tensor!{N,T,C}(f::Function, x::Vector{T}, tensvec::Vector{TensorNum{N,T,C}})
-    xlen = length(x)
-    return take_tensor!(f, x, Array(T, xlen, xlen, xlen), tensvec)
+    return take_tensor!(f, x, Array(T, N, N, N), tensvec)
 end
 
-function tensor!{N,T,C,S}(f::Function, x::Vector{T}, output::Array{S,3}, ::Type{GradientNum{N,T,C}})
-    return take_tensor!(f, x, output, similar(x, TensorNum{N,T,C}))
+function tensor!{N,T,S}(f::Function, x::Vector{T}, output::Array{S,3}, P::Type{Partials{N,T}})
+    return take_tensor!(f, x, output, similar(x, TensorNum{N,T,pick_implementation(P)}))
 end
 
-function tensor{N,T,C}(f::Function, x::Vector{T}, Grad::Type{GradientNum{N,T,C}})
-    xlen = length(x)
-    return tensor!(f, x, Array(T, xlen, xlen, xlen), Grad)
+function tensor{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}})
+    return tensor!(f, x, Array(T, N, N, N), P)
 end
 
-function tensor_func{N,T,C}(f::Function, xlen::Int, ::Type{GradientNum{N,T,C}}, mutates=true)
-    tensvec = Vector{TensorNum{N,T,C}}(xlen)
+function tensor_func{N,T}(f::Function, ::Type{Partials{N,T}}; mutates=true)
+    tensvec = Vector{TensorNum{N,T,pick_implementation(P)}}(N)
     if mutates
         tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = take_tensor!(f, x, output, tensvec)
         return tensf!
