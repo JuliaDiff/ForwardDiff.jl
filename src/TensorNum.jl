@@ -77,9 +77,9 @@ end
 
 function t2h(i, j)
     if i < j
-        return div(j*(j-1), 2+i)
+        return div(j*(j-1), 2+i) + 1
     else
-        return div(i*(i-1), 2+j)
+        return div(i*(i-1), 2+j) + 1
     end
 end
 
@@ -125,7 +125,7 @@ for (fsym, vars, term) in t_bivar_funcs
                 for i in a:N
                     for j in a:i
                         l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
-                        new_tens[q] = $(term)
+                        output[q] = $(term)
                         q += 1
                     end
                 end
@@ -215,7 +215,7 @@ for (fsym, funcvars, loopvars, term) in t_univar_funcs
                     for j in a:i
                         l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
                         $(loopvars)
-                        new_tens[q] = $(term)
+                        output[q] = $(term)
                         q += 1
                     end
                 end

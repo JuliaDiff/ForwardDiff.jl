@@ -210,15 +210,31 @@ function take_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     q = 1
     for k in 1:N
         for i in k:N
-            for j in k:i 
-                val = tens(n, q)
-                output[i, j, k] = val
-                output[j, i, k] = val
-                output[j, k, i] = val
+            for j in k:i
+                output[i, j, k] = tens(n, q)
                 q += 1
             end
         end
+
+        for i in 1:(k-1)
+            for j in 1:i
+                output[i, j, k] = output[k, i, j]
+            end
+        end
+
+        for i in k:N
+            for j in 1:(k-1)
+                output[i, j, k] = output[k, i, j]
+            end
+        end
+
+        for i in 1:N
+            for j in (i+1):N
+                output[i, j, k] = output[j, i, k]
+            end
+        end
     end
+
     return output
 end
 
