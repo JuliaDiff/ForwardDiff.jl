@@ -43,6 +43,7 @@ isreal(g::GradientNum) = isconstant(g)
 isequal(a::GradientNum, b::GradientNum) = isequal(value(a), value(b)) && isequal(grad(a), grad(b))
 
 hash(g::GradientNum) = isconstant(g) ? hash(value(g)) : hash(value(g), hash(grad(g)))
+hash(g::GradientNum, hsh::Uint64) = hash(hash(g), hsh)
 
 read_partials{N,T}(io::IO, n::Int, ::Type{NTuple{N,T}}) = ntuple(n->read(io, T), Val{N})
 read_partials{T}(io::IO, n::Int, ::Type{Vector{T}}) = [read(io, T) for i in 1:n]
