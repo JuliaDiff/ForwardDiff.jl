@@ -1,7 +1,7 @@
 immutable HessianNum{N,T,C} <: ForwardDiffNum{N,T,C}
     gradnum::GradientNum{N,T,C} 
     hess::Vector{T}
-    function HessianNum(gradnum::GradientNum{N,T,C}, hess::Vector)
+    function HessianNum(gradnum, hess)
         @assert length(hess) == halfhesslen(N)
         return new(gradnum, hess)
     end
@@ -12,11 +12,13 @@ function HessianNum{N,T,C}(gradnum::GradientNum{N,T,C},
     return HessianNum{N,T,C}(gradnum, hess)
 end
 
+HessianNum(value::Real) = HessianNum(GradientNum(value))
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
-zero{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(zero(GradientNum{N,T,C}), zeros(T, halfhesslen(N)))
-one{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(one(GradientNum{N,T,C}), zeros(T, halfhesslen(N)))
+zero{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(zero(GradientNum{N,T,C}))
+one{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(one(GradientNum{N,T,C}))
 
 gradnum(h::HessianNum) = h.gradnum
 
@@ -28,21 +30,45 @@ tens(h::HessianNum) = error("HessianNums do not store tensor values")
 npartials{N,T,C}(::Type{HessianNum{N,T,C}}) = N
 eltype{N,T,C}(::Type{HessianNum{N,T,C}}) = T
 
+#####################
+# Generic Functions #
+#####################
 function isconstant(h::HessianNum)
     zeroT = zero(eltype(h))
     return isconstant(gradnum(h)) && all(x -> x == zeroT, hess(h))
 end
 
+isconstant(h::HessianNum{0}) = true
+isreal(h::HessianNum) = isconstant(h)
+
 =={N}(a::HessianNum{N}, b::HessianNum{N}) = (gradnum(a) == gradnum(b)) && (hess(a) == hess(b))
+
+isequal{N}(a::HessianNum{N}, b::HessianNum{N}) = isequal(gradnum(a), gradnum(b)) && isequal(hess(a),hess(b))
+
+hash(h::HessianNum) = isconstant(h) ? hash(value(h)) : hash(gradnum(h), hash(hess(h)))
+hash(h::HessianNum, hsh::Uint64) = hash(hash(h), hsh)
+
+function read{N,T,C}(io::IO, ::Type{HessianNum{N,T,C}})
+    gradnum = read(io, GradientNum{N,T,C})
+    hess = [read(io, T) for i in 1:halfhesslen(N)]
+    return HessianNum{N,T,C}(gradnum, hess)
+end
+
+function write(io::IO, h::HessianNum)
+    write(io, gradnum(h))
+    for du in hess(h)
+        write(io, du)
+    end
+end
 
 ########################
 # Conversion/Promotion #
 ########################
 convert{N,T,C}(::Type{HessianNum{N,T,C}}, h::HessianNum{N,T,C}) = h
-convert{N,T,C}(::Type{HessianNum{N,T,C}}, x::Real) = HessianNum(GradientNum{N,T,C}(x), zeros(T, halfhesslen(N)))
+convert{N,T,C}(::Type{HessianNum{N,T,C}}, x::Real) = HessianNum(GradientNum{N,T,C}(x))
 
 function convert{N,T,C}(::Type{HessianNum{N,T,C}}, h::HessianNum{N})
-    return HessianNum(convert(C, gradnum(h)), hess(h))
+    return HessianNum(convert(GradientNum{N,T,C}, gradnum(h)), hess(h))
 end
 
 function convert{T<:Real}(::Type{T}, h::HessianNum)
