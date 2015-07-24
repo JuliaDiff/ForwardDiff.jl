@@ -1,60 +1,65 @@
 using Base.Test
-using ForwardDiff
 using Calculus
+using ForwardDiff
+using ForwardDiff: 
+        GradientNum,
+        value,
+        grad,
+        npartials
 
 floatrange = 0.0:.01:.99
 intrange = 0:10
 N = 3
 T = Float64
 
-testval = rand(floatrange)
-partialtup = tuple(rand(floatrange, N)...)
-partialvec = collect(partialtup)
+test_val = rand(floatrange)
+test_partialstup = tuple(rand(floatrange, N)...)
+test_partialsvec = collect(test_partialstup)
 
-for (testpartials, Grad) in ((partialtup, ForwardDiff.GradNumTup), (partialvec, ForwardDiff.GradNumVec))
-    testgrad = Grad{N,T}(testval, testpartials)
+for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_partialsvec, ForwardDiff.GradNumVec))
+    test_grad = Grad{N,T}(test_val, test_partials)
 
     ######################
     # Accessor Functions #
     ######################
-    @test ForwardDiff.value(testgrad) == testval
-    @test ForwardDiff.grad(testgrad) == testpartials
+    @test value(test_grad) == test_val
+    @test grad(test_grad) == test_partials
 
     for i in 1:N
-        @test ForwardDiff.grad(testgrad, i) == testpartials[i]
+        @test grad(test_grad, i) == test_partials[i]
     end
 
-    @test ForwardDiff.npartials(testgrad) == ForwardDiff.npartials(typeof(testgrad)) == N
+    @test npartials(test_grad) == npartials(typeof(test_grad)) == N
     
     ##################################
     # Value Representation Functions #
     ##################################
-    @test eps(testgrad) == eps(testval)
-    @test eps(typeof(testgrad)) == eps(T)
+    @test eps(test_grad) == eps(test_val)
+    @test eps(typeof(test_grad)) == eps(T)
 
-    grad_zero = Grad{N,T}(zero(testval), map(zero, testpartials))
-    grad_one = Grad{N,T}(one(testval), map(zero, testpartials))
+    grad_zero = Grad{N,T}(zero(test_val), map(zero, test_partials))
+    grad_one = Grad{N,T}(one(test_val), map(zero, test_partials))
 
-    @test zero(testgrad) == grad_zero
-    @test zero(typeof(testgrad)) == grad_zero
+    @test zero(test_grad) == grad_zero
+    @test zero(typeof(test_grad)) == grad_zero
 
-    @test one(testgrad) == grad_one
-    @test one(typeof(testgrad)) == grad_one
+    @test one(test_grad) == grad_one
+    @test one(typeof(test_grad)) == grad_one
 
     #########################################
     # Conversion/Promotion/Hashing/Equality #
     #########################################
-    int_val = round(Int, testval)
-    int_derivs = map(x -> round(Int, x), testpartials)
+    int_val = round(Int, test_val)
+    int_partials = map(x -> round(Int, x), test_partials)
     float_val = float(int_val)
-    float_derivs = map(float, int_derivs)
+    float_partials = map(float, int_partials)
 
-    int_grad = Grad{N,Int}(int_val, int_derivs)
-    float_grad = Grad{N,Float64}(float_val, float_derivs)
+    int_grad = Grad{N,Int}(int_val, int_partials)
+    float_grad = Grad{N,Float64}(float_val, float_partials)
     const_grad = Grad{N,Float64}(float_val)
 
-    @test convert(typeof(testgrad), testgrad) == testgrad
-    @test convert(ForwardDiff.GradientNum, testgrad) == testgrad
+    @test convert(typeof(test_grad), test_grad) == test_grad
+    @test convert(GradientNum, test_grad) == test_grad
     @test convert(Grad{N,Float64}, int_grad) == float_grad
     @test convert(Grad{0,Float64}, 1) == Grad{0,Float64}(1.0, ForwardDiff.zero_partials(Grad{0,Float64}))
     @test convert(Grad{3,Float64}, 1) == Grad{3,Float64}(1.0, ForwardDiff.zero_partials(Grad{3,Float64}))
@@ -76,142 +81,142 @@ for (testpartials, Grad) in ((partialtup, ForwardDiff.GradNumTup), (partialvec, 
     @test isequal(float_val, const_grad)
     @test isequal(const_grad, float_val)
 
-    @test copy(testgrad) == testgrad
+    @test copy(test_grad) == test_grad
 
     ####################
     # is____ Functions #
     ####################
-    @test isnan(testgrad) == isnan(testval)
+    @test isnan(test_grad) == isnan(test_val)
     @test isnan(Grad{0,Float64}(NaN))
 
-    not_const_grad = Grad{N,T}(1, map(one, testpartials))
-    @test !(ForwardDiff.isconstant(not_const_grad) || isreal(not_const_grad) || any(x -> x == 0, ForwardDiff.grad(not_const_grad)))
+    not_const_grad = Grad{N,T}(1, map(one, test_partials))
+    @test !(ForwardDiff.isconstant(not_const_grad) || isreal(not_const_grad) || any(x -> x == 0, grad(not_const_grad)))
     @test ForwardDiff.isconstant(const_grad) && isreal(const_grad)
     @test ForwardDiff.isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
 
-    @test isfinite(testgrad) && isfinite(testval)
+    @test isfinite(test_grad) && isfinite(test_val)
     @test !isfinite(Grad{N,T}(Inf))
 
-    @test isless(testgrad-1, testgrad)
-    @test isless(testval-1, testgrad)
-    @test isless(testgrad, testval+1)
+    @test isless(test_grad-1, test_grad)
+    @test isless(test_val-1, test_grad)
+    @test isless(test_grad, test_val+1)
 
     #######
     # I/O #
     #######
     io = IOBuffer()
-    write(io, testgrad)
+    write(io, test_grad)
     seekstart(io)
 
-    @test read(io, typeof(testgrad)) == testgrad
+    @test read(io, typeof(test_grad)) == test_grad
     
     close(io)
 
     #####################################
     # Arithmetic/Mathematical Functions #
     #####################################
-    randval = rand(T)
-    randpartials = map(x -> rand(T), testpartials)
-    randgrad = Grad{N,T}(randval, randpartials)
+    rand_val = rand(T)
+    rand_partials = map(x -> rand(T), test_partials)
+    rand_grad = Grad{N,T}(rand_val, rand_partials)
 
     # Addition/Subtraction #
     #----------------------#
-    @test randgrad + testgrad == Grad{N,T}(randval+testval, map(+, randpartials, testpartials))
-    @test randgrad + testgrad == testgrad + randgrad
-    @test randgrad - testgrad == Grad{N,T}(randval-testval, map(-, randpartials, testpartials))
-    @test randval - testgrad == Grad{N,T}(randval-testval, map(-, testpartials))
-    @test testgrad - randval == Grad{N,T}(testval-randval, testpartials)
-    @test -testgrad == Grad{N,T}(-testval, map(-, testpartials))
+    @test rand_grad + test_grad == Grad{N,T}(rand_val+test_val, map(+, rand_partials, test_partials))
+    @test rand_grad + test_grad == test_grad + rand_grad
+    @test rand_grad - test_grad == Grad{N,T}(rand_val-test_val, map(-, rand_partials, test_partials))
+    @test rand_val - test_grad == Grad{N,T}(rand_val-test_val, map(-, test_partials))
+    @test test_grad - rand_val == Grad{N,T}(test_val-rand_val, test_partials)
+    @test -test_grad == Grad{N,T}(-test_val, map(-, test_partials))
 
     # Multiplication #
     #----------------#
-    randxtest = randgrad * testgrad
+    rand_x_test = rand_grad * test_grad
 
-    @test ForwardDiff.value(randxtest) == randval * testval
+    @test value(rand_x_test) == rand_val * test_val
 
     for i in 1:N
-        @test ForwardDiff.grad(randxtest, i) == (randpartials[i] * testval) + (randval * testpartials[i])
+        @test grad(rand_x_test, i) == (rand_partials[i] * test_val) + (rand_val * test_partials[i])
     end
 
-    @test randval * testgrad == Grad{N,T}(randval*testval, map(x -> randval*x, testpartials))
-    @test testgrad * randval == randval * testgrad
+    @test rand_val * test_grad == Grad{N,T}(rand_val*test_val, map(x -> rand_val*x, test_partials))
+    @test test_grad * rand_val == rand_val * test_grad
 
-    @test testgrad * false == zero(testgrad)
-    @test testgrad * true == testgrad
-    @test true * testgrad == testgrad * true
-    @test false * testgrad == testgrad * false
+    @test test_grad * false == zero(test_grad)
+    @test test_grad * true == test_grad
+    @test true * test_grad == test_grad * true
+    @test false * test_grad == test_grad * false
 
     # Division #
     #----------#
-    randdivtest = randgrad / testgrad
-    valdivtest = randval / testgrad
+    rand_div_test = rand_grad / test_grad
+    val_div_test = rand_val / test_grad
 
-    @test ForwardDiff.value(randdivtest) == randval/testval
-    @test ForwardDiff.value(valdivtest) == randval/testval
+    @test value(rand_div_test) == rand_val/test_val
+    @test value(val_div_test) == rand_val/test_val
 
     for i in 1:N
-        @test ForwardDiff.grad(randdivtest, i) == ((randpartials[i] * testval) - (randval * testpartials[i])) / testval^2
-        @test ForwardDiff.grad(valdivtest, i) == (-randval * testpartials[i]) / testval^2
+        @test grad(rand_div_test, i) == ((rand_partials[i] * test_val) - (rand_val * test_partials[i])) / test_val^2
+        @test grad(val_div_test, i) == (-rand_val * test_partials[i]) / test_val^2
     end
 
-    @test testgrad / randval == Grad{N,T}(testval/randval, map(x -> x/randval, testpartials))
+    @test test_grad / rand_val == Grad{N,T}(test_val/rand_val, map(x -> x/rand_val, test_partials))
 
     # Exponentiation #
     #----------------#
-    powval = randval * (testval^(randval-1))
-    logval = (testval^randval) * log(testval)
+    pow_val = rand_val * (test_val^(rand_val-1))
+    log_val = (test_val^rand_val) * log(test_val)
 
-    testexprand = testgrad^randgrad
-    valexptest = randval^testgrad
-    testexpval = testgrad^randval
+    test_exp_rand = test_grad^rand_grad
+    val_exp_test = rand_val^test_grad
+    test_exp_val = test_grad^rand_val
 
-    @test ForwardDiff.value(testexprand) == testval^randval
-    @test ForwardDiff.value(valexptest) == randval^testval
-    @test ForwardDiff.value(testexpval) == testval^randval
+    @test value(test_exp_rand) == test_val^rand_val
+    @test value(val_exp_test) == rand_val^test_val
+    @test value(test_exp_val) == test_val^rand_val
 
     for i in 1:N
-        @test_approx_eq ForwardDiff.grad(testexprand, i) (testpartials[i] * powval) + (logval * randpartials[i])
-        @test_approx_eq ForwardDiff.grad(valexptest, i) testpartials[i] * ((randval^testval) * log(randval))
-        @test_approx_eq ForwardDiff.grad(testexpval, i) testpartials[i] * randval * (testval^(randval-1))
+        @test_approx_eq grad(test_exp_rand, i) (test_partials[i] * pow_val) + (log_val * rand_partials[i])
+        @test_approx_eq grad(val_exp_test, i) test_partials[i] * ((rand_val^test_val) * log(rand_val))
+        @test_approx_eq grad(test_exp_val, i) test_partials[i] * rand_val * (test_val^(rand_val-1))
 
     end
 
     # Univariate functions #
     #----------------------#
-    @test abs(testgrad) == testgrad
-    @test abs(-testgrad) == testgrad
-    @test abs2(testgrad) == testgrad*testgrad
+    @test abs(test_grad) == test_grad
+    @test abs(-test_grad) == test_grad
+    @test abs2(test_grad) == test_grad*test_grad
 
-    @test conj(testgrad) == testgrad
-    @test transpose(testgrad) == testgrad
-    @test ctranspose(testgrad) == testgrad
+    @test conj(test_grad) == test_grad
+    @test transpose(test_grad) == test_grad
+    @test ctranspose(test_grad) == test_grad
 
     for (fsym, expr) in Calculus.symbolic_derivatives_1arg()
         @eval begin
             func = $fsym
 
-            local orig_grad, fgrad
+            local orig_grad, f_grad
 
             try
-                orig_grad = $testgrad
-                fgrad = func(orig_grad)
+                orig_grad = $test_grad
+                f_grad = func(orig_grad)
             catch DomainError
                 # some of the provided functions
                 # have a domain x > 1, so we simply
                 # add 1 to our test GradientNum if
                 # a DomainError is thrown
-                orig_grad = $testgrad + 1
-                fgrad = func(orig_grad)
+                orig_grad = $test_grad + 1
+                f_grad = func(orig_grad)
             end
 
-            x = ForwardDiff.value(orig_grad)
+            x = value(orig_grad)
             df = $expr 
 
-            @test_approx_eq ForwardDiff.value(fgrad) func(x)
+            @test_approx_eq value(f_grad) func(x)
 
             for i in 1:N
                 try 
-                    @test_approx_eq ForwardDiff.grad(fgrad, i) df*ForwardDiff.grad(orig_grad, i)
+                    @test_approx_eq grad(f_grad, i) df*grad(orig_grad, i)
                 catch exception
                     info("The exception was thrown while testing function $func at value $orig_grad")
                     throw(exception)
