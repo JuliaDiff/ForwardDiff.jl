@@ -5,7 +5,8 @@ using ForwardDiff:
         GradientNum,
         value,
         grad,
-        npartials
+        npartials,
+        isconstant
 
 floatrange = 0.0:.01:.99
 intrange = 0:10
@@ -55,15 +56,15 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     float_partials = map(float, int_partials)
 
     int_grad = Grad{N,Int}(int_val, int_partials)
-    float_grad = Grad{N,Float64}(float_val, float_partials)
-    const_grad = Grad{N,Float64}(float_val)
+    float_grad = Grad{N,T}(float_val, float_partials)
+    const_grad = Grad{N,T}(float_val)
 
     @test convert(typeof(test_grad), test_grad) == test_grad
     @test convert(GradientNum, test_grad) == test_grad
-    @test convert(Grad{N,Float64}, int_grad) == float_grad
-    @test convert(Grad{0,Float64}, 1) == Grad{0,Float64}(1.0, ForwardDiff.zero_partials(Grad{0,Float64}))
-    @test convert(Grad{3,Float64}, 1) == Grad{3,Float64}(1.0, ForwardDiff.zero_partials(Grad{3,Float64}))
-    @test convert(Float64, Grad{2,Float64}(1)) == 1.0
+    @test convert(Grad{N,T}, int_grad) == float_grad
+    @test convert(Grad{0,T}, 1) == Grad{0,T}(1.0, ForwardDiff.zero_partials(Grad{0,T}))
+    @test convert(Grad{3,T}, 1) == Grad{3,T}(1.0, ForwardDiff.zero_partials(Grad{3,T}))
+    @test convert(T, Grad{2,T}(1)) == 1.0
 
     @test promote_type(Grad{N,Int}, Grad{N,Int}) == Grad{N,Int}
     @test promote_type(Grad{N,Float64}, Grad{N,Int}) == Grad{N,Float64}
@@ -87,12 +88,12 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     # is____ Functions #
     ####################
     @test isnan(test_grad) == isnan(test_val)
-    @test isnan(Grad{0,Float64}(NaN))
+    @test isnan(Grad{0,T}(NaN))
 
     not_const_grad = Grad{N,T}(1, map(one, test_partials))
-    @test !(ForwardDiff.isconstant(not_const_grad) || isreal(not_const_grad) || any(x -> x == 0, grad(not_const_grad)))
-    @test ForwardDiff.isconstant(const_grad) && isreal(const_grad)
-    @test ForwardDiff.isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
+    @test !(isconstant(not_const_grad) || isreal(not_const_grad))
+    @test isconstant(const_grad) && isreal(const_grad)
+    @test isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
 
     @test isfinite(test_grad) && isfinite(test_val)
     @test !isfinite(Grad{N,T}(Inf))
