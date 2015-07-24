@@ -1,19 +1,15 @@
 immutable GradientNum{N,T,C} <: ForwardDiffNum{N,T,C}
     value::T
     grad::C
-    GradientNum(value::T, grad::NTuple{N,T}) = new(value, grad)
-    GradientNum(value::T, grad::Vector{T}) = new(value, grad)
-    GradientNum(value, grad) = GradientNum{N,T,C}(convert(T, value), convert(C, grad))
-    GradientNum(value) = GradientNum{N,T,C}(convert(T, value), zero_partials(GradientNum{N,T,C}))
+    GradientNum(value, grad::Tuple) = new(value, grad)
+    GradientNum(value, grad::Vector) = new(value, grad)
 end
 
 typealias GradNumTup{N,T} GradientNum{N,T,NTuple{N,T}}
 typealias GradNumVec{N,T} GradientNum{N,T,Vector{T}}
 
 GradientNum{N,T}(value::T, grad::NTuple{N,T}) = GradientNum{N,T,NTuple{N,T}}(value, grad)
-GradientNum{T}(value::T) = GradientNum{0,T,NTuple{0,T}}(value, tuple())
 GradientNum{T}(value::T, grad::T...) = GradientNum(value, grad)
-GradientNum(value::Real, grad::Real...) = GradientNum(promote(value, grad...)...)
 
 ##############################
 # Utility/Accessor Functions #
@@ -75,7 +71,7 @@ one{N,T,C}(::Type{GradientNum{N,T,C}}) = GradientNum{N,T,C}(one(T), zero_partial
 
 for F in (:GradNumVec, :GradNumTup)
     @eval begin
-        convert{N,T}(::Type{$(F){N,T}}, x::Real) = $(F){N,T}(x)
+        convert{N,T}(::Type{$(F){N,T}}, x::Real) = $(F){N,T}(x, zero_partials($(F){N,T}))
         convert{N,A,B}(::Type{$(F){N,A}}, g::$(F){N,B}) = $(F){N,A}(value(g), grad(g))
         convert{N,T}(::Type{$(F){N,T}}, g::$(F){N,T}) = g
 
