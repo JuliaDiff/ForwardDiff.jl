@@ -1,7 +1,7 @@
 immutable TensorNum{N,T,C} <: ForwardDiffNum{N,T,C}
     hessnum::HessianNum{N,T,C}
     tens::Vector{T}
-    function TensorNum(hessnum::HessianNum{N,T,C}, tens::Vector{T})
+    function TensorNum(hessnum, tens)
         @assert length(tens) == halftenslen(N)
         return new(hessnum, tens)
     end
@@ -12,11 +12,13 @@ function TensorNum{N,T,C}(hessnum::HessianNum{N,T,C},
     return TensorNum{N,T,C}(hessnum, tens)
 end
 
+TensorNum(value::Real) = TensorNum(HessianNum(value))
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
-zero{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(zero(HessianNum{N,T,C}), zeros(T, halftenslen(n)))
-one{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(one(HessianNum{N,T,C}), zeros(T, halftenslen(n)))
+zero{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(zero(HessianNum{N,T,C}))
+one{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(one(HessianNum{N,T,C}))
 
 hessnum(t::TensorNum) = t.hessnum
 
@@ -28,18 +30,41 @@ tens(t::TensorNum) = t.tens
 npartials{N,T,C}(::Type{TensorNum{N,T,C}}) = N
 eltype{N,T,C}(::Type{TensorNum{N,T,C}}) = T
 
+#####################
+# Generic Functions #
+#####################
 function isconstant(t::TensorNum)
     zeroT = zero(eltype(t))
-    return isconstant(hess(t)) && all(x -> x == zeroT, tens(h))
+    return isconstant(hessnum(t)) && all(x -> x == zeroT, tens(t))
 end
 
+isconstant(t::TensorNum{0}) = true
+
 =={N}(a::TensorNum{N}, b::TensorNum{N}) = (hessnum(a) == hessnum(b)) && (tens(a) == tens(b))
+
+isequal{N}(a::TensorNum{N}, b::TensorNum{N}) = isequal(hessnum(a), hessnum(b)) && isequal(tens(a), tens(b))
+
+hash(t::TensorNum) = isconstant(t) ? hash(value(t)) : hash(hessnum(t), hash(tens(t)))
+hash(t::TensorNum, hsh::Uint64) = hash(hash(t), hsh)
+
+function read{N,T,C}(io::IO, ::Type{TensorNum{N,T,C}})
+    hessnum = read(io, HessianNum{N,T,C})
+    tens = [read(io, T) for i in 1:halftenslen(N)]
+    return TensorNum{N,T,C}(hessnum, tens)
+end
+
+function write(io::IO, t::TensorNum)
+    write(io, hessnum(t))
+    for du in tens(t)
+        write(io, du)
+    end
+end
 
 ########################
 # Conversion/Promotion #
 ########################
 convert{N,T,C}(::Type{TensorNum{N,T,C}}, t::TensorNum{N,T,C}) = t
-convert{N,T,C}(::Type{TensorNum{N,T,C}}, x::Real) = TensorNum(HessianNum{N,T,C}(x), zeros(T, halftenslen(N)))
+convert{N,T,C}(::Type{TensorNum{N,T,C}}, x::Real) = TensorNum(HessianNum{N,T,C}(x))
 
 function convert{N,T,C}(::Type{TensorNum{N,T,C}}, t::TensorNum{N})
     return TensorNum(convert(HessianNum{N,T,C}, hessnum(t)), tens(t))

@@ -36,7 +36,6 @@ zero_partials{N,T,C<:Vector}(::Type{GradientNum{N,T,C}}) = zeros(T, N)
 #####################
 isconstant(g::GradientNum) = any(x -> x == 0, grad(g))
 isconstant(::GradientNum{0}) = true
-isreal(g::GradientNum) = isconstant(g)
 
 ==(a::GradientNum, b::GradientNum) = value(a) == value(b) && grad(a) == grad(b)
 

@@ -39,7 +39,6 @@ function isconstant(h::HessianNum)
 end
 
 isconstant(h::HessianNum{0}) = true
-isreal(h::HessianNum) = isconstant(h)
 
 =={N}(a::HessianNum{N}, b::HessianNum{N}) = (gradnum(a) == gradnum(b)) && (hess(a) == hess(b))
 

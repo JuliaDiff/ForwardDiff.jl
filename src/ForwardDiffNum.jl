@@ -56,6 +56,7 @@ eps{F<:ForwardDiffNum}(::Type{F}) = eps(eltype(F))
 
 isnan(n::ForwardDiffNum) = isnan(value(n))
 isfinite(n::ForwardDiffNum) = isfinite(value(n))
+isreal(n::ForwardDiffNum) = isconstant(n)
 
 ##################
 # Math Functions #
