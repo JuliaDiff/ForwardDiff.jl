@@ -68,13 +68,13 @@ float_hessvec= map(float, int_hessvec)
 
 int_hess = HessianNum(GradientNum(int_val, int_partials), int_hessvec)
 float_hess = HessianNum(GradientNum(float_val, float_partials), float_hessvec)
-const_hess = HessianNum(GradientNum(float_val))
+const_hess = HessianNum(float_val)
 
 @test convert(typeof(test_hess), test_hess) == test_hess
 @test convert(HessianNum, test_hess) == test_hess
 @test convert(HessianNum{N,T,C}, int_hess) == float_hess
-@test convert(HessianNum{0,T,Tuple{}}, 1) == HessianNum(GradientNum(1.0))
-@test convert(HessianNum{3,T,NTuple{3,T}}, 1) == HessianNum(GradientNum{3,T,NTuple{3,T}}(1.0))
+@test convert(HessianNum{0,T,Tuple{}}, 1) == HessianNum(1.0)
+@test convert(HessianNum{3,T,NTuple{3,T}}, 1) == HessianNum{3,T,NTuple{3,T}}(1.0)
 @test convert(T, HessianNum(GradientNum(1, tuple(0, 0)))) == 1.0
 
 IntHess = HessianNum{N,Int,NTuple{N,Int}}
@@ -102,7 +102,7 @@ FloatHess = HessianNum{N,Float64,NTuple{N,Float64}}
 # is____ Functions #
 ####################
 @test isnan(test_hess) == isnan(test_val)
-@test isnan(HessianNum(GradientNum(NaN)))
+@test isnan(HessianNum(NaN))
 
 not_const_hess = HessianNum(GradientNum(one(T), map(one, test_partials)))
 @test !(isconstant(not_const_hess) || isreal(not_const_hess))
@@ -110,7 +110,7 @@ not_const_hess = HessianNum(GradientNum(one(T), map(one, test_partials)))
 @test isconstant(zero(not_const_hess)) && isreal(zero(not_const_hess))
 
 @test isfinite(test_hess) == isfinite(test_val)
-@test !isfinite(HessianNum(GradientNum(Inf)))
+@test !isfinite(HessianNum(Inf))
 
 @test isless(test_hess-1, test_hess)
 @test isless(test_val-1, test_hess)
