@@ -16,9 +16,12 @@ abstract ForwardDiffNum{N,T<:Real,C} <: Number
 #...as well as:
 #    ==(a::F, b::F)
 #    isequal(a::F, b::F)
+#    zero(a::F)/zero(::Type{F})
+#    one(a::F)/one(::Type{F})
 #    hash(n::F)
 #    read(io::IO, ::Type{F})
 #    write(io::IO, n::F)
+#    conversion/promotion rules
 
 ##############################
 # Utility/Accessor Functions #
