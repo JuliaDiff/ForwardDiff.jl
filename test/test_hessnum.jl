@@ -130,10 +130,24 @@ close(io)
 ####################################
 # Math tests (including API usage) #
 ####################################
+rand_val = rand(floatrange)
+rand_partials = map(x -> rand(floatrange), test_partials)
+rand_hessvec = map(x -> rand(floatrange), test_hessvec)
+rand_grad = GradientNum(rand_val, rand_partials)
+rand_hess = HessianNum(rand_grad, rand_hessvec)
 
 # Addition/Subtraction #
 #----------------------#
-# TODO
+@test rand_hess + test_hess == HessianNum(rand_grad + test_grad, rand_hessvec + test_hessvec)
+@test rand_hess + test_hess == test_hess + rand_hess
+@test rand_hess - test_hess == HessianNum(rand_grad - test_grad, rand_hessvec - test_hessvec)
+
+@test rand_val + test_hess == HessianNum(rand_val + test_grad, test_hessvec)
+@test rand_val + test_hess == test_hess + rand_val
+@test rand_val - test_hess == HessianNum(rand_val - test_grad, -test_hessvec)
+@test test_hess - rand_val == HessianNum(test_grad - rand_val, test_hessvec)
+
+@test -test_hess == HessianNum(-test_grad, -test_hessvec)
 
 # Multiplication #
 #----------------#
