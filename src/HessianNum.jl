@@ -97,15 +97,15 @@ end
 # Bivariate functions on HessianNums #
 #------------------------------------#
 function loadhess_mul!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
-    a_val = value(a)
-    b_val = value(b)
+    aval = value(a)
+    bval = value(b)
     k = 1
     for i in 1:N
         for j in 1:i
-            output[k] = (hess(a,k)*b_val
+            output[k] = (hess(a,k)*bval
                          + grad(a,i)*grad(b,j)
                          + grad(a,j)*grad(b,i)
-                         + a_val*hess(b,k))
+                         + aval*hess(b,k))
             k += 1
         end
     end
@@ -113,20 +113,19 @@ function loadhess_mul!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
 end
 
 function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
-    a_val = value(a)
-    two_a_val = a_val + a_val
-    b_val = value(b)
-    b_val_sq = b_val * b_val
-    b_val_cb = b_val_sq * b_val
-
+    aval = value(a)
+    two_aval = aval + aval
+    bval = value(b)
+    bval_sq = bval * bval
+    bval_cb = bval_sq * bval
     k = 1
     for i in 1:N
         for j in 1:i
-            grad_b_i = grad(b, i)
-            grad_b_j = grad(b, j)
-            term1 = two_a_val*grad_b_j*grad_b_i + b_val_sq*hess(a,k)
-            term2 = grad(a,i)*grad_b_j + grad(a,j)*grad_b_i + a_val*hess(b,k)
-            output[k] = (term1 - b_val*term2) / b_val_cb
+            grad_bi = grad(b, i)
+            grad_bj = grad(b, j)
+            term1 = two_aval*grad_bj*grad_bi + bval_sq*hess(a,k)
+            term2 = grad(a,i)*grad_bj + grad(a,j)*grad_bi + aval*hess(b,k)
+            output[k] = (term1 - bval*term2) / bval_cb
             k += 1
         end
     end
@@ -190,7 +189,25 @@ for T in (:Bool, :Real)
 end
 
 /(h::HessianNum, x::Real) = HessianNum(gradnum(h) / x, hess(h) / x)
-#/(x::Real, h::HessianNum) = ?
+
+function loadhess_div_real!{N}(x::Real, h::HessianNum{N}, output)
+    hval = value(h)
+    hval_sq = hval * hval
+    hval_cb = hval_sq * hval
+    k = 1
+    for i in 1:N
+        for j in 1:i
+            output[k] = x * ((2*grad(h,i)*grad(h,j)/hval_cb) - (hess(h,k)/hval_sq))
+            k += 1
+        end
+    end
+    return output
+end
+
+function /{N,T}(x::Real, h::HessianNum{N,T})
+    new_hess = Array(promote_type(T, typeof(x)), halfhesslen(N))
+    return HessianNum(x / gradnum(h), loadhess_div_real!(x, h, new_hess))
+end
 
 for T in (:Rational, :Integer, :Real)
     @eval begin

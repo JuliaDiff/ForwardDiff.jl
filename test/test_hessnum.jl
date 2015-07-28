@@ -154,7 +154,7 @@ rand_hess = HessianNum(rand_grad, rand_hessvec)
 #----------------#
 rand_x_test = rand_hess * test_hess
 
-@test gradnum(rand_x_test) == gradnum(rand_hess) * gradnum(test_hess)
+@test gradnum(rand_x_test) == rand_grad * test_grad
 
 k = 1
 for i in 1:N
@@ -176,7 +176,21 @@ end
 
 # Division #
 #----------#
-# TODO
+rand_div_test = rand_hess / test_hess
+rand_x_inv = rand_hess * inv(test_hess)
+
+@test_approx_eq value(rand_x_inv) value(rand_div_test)
+@test_approx_eq collect(grad(rand_x_inv)) collect(grad(rand_div_test))
+@test_approx_eq hess(rand_x_inv) hess(rand_div_test)
+
+val_div_test = rand_val / test_hess 
+val_x_inv = rand_val * inv(test_hess)
+
+@test_approx_eq value(val_x_inv) value(val_div_test)
+@test_approx_eq collect(grad(val_x_inv)) collect(grad(val_div_test))
+@test_approx_eq hess(val_x_inv) hess(val_div_test)
+
+@test test_hess / rand_val == HessianNum(test_grad / rand_val, test_hessvec / rand_val)
 
 # Exponentiation #
 #----------------#
