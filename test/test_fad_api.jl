@@ -87,62 +87,6 @@ fill!(testout, zero(eltype(testout)))
 jacf = jacobian_func(jac_testf, P, M, mutates=false)
 @test jacf(testx) == testresult
 
-########################
-# Test Hessian methods #
-########################
-# hess_testf: R⁴ -> R
-function hess_testf(x::Vector)
-    @assert length(x) == N
-    return prod(i->i^2, x)
-end
-
-function hess_deriv(i, j)
-    wrt = [:a, :b, :c, :d]
-
-    diff = differentiate(:(a^2 * b^2 * c^2 * d^2), wrt[j])
-    diff = differentiate(diff, wrt[i])
-
-    str = string(diff)    
-    str = replace(str, 'a', "x[1]")
-    str = replace(str, 'b', "x[2]")
-    str = replace(str, 'c', "x[3]")
-    str = replace(str, 'd', "x[4]")
-
-    return parse(str)
-end
-
-function hess_deriv(x::Vector, i, j)
-    ex = hess_deriv(i,j)
-    @eval begin
-       x = $x
-       return $ex
-    end
-end
-
-# hard code the correct hessian for
-# hess_testf at the given vector x
-function hess_test_result(x::Vector)
-    @assert length(x) == N
-    return [hess_deriv(x, i, j) for i in 1:N, j in 1:N]
-end
-
-testout = Array(Float64, N, N)
-testresult = hess_test_result(testx)
-
-hessian!(hess_testf, testx, testout, P)
-@test testout == testresult
-fill!(testout, zero(eltype(testout)))
-
-@test hessian(hess_testf, testx, P) == testresult
-
-hessf! = hessian_func(hess_testf, P, mutates=true)
-hessf!(testx, testout)
-@test testout == testresult
-fill!(testout, zero(eltype(testout)))
-
-hessf = hessian_func(hess_testf, P, mutates=false)
-@test hessf(testx) == testresult
-
 #######################
 # Test Tensor methods #
 #######################

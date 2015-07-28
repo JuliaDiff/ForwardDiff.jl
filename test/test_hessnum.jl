@@ -126,3 +126,63 @@ seekstart(io)
 @test read(io, typeof(test_hess)) == test_hess
 
 close(io)
+
+####################################
+# Math tests (including API usage) #
+####################################
+
+# Univariate functions #
+#----------------------#
+N = 4
+P = Partials{N,Float64}
+testout = Array(Float64, N, N)
+
+function hess_deriv_ij(f_expr, x::Vector, i, j)
+    var_syms = [:a, :b, :c, :d]
+    diff_expr = differentiate(f_expr, var_syms[j])
+    diff_expr = differentiate(diff_expr, var_syms[i])
+    @eval begin
+        a,b,c,d = $x
+        return $diff_expr
+    end
+end
+
+function hess_test_result(f_expr, x::Vector)
+    return [hess_deriv_ij(f_expr, x, i, j) for i in 1:N, j in 1:N]
+end
+
+function hess_test_x(fsym, N)
+    randrange = 0.01:.01:.99
+
+    if fsym == :acosh
+        randrange += 1
+    elseif fsym == :acoth
+        randrange += 2
+    end
+
+    return rand(randrange, N)
+end
+
+for fsym in ForwardDiff.univar_hess_funcs    
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+
+    @eval function testf(x::Vector) 
+        a,b,c,d = x
+        return $testexpr
+    end
+
+    testx = hess_test_x(fsym, N)
+    testresult = hess_test_result(testexpr, testx)
+
+    hessian!(testf, testx, testout, P)
+    @test_approx_eq testout testresult
+
+    @test_approx_eq hessian(testf, testx, P) testresult
+
+    hessf! = hessian_func(testf, P, mutates=true)
+    hessf!(testx, testout)
+    @test_approx_eq testout testresult
+
+    hessf = hessian_func(testf, P, mutates=false)
+    @test_approx_eq hessf(testx) testresult
+end

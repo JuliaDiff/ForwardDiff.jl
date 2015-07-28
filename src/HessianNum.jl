@@ -173,42 +173,29 @@ end
 #-------------------------------------#
 -(h::HessianNum) = HessianNum(-gradnum(h), -hess(h))
 
-# The Tuples in `h_univar_funcs` have the following format:
-#
-# (:function_name,
-#  :(expression defining the kth entry of the hessian vector, using any available variables))
-const h_univar_funcs = Tuple{Symbol, Expr}[
-    (:sqrt, :((-grad(h,i)*grad(h,j)+2*value(h)*hess(h,i)) / (4*(value(h)^(1.5))))),
-    (:cbrt, :((-2*grad(h,i)*grad(h,j)+3*value(h)*hess(h,k)) / (9*cbrt(value(h)^5)))),
-    (:exp, :(exp(value(h))*(grad(h,i)*grad(h,j)+hess(h,k)))),
-    (:log, :((value(h)*hess(h,k)-grad(h,i)*grad(h,j))/(value(h)^2))),
-    (:log2, :((value(h)*hess(h,k)-grad(h,i)*grad(h,j)) / ((value(h)^2)*0.6931471805599453))),
-    (:log10, :((value(h)*hess(h,k)-grad(h,i)*grad(h,j)) / ((value(h)^2)*2.302585092994046))),
-    (:sin, :(-sin(value(h))*grad(h,i)*grad(h,j)+cos(value(h))*hess(h,k))),
-    (:cos, :(-cos(value(h))*grad(h,i)*grad(h,j)-sin(value(h))*hess(h,k))),
-    (:tan, :((sec(value(h))^2)*(2*tan(value(h))*grad(h,i)*grad(h,j)+hess(h,k)))),
-    (:asin, :((value(h)*grad(h,i)*grad(h,j)-((value(h)^2)-1)*new_hess[k]) / ((1-(value(h)^2))^1.5))),
-    (:acos, :((-value(h)*grad(h,i)*grad(h,j)+((value(h)^2)-1)*new_hess[k]) / ((1-(value(h)^2))^1.5))),
-    (:atan, :((-2*value(h)*grad(h,i)*grad(h,j)+((value(h)^2)+1)*new_hess[k]) / ((1+(value(h)^2))^2))),
-    (:sinh, :(sinh(value(h))*grad(h,i)*grad(h,j)+cosh(value(h))*hess(h,k))),
-    (:cosh, :(cosh(value(h))*grad(h,i)*grad(h,j)+sinh(value(h))*hess(h,k))),
-    (:tanh, :((sech(value(h))^2)*(-2*tanh(value(h))*grad(h,i)*grad(h,j)+hess(h,k)))),
-    (:asinh, :((-value(h)*grad(h,i)*grad(h,j)+((1+(value(h)^2))*hess(h,k))) / ((1+(value(h)^2))^1.5))),
-    (:acosh, :((-value(h)*grad(h,i)*grad(h,j)+(((value(h)^2)-1)*hess(h,k))) / (((1+value(h))^1.5)*((value(h)-1)^1.5)))),
-    (:atanh, :((2*value(h)*grad(h,i)*grad(h,j)-(((value(h)^2)-1)*hess(h,k)))/(((value(h)^2)-1)^2))),
-    (:lgamma, :(digamma(value(h))*hess(h,k)+trigamma(value(h))*grad(h,i)*grad(h,j))),
-    (:digamma, :(trigamma(value(h))*hess(h,k)+polygamma(2,value(h))*grad(h,i)*grad(h,j)))
-]
+# the second derivative of functions in unsupported_univar_hess_funcs involves differentiating 
+# elementary functions that are unsupported by Calculus.jl, e.g. abs(x) and polygamma(x)
+const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
+const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), map(first, Calculus.symbolic_derivatives_1arg()))
 
 # Univariate function construction loop
-for (fsym, term) in h_univar_funcs
+for fsym in univar_hess_funcs
     loadfsym = symbol(string("loadhess_", fsym, "!"))
+
+    hval = :hval
+    call_expr = :($(fsym)($hval))
+    deriv1 = differentiate(call_expr, hval)
+    deriv2 = differentiate(deriv1, hval)
+    
     @eval begin
         function $(loadfsym){N}(h::HessianNum{N}, output)
+            hval = value(h)
+            deriv1 = $deriv1
+            deriv2 = $deriv2
             k = 1
             for i in 1:N
                 for j in 1:i
-                    output[k] = $(term)
+                    output[k] = deriv1*hess(h, k) + deriv2*grad(h, i)*grad(h, j)
                     k += 1
                 end
             end
