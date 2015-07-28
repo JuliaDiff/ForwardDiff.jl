@@ -93,50 +93,89 @@ end
 #######################
 # Math on HessianNums #
 #######################
-# In the code-generating loops below (see "Bivariate function construction loop"
-# and "Univariate function construction loop"), we build definitions for math functions
-# on HessianNums in a consistent, uniform manner by utilizing the `h_bivar_funcs` and
-# `h_univar_funcs` arrays. These arrays hold multiple Tuples, each of which provides the
-# necessary information to define a different function. The description of these
-# Tuples' formats can be found in comments above their respective arrays.
 
 # Bivariate functions on HessianNums #
 #------------------------------------#
-
-# The Tuples in `h_bivar_funcs` have the following format:
-#
-# (:function_name,
-#  :(expression defining the kth entry of the hessian vector, using any available variables))
-const h_bivar_funcs = Tuple{Symbol, Expr}[
-    (:*, :(hess(a,k)*value(b)+grad(a,i)*grad(b,j)+grad(a,j)*grad(b,i)+value(a)*hess(b,k))),
-    (:/, :(((2*value(a)*grad(b,j)*grad(b,i)+(value(b)^2)*hess(a,k))-(value(b)*(grad(a,i)*grad(b,j)
-           +grad(a,j)*grad(b,i)+value(a)*hess(b,k))))/(value(b)^3))),
-    (:^, :((value(a)^(value(b)-2))*((value(b)^2)*grad(a,i)*grad(a,j)+value(b)*(grad(a,j)*(-grad(a,i)
-           +value(a)*log(value(a))*grad(b,i))+value(a)*(log(value(a))*grad(a,i)*grad(b,j)
-           +hess(a,k)))+value(a)*(grad(a,j)*grad(b,i)+grad(b,j)*(grad(a,i)+value(a)*log(value(a))
-           *log(value(a))*grad(b,i))+value(a)*log(value(a))*hess(b,k)))))
-]
-
-# Bivariate function construction loop
-for (fsym, term) in h_bivar_funcs
-    loadfsym = symbol(string("loadhess_", fsym, "!"))
-    @eval begin
-        function $(loadfsym){N}(a::HessianNum{N}, b::HessianNum{N}, output)
-            k = 1
-            for i in 1:N
-                for j in 1:i
-                    output[k] = $(term)
-                    k += 1
-                end
-            end
-            return output
+function loadhess_mul!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
+    a_val = value(a)
+    b_val = value(b)
+    k = 1
+    for i in 1:N
+        for j in 1:i
+            output[k] = (hess(a,k)*b_val
+                         + grad(a,i)*grad(b,j)
+                         + grad(a,j)*grad(b,i)
+                         + a_val*hess(b,k))
+            k += 1
         end
+    end
+    return output
+end
 
-        function $(fsym){N,A,B}(a::HessianNum{N,A}, b::HessianNum{N,B})
-            new_hess = Array(promote_type(A, B), halfhesslen(N))
-            return HessianNum($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
+function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
+    a_val = value(a)
+    two_a_val = a_val + a_val
+    b_val = value(b)
+    b_val_sq = b_val * b_val
+    b_val_cb = b_val_sq * b_val
+
+    k = 1
+    for i in 1:N
+        for j in 1:i
+            grad_b_i = grad(b, i)
+            grad_b_j = grad(b, j)
+            term1 = two_a_val*grad_b_j*grad_b_i + b_val_sq*hess(a,k)
+            term2 = grad(a,i)*grad_b_j + grad(a,j)*grad_b_i + a_val*hess(b,k)
+            output[k] = (term1 - b_val*term2) / b_val_cb
+            k += 1
         end
+    end
+    return output
+end
 
+function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
+    aval = value(a)
+    bval = value(b)
+    aval_exp_bval = aval^(bval-2)
+    bval_sq = bval * bval
+    log_aval = log(aval)
+    log_bval = log(bval)
+    aval_x_logaval = aval * log_aval
+    aval_x_logaval_x_logaval = aval_x_logaval * log_aval
+    k = 1
+    for i in 1:N
+        for j in 1:i
+            grad_ai = grad(a, i)
+            grad_aj = grad(a, j)
+            grad_bi = grad(b, i)
+            grad_bj = grad(b, j)
+            output[k] = (aval_exp_bval*(
+                              bval_sq*grad_ai*grad_aj
+                            + bval*(
+                                  grad_aj*(
+                                      aval_x_logaval*grad_bi
+                                    - grad_ai)
+                                + aval*(
+                                      log_aval*grad_ai*grad_bj
+                                    + hess(a,k)))
+                            + aval*(
+                                  grad_aj*grad_bi
+                                + aval_x_logaval*hess(b,k)
+                                + grad_bj*(
+                                      grad_ai
+                                    + aval_x_logaval_x_logaval*grad_bi))))
+            k += 1
+        end
+    end
+    return output
+end
+
+for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
+                         (:/, symbol("loadhess_div!")), 
+                         (:^, symbol("loadhess_exp!"))]
+    @eval function $(fsym){N,A,B}(a::HessianNum{N,A}, b::HessianNum{N,B})
+        new_hess = Array(promote_type(A, B), halfhesslen(N))
+        return HessianNum($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
     end
 end
 

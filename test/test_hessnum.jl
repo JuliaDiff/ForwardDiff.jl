@@ -131,6 +131,22 @@ close(io)
 # Math tests (including API usage) #
 ####################################
 
+# Addition/Subtraction #
+#----------------------#
+# TODO
+
+# Multiplication #
+#----------------#
+# TODO
+
+# Division #
+#----------#
+# TODO
+
+# Exponentiation #
+#----------------#
+# TODO
+
 # Univariate functions #
 #----------------------#
 N = 4
