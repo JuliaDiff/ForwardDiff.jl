@@ -154,15 +154,16 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     # Division #
     #----------#
     rand_div_test = rand_grad / test_grad
+    rand_x_inv = rand_grad * inv(test_grad)
+
+    @test_approx_eq value(rand_x_inv) value(rand_div_test)
+    @test_approx_eq collect(grad(rand_x_inv)) collect(grad(rand_div_test))
+
     val_div_test = rand_val / test_grad
+    val_x_inv = rand_val * inv(test_grad)
 
-    @test value(rand_div_test) == rand_val/test_val
-    @test value(val_div_test) == rand_val/test_val
-
-    for i in 1:N
-        @test grad(rand_div_test, i) == ((rand_partials[i] * test_val) - (rand_val * test_partials[i])) / test_val^2
-        @test grad(val_div_test, i) == (-rand_val * test_partials[i]) / test_val^2
-    end
+    @test_approx_eq value(val_x_inv) value(val_div_test)
+    @test_approx_eq collect(grad(val_x_inv)) collect(grad(val_div_test))
 
     @test test_grad / rand_val == Grad{N,T}(test_val/rand_val, map(x -> x/rand_val, test_partials))
 
