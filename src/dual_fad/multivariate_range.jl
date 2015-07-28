@@ -1,6 +1,6 @@
 function dual_fad{T<:Real}(f!::Function, x::Vector{T}, jac_out::Matrix{T}, dual_in, dual_out)
   @assert(length(dual_in) == length(x),
-          "The length of x ($(length(x))) is different from n ($(length(dualvec))).")
+          "The length of x ($(length(x))) is different from n ($(length(dual_in))).")
   for i in 1:length(x)
     dual_in[i] = Dual(x[i], zero(T))
   end
