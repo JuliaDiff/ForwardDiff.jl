@@ -125,8 +125,12 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test rand_grad + test_grad == Grad{N,T}(rand_val+test_val, map(+, rand_partials, test_partials))
     @test rand_grad + test_grad == test_grad + rand_grad
     @test rand_grad - test_grad == Grad{N,T}(rand_val-test_val, map(-, rand_partials, test_partials))
+
+    @test rand_val + test_grad == Grad{N,T}(rand_val+test_val, test_partials)
+    @test rand_val + test_grad == test_grad + rand_val
     @test rand_val - test_grad == Grad{N,T}(rand_val-test_val, map(-, test_partials))
     @test test_grad - rand_val == Grad{N,T}(test_val-rand_val, test_partials)
+    
     @test -test_grad == Grad{N,T}(-test_val, map(-, test_partials))
 
     # Multiplication #
