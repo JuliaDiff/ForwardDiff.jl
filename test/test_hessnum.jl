@@ -8,7 +8,8 @@ using ForwardDiff:
         grad,
         hess,
         npartials,
-        isconstant
+        isconstant,
+        gradnum
 
 floatrange = 0.0:.01:.99
 intrange = 0:10
@@ -151,7 +152,27 @@ rand_hess = HessianNum(rand_grad, rand_hessvec)
 
 # Multiplication #
 #----------------#
-# TODO
+rand_x_test = rand_hess * test_hess
+
+@test gradnum(rand_x_test) == gradnum(rand_hess) * gradnum(test_hess)
+
+k = 1
+for i in 1:N
+    for j in 1:i
+        term = (rand_hessvec[k]*test_val + rand_partials[i]*test_partials[j]
+                + rand_partials[j]*test_partials[i] + rand_val*test_hessvec[k])
+        @test hess(rand_x_test, k) == term
+        k += 1
+    end
+end
+
+@test rand_val * test_hess == HessianNum(rand_val * test_grad, rand_val * test_hessvec)
+@test test_hess * rand_val == rand_val * test_hess
+
+@test test_hess * true == test_hess
+@test true * test_hess == test_hess * true
+@test test_hess * false == zero(test_hess)
+@test false * test_hess == test_hess * false
 
 # Division #
 #----------#
