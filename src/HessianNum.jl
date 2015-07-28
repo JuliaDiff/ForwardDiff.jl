@@ -186,26 +186,30 @@ for fsym in univar_hess_funcs
     call_expr = :($(fsym)($hval))
     deriv1 = differentiate(call_expr, hval)
     deriv2 = differentiate(deriv1, hval)
-    
-    @eval begin
-        function $(loadfsym){N}(h::HessianNum{N}, output)
-            hval = value(h)
-            deriv1 = $deriv1
-            deriv2 = $deriv2
-            k = 1
-            for i in 1:N
-                for j in 1:i
-                    output[k] = deriv1*hess(h, k) + deriv2*grad(h, i)*grad(h, j)
-                    k += 1
-                end
-            end
-            return output
-        end
 
-        function $(fsym){N,T}(h::HessianNum{N,T})
-            ResultType = typeof($(fsym)(one(T)))
-            new_hess = Array(ResultType, halfhesslen(N))
-            return HessianNum($(fsym)(gradnum(h)), $(loadfsym)(h, new_hess))
+    @eval function $(loadfsym){N}(h::HessianNum{N}, output)
+        hval = value(h)
+        deriv1 = $deriv1
+        deriv2 = $deriv2
+        k = 1
+        for i in 1:N
+            for j in 1:i
+                output[k] = deriv1*hess(h, k) + deriv2*grad(h, i)*grad(h, j)
+                k += 1
+            end
         end
+        return output
     end
+
+    expr = parse(""" 
+        @generated function $(fsym){N,T}(h::HessianNum{N,T})
+            ResultType = typeof($(fsym)(one(T)))
+            return quote 
+                new_hess = Array(\$ResultType, halfhesslen(N))
+                return HessianNum($(fsym)(gradnum(h)), $(loadfsym)(h, new_hess))
+            end
+        end
+    """)
+
+    @eval $expr
 end
