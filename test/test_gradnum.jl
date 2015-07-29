@@ -184,7 +184,6 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
         @test_approx_eq grad(test_exp_rand, i) (test_partials[i] * pow_val) + (log_val * rand_partials[i])
         @test_approx_eq grad(val_exp_test, i) test_partials[i] * ((rand_val^test_val) * log(rand_val))
         @test_approx_eq grad(test_exp_val, i) test_partials[i] * rand_val * (test_val^(rand_val-1))
-
     end
 
     # Univariate functions #
