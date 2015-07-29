@@ -99,14 +99,14 @@ end
 function loadhess_mul!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     aval = value(a)
     bval = value(b)
-    k = 1
+    q = 1
     for i in 1:N
         for j in 1:i
-            output[k] = (hess(a,k)*bval
+            output[q] = (hess(a,q)*bval
                          + grad(a,i)*grad(b,j)
                          + grad(a,j)*grad(b,i)
-                         + aval*hess(b,k))
-            k += 1
+                         + aval*hess(b,q))
+            q += 1
         end
     end
     return output
@@ -118,15 +118,15 @@ function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     bval = value(b)
     bval_sq = bval * bval
     bval_cb = bval_sq * bval
-    k = 1
+    q = 1
     for i in 1:N
         for j in 1:i
             grad_bi = grad(b, i)
             grad_bj = grad(b, j)
-            term1 = two_aval*grad_bj*grad_bi + bval_sq*hess(a,k)
-            term2 = grad(a,i)*grad_bj + grad(a,j)*grad_bi + aval*hess(b,k)
-            output[k] = (term1 - bval*term2) / bval_cb
-            k += 1
+            term1 = two_aval*grad_bj*grad_bi + bval_sq*hess(a,q)
+            term2 = grad(a,i)*grad_bj + grad(a,j)*grad_bi + aval*hess(b,q)
+            output[q] = (term1 - bval*term2) / bval_cb
+            q += 1
         end
     end
     return output
@@ -141,14 +141,14 @@ function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     log_bval = log(bval)
     aval_x_logaval = aval * log_aval
     aval_x_logaval_x_logaval = aval_x_logaval * log_aval
-    k = 1
+    q = 1
     for i in 1:N
         for j in 1:i
             grad_ai = grad(a, i)
             grad_aj = grad(a, j)
             grad_bi = grad(b, i)
             grad_bj = grad(b, j)
-            output[k] = (aval_exp_bval*(
+            output[q] = (aval_exp_bval*(
                               bval_sq*grad_ai*grad_aj
                             + bval*(
                                   grad_aj*(
@@ -156,14 +156,14 @@ function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
                                     - grad_ai)
                                 + aval*(
                                       log_aval*grad_ai*grad_bj
-                                    + hess(a,k)))
+                                    + hess(a,q)))
                             + aval*(
                                   grad_aj*grad_bi
-                                + aval_x_logaval*hess(b,k)
+                                + aval_x_logaval*hess(b,q)
                                 + grad_bj*(
                                       grad_ai
                                     + aval_x_logaval_x_logaval*grad_bi))))
-            k += 1
+            q += 1
         end
     end
     return output
@@ -194,11 +194,11 @@ function loadhess_div_real!{N}(x::Real, h::HessianNum{N}, output)
     hval = value(h)
     hval_sq = hval * hval
     hval_cb = hval_sq * hval
-    k = 1
+    q = 1
     for i in 1:N
         for j in 1:i
-            output[k] = x * ((2*grad(h,i)*grad(h,j)/hval_cb) - (hess(h,k)/hval_sq))
-            k += 1
+            output[q] = x * ((2*grad(h,i)*grad(h,j)/hval_cb) - (hess(h,q)/hval_sq))
+            q += 1
         end
     end
     return output
@@ -209,18 +209,25 @@ function /{N,T}(x::Real, h::HessianNum{N,T})
     return HessianNum(x / gradnum(h), loadhess_div_real!(x, h, new_hess))
 end
 
+function loadhess_exp!{N}(h::HessianNum{N}, p::Real, output)
+    hval = value(h)
+    p_coeff = p*hval^(p - 2)
+    p_minus = p - 1
+    q = 1
+    for i in 1:N
+        for j in 1:i
+            output[q] =p_coeff*(p_minus*grad(h,i)*grad(h,j)+hval*hess(h,q))
+            q += 1
+        end
+    end
+    return output
+end
+
 for T in (:Rational, :Integer, :Real)
     @eval begin
         function ^{N}(h::HessianNum{N}, p::$(T))
             new_hess = Array(promote_type(eltype(h), typeof(p)), halfhesslen(N))
-            k = 1
-            for i in 1:N
-                for j in 1:i
-                    new_hess[k] = p*value(h)^(p-2)*((p-1)*grad(h,i)*grad(h,j)+value(h)*hess(h,k))
-                    k += 1
-                end
-            end
-            return HessianNum(gradnum(h)^p, new_hess)
+            return HessianNum(gradnum(h)^p, loadhess_exp!(h, p, new_hess))
         end
     end
 end
@@ -229,8 +236,8 @@ end
 #-------------------------------------#
 -(h::HessianNum) = HessianNum(-gradnum(h), -hess(h))
 
-# the second derivative of functions in unsupported_univar_hess_funcs involves differentiating 
-# elementary functions that are unsupported by Calculus.jl, e.g. abs(x) and polygamma(x)
+# the second derivatives of functions in unsupported_univar_hess_funcs involves differentiating 
+# elementary functions that are unsupported by Calculus.jl
 const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
 const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), map(first, Calculus.symbolic_derivatives_1arg()))
 
