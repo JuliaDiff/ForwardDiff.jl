@@ -153,38 +153,21 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     # Division #
     #----------#
-    rand_div_test = rand_grad / test_grad
-    rand_x_inv = rand_grad * inv(test_grad)
+    function grad_approx_eq(a::GradientNum, b::GradientNum)
+        @test_approx_eq value(a) value(b)
+        @test_approx_eq collect(grad(a)) collect(grad(b))
+    end
 
-    @test_approx_eq value(rand_x_inv) value(rand_div_test)
-    @test_approx_eq collect(grad(rand_x_inv)) collect(grad(rand_div_test))
-
-    val_div_test = rand_val / test_grad
-    val_x_inv = rand_val * inv(test_grad)
-
-    @test_approx_eq value(val_x_inv) value(val_div_test)
-    @test_approx_eq collect(grad(val_x_inv)) collect(grad(val_div_test))
+    grad_approx_eq(rand_grad / test_grad, rand_grad * inv(test_grad))
+    grad_approx_eq(rand_val / test_grad, rand_val * inv(test_grad))
 
     @test test_grad / rand_val == Grad{N,T}(test_val/rand_val, map(x -> x/rand_val, test_partials))
 
     # Exponentiation #
     #----------------#
-    pow_val = rand_val * (test_val^(rand_val-1))
-    log_val = (test_val^rand_val) * log(test_val)
-
-    test_exp_rand = test_grad^rand_grad
-    val_exp_test = rand_val^test_grad
-    test_exp_val = test_grad^rand_val
-
-    @test value(test_exp_rand) == test_val^rand_val
-    @test value(val_exp_test) == rand_val^test_val
-    @test value(test_exp_val) == test_val^rand_val
-
-    for i in 1:N
-        @test_approx_eq grad(test_exp_rand, i) (test_partials[i] * pow_val) + (log_val * rand_partials[i])
-        @test_approx_eq grad(val_exp_test, i) test_partials[i] * ((rand_val^test_val) * log(rand_val))
-        @test_approx_eq grad(test_exp_val, i) test_partials[i] * rand_val * (test_val^(rand_val-1))
-    end
+    grad_approx_eq(test_grad^rand_grad, exp(rand_grad * log(test_grad)))
+    grad_approx_eq(test_grad^rand_val, exp(rand_val * log(test_grad)))
+    grad_approx_eq(rand_val^test_grad, exp(test_grad * log(rand_val)))
 
     # Univariate functions #
     #----------------------#
