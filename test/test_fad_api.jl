@@ -8,42 +8,6 @@ floatrange = 0.01:.01:.99
 testx = rand(floatrange, N)
 
 #########################
-# Test Gradient methods #
-#########################
-# grad_testf: R⁴ -> R
-function grad_testf(x::Vector)
-    @assert length(x) == N
-    return prod(x)
-end
-
-# hard code the correct jacobian for
-# testf at the given vector x
-function grad_test_result(x::Vector)
-    @assert length(x) == N
-    return [x[2]*x[3]*x[4],
-            x[1]*x[3]*x[4],
-            x[1]*x[2]*x[4],
-            x[1]*x[2]*x[3]]
-end
-
-testout = Vector{Float64}(N)
-testresult = grad_test_result(testx)
-
-gradient!(grad_testf, testx, testout, P)
-@test testout == testresult
-fill!(testout, zero(eltype(testout)))
-
-@test gradient(grad_testf, testx, P) == testresult
-
-gradf! = gradient_func(grad_testf, P, mutates=true)
-gradf!(testx, testout)
-@test testout == testresult
-fill!(testout, zero(eltype(testout)))
-
-gradf = gradient_func(grad_testf, P, mutates=false)
-@test gradf(testx) == testresult
-
-#########################
 # Test Jacobian methods #
 #########################
 # jac_testf: R⁴ -> R⁵

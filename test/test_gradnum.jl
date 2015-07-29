@@ -213,3 +213,58 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
         end
     end
 end
+
+#####################
+# API Usage Testing #
+#####################
+N = 4
+P = Partials{N,Float64}
+testout = Array(Float64, N)
+
+function grad_deriv_i(f_expr, x::Vector, i)
+    var_syms = [:a, :b, :c, :d]
+    diff_expr = differentiate(f_expr, var_syms[i])
+    @eval begin
+        a,b,c,d = $x
+        return $diff_expr
+    end
+end
+
+function grad_test_result(f_expr, x::Vector)
+    return [grad_deriv_i(f_expr, x, i) for i in 1:N]
+end
+
+function grad_test_x(fsym, N)
+    randrange = 0.01:.01:.99
+
+    needs_modification = (:asec, :acsc, :asecd, :acscd, :acosh, :acoth)
+    if fsym in needs_modification
+        randrange += 1
+    end
+
+    return rand(randrange, N)
+end
+
+for fsym in map(first, Calculus.symbolic_derivatives_1arg())
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+
+    @eval function testf(x::Vector) 
+        a,b,c,d = x
+        return $testexpr
+    end
+
+    testx = grad_test_x(fsym, N)
+    testresult = grad_test_result(testexpr, testx)
+
+    gradient!(testf, testx, testout, P)
+    @test_approx_eq testout testresult
+
+    @test_approx_eq gradient(testf, testx, P) testresult
+
+    gradf! = gradient_func(testf, P, mutates=true)
+    gradf!(testx, testout)
+    @test_approx_eq testout testresult
+
+    gradf = gradient_func(testf, P, mutates=false)
+    @test_approx_eq gradf(testx) testresult
+end
