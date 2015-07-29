@@ -1,6 +1,6 @@
-AutoDiff.jl is licensed under the MIT License:
+ForwardDiff.jl is licensed under the MIT License:
 
-> Copyright (c) 2013: Jonas Rauch, Kevin Squire, Tom Short, Theodore Papamarkou 
+> Copyright (c) 2015: Jarrett Revels, Jonas Rauch, Kevin Squire, Tom Short, Theodore Papamarkou 
 > and other contributors.
 >
 > Permission is hereby granted, free of charge, to any person obtaining
