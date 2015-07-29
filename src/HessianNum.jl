@@ -93,6 +93,36 @@ end
 #######################
 # Math on HessianNums #
 #######################
+# Math on HessianNums is developed by examining hyperdual numbers
+# with 2 different infinitesmal parts (ϵ₁, ϵ₂). These numbers
+# can be formulated like the following:
+#
+#   h = h₀ + h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂
+# 
+# where the h-components are real numbers, and the infinitesmal 
+# ϵ-components are defined as:
+#
+#   ϵ₁ != ϵ₂ != 0
+#   ϵ₁² = ϵ₂² = (ϵ₁ϵ₂)² = 0
+#
+# Taylor series expansion of a univariate function `f` on a 
+# HessianNum `h`:
+#
+#   f(h) = f(h₀ + h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂) 
+#        = f(h₀) + f'(h₀)*(h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂) + f''(h₀)*h₁h₂ϵ₂ϵ₁
+#
+# The coefficients of ϵ₁ϵ₂ are what's stored by HessianNum's `hess` field:
+#
+#   f(h)_ϵ₁ϵ₂ = (f'(h₀)*h₃ + f''(h₀)*h₁h₂)
+#
+# where, in loop code:
+#
+#   h₀ = value(h)
+#   h₁ = grad(h, i)
+#   h₂ = grad(h, j)
+#   h₃ = hess(h, q)
+#
+# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
 # Bivariate functions on HessianNums #
 #------------------------------------#
@@ -126,6 +156,20 @@ function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
             term1 = two_aval*grad_bj*grad_bi + bval_sq*hess(a,q)
             term2 = grad(a,i)*grad_bj + grad(a,j)*grad_bi + aval*hess(b,q)
             output[q] = (term1 - bval*term2) / bval_cb
+            q += 1
+        end
+    end
+    return output
+end
+
+function loadhess_div!{N}(x::Real, h::HessianNum{N}, output)
+    hval = value(h)
+    hval_sq = hval * hval
+    hval_cb = hval_sq * hval
+    q = 1
+    for i in 1:N
+        for j in 1:i
+            output[q] = x * ((2*grad(h,i)*grad(h,j)/hval_cb) - (hess(h,q)/hval_sq))
             q += 1
         end
     end
@@ -169,12 +213,40 @@ function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     return output
 end
 
+function loadhess_exp!{N}(h::HessianNum{N}, p::Real, output)
+    hval = value(h)
+    p_coeff = p*hval^(p - 2)
+    p_minus = p - 1
+    q = 1
+    for i in 1:N
+        for j in 1:i
+            output[q] =p_coeff*(p_minus*grad(h,i)*grad(h,j)+hval*hess(h,q))
+            q += 1
+        end
+    end
+    return output
+end
+
 for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
                          (:/, symbol("loadhess_div!")), 
                          (:^, symbol("loadhess_exp!"))]
     @eval function $(fsym){N,A,B}(a::HessianNum{N,A}, b::HessianNum{N,B})
         new_hess = Array(promote_type(A, B), halfhesslen(N))
         return HessianNum($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
+    end
+end
+
+function /{N,T}(x::Real, h::HessianNum{N,T})
+    new_hess = Array(promote_type(T, typeof(x)), halfhesslen(N))
+    return HessianNum(x / gradnum(h), loadhess_div!(x, h, new_hess))
+end
+
+for T in (:Rational, :Integer, :Real)
+    @eval begin
+        function ^{N}(h::HessianNum{N}, p::$(T))
+            new_hess = Array(promote_type(eltype(h), typeof(p)), halfhesslen(N))
+            return HessianNum(gradnum(h)^p, loadhess_exp!(h, p, new_hess))
+        end
     end
 end
 
@@ -190,48 +262,6 @@ end
 
 /(h::HessianNum, x::Real) = HessianNum(gradnum(h) / x, hess(h) / x)
 
-function loadhess_div_real!{N}(x::Real, h::HessianNum{N}, output)
-    hval = value(h)
-    hval_sq = hval * hval
-    hval_cb = hval_sq * hval
-    q = 1
-    for i in 1:N
-        for j in 1:i
-            output[q] = x * ((2*grad(h,i)*grad(h,j)/hval_cb) - (hess(h,q)/hval_sq))
-            q += 1
-        end
-    end
-    return output
-end
-
-function /{N,T}(x::Real, h::HessianNum{N,T})
-    new_hess = Array(promote_type(T, typeof(x)), halfhesslen(N))
-    return HessianNum(x / gradnum(h), loadhess_div_real!(x, h, new_hess))
-end
-
-function loadhess_exp!{N}(h::HessianNum{N}, p::Real, output)
-    hval = value(h)
-    p_coeff = p*hval^(p - 2)
-    p_minus = p - 1
-    q = 1
-    for i in 1:N
-        for j in 1:i
-            output[q] =p_coeff*(p_minus*grad(h,i)*grad(h,j)+hval*hess(h,q))
-            q += 1
-        end
-    end
-    return output
-end
-
-for T in (:Rational, :Integer, :Real)
-    @eval begin
-        function ^{N}(h::HessianNum{N}, p::$(T))
-            new_hess = Array(promote_type(eltype(h), typeof(p)), halfhesslen(N))
-            return HessianNum(gradnum(h)^p, loadhess_exp!(h, p, new_hess))
-        end
-    end
-end
-
 # Univariate functions on HessianNums #
 #-------------------------------------#
 -(h::HessianNum) = HessianNum(-gradnum(h), -hess(h))
@@ -240,37 +270,6 @@ end
 # elementary functions that are unsupported by Calculus.jl
 const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
 const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), map(first, Calculus.symbolic_derivatives_1arg()))
-
-# The below is developed from hyperdual numbers with 2 
-# different infinitesmal parts (ϵ₁, ϵ₂). These numbers
-# can be formulated like the following:
-#
-# Espilon part definitions:
-# ϵ₁ != ϵ₂ != 0
-# ϵ₁² = ϵ₂² = (ϵ₁ϵ₂)² = 0
-#
-# Taylor Series Expansion:
-# f(x₀ + d) = f(x₀) + d*f'(x₀) + (1/2)*d²*f''(x₀) # further terms are 0 
-#
-# d terms:
-# d = x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₁ϵ₂
-# d² = 2 * x₁x₂ϵ₂ϵ₁
-# 
-# Thus, plugging in:
-# f(x₀ + d) = f(x₀) + f'(x₀)*(x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₁ϵ₂) + f''(x₀)*x₁x₂ϵ₂ϵ₁
-#
-# The coefficients of ϵ₁ϵ₂ are what's stored by HessianNum's `hess` field:
-#
-# (f'(x₀)*x₃ + f''(x₀)*x₁x₂) * ϵ₁ϵ₂
-#
-# where, in the below loops:
-#
-# x₀ = value(t)
-# x₁ = grad(t, i)
-# x₂ = grad(t, j)
-# x₃ = hess(t, q)
-#
-# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
 for fsym in univar_hess_funcs
 
