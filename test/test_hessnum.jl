@@ -176,25 +176,22 @@ end
 
 # Division #
 #----------#
-rand_div_test = rand_hess / test_hess
-rand_x_inv = rand_hess * inv(test_hess)
+function hess_approx_eq(a::HessianNum, b::HessianNum)
+    @test_approx_eq value(a) value(b)
+    @test_approx_eq collect(grad(a)) collect(grad(b))
+    @test_approx_eq hess(a) hess(b)
+end
 
-@test_approx_eq value(rand_x_inv) value(rand_div_test)
-@test_approx_eq collect(grad(rand_x_inv)) collect(grad(rand_div_test))
-@test_approx_eq hess(rand_x_inv) hess(rand_div_test)
-
-val_div_test = rand_val / test_hess 
-val_x_inv = rand_val * inv(test_hess)
-
-@test_approx_eq value(val_x_inv) value(val_div_test)
-@test_approx_eq collect(grad(val_x_inv)) collect(grad(val_div_test))
-@test_approx_eq hess(val_x_inv) hess(val_div_test)
+hess_approx_eq(rand_hess / test_hess, rand_hess * inv(test_hess))
+hess_approx_eq(rand_val / test_hess, rand_val * inv(test_hess))
 
 @test test_hess / rand_val == HessianNum(test_grad / rand_val, test_hessvec / rand_val)
 
 # Exponentiation #
 #----------------#
-# TODO
+hess_approx_eq(test_hess^rand_hess, exp(rand_hess * log(test_hess)))
+hess_approx_eq(test_hess^rand_val, exp(rand_val * log(test_hess)))
+hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 
 # Univariate functions #
 #----------------------#
