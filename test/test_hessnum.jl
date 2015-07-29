@@ -128,9 +128,9 @@ seekstart(io)
 
 close(io)
 
-####################################
-# Math tests (including API usage) #
-####################################
+##############
+# Math tests #
+##############
 rand_val = rand(floatrange)
 rand_partials = map(x -> rand(floatrange), test_partials)
 rand_hessvec = map(x -> rand(floatrange), test_hessvec)
@@ -193,8 +193,8 @@ hess_approx_eq(test_hess^rand_hess, exp(rand_hess * log(test_hess)))
 hess_approx_eq(test_hess^rand_val, exp(rand_val * log(test_hess)))
 hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 
-# Univariate functions #
-#----------------------#
+# Univariate functions/API usage testing #
+#----------------------------------------#
 N = 4
 P = Partials{N,Float64}
 testout = Array(Float64, N, N)
@@ -216,10 +216,9 @@ end
 function hess_test_x(fsym, N)
     randrange = 0.01:.01:.99
 
-    if fsym == :acosh
+    needs_modification = (:acosh, :acoth)
+    if fsym in needs_modification
         randrange += 1
-    elseif fsym == :acoth
-        randrange += 2
     end
 
     return rand(randrange, N)
