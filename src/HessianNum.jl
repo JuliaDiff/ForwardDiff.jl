@@ -234,8 +234,27 @@ end
 const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
 const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), map(first, Calculus.symbolic_derivatives_1arg()))
 
-# Univariate function construction loop
+# The below is developed from hyperdual numbers with 2 
+# different infinitesmal parts (ϵ₁, ϵ₂). These numbers
+# can be formulated like the following:
+#
+# Espilon part definitions:
+# ϵ₁ != ϵ₂ != 0
+# ϵ₁² = ϵ₂² = (ϵ₁ϵ₂)² = 0
+#
+# Taylor Series Expansion:
+# f(x₀ + d) = f(x₀) + d*f'(x₀) + (1/2)*d²*f''(x₀) # further terms are 0 
+#
+# d terms:
+# d = x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₁ϵ₂
+# d² = 2 * x₁x₂ϵ₂ϵ₁
+# 
+# Thus, plugging in:
+# f(x₀ + d) = f(x₀) + f'(x₀)*(x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₁ϵ₂) + f''(x₀)*x₁x₂ϵ₂ϵ₁
+#
+# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 for fsym in univar_hess_funcs
+
     loadfsym = symbol(string("loadhess_", fsym, "!"))
 
     hval = :hval
@@ -247,11 +266,11 @@ for fsym in univar_hess_funcs
         hval = value(h)
         deriv1 = $deriv1
         deriv2 = $deriv2
-        k = 1
+        q = 1
         for i in 1:N
             for j in 1:i
-                output[k] = deriv1*hess(h, k) + deriv2*grad(h, i)*grad(h, j)
-                k += 1
+                output[q] = deriv1*hess(h, q) + deriv2*grad(h, i)*grad(h, j)
+                q += 1
             end
         end
         return output
