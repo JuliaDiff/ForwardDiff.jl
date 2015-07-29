@@ -201,6 +201,32 @@ end
 # Univariate functions on TensorNums #
 #------------------------------------#
 
+-(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
+
+# The below is developed from hyperdual numbers with 3
+# different infinitesmal parts (ϵ₁, ϵ₂, ϵ₃). These numbers
+# can be formulated like the following:
+#
+# Espilon part definitions:
+# ϵ₁ != ϵ₂ != ϵ₃ != 0
+# ϵ₁² = ϵ₂² = ϵ₃² = (ϵ₁ϵ₂)² = (ϵ₁ϵ₃)² = (ϵ₂ϵ₃)² = (ϵ₁ϵ₂ϵ₃)² = 0
+#
+# Taylor Series Expansion:
+# f(x₀ + d) = f(x₀) + d*f'(x₀) + (1/2)*d²*f''(x₀) + (1/6)*d³*f'''(x₀) # further terms are 0
+#
+# d terms:
+# d = x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₃ + x₄ϵ₁ϵ₂ + x₅ϵ₁ϵ₃ + x₆ϵ₂ϵ₃ + x₇ϵ₁ϵ₂ϵ₃
+# d² = 2 * (x₁x₂ϵ₂ϵ₁ + x₁x₃ϵ₃ϵ₁ + x₃x₄ϵ₂ϵ₃ϵ₁ + x₂x₅ϵ₂ϵ₃ϵ₁ + x₁x₆ϵ₂ϵ₃ϵ₁ + x₂x₃ϵ₂ϵ₃)
+# d³ = 6 * x₁x₂x₃ϵ₂ϵ₃ϵ₁
+#
+# Thus, plugging in:
+# f(x₀ + d) = f(x₀) +
+#             f'(x₀)   * (x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₃ + x₄ϵ₁ϵ₂ + x₅ϵ₁ϵ₃ + x₆ϵ₂ϵ₃ + x₇ϵ₁ϵ₂ϵ₃) +
+#             f''(x₀)  * (x₁x₂ϵ₂ϵ₁ + x₁x₃ϵ₃ϵ₁ + x₃x₄ϵ₂ϵ₃ϵ₁ + x₂x₅ϵ₂ϵ₃ϵ₁ + x₁x₆ϵ₂ϵ₃ϵ₁ + x₂x₃ϵ₂ϵ₃) +
+#             f'''(x₀) * x₁x₂x₃ϵ₂ϵ₃ϵ₁
+#
+# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
+
 # The Tuples in `t_univar_funcs` have the following format:
 #
 # (:function_name,
@@ -255,6 +281,3 @@ for (fsym, funcvars, loopvars, term) in t_univar_funcs
         end
     end
 end
-
--(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
-
