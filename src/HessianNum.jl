@@ -252,7 +252,19 @@ const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs)
 # Thus, plugging in:
 # f(x₀ + d) = f(x₀) + f'(x₀)*(x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₁ϵ₂) + f''(x₀)*x₁x₂ϵ₂ϵ₁
 #
+# The coefficients of ϵ₁ϵ₂ are what's stored by HessianNum's `hess` field:
+#
+# (f'(x₀)*x₃ + f''(x₀)*x₁x₂) * ϵ₁ϵ₂
+#
+# where, in the below loops:
+#
+# x₀ = value(t)
+# x₁ = grad(t, i)
+# x₂ = grad(t, j)
+# x₃ = hess(t, q)
+#
 # see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
+
 for fsym in univar_hess_funcs
 
     loadfsym = symbol(string("loadhess_", fsym, "!"))
