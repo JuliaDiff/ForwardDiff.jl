@@ -29,6 +29,9 @@ module ForwardDiff
     end
 
     export Partials,
+           derivative!,
+           derivative,
+           derivative_func,
            gradient!,
            gradient,
            gradient_func,

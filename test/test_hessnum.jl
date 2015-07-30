@@ -156,13 +156,13 @@ rand_x_test = rand_hess * test_hess
 
 @test gradnum(rand_x_test) == rand_grad * test_grad
 
-k = 1
+q = 1
 for i in 1:N
     for j in 1:i
-        term = (rand_hessvec[k]*test_val + rand_partials[i]*test_partials[j]
-                + rand_partials[j]*test_partials[i] + rand_val*test_hessvec[k])
-        @test hess(rand_x_test, k) == term
-        k += 1
+        term = (rand_hessvec[q]*test_val + rand_partials[i]*test_partials[j]
+                + rand_partials[j]*test_partials[i] + rand_val*test_hessvec[q])
+        @test hess(rand_x_test, q) == term
+        q += 1
     end
 end
 

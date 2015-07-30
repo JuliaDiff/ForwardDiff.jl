@@ -1,3 +1,52 @@
+######################
+# Taking Derivatives #
+######################
+
+# Derivative from Vector{F<:ForwardDiffNum} #
+#-------------------------------------------#
+function take_derivative!{F<:ForwardDiffNum}(v::Vector{F}, output::Vector)
+    @assert length(v) == length(output)
+    @inbounds @simd for i in eachindex(result)
+        output[i] = grad(v[i], 1)
+    end
+    return output
+end
+
+# Derivative from function #
+#--------------------------#
+function derivative!(f::Function, x::Real, output::Vector)
+    g = GradientNum(x, one(x))
+    v = f(g)
+    return take_derivative!(v, output)
+end
+
+function derivative(f::Function, x::Real, ::Type{Number})
+    g = GradientNum(x, one(x))
+    return grad(f(g),1)
+end
+
+function derivative(f::Function, x::Real, ::Type{Vector})
+    g = GradientNum(x, one(x))
+    v = f(g)
+    return take_derivative!(v, Vector{typeof(x)}(length(v)))
+end
+
+derivative(f::Function, x::Real) = derivative(f, x, Number)
+
+function derivative_func(f::Function, ::Type{Number})
+    derivf(x::Real) = derivative(f, x, Number)
+    return derivf
+end
+
+function derivative_func(f::Function, ::Type{Vector}; mutates=true)
+    if mutates
+        derivf(x::Real, output::Vector) = derivative!(f, x, output)
+    else
+        derivf(x::Real) = derivative(f, x, Vector)
+    end
+    return derivf
+end
+
 ####################
 # Taking Gradients #
 ####################
@@ -208,34 +257,38 @@ end
 #----------------------------#
 function take_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     q = 1
-    for k in 1:N
-        for i in k:N
-            for j in k:i
-                output[i, j, k] = tens(n, q)
+    for i in 1:N
+        for j in i:N
+            for k in i:j
+                tval = tens(n, q)
+                output[i, j, k] = tval
+                output[i, k, j] = tval
+                output[j, i, k] = tval
+                output[j, k, i] = tval
+                output[k, i, j] = tval
+                output[k, j, i] = tval
                 q += 1
             end
         end
 
-        for i in 1:(k-1)
-            for j in 1:i
-                output[i, j, k] = output[k, i, j]
-            end
-        end
+        # for j in 1:(i-1)
+        #     for k in 1:j
+        #         output[i, j, k] = output[, j, k]
+        #     end
+        # end
 
-        for i in k:N
-            for j in 1:(k-1)
-                output[i, j, k] = output[k, i, j]
-            end
-        end
+        # for j in i:N
+        #     for k in 1:(i-1)
+        #         output[j, k, i] = output[i, j, k]
+        #     end
+        # end
 
-        for i in 1:N
-            for j in (i+1):N
-                output[i, j, k] = output[j, i, k]
-            end
-        end
+        # for j in 1:N
+        #     for k in (j+1):N
+        #         output[j, k, i] = output[k, j, i]
+        #     end
+        # end
     end
-
-    return output
 end
 
 take_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = take_tensor!(n, Array(T, N, N, N))
