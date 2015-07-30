@@ -147,15 +147,15 @@ function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     two_aval = aval + aval
     bval = value(b)
     bval_sq = bval * bval
-    bval_cb = bval_sq * bval
+    inv_bval_cb = inv(bval_sq * bval)
     q = 1
     for i in 1:N
         for j in 1:i
-            grad_bi = grad(b, i)
-            grad_bj = grad(b, j)
-            term1 = two_aval*grad_bj*grad_bi + bval_sq*hess(a,q)
-            term2 = grad(a,i)*grad_bj + grad(a,j)*grad_bi + aval*hess(b,q)
-            output[q] = (term1 - bval*term2) / bval_cb
+            g_bi = grad(b, i)
+            g_bj = grad(b, j)
+            term1 = two_aval*g_bj*g_bi + bval_sq*hess(a,q)
+            term2 = grad(a,i)*g_bj + grad(a,j)*g_bi + aval*hess(b,q)
+            output[q] = (term1 - bval*term2) * inv_bval_cb
             q += 1
         end
     end
@@ -165,11 +165,13 @@ end
 function loadhess_div!{N}(x::Real, h::HessianNum{N}, output)
     hval = value(h)
     hval_sq = hval * hval
-    hval_cb = hval_sq * hval
+    inv_hval_sq = inv(hval_sq) * x
+    inv_hval_cb = inv(hval_sq * hval)
+    two_inv_hval_cb = (inv_hval_cb + inv_hval_cb) * x
     q = 1
     for i in 1:N
         for j in 1:i
-            output[q] = x * ((2*grad(h,i)*grad(h,j)/hval_cb) - (hess(h,q)/hval_sq))
+            output[q] = (grad(h,i)*grad(h,j)*two_inv_hval_cb) - (hess(h,q)*inv_hval_sq)
             q += 1
         end
     end
@@ -188,25 +190,25 @@ function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     q = 1
     for i in 1:N
         for j in 1:i
-            grad_ai = grad(a, i)
-            grad_aj = grad(a, j)
-            grad_bi = grad(b, i)
-            grad_bj = grad(b, j)
+            g_ai = grad(a, i)
+            g_aj = grad(a, j)
+            g_bi = grad(b, i)
+            g_bj = grad(b, j)
             output[q] = (aval_exp_bval*(
-                              bval_sq*grad_ai*grad_aj
+                              bval_sq*g_ai*g_aj
                             + bval*(
-                                  grad_aj*(
-                                      aval_x_logaval*grad_bi
-                                    - grad_ai)
+                                  g_aj*(
+                                      aval_x_logaval*g_bi
+                                    - g_ai)
                                 + aval*(
-                                      log_aval*grad_ai*grad_bj
+                                      log_aval*g_ai*g_bj
                                     + hess(a,q)))
                             + aval*(
-                                  grad_aj*grad_bi
+                                  g_aj*g_bi
                                 + aval_x_logaval*hess(b,q)
-                                + grad_bj*(
-                                      grad_ai
-                                    + aval_x_logaval_x_logaval*grad_bi))))
+                                + g_bj*(
+                                      g_ai
+                                    + aval_x_logaval_x_logaval*g_bi))))
             q += 1
         end
     end
@@ -216,11 +218,12 @@ end
 function loadhess_exp!{N}(h::HessianNum{N}, p::Real, output)
     hval = value(h)
     p_coeff = p*hval^(p - 2)
-    p_minus = p - 1
+    coeff_ij = p_coeff * (p - 1)
+    coeff_q = p_coeff * hval
     q = 1
     for i in 1:N
         for j in 1:i
-            output[q] =p_coeff*(p_minus*grad(h,i)*grad(h,j)+hval*hess(h,q))
+            output[q] = (coeff_ij*grad(h,i)*grad(h,j)) + (coeff_q*hess(h,q))
             q += 1
         end
     end
