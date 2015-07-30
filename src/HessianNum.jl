@@ -151,8 +151,7 @@ function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     q = 1
     for i in 1:N
         for j in 1:i
-            g_bi = grad(b, i)
-            g_bj = grad(b, j)
+            g_bi, g_bj = grad(b, i), grad(b, j)
             term1 = two_aval*g_bj*g_bi + bval_sq*hess(a,q)
             term2 = grad(a,i)*g_bj + grad(a,j)*g_bi + aval*hess(b,q)
             output[q] = (term1 - bval*term2) * inv_bval_cb
@@ -190,10 +189,8 @@ function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     q = 1
     for i in 1:N
         for j in 1:i
-            g_ai = grad(a, i)
-            g_aj = grad(a, j)
-            g_bi = grad(b, i)
-            g_bj = grad(b, j)
+            g_ai, g_aj = grad(a, i), grad(a, j)
+            g_bi, g_bj = grad(b, i), grad(b, j)
             output[q] = (aval_exp_bval*(
                               bval_sq*g_ai*g_aj
                             + bval*(
