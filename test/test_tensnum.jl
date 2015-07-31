@@ -223,7 +223,7 @@ tens_approx_eq(rand_val^test_tens, exp(test_tens * log(rand_val)))
 # Univariate functions/API usage testing #
 #----------------------------------------#
 N = 4
-P = Partials{N}
+P = Dim{N}
 testout = Array(Float64, N, N, N)
 
 function tens_deriv_ijk(f_expr, x::Vector, i, j, k)

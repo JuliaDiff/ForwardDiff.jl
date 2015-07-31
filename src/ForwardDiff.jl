@@ -9,9 +9,7 @@ module ForwardDiff
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
 
-    abstract Partials{N}
-    
-    npartials{N}(::Type{Partials{N}}) = N
+    abstract Dim{N}
 
     include("ForwardDiffNum.jl")
     include("GradientNum.jl")
@@ -19,7 +17,7 @@ module ForwardDiff
     include("TensorNum.jl")
     include("fad_api.jl")
 
-    export Partials,
+    export Dim,
            derivative!,
            derivative,
            derivative_func,

@@ -79,20 +79,20 @@ end
 
 # Exposed API methods #
 #---------------------#
-function gradient!{N,T}(f, x::Vector{T}, output::Vector, P::Type{Partials{N}})
-    return take_gradient!(f, x, output, grad_workvec(P, T))
+function gradient!{T,D<:Dim}(f, x::Vector{T}, output::Vector, ::Type{D})
+    return take_gradient!(f, x, output, grad_workvec(D, T))
 end
 
-function gradient{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
-    return take_gradient!(f, x, grad_workvec(P, T))
+function gradient{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
+    return take_gradient!(f, x, grad_workvec(D, T))
 end
 
-function gradient_func{N}(f, P::Type{Partials{N}}; mutates=false)
+function gradient_func{D<:Dim}(f, ::Type{D}; mutates=false)
     if mutates
-        gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, P)
+        gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, D)
         return gradf!
     else
-        gradf{T}(x::Vector{T}) = gradient(f, x, P)
+        gradf{T}(x::Vector{T}) = gradient(f, x, D)
         return gradf
     end
 end
@@ -143,20 +143,20 @@ end
 
 # Exposed API methods #
 #---------------------#
-function jacobian!{N,T}(f, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
-    return take_jacobian!(f, x, output, grad_workvec(P, T))
+function jacobian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D})
+    return take_jacobian!(f, x, output, grad_workvec(D, T))
 end
 
-function jacobian{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
-    return take_jacobian!(f, x, grad_workvec(P, T))
+function jacobian{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
+    return take_jacobian!(f, x, grad_workvec(D, T))
 end
 
-function jacobian_func{N}(f, P::Type{Partials{N}}; mutates=false)
+function jacobian_func{D<:Dim}(f, ::Type{D}; mutates=false)
     if mutates
-        jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, P)
+        jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, D)
         return jacf!
     else
-        jacf{T}(x::Vector{T}) = jacobian(f, x, P)
+        jacf{T}(x::Vector{T}) = jacobian(f, x, D)
         return jacf
     end
 end
@@ -213,20 +213,20 @@ end
 
 # Exposed API methods #
 #---------------------#
-function hessian!{N,T}(f, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
-    return take_hessian!(f, x, output, hess_workvec(P, T))
+function hessian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D})
+    return take_hessian!(f, x, output, hess_workvec(D, T))
 end
 
-function hessian{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
-    return take_hessian!(f, x, hess_workvec(P, T))
+function hessian{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
+    return take_hessian!(f, x, hess_workvec(D, T))
 end
 
-function hessian_func{N}(f, P::Type{Partials{N}}; mutates=false)
+function hessian_func{D<:Dim}(f, ::Type{D}; mutates=false)
     if mutates
-        hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, P)
+        hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, D)
         return hessf!
     else
-        hessf{T}(x::Vector{T}) = hessian(f, x, P)
+        hessf{T}(x::Vector{T}) = hessian(f, x, D)
         return hessf
     end
 end
@@ -307,20 +307,20 @@ end
 
 # Exposed API methods #
 #---------------------#
-function tensor!{N,T,S}(f, x::Vector{T}, output::Array{S,3}, P::Type{Partials{N}})
-    return take_tensor!(f, x, output, tens_workvec(P, T))
+function tensor!{T,S,D<:Dim}(f, x::Vector{T}, output::Array{S,3}, ::Type{D})
+    return take_tensor!(f, x, output, tens_workvec(D, T))
 end
 
-function tensor{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
-    return take_tensor!(f, x, tens_workvec(P, T))
+function tensor{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
+    return take_tensor!(f, x, tens_workvec(D, T))
 end
 
-function tensor_func{N}(f, ::Type{Partials{N}}; mutates=false)
+function tensor_func{D<:Dim}(f, ::Type{D}; mutates=false)
     if mutates
-        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, P)
+        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, D)
         return tensf!
     else
-        tensf{T}(x::Vector{T}) = tensor(f, x, P)
+        tensf{T}(x::Vector{T}) = tensor(f, x, D)
         return tensf
     end
 end
@@ -341,7 +341,7 @@ end
 # though I can't think of any use cases in which that would be 
 # relevant.
 
-@generated function pick_implementation{N,T}(::Type{Partials{N}}, ::Type{T})
+@generated function pick_implementation{N,T}(::Type{Dim{N}}, ::Type{T})
     if N > 10
         return :(Vector{$T})
     else
@@ -349,18 +349,18 @@ end
     end
 end
 
-@generated function grad_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
-    result = Vector{GradientNum{N,T,pick_implementation(Partials{N},T)}}(N)
+@generated function grad_workvec{N,T}(::Type{Dim{N}}, ::Type{T})
+    result = Vector{GradientNum{N,T,pick_implementation(Dim{N},T)}}(N)
     return :($result)
 end
 
-@generated function hess_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
-    result = Vector{HessianNum{N,T,pick_implementation(Partials{N},T)}}(N)
+@generated function hess_workvec{N,T}(::Type{Dim{N}}, ::Type{T})
+    result = Vector{HessianNum{N,T,pick_implementation(Dim{N},T)}}(N)
     return :($result)
 end
 
-@generated function tens_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
-    result = Vector{TensorNum{N,T,pick_implementation(Partials{N},T)}}(N)
+@generated function tens_workvec{N,T}(::Type{Dim{N}}, ::Type{T})
+    result = Vector{TensorNum{N,T,pick_implementation(Dim{N},T)}}(N)
     return :($result)
 end
 

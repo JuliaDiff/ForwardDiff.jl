@@ -6,7 +6,7 @@ using Calculus
 # Test taking the Jacobian #
 ############################
 N = 4
-P = Partials{N}
+P = Dim{N}
 floatrange = 0.01:.01:.99
 testx = rand(floatrange, N)
 
