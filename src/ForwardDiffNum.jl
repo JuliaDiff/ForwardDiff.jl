@@ -1,4 +1,4 @@
-abstract ForwardDiffNum{N,T<:Real,C} <: Number
+abstract ForwardDiffNum{N,T<:Number,C} <: Number
 
 # Subtypes F<:ForwardDiffNum should define:
 #    npartials(::Type{F}) --> N from ForwardDiffNum{N,T,C}

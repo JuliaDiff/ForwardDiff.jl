@@ -2,9 +2,10 @@
 # Taking Derivatives #
 ######################
 
-# Derivative from Vector{F<:ForwardDiffNum} #
-#-------------------------------------------#
-function take_derivative!{F<:ForwardDiffNum}(v::Vector{F}, output::Vector)
+# Load derivative from ForwardDiffNum #
+#-------------------------------------#
+# generalize to arbitrary array dimensions?
+function load_derivative!{F<:ForwardDiffNum}(v::Vector{F}, output::Vector)
     @assert length(v) == length(output)
     @inbounds @simd for i in eachindex(result)
         output[i] = grad(v[i], 1)
@@ -12,37 +13,19 @@ function take_derivative!{F<:ForwardDiffNum}(v::Vector{F}, output::Vector)
     return output
 end
 
-# Derivative from function #
-#--------------------------#
-function derivative!(f::Function, x::Real, output::Vector)
-    g = GradientNum(x, one(x))
-    v = f(g)
-    return take_derivative!(v, output)
-end
+load_derivative{F<:ForwardDiffNum}(arr::Array{F}) = load_derivative!(arr, similar(arr, eltype(F)))
+load_derivative(n::ForwardDiffNum{1}) = grad(n, 1)
 
-function derivative(f::Function, x::Real, ::Type{Number})
-    g = GradientNum(x, one(x))
-    return grad(f(g),1)
-end
+# Derivative from function/Exposed API methods #
+#----------------------------------------------#
+derivative!(f::Function, x::Real, output::Array) = load_derivative!(f(GradientNum(x, one(x))), output)
+derivative(f::Function, x::Real) = load_derivative(f(GradientNum(x, one(x))))
 
-function derivative(f::Function, x::Real, ::Type{Vector})
-    g = GradientNum(x, one(x))
-    v = f(g)
-    return take_derivative!(v, Vector{typeof(x)}(length(v)))
-end
-
-derivative(f::Function, x::Real) = derivative(f, x, Number)
-
-function derivative_func(f::Function, ::Type{Number})
-    derivf(x::Real) = derivative(f, x, Number)
-    return derivf
-end
-
-function derivative_func(f::Function, ::Type{Vector}; mutates=true)
+function derivative_func(f::Function; mutates=false)
     if mutates
-        derivf(x::Real, output::Vector) = derivative!(f, x, output)
+        derivf(x::Real, output::Array) = derivative!(f, x, output)
     else
-        derivf(x::Real) = derivative(f, x, Vector)
+        derivf(x::Real) = derivative(f, x)
     end
     return derivf
 end
@@ -51,30 +34,27 @@ end
 # Taking Gradients #
 ####################
 
-# Gradient from ForwardDiffNum #
-#------------------------------#
-function take_gradient!(n::ForwardDiffNum, output)
-    @assert npartials(n) == length(output)
+# Load gradient from ForwardDiffNum #
+#-----------------------------------#
+function load_gradient!(n::ForwardDiffNum, output::Vector)
+    @assert npartials(n) == length(output) "The output vector must be the same length as the input vector"
     @inbounds @simd for i in eachindex(output)
         output[i] = grad(n, i)
     end
     return output
 end
 
-take_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = take_gradient!(n, Array(T, N))
+load_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_gradient!(n, Array(T, N))
 
 # Gradient from function #
 #------------------------#
-function take_gradient!{N,T,C,S}(f::Function,
-                                 x::Vector{T},
-                                 output::Vector{S},
-                                 gradvec::Vector{GradientNum{N,T,C}}) 
+function calc_gradnum!{N,T,C}(f::Function,
+                              x::Vector{T},
+                              gradvec::Vector{GradientNum{N,T,C}}) 
     Grad = eltype(gradvec)
-    ResultGrad = GradientNum{N,S,switch_eltype(C,S)}
 
     @assert length(x) == N "Length of input must be equal to the number of partials components used"
-    @assert N == length(output) "The output vector must be the same length as the input vector"
-    @assert N == length(gradvec) "The GradientNum vector must be the same length as the input vector"
+    @assert length(gradvec) == N "The GradientNum vector must be the same length as the input vector"
 
     pchunk = partials_chunk(Grad)
 
@@ -82,32 +62,33 @@ function take_gradient!{N,T,C,S}(f::Function,
         gradvec[i] = Grad(x[i], pchunk[i])
     end
 
-    result::ResultGrad = f(gradvec)
-    
-    take_gradient!(result, output)
-
-    return output
+    return f(gradvec)
 end
 
-function take_gradient!{N,T,C}(f::Function, x::Vector{T}, gradvec::Vector{GradientNum{N,T,C}})
-    return take_gradient!(f, x, similar(x), gradvec)
+function take_gradient!(f::Function, x::Vector, output::Vector, gradvec::Vector) 
+    return load_gradient!(calc_gradnum!(f, x, gradvec), output)
 end
 
-function gradient!{N,T}(f::Function, x::Vector{T}, output::Vector, P::Type{Partials{N,T}})
-    return take_gradient!(f, x, output, similar(x, GradientNum{N,T,pick_implementation(P)}))
+function take_gradient!(f::Function, x::Vector, gradvec::Vector)
+    return load_gradient(calc_gradnum!(f, x, gradvec))
 end
 
-function gradient{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}})
-    return gradient!(f, x, similar(x), P)
+# Exposed API methods #
+#---------------------#
+function gradient!{N,T}(f::Function, x::Vector{T}, output::Vector, P::Type{Partials{N}})
+    return take_gradient!(f, x, output, grad_workvec(P, T))
 end
 
-function gradient_func{N,T}(f::Function, P::Type{Partials{N,T}}; mutates=true)
-    gradvec = Vector{GradientNum{N,T,pick_implementation(P)}}(N)
+function gradient{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+    return take_gradient!(f, x, grad_workvec(P, T))
+end
+
+function gradient_func{N}(f::Function, P::Type{Partials{N}}; mutates=false)
     if mutates
-        gradf!{T}(x::Vector{T}, output::Vector) = take_gradient!(f, x, output, gradvec)
+        gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, P)
         return gradf!
     else
-        gradf{T}(x::Vector{T}) = take_gradient!(f, x, gradvec)
+        gradf{T}(x::Vector{T}) = gradient(f, x, P)
         return gradf
     end
 end
@@ -116,9 +97,9 @@ end
 # Taking Jacobians #
 ####################
 
-# Jacobian from Vector{F<:ForwardDiffNum} #
-#-----------------------------------------#
-function take_jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
+# Load Jacobian from ForwardDiffNum #
+#-----------------------------------#
+function load_jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
     N = npartials(F)
     @assert (length(v), N) == size(output)
     for i in 1:length(v), j in 1:N
@@ -127,20 +108,17 @@ function take_jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
     return output
 end
 
-take_jacobian{F<:ForwardDiffNum}(v::Vector{F}) = take_jacobian!(v, Array(eltype(F), length(v), npartials(F)))
+load_jacobian{F<:ForwardDiffNum}(v::Vector{F}) = load_jacobian!(v, Array(eltype(F), length(v), npartials(F)))
 
 # Jacobian from function #
 #------------------------#
-function take_jacobian!{N,T,C,S}(f::Function,
-                                 x::Vector{T},
-                                 output::Matrix{S},
-                                 gradvec::Vector{GradientNum{N,T,C}})
+function calc_jacnum!{N,T,C}(f::Function,
+                             x::Vector{T},
+                             gradvec::Vector{GradientNum{N,T,C}})
     Grad = eltype(gradvec)
-    ResultGradVec = Vector{GradientNum{N,S,switch_eltype(C,S)}}
 
     @assert length(x) == N "Length of input must be equal to the number of partials components used"
-    @assert N == size(output, 2) "The number of columns of the output matrix must equal the length of the input vector"
-    @assert N == length(gradvec) "The GradientNum vector must be the same length as the input vector"
+    @assert length(gradvec) == N "The GradientNum vector must be the same length as the input vector"
 
     pchunk = partials_chunk(Grad)
 
@@ -148,32 +126,33 @@ function take_jacobian!{N,T,C,S}(f::Function,
         gradvec[j] = Grad(x[j], pchunk[j])
     end
 
-    result::ResultGradVec = f(gradvec)
-
-    take_jacobian!(result, output)
-
-    return output
+    return f(gradvec)
 end
 
-function take_jacobian!{N,T,C}(f::Function, x::Vector{T}, ylen::Int, gradvec::Vector{GradientNum{N,T,C}})
-    return take_jacobian!(f, x, Array(T, ylen, length(x)), gradvec)
+function take_jacobian!(f::Function, x::Vector, output::Matrix, gradvec::Vector)
+    return load_jacobian!(calc_jacnum!(f, x, gradvec), output)
 end
 
-function jacobian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N,T}})
-    return take_jacobian!(f, x, output, similar(x, GradientNum{N,T,pick_implementation(P)}))
+function take_jacobian!(f::Function, x::Vector, gradvec::Vector)
+    return load_jacobian(calc_jacnum!(f, x, gradvec))
 end
 
-function jacobian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}}, ylen::Int)
-    return jacobian!(f, x, Array(T, ylen, length(x)), P)
+# Exposed API methods #
+#---------------------#
+function jacobian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
+    return take_jacobian!(f, x, output, grad_workvec(P, T))
 end
 
-function jacobian_func{N,T}(f::Function, P::Type{Partials{N,T}}, ylen::Int; mutates=true)
-    gradvec = Vector{GradientNum{N,T,pick_implementation(P)}}(N)
+function jacobian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+    return take_jacobian!(f, x, grad_workvec(P, T))
+end
+
+function jacobian_func{N}(f::Function, P::Type{Partials{N}}; mutates=false)
     if mutates
-        jacf!{T}(x::Vector{T}, output::Matrix) = take_jacobian!(f, x, output, gradvec)
+        jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, P)
         return jacf!
     else
-        jacf{T}(x::Vector{T}) = take_jacobian!(f, x, ylen, gradvec)
+        jacf{T}(x::Vector{T}) = jacobian(f, x, P)
         return jacf
     end
 end
@@ -182,9 +161,10 @@ end
 # Taking Hessians #
 ###################
 
-# Hessian from ForwardDiffNum #
-#-----------------------------#
-function take_hessian!{N}(n::ForwardDiffNum{N}, output)
+# Load Hessian from ForwardDiffNum #
+#----------------------------------#
+function load_hessian!{N}(n::ForwardDiffNum{N}, output)
+    @assert (N, N) == size(output) "The output matrix must have size (length(input), length(input))"
     q = 1
     for i in 1:N
         for j in 1:i
@@ -197,20 +177,17 @@ function take_hessian!{N}(n::ForwardDiffNum{N}, output)
     return output
 end
 
-take_hessian{N,T}(n::ForwardDiffNum{N,T}) = take_hessian!(n, Array(T, N, N))
+load_hessian{N,T}(n::ForwardDiffNum{N,T}) = load_hessian!(n, Array(T, N, N))
 
 # Hessian from function #
 #-----------------------#
-function take_hessian!{N,T,C,S}(f::Function,
-                                x::Vector{T},
-                                output::Matrix{S},
-                                hessvec::Vector{HessianNum{N,T,C}}) 
+function calc_hessnum!{N,T,C}(f::Function,
+                              x::Vector{T},
+                              hessvec::Vector{HessianNum{N,T,C}}) 
     Grad = GradientNum{N,T,C}
-    ResultHessian = HessianNum{N,S,switch_eltype(C,S)}
 
     @assert length(x) == N "Length of input must be equal to the number of partials components used"
-    @assert (N, N) == size(output) "The output matrix must have size (length(input), length(input))"
-    @assert N == length(hessvec) "The HessianNum vector must be the same length as the input vector"
+    @assert length(hessvec) == N "The HessianNum vector must be the same length as the input vector"
 
     pchunk = partials_chunk(Grad)
     zhess = zero_partials(eltype(hessvec))
@@ -219,32 +196,33 @@ function take_hessian!{N,T,C,S}(f::Function,
         hessvec[i] = HessianNum(Grad(x[i], pchunk[i]), zhess)
     end
 
-    result::ResultHessian = f(hessvec)
-
-    take_hessian!(result, output)
-
-    return output
+    return f(hessvec)
 end
 
-function take_hessian!{N,T,C}(f::Function, x::Vector{T}, hessvec::Vector{HessianNum{N,T,C}})
-    return take_hessian!(f, x, Array(T, N, N), hessvec)
+function take_hessian!(f::Function, x::Vector, output::Matrix, hessvec::Vector)
+    return load_hessian!(calc_hessnum!(f, x, hessvec), output)
 end
 
-function hessian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N,T}})
-    return take_hessian!(f, x, output, similar(x, HessianNum{N,T,pick_implementation(P)}))
+function take_hessian!(f::Function, x::Vector, hessvec::Vector)
+    return load_hessian(calc_hessnum!(f, x, hessvec))
 end
 
-function hessian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}})
-    return hessian!(f, x, Array(T, N, N), P)
+# Exposed API methods #
+#---------------------#
+function hessian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
+    return take_hessian!(f, x, output, hess_workvec(P, T))
 end
 
-function hessian_func{N,T}(f::Function, P::Type{Partials{N,T}}; mutates=true)
-    hessvec = Vector{HessianNum{N,T,pick_implementation(P)}}(N)
+function hessian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+    return take_hessian!(f, x, hess_workvec(P, T))
+end
+
+function hessian_func{N}(f::Function, P::Type{Partials{N}}; mutates=false)
     if mutates
-        hessf!{T}(x::Vector{T}, output::Matrix) = take_hessian!(f, x, output, hessvec)
+        hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, P)
         return hessf!
     else
-        hessf{T}(x::Vector{T}) = take_hessian!(f, x, hessvec)
+        hessf{T}(x::Vector{T}) = hessian(f, x, P)
         return hessf
     end
 end
@@ -253,9 +231,10 @@ end
 # Taking Tensors #
 ##################
 
-# Tensor from ForwardDiffNum #
-#----------------------------#
-function take_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
+# Load Tensor from ForwardDiffNum #
+#---------------------------------#
+function load_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
+    @assert (N, N, N) == size(output) "The output array must have size (length(input), length(input), length(input))"
     q = 1
     for i in 1:N
         for j in i:N
@@ -291,21 +270,17 @@ function take_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     end
 end
 
-take_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = take_tensor!(n, Array(T, N, N, N))
+load_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_tensor!(n, Array(T, N, N, N))
 
 # Tensor from function #
 #----------------------#
-function take_tensor!{N,T,C,S}(f::Function,
-                          x::Vector{T},
-                          output::Array{S,3},
-                          tensvec::Vector{TensorNum{N,T,C}}) 
-    xlen = 
+function calc_tensnum!{N,T,C}(f::Function,
+                              x::Vector{T},
+                              tensvec::Vector{TensorNum{N,T,C}}) 
     Grad = GradientNum{N,T,C}
-    ResultTensor = TensorNum{N,S,switch_eltype(C,S)}
 
     @assert length(x) == N "Length of input must be equal to the number of partials components used"
-    @assert (N, N, N) == size(output) "The output array must have size (length(input), length(input), length(input))"
-    @assert N == length(tensvec) "The TensorNum vector must be the same length as the input"
+    @assert length(tensvec) == N "The TensorNum vector must be the same length as the input"
 
     pchunk = partials_chunk(Grad)
     zhess = zero_partials(HessianNum{N,T,C})
@@ -315,33 +290,33 @@ function take_tensor!{N,T,C,S}(f::Function,
         tensvec[i] = TensorNum(HessianNum(Grad(x[i], pchunk[i]), zhess), ztens)
     end
 
-    result::ResultTensor = f(tensvec)
-
-    take_tensor!(result, output)
-    
-    return output
+    return f(tensvec)
 end
 
-
-function take_tensor!{N,T,C}(f::Function, x::Vector{T}, tensvec::Vector{TensorNum{N,T,C}})
-    return take_tensor!(f, x, Array(T, N, N, N), tensvec)
+function take_tensor!{S}(f::Function, x::Vector, output::Array{S,3}, tensvec::Vector)
+    return load_tensor!(calc_tensnum!(f, x, tensvec), output)
 end
 
-function tensor!{N,T,S}(f::Function, x::Vector{T}, output::Array{S,3}, P::Type{Partials{N,T}})
-    return take_tensor!(f, x, output, similar(x, TensorNum{N,T,pick_implementation(P)}))
+function take_tensor!(f::Function, x::Vector, tensvec::Vector)
+    return load_tensor(calc_tensnum!(f, x, tensvec))
 end
 
-function tensor{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N,T}})
-    return tensor!(f, x, Array(T, N, N, N), P)
+# Exposed API methods #
+#---------------------#
+function tensor!{N,T,S}(f::Function, x::Vector{T}, output::Array{S,3}, P::Type{Partials{N}})
+    return take_tensor!(f, x, output, tens_workvec(P, T))
 end
 
-function tensor_func{N,T}(f::Function, ::Type{Partials{N,T}}; mutates=true)
-    tensvec = Vector{TensorNum{N,T,pick_implementation(P)}}(N)
+function tensor{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+    return take_tensor!(f, x, tens_workvec(P, T))
+end
+
+function tensor_func{N}(f::Function, ::Type{Partials{N}}; mutates=false)
     if mutates
-        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = take_tensor!(f, x, output, tensvec)
+        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, P)
         return tensf!
     else
-        tensf{T}(x::Vector{T}) = take_tensor!(f, x, tensvec)
+        tensf{T}(x::Vector{T}) = tensor(f, x, P)
         return tensf
     end
 end
@@ -361,6 +336,21 @@ end
 # downstream program use many *different* partial components, 
 # though I can't think of any use cases in which that would be 
 # relevant.
+
+@generated function grad_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
+    result = Vector{GradientNum{N,T,pick_implementation(Partials{N},T)}}(N)
+    return :($result)
+end
+
+@generated function hess_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
+    result = Vector{HessianNum{N,T,pick_implementation(Partials{N},T)}}(N)
+    return :($result)
+end
+
+@generated function tens_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
+    result = Vector{TensorNum{N,T,pick_implementation(Partials{N},T)}}(N)
+    return :($result)
+end
 
 @generated function zero_partials{N,T}(::Type{GradNumVec{N,T}})
     result = zeros(T, N)

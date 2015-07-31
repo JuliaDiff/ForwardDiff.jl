@@ -218,7 +218,7 @@ end
 # API Usage Testing #
 #####################
 N = 4
-P = Partials{N,Float64}
+P = Partials{N}
 testout = Array(Float64, N)
 
 function grad_deriv_i(f_expr, x::Vector, i)

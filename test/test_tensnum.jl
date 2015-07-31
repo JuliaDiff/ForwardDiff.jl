@@ -10,7 +10,9 @@ using ForwardDiff:
         hess,
         tens,
         npartials,
-        isconstant
+        isconstant,
+        hessnum,
+        t_inds_2_h_ind
 
 floatrange = 0.0:.01:.99
 intrange = 0:10
@@ -139,3 +141,137 @@ seekstart(io)
 @test read(io, typeof(test_tens)) == test_tens
 
 close(io)
+
+##############
+# Math tests #
+##############
+rand_val = rand(floatrange)
+rand_partials = map(x -> rand(floatrange), test_partials)
+rand_hessvec = map(x -> rand(floatrange), test_hessvec)
+rand_tensvec = map(x -> rand(floatrange), test_tensvec)
+
+rand_grad = GradientNum(rand_val, rand_partials)
+rand_hess = HessianNum(rand_grad, rand_hessvec)
+rand_tens = TensorNum(rand_hess, rand_tensvec)
+
+# Addition/Subtraction #
+#----------------------#
+@test rand_tens + test_tens == TensorNum(rand_hess + test_hess, rand_tensvec + test_tensvec)
+@test rand_tens + test_tens == test_tens + rand_tens
+@test rand_tens - test_tens == TensorNum(rand_hess - test_hess, rand_tensvec - test_tensvec)
+
+@test rand_val + test_tens == TensorNum(rand_val + test_hess, test_tensvec)
+@test rand_val + test_tens == test_tens + rand_val
+@test rand_val - test_tens == TensorNum(rand_val - test_hess, -test_tensvec)
+@test test_tens - rand_val == TensorNum(test_hess - rand_val, test_tensvec)
+
+@test -test_tens == TensorNum(-test_hess, -test_tensvec)
+
+# Multiplication #
+#----------------#
+rand_x_test = rand_tens * test_tens
+
+@test hessnum(rand_x_test) == rand_hess * test_hess
+
+q = 1
+for i in 1:N
+    for j in i:N
+        for k in i:j
+            a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+            term = (tens(rand_tens,q)*value(test_tens) +
+                    hess(rand_tens,c)*grad(test_tens,i) +
+                    hess(rand_tens,b)*grad(test_tens,j) +
+                    hess(rand_tens,a)*grad(test_tens,k) +
+                    grad(rand_tens,k)*hess(test_tens,a) +
+                    grad(rand_tens,j)*hess(test_tens,b) +
+                    grad(rand_tens,i)*hess(test_tens,c) +
+                    value(rand_tens)*tens(test_tens,q))
+            @test tens(rand_x_test, q) == term
+            q += 1
+        end
+    end
+end
+
+@test rand_val * test_tens == TensorNum(rand_val * test_hess, rand_val * test_tensvec)
+@test test_tens * rand_val == rand_val * test_tens
+
+@test test_tens * true == test_tens
+@test true * test_tens == test_tens * true
+@test test_tens * false == zero(test_tens)
+@test false * test_tens == test_tens * false
+
+# Division #
+#----------#
+function tens_approx_eq(a::TensorNum, b::TensorNum)
+    @test_approx_eq value(a) value(b)
+    @test_approx_eq collect(grad(a)) collect(grad(b))
+    @test_approx_eq hess(a) hess(b)
+    @test_approx_eq tens(a) tens(b)
+end
+
+tens_approx_eq(rand_tens / test_tens, rand_tens * inv(test_tens))
+tens_approx_eq(rand_val / test_tens, rand_val * inv(test_tens))
+
+@test test_tens / rand_val == TensorNum(test_hess / rand_val, test_tensvec / rand_val)
+
+# Exponentiation #
+#----------------#
+tens_approx_eq(test_tens^rand_tens, exp(rand_tens * log(test_tens)))
+tens_approx_eq(test_tens^rand_val, exp(rand_val * log(test_tens)))
+tens_approx_eq(rand_val^test_tens, exp(test_tens * log(rand_val)))
+
+# Univariate functions/API usage testing #
+#----------------------------------------#
+N = 4
+P = Partials{N}
+testout = Array(Float64, N, N, N)
+
+function tens_deriv_ijk(f_expr, x::Vector, i, j, k)
+    var_syms = [:a, :b, :c, :d]
+    diff_expr = differentiate(f_expr, var_syms[k])
+    diff_expr = differentiate(diff_expr, var_syms[j])
+    diff_expr = differentiate(diff_expr, var_syms[i])
+    @eval begin
+        a,b,c,d = $x
+        return $diff_expr
+    end
+end
+
+function tens_test_result(f_expr, x::Vector)
+    return [tens_deriv_ijk(f_expr, x, i, j, k) for i in 1:N, j in 1:N, k in 1:N]
+end
+
+function tens_test_x(fsym, N)
+    randrange = 0.01:.01:.99
+
+    needs_modification = tuple()#(:acosh, :acoth)
+    if fsym in needs_modification
+        randrange += 1
+    end
+
+    return rand(randrange, N)
+end
+
+for fsym in ForwardDiff.univar_tens_funcs    
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+
+    @eval function testf(x::Vector) 
+        a,b,c,d = x
+        return $testexpr
+    end
+
+    testx = tens_test_x(fsym, N)
+    testresult = tens_test_result(testexpr, testx)
+
+    tensor!(testf, testx, testout, P)
+    @test_approx_eq testout testresult
+
+    @test_approx_eq tensor(testf, testx, P) testresult
+
+    tensf! = tensor_func(testf, P, mutates=true)
+    tensf!(testx, testout)
+    @test_approx_eq testout testresult
+
+    tensf = tensor_func(testf, P, mutates=false)
+    @test_approx_eq tensf(testx) testresult
+end

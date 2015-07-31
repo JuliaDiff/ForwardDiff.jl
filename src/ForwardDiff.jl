@@ -9,10 +9,9 @@ module ForwardDiff
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
 
-    abstract Partials{N,T}
+    abstract Partials{N}
     
-    npartials{N,T}(::Type{Partials{N,T}}) = N
-    eltype{N,T}(::Type{Partials{N,T}}) = T
+    npartials{N}(::Type{Partials{N}}) = N
 
     include("ForwardDiffNum.jl")
     include("GradientNum.jl")
@@ -20,7 +19,7 @@ module ForwardDiff
     include("TensorNum.jl")
     include("fad_api.jl")
 
-    @generated function pick_implementation{N,T}(::Type{Partials{N,T}})
+    @generated function pick_implementation{N,T}(::Type{Partials{N}}, ::Type{T})
         if N > 10
             return :(Vector{$T})
         else

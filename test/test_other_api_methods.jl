@@ -6,7 +6,7 @@ using Calculus
 # Test taking the Jacobian #
 ############################
 N = 4
-P = Partials{N,Float64}
+P = Partials{N}
 floatrange = 0.01:.01:.99
 testx = rand(floatrange, N)
 
@@ -31,19 +31,17 @@ function jac_test_result(x::Vector)
                 0              0         0       1/(2*sqrt(x[4]))]
 end
 
-M = 5
-
-testout = Array(Float64, M, N)
+testout = Array(Float64, 5, N)
 testresult = jac_test_result(testx)
 
 jacobian!(jac_testf, testx, testout, P)
 @test testout == testresult
 
-@test jacobian(jac_testf, testx, P, M) == testresult
+@test jacobian(jac_testf, testx, P) == testresult
 
-jacf! = jacobian_func(jac_testf, P, M, mutates=true)
+jacf! = jacobian_func(jac_testf, P, mutates=true)
 jacf!(testx, testout)
 @test testout == testresult
 
-jacf = jacobian_func(jac_testf, P, M, mutates=false)
+jacf = jacobian_func(jac_testf, P, mutates=false)
 @test jacf(testx) == testresult
