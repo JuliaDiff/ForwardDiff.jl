@@ -19,14 +19,6 @@ module ForwardDiff
     include("TensorNum.jl")
     include("fad_api.jl")
 
-    @generated function pick_implementation{N,T}(::Type{Partials{N}}, ::Type{T})
-        if N > 10
-            return :(Vector{$T})
-        else
-            return :(NTuple{$N,$T})
-        end
-    end
-
     export Partials,
            derivative!,
            derivative,

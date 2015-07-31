@@ -337,6 +337,14 @@ end
 # though I can't think of any use cases in which that would be 
 # relevant.
 
+@generated function pick_implementation{N,T}(::Type{Partials{N}}, ::Type{T})
+    if N > 10
+        return :(Vector{$T})
+    else
+        return :(NTuple{$N,$T})
+    end
+end
+
 @generated function grad_workvec{N,T}(::Type{Partials{N}}, ::Type{T})
     result = Vector{GradientNum{N,T,pick_implementation(Partials{N},T)}}(N)
     return :($result)
