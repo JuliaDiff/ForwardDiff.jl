@@ -124,6 +124,17 @@ end
 #
 # see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
+function loadhess_deriv!(h::HessianNum{N}, deriv1, deriv2, output)
+    q = 1
+    for i in 1:N
+        for j in 1:i
+            output[q] = deriv1*hess(h, q) + deriv2*grad(h, i)*grad(h, j)
+            q += 1
+        end
+    end
+    return output
+end
+
 # Bivariate functions on HessianNums #
 #------------------------------------#
 function loadhess_mul!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
@@ -165,16 +176,9 @@ function loadhess_div!{N}(x::Real, h::HessianNum{N}, output)
     hval = value(h)
     hval_sq = hval * hval
     inv_hval_sq = inv(hval_sq) * x
-    inv_hval_cb = inv(hval_sq * hval)
-    two_inv_hval_cb = (inv_hval_cb + inv_hval_cb) * x
-    q = 1
-    for i in 1:N
-        for j in 1:i
-            output[q] = (grad(h,i)*grad(h,j)*two_inv_hval_cb) - (hess(h,q)*inv_hval_sq)
-            q += 1
-        end
-    end
-    return output
+    deriv1 = inv(hval_sq * hval)
+    deriv2 = (inv_hval_cb + inv_hval_cb) * x
+    return loadhess_deriv!(h, deriv1, deriv2, output)
 end
 
 function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
@@ -215,16 +219,9 @@ end
 function loadhess_exp!{N}(h::HessianNum{N}, p::Real, output)
     hval = value(h)
     p_coeff = p*hval^(p - 2)
-    coeff_ij = p_coeff * (p - 1)
-    coeff_q = p_coeff * hval
-    q = 1
-    for i in 1:N
-        for j in 1:i
-            output[q] = (coeff_ij*grad(h,i)*grad(h,j)) + (coeff_q*hess(h,q))
-            q += 1
-        end
-    end
-    return output
+    deriv1 = p_coeff * hval
+    deriv2 = p_coeff * (p - 1)
+    return loadhess_deriv!(h, deriv1, deriv2, output)
 end
 
 for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
@@ -282,16 +279,7 @@ for fsym in univar_hess_funcs
 
     @eval function $(loadfsym){N}(h::HessianNum{N}, output)
         hval = value(h)
-        deriv1 = $deriv1
-        deriv2 = $deriv2
-        q = 1
-        for i in 1:N
-            for j in 1:i
-                output[q] = deriv1*hess(h, q) + deriv2*grad(h, i)*grad(h, j)
-                q += 1
-            end
-        end
-        return output
+        return loadhess_deriv!(h, $deriv1, $deriv2, output)
     end
 
     expr = parse(""" 
