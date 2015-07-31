@@ -118,7 +118,7 @@ end
 #
 #   f(t)_ϵ₁ϵ₂ϵ₃ = (f'(t₀)*t₇ + f''(t₀)*(t₃t₄ + t₂t₅ + t₁t₆) + f'''(t₀)*t₁t₂t₃
 #
-# where, in loop code:
+# where, in the loop code below:
 #
 #   a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
 #   t₀ = value(h)
@@ -138,6 +138,21 @@ function t_inds_2_h_ind(i, j)
     else
         return div(i*(i-1), 2+j) + 1
     end
+end
+
+function loadtens_deriv!(t::HessianNum{N}, deriv1, deriv2, deriv3, output)
+    q = 1
+    for i in 1:N
+        for j in i:N
+            for k in i:j
+                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(j,k), t_inds_2_h_ind(k,i)
+                g_i,g_j,g_k = grad(t,i), grad(t,j), grad(t,k)
+                output[q] = deriv1*tens(t,q) + deriv2*(g_k*hess(t,a) + g_j*hess(t,b) + g_i*hess(t,c)) + deriv3*g_i*g_j*g_k
+                q += 1
+            end
+        end
+    end
+    return output
 end
 
 # Bivariate functions on TensorNums #
@@ -165,33 +180,44 @@ function loadtens_mul!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
     return output
 end
 
-# function loadtens_div!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
-#     q = 1
-#     for i in 1:N
-#         for j in i:N
-#             for k in i:j
-#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
-#                 output[q] = 
-#                 q += 1
-#             end
-#         end
-#     end
-#     return output
-# end
+function loadtens_div!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
+    t1val = value(t1)
+    t2val = value(t2)
+    coeff0 = inv(t2val)
+    coeff1 = abs2(coeff0)
+    coeff2 = 2*coeff1*coeff0
+    coeff3 = 2*coeff1*(2*coeff0^2 + coeff1)
+    q = 1
+    for i in 1:N
+        for j in i:N
+            for k in i:j
+                a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+                t1_gi, t1_gj, t1_gk = grad(t1,i), grad(t1,j), grad(t1,k)
+                t2_gj, t2_gk = grad(t2,j), grad(t2,k)
+                t1_ha, t1_hb, t1_hc = hess(t1,a), hess(t1,b), hess(t1,c)
+                t2_ha, t2_hb, t2_hc = hess(t2,a), hess(t2,b), hess(t2,c)
+                loop_coeff1 = (tens(t1,q)*t1val + t2_hc*t1_gi + t2_hb*t1_gj + t2_ha*t1_gk + t2_gk*t1_ha + t2_gj*t1_hb + t1_hc)
+                loop_coeff2 = (t2_gk*t2_ha*t1val + t2_gj*t2_hb*t1val + t2_hc*t1val + t2_gj*t2_gk*t1_gi + t2_gk*t1_gj + t2_gj*t1_gk)
+                loop_coeff3 = (t2_gj*t2_gk*t1val)
+                output[q] = coeff0*tens(t2,q) - coeff1*loop_coeff1 - coeff2*loop_coeff2 - coeff3*loop_coeff3
+                q += 1
+            end
+        end
+    end
+    return output
+end
 
-# function loadtens_div!{N}(x::Real, h::TensorNum{N}, output)
-#     q = 1
-#     for i in 1:N
-#         for j in i:N
-#             for k in i:j
-#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
-#                 output[q] = 
-#                 q += 1
-#             end
-#         end
-#     end
-#     return output
-# end
+function loadtens_div!{N}(x::Real, t::TensorNum{N}, output)
+    tval = value(t)
+    inv_tval = inv(tval)
+    abs2_inv_tval = abs2(inv_tval)
+
+    inv_deriv1 = -x*abs2_inv_tval
+    inv_deriv2 = -2*x*abs2_inv_tval*inv_tval
+    inv_deriv3 = -2*x*abs2_inv_tval*(2*inv_tval*inv_tval + abs2_inv_tval)
+
+    return loadtens_deriv!(t, inv_deriv1, inv_deriv2, inv_deriv3, output)
+end
 
 # function loadtens_exp!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
 #     q = 1
@@ -279,20 +305,7 @@ for fsym in univar_tens_funcs
         deriv1 = $deriv1
         deriv2 = $deriv2
         deriv3 = $deriv3
-        q = 1
-        for i in 1:N
-            for j in i:N
-                for k in i:j
-                    a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(j,k), t_inds_2_h_ind(k,i)
-                    g_i = grad(t,i)
-                    g_j = grad(t,j)
-                    g_k = grad(t,k)
-                    output[q] = deriv1*tens(t,q) + deriv2*(g_k*hess(t,a) + g_j*hess(t,b) + g_i*hess(t,c)) + deriv3*g_i*g_j*g_k
-                    q += 1
-                end
-            end
-        end
-        return output
+        return loadtens_deriv!(t, deriv1, deriv2, deriv3, output)
     end
 
     expr = parse(""" 
