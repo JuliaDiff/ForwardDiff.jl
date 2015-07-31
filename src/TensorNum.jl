@@ -93,14 +93,46 @@ end
 ######################
 # Math on TensorNums #
 ######################
-# In the code-generating loops below (see "Bivariate function construction loop"
-# and "Univariate function construction loop"), we build definitions for math functions
-# on TensorNums in a consistent, uniform manner by utilizing the `t_bivar_funcs` and
-# `t_univar_funcs` arrays. These arrays hold multiple Tuples, each of which provides the
-# necessary information to define a different function. The description of these
-# Tuples' formats can be found in comments above their respective arrays.
+# Math on TensorNums is developed by examining hyperdual numbers
+# with 3 different infinitesmal parts (ϵ₁, ϵ₂, ϵ₃). These numbers
+# can be formulated like the following:
+#
+#   t = t₀ + t₁ϵ₁ + t₂ϵ₂ + t₃ϵ₃ + t₄ϵ₁ϵ₂ + t₅ϵ₁ϵ₃ + t₆ϵ₂ϵ₃ + t₇ϵ₁ϵ₂ϵ₃
+#
+# where the t-components are real numbers, and the infinitesmal
+# ϵ-components are defined as:
+#
+#   ϵ₁ != ϵ₂ != ϵ₃ != 0
+#   ϵ₁² = ϵ₂² = ϵ₃² = (ϵ₁ϵ₂)² = (ϵ₁ϵ₃)² = (ϵ₂ϵ₃)² = (ϵ₁ϵ₂ϵ₃)² = 0
+#
+# Taylor series expansion of a univariate function `f` on a
+# TensorNum `t`:
+#
+#   f(t) = f(t₀ + t₁ϵ₁ + t₂ϵ₂ + t₃ϵ₃ + t₄ϵ₁ϵ₂ + t₅ϵ₁ϵ₃ + t₆ϵ₂ϵ₃ + t₇ϵ₁ϵ₂ϵ₃)
+#        = f(t₀) +
+#          f'(t₀)   * (t₁ϵ₁ + t₂ϵ₂ + t₃ϵ₃ + t₄ϵ₁ϵ₂ + t₅ϵ₁ϵ₃ + t₆ϵ₂ϵ₃ + t₇ϵ₁ϵ₂ϵ₃) +
+#          f''(t₀)  * (t₁t₂ϵ₂ϵ₁ + t₁t₃ϵ₃ϵ₁ + t₃t₄ϵ₂ϵ₃ϵ₁ + t₂t₅ϵ₂ϵ₃ϵ₁ + t₁t₆ϵ₂ϵ₃ϵ₁ + t₂t₃ϵ₂ϵ₃) +
+#          f'''(t₀) * (t₁t₂t₃ϵ₂ϵ₃ϵ₁)
+#
+# The coefficients of ϵ₁ϵ₂ are what's stored by TensorNum's `tens` field:
+#
+#   f(t)_ϵ₁ϵ₂ϵ₃ = (f'(t₀)*t₇ + f''(t₀)*(t₃t₄ + t₂t₅ + t₁t₆) + f'''(t₀)*t₁t₂t₃
+#
+# where, in loop code:
+#
+#   a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+#   t₀ = value(h)
+#   t₁ = grad(t, i)
+#   t₂ = grad(t, j)
+#   t₃ = grad(t, k)
+#   t₄ = hess(t, a)
+#   t₅ = hess(t, b)
+#   t₆ = hess(t, c)
+#   t₇ = tens(t, q)
+#
+# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
-function t2h(i, j)
+function t_inds_2_h_ind(i, j)
     if i < j
         return div(j*(j-1), 2+i) + 1
     else
@@ -108,59 +140,97 @@ function t2h(i, j)
     end
 end
 
-const noexpr = Expr(:quote, nothing)
-
 # Bivariate functions on TensorNums #
 #-----------------------------------#
+# function loadtens_mul!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
+#     q = 1
+#     for i in 1:N
+#         for j in i:N
+#             for k in i:j
+#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+#                 output[q] = 
+#                 q += 1
+#             end
+#         end
+#     end
+#     return output
+# end
 
-# The Tuples in `t_bivar_funcs` have the following format:
-#
-# (:function_name,
-#  :(expression defining function-level variables, or `noexpr` if none),
-#  :(expression defining the qth entry of the tensor vector, using any available variables))
-const t_bivar_funcs = Tuple{Symbol, Expr, Expr}[
-    (:*, noexpr, :(grad(t2,a)*hess(t1,r)+grad(t1,j)*hess(t2,r)+grad(t2,i)*hess(t1,m)+grad(t1,i)*hess(t2,m)+grad(t2,j)*hess(t1,l)
-                   +grad(t1,j)*hess(t2,l)+value(t2)*tens(t1,q)+value(t1)*tens(t2,q))),
-    (:/, noexpr, :((tens(t1,q)+((-(grad(t1,j)*hess(t2,r)+grad(t1,i)*hess(t2,m)+grad(t1,j)*hess(t2,l)+grad(t2,a)*hess(t1,r)+grad(t2,i)
-                   *hess(t1,m)+grad(t2,j)*hess(t1,l)+value(t1)*tens(t2,q))+(2*(grad(t1,j)*grad(t2,i)*grad(t2,j)+grad(t2,a)*grad(t1,i)
-                   *grad(t2,j)+grad(t2,a)*grad(t2,i)*grad(t1,j)+(value(t1)*(grad(t2,a)*hess(t2,r)+grad(t2,i)*hess(t2,m)+grad(t2,j)
-                   *hess(t2,l)))-(3*value(t1)*grad(t2,a)*grad(t2,i)*grad(t2,j)/value(t2)))/value(t2)))/value(t2)))/value(t2))),
-    (:^, :(logt1 = log(value(t1)); logt1sq = logt1^2; t1logt1 = value(t1)*logt1; t1logt1sq = value(t1)*logt1sq),
-         :(value(t1)^(value(t2)-3)*(value(t2)^3*grad(t1,j)*grad(t1,i)*grad(t1,j)+value(t2)^2*(value(t1)*((logt1*grad(t2,j)
-           *grad(t1,i)+hess(t1,r))*grad(t1,j)+grad(t1,i)*hess(t1,m))+grad(t1,j)*(grad(t1,i)*(-3*grad(t1,j)+t1logt1*grad(t2,a))
-           +value(t1)*(logt1*grad(t2,i)*grad(t1,j)+hess(t1,l))))+value(t2)*(grad(t1,j)*(grad(t1,i)*(2*grad(t1,j)-value(t1)
-           *(-2+logt1)*grad(t2,a))+value(t1)*(grad(t2,i)*(-(-2+logt1)*grad(t1,j)+t1logt1sq*grad(t2,a))-hess(t1,l)+t1logt1*hess(t2,l)))
-           +value(t1)*(hess(t1,r)*(-grad(t1,j)+t1logt1*grad(t2,a))-grad(t1,i)*hess(t1,m)+grad(t2,j)*(grad(t1,i)*(-(-2+logt1)*grad(t1,j)
-           +t1logt1sq*grad(t2,a))+t1logt1*(logt1*grad(t1,j)*grad(t2,i)+hess(t1,l)))+value(t1)*(logt1*(grad(t1,j)*hess(t2,r)+grad(t2,i)
-           *hess(t1,m)+grad(t1,i)*hess(t2,m))+tens(t1,q))))+value(t1)*(grad(t1,j)*(-grad(t1,i)*grad(t2,a)-grad(t2,i)*(grad(t1,j)
-           -2*t1logt1*grad(t2,a))+value(t1)*hess(t2,l))+grad(t2,j)*(-grad(t1,i)*(grad(t1,j)-2*t1logt1*grad(t2,a))+value(t1)
-           *(hess(t1,l)+logt1*(grad(t2,i)*(2*grad(t1,j)+t1logt1sq*grad(t2,a))+t1logt1*hess(t2,l))))+value(t1)*(grad(t2,a)*hess(t1,r)
-           +hess(t2,r)*(grad(t1,j)+t1logt1sq*grad(t2,a))+grad(t1,i)*hess(t2,m)+grad(t2,i)*(hess(t1,m)+t1logt1sq*hess(t2,m))
-           +t1logt1*tens(t2,q))))))
-]
+# function loadtens_div!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
+#     q = 1
+#     for i in 1:N
+#         for j in i:N
+#             for k in i:j
+#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+#                 output[q] = 
+#                 q += 1
+#             end
+#         end
+#     end
+#     return output
+# end
 
-# Bivariate function construction loop
-for (fsym, vars, term) in t_bivar_funcs
-    loadfsym = symbol(string("loadtens_", fsym, "!"))
+# function loadtens_div!{N}(x::Real, h::TensorNum{N}, output)
+#     q = 1
+#     for i in 1:N
+#         for j in i:N
+#             for k in i:j
+#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+#                 output[q] = 
+#                 q += 1
+#             end
+#         end
+#     end
+#     return output
+# end
+
+# function loadtens_exp!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
+#     q = 1
+#     for i in 1:N
+#         for j in i:N
+#             for k in i:j
+#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+#                 output[q] = 
+#                 q += 1
+#             end
+#         end
+#     end
+#     return output
+# end
+
+# function loadtens_exp!{N}(h::TensorNum{N}, p::Real, output)
+#     q = 1
+#     for i in 1:N
+#         for j in i:N
+#             for k in i:j
+#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+#                 output[q] = 
+#                 q += 1
+#             end
+#         end
+#     end
+#     return output
+# end
+
+for (fsym, loadfsym) in [(:*, symbol("loadtens_mul!")),
+                         (:/, symbol("loadtens_div!")), 
+                         (:^, symbol("loadtens_exp!"))]
+    @eval function $(fsym){N,A,B}(a::TensorNum{N,A}, b::TensorNum{N,B})
+        new_tens = Array(promote_type(A, B), halftenslen(N))
+        return TensorNum($(fsym)(hessnum(a), hessnum(b)), $(loadfsym)(a, b, new_tens))
+    end
+end
+
+function /{N,T}(x::Real, t::TensorNum{N,T})
+    new_hess = Array(promote_type(T, typeof(x)), halftenslen(N))
+    return TensorNum(x / hessnum(t), loadtens_div!(x, t, new_tens))
+end
+
+for T in (:Rational, :Integer, :Real)
     @eval begin
-        function $(loadfsym){N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
-            q = 1
-            $(vars)
-            for a in 1:N
-                for i in a:N
-                    for j in a:i
-                        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
-                        output[q] = $(term)
-                        q += 1
-                    end
-                end
-            end
-            return output
-        end
-
-        function $(fsym){N,A,B}(t1::TensorNum{N,A}, t2::TensorNum{N,B})
-            new_tens = Array(promote_type(A, B), halftenslen(N))
-            return TensorNum($(fsym)(hessnum(t1), hessnum(t2)), $(loadfsym)(t1, t2, new_tens))
+        function ^{N}(t::TensorNum{N}, p::$(T))
+            new_hess = Array(promote_type(eltype(t), typeof(p)), halftenslen(N))
+            return TensorNum(hessnum(t)^p, loadtens_exp!(h, p, new_tens))
         end
     end
 end
@@ -176,56 +246,11 @@ for T in (:Bool, :Real)
 end
 
 /(t::TensorNum, x::Real) = TensorNum(hessnum(t) / x, tens(t) / x)
-#/(x::Real, t::TensorNum) = ?
-
-for T in (:Rational, :Integer, :Real)
-    @eval begin
-        function ^{N}(t::TensorNum{N}, p::$(T))
-            new_tens = Array(promote_type(eltype(t), typeof(p)), halftenslen(N))
-            q = 1
-            for a in 1:N
-                for i in a:N
-                    for j in a:i
-                        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
-                        new_tens[q] = (p*((p-1)*value(t)^(p-3)*((p-2)*grad(t,a)*grad(t,i)*grad(t,j)+value(t)
-                                      *(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))+value(t)^2*tens(t,q)))
-                        q += 1
-                    end
-                end
-            end
-            return TensorNum(hessnum(t)^p, new_tens)
-        end
-    end
-end
 
 # Univariate functions on TensorNums #
 #------------------------------------#
 
 -(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
-
-# The below is developed from hyperdual numbers with 3
-# different infinitesmal parts (ϵ₁, ϵ₂, ϵ₃). These numbers
-# can be formulated like the following:
-#
-# Espilon part definitions:
-# ϵ₁ != ϵ₂ != ϵ₃ != 0
-# ϵ₁² = ϵ₂² = ϵ₃² = (ϵ₁ϵ₂)² = (ϵ₁ϵ₃)² = (ϵ₂ϵ₃)² = (ϵ₁ϵ₂ϵ₃)² = 0
-#
-# Taylor Series Expansion:
-# f(x₀ + d) = f(x₀) + d*f'(x₀) + (1/2)*d²*f''(x₀) + (1/6)*d³*f'''(x₀) # further terms are 0
-#
-# d terms:
-# d = x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₃ + x₄ϵ₁ϵ₂ + x₅ϵ₁ϵ₃ + x₆ϵ₂ϵ₃ + x₇ϵ₁ϵ₂ϵ₃
-# d² = 2 * (x₁x₂ϵ₂ϵ₁ + x₁x₃ϵ₃ϵ₁ + x₃x₄ϵ₂ϵ₃ϵ₁ + x₂x₅ϵ₂ϵ₃ϵ₁ + x₁x₆ϵ₂ϵ₃ϵ₁ + x₂x₃ϵ₂ϵ₃)
-# d³ = 6 * x₁x₂x₃ϵ₂ϵ₃ϵ₁
-#
-# Thus, plugging in:
-# f(x₀ + d) = f(x₀) +
-#             f'(x₀)   * (x₁ϵ₁ + x₂ϵ₂ + x₃ϵ₃ + x₄ϵ₁ϵ₂ + x₅ϵ₁ϵ₃ + x₆ϵ₂ϵ₃ + x₇ϵ₁ϵ₂ϵ₃) +
-#             f''(x₀)  * (x₁x₂ϵ₂ϵ₁ + x₁x₃ϵ₃ϵ₁ + x₃x₄ϵ₂ϵ₃ϵ₁ + x₂x₅ϵ₂ϵ₃ϵ₁ + x₁x₆ϵ₂ϵ₃ϵ₁ + x₂x₃ϵ₂ϵ₃) +
-#             f'''(x₀) * x₁x₂x₃ϵ₂ϵ₃ϵ₁
-#
-# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
 # The Tuples in `t_univar_funcs` have the following format:
 #
