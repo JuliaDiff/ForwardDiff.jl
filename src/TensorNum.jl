@@ -142,19 +142,28 @@ end
 
 # Bivariate functions on TensorNums #
 #-----------------------------------#
-# function loadtens_mul!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
-#     q = 1
-#     for i in 1:N
-#         for j in i:N
-#             for k in i:j
-#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
-#                 output[q] = 
-#                 q += 1
-#             end
-#         end
-#     end
-#     return output
-# end
+function loadtens_mul!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
+    q = 1
+    t1val = value(t1)
+    t2val = value(t2)
+    for i in 1:N
+        for j in i:N
+            for k in i:j
+                a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+                output[q] = (tens(t1,q)*t2val +
+                             hess(t1,c)*grad(t2,i) +
+                             hess(t1,b)*grad(t2,j) +
+                             hess(t1,a)*grad(t2,k) +
+                             grad(t1,k)*hess(t2,a) +
+                             grad(t1,j)*hess(t2,b) +
+                             grad(t1,i)*hess(t2,c) +
+                             t1val*tens(t2,q))
+                q += 1
+            end
+        end
+    end
+    return output
+end
 
 # function loadtens_div!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
 #     q = 1
@@ -249,60 +258,52 @@ end
 
 # Univariate functions on TensorNums #
 #------------------------------------#
-
 -(t::TensorNum) = TensorNum(-hessnum(t), -tens(t))
 
-# The Tuples in `t_univar_funcs` have the following format:
-#
-# (:function_name,
-#  :(expression defining function-level variables, or `noexpr` if none),
-#  :(expression defining inner-loop variables, or `noexpr` if none),
-#  :(expression defining the qth entry of the tensor vector, using any available variables))
-const t_univar_funcs = Tuple{Symbol, Expr, Expr, Expr}[
-    (:sqrt, noexpr, noexpr, :(((0.375*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-0.25*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+0.5*tens(t,q))/sqrt(value(t)))),
-    (:cbrt, noexpr, noexpr, :(((10*grad(t,a)*grad(t,i)*grad(t,j)/(3*value(t))-2*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/(3*value(t))+tens(t,q))/(3*value(t)^(2/3)))),
-    (:exp, noexpr, noexpr, :(exp(value(t))*(grad(t,a)*grad(t,i)*grad(t,j)+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)+tens(t,q)))),
-    (:log, noexpr, noexpr, :(((2*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+tens(t,q))/value(t))),
-    (:log2, noexpr, noexpr, :(((2*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+tens(t,q))/(value(t)*convert(T, 0.6931471805599453)))),
-    (:log10, noexpr, noexpr, :(((2*grad(t,a)*grad(t,i)*grad(t,j)/value(t)-(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))/value(t)+tens(t,q))/(value(t)*convert(T, 2.302585092994046)))),
-    (:sin, noexpr, noexpr, :(cos(value(t))*(tens(t,q)-grad(t,a)*grad(t,i)*grad(t,j))-sin(value(t))*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))),
-    (:cos, noexpr, noexpr, :(sin(value(t))*(grad(t,a)*grad(t,i)*grad(t,j)-tens(t,q))-cos(value(t))*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))),
-    (:tan, :(tanx = tan(value(t)); secxsq = sec(value(t))^2), noexpr, :(secxsq*(2*tanx*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m))+2*grad(t,j)*((3*secxsq-2)*grad(t,a)*grad(t,i)+tanx*hess(t,l))+tens(t,q)))),
-    (:asin, :(xsq = value(t)^2; oneminusxsq = 1-xsq), :(gprod = grad(t,a)*grad(t,i)*grad(t,j)), :(((3*xsq*gprod/oneminusxsq+gprod+(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l))*value(t))/oneminusxsq+tens(t,q))/oneminusxsq^0.5)),
-    (:acos,  :(xsq = value(t)^2; oneminusxsq = 1-xsq), :(gprod = grad(t,a)*grad(t,i)*grad(t,j)), :(-((3*xsq*gprod/oneminusxsq+gprod+(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l))*value(t))/oneminusxsq+tens(t,q))/oneminusxsq^0.5)),
-    (:atan, :(xsq = value(t)^2; oneplusxsq = 1+xsq), :(gprod = grad(t,a)*grad(t,i)*grad(t,j)), :(((4*xsq*gprod/oneplusxsq-gprod-(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l))*value(t))*2/oneplusxsq+tens(t,q))/oneplusxsq)),
-    (:sinh, noexpr, noexpr, :(cosh(value(t))*(grad(t,a)*grad(t,i)*grad(t,j)+tens(t,q))+sinh(value(t))*(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))),
-    (:cosh, noexpr, noexpr, :(sinh(value(t))*(grad(t,a)*grad(t,i)*grad(t,j)+tens(t,q))+cosh(value(t))*(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l)))),
-    (:tanh, :(sechxsq = sech(value(t))^2; tanhx = tanh(value(t))), noexpr, :(sechxsq*(-2*(tanhx*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m))+grad(t,j)*((3*sechxsq-2)*grad(t,a)*grad(t,i)+tanhx*hess(t,l)))+tens(t,q)))),
-    (:asinh, :(xsq = value(t)^2; oneplusxsq = 1+xsq), :(gprod = grad(t,a)*grad(t,i)*grad(t,j)), :(((3*xsq*gprod/oneplusxsq-gprod-(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l))*value(t))/oneplusxsq+tens(t,q))/oneplusxsq^0.5)),
-    (:acosh, :(xsq = value(t)^2), noexpr, :((grad(t,j)*((2*xsq+1)*grad(t,a)*grad(t,i)-value(t)*(xsq-1)*hess(t,l))+(xsq-1)*(-value(t)*(grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m))+tens(t,q)*(xsq-1)))/(xsq-1)^2.5)),
-    (:atanh, :(xsq = value(t)^2; oneminusxsq = 1-xsq), :(gprod = grad(t,a)*grad(t,i)*grad(t,j)), :(((4*xsq*gprod/oneminusxsq+gprod+(+grad(t,a)*hess(t,r)+grad(t,i)*hess(t,m)+grad(t,j)*hess(t,l))*value(t))*2/oneminusxsq+tens(t,q))/oneminusxsq))
-]
+# the third derivatives of functions in unsupported_univar_tens_funcs involves differentiating 
+# elementary functions that are unsupported by Calculus.jl
+const unsupported_univar_tens_funcs = [:digamma]
+const univar_tens_funcs = filter!(sym -> !in(sym, unsupported_univar_tens_funcs), ForwardDiff.univar_hess_funcs)
 
-# Univariate function construction loop
-for (fsym, funcvars, loopvars, term) in t_univar_funcs
+for fsym in univar_tens_funcs
     loadfsym = symbol(string("loadtens_", fsym, "!"))
-    @eval begin
-        function $(loadfsym){N}(t::TensorNum{N}, output)
-            q = 1
-            $(funcvars)
-            for a in 1:N
-                for i in a:N
-                    for j in a:i
-                        l, m, r = t2h(a, i), t2h(a, j), t2h(i, j)
-                        $(loopvars)
-                        output[q] = $(term)
-                        q += 1
-                    end
+
+    hval = :hval
+    call_expr = :($(fsym)($hval))
+    deriv1 = differentiate(call_expr, hval)
+    deriv2 = differentiate(deriv1, hval)
+    deriv3 = differentiate(deriv2, hval)
+
+    @eval function $(loadfsym){N}(t::HessianNum{N}, output)
+        tval = value(t)
+        deriv1 = $deriv1
+        deriv2 = $deriv2
+        deriv3 = $deriv3
+        q = 1
+        for i in 1:N
+            for j in i:N
+                for k in i:j
+                    a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(j,k), t_inds_2_h_ind(k,i)
+                    g_i = grad(t,i)
+                    g_j = grad(t,j)
+                    g_k = grad(t,k)
+                    output[q] = deriv1*tens(t,q) + deriv2*(g_k*hess(t,a) + g_j*hess(t,b) + g_i*hess(t,c)) + deriv3*g_i*g_j*g_k
+                    q += 1
                 end
             end
-            return output
         end
-
-        function $(fsym){N,T}(t::TensorNum{N,T})
-            ResultType = typeof($(fsym)(one(T)))
-            new_tens = Array(ResultType, halftenslen(N))
-            return TensorNum($(fsym)(hessnum(t)), $(loadfsym)(t, new_tens))
-        end
+        return output
     end
+
+    expr = parse(""" 
+        @generated function $(fsym){N,T}(t::TensorNum{N,T})
+            ResultType = typeof($(fsym)(one(T)))
+            return quote 
+                new_tens = Array(\$ResultType, halftenslen(N))
+                return TensorNum($(fsym)(hessnum(h)), $(loadfsym)(h, new_tens))
+            end
+        end
+    """)
+
+    @eval $expr
 end
