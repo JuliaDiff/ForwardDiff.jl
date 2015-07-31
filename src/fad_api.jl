@@ -18,14 +18,18 @@ load_derivative(n::ForwardDiffNum{1}) = grad(n, 1)
 
 # Derivative from function/Exposed API methods #
 #----------------------------------------------#
-derivative!(f::Function, x::Real, output::Array) = load_derivative!(f(GradientNum(x, one(x))), output)
-derivative(f::Function, x::Real) = load_derivative(f(GradientNum(x, one(x))))
 
-function derivative_func(f::Function; mutates=false)
+derivative!(f, x::Number, output::Array) = load_derivative!(f(GradientNum(x, one(x))), output)
+
+# redundant definition to resolve ambiguity warnings
+derivative(f::Function, x::Number) = load_derivative(f(GradientNum(x, one(x))))
+derivative(f, x::Number) = load_derivative(f(GradientNum(x, one(x))))
+
+function derivative_func(f; mutates=false)
     if mutates
-        derivf(x::Real, output::Array) = derivative!(f, x, output)
+        derivf(x::Number, output::Array) = derivative!(f, x, output)
     else
-        derivf(x::Real) = derivative(f, x)
+        derivf(x::Number) = derivative(f, x)
     end
     return derivf
 end
@@ -48,7 +52,7 @@ load_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_gradient!(n, Array(T, N))
 
 # Gradient from function #
 #------------------------#
-function calc_gradnum!{N,T,C}(f::Function,
+function calc_gradnum!{N,T,C}(f,
                               x::Vector{T},
                               gradvec::Vector{GradientNum{N,T,C}}) 
     Grad = eltype(gradvec)
@@ -65,25 +69,25 @@ function calc_gradnum!{N,T,C}(f::Function,
     return f(gradvec)
 end
 
-function take_gradient!(f::Function, x::Vector, output::Vector, gradvec::Vector) 
+function take_gradient!(f, x::Vector, output::Vector, gradvec::Vector) 
     return load_gradient!(calc_gradnum!(f, x, gradvec), output)
 end
 
-function take_gradient!(f::Function, x::Vector, gradvec::Vector)
+function take_gradient!(f, x::Vector, gradvec::Vector)
     return load_gradient(calc_gradnum!(f, x, gradvec))
 end
 
 # Exposed API methods #
 #---------------------#
-function gradient!{N,T}(f::Function, x::Vector{T}, output::Vector, P::Type{Partials{N}})
+function gradient!{N,T}(f, x::Vector{T}, output::Vector, P::Type{Partials{N}})
     return take_gradient!(f, x, output, grad_workvec(P, T))
 end
 
-function gradient{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+function gradient{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
     return take_gradient!(f, x, grad_workvec(P, T))
 end
 
-function gradient_func{N}(f::Function, P::Type{Partials{N}}; mutates=false)
+function gradient_func{N}(f, P::Type{Partials{N}}; mutates=false)
     if mutates
         gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, P)
         return gradf!
@@ -112,7 +116,7 @@ load_jacobian{F<:ForwardDiffNum}(v::Vector{F}) = load_jacobian!(v, Array(eltype(
 
 # Jacobian from function #
 #------------------------#
-function calc_jacnum!{N,T,C}(f::Function,
+function calc_jacnum!{N,T,C}(f,
                              x::Vector{T},
                              gradvec::Vector{GradientNum{N,T,C}})
     Grad = eltype(gradvec)
@@ -129,25 +133,25 @@ function calc_jacnum!{N,T,C}(f::Function,
     return f(gradvec)
 end
 
-function take_jacobian!(f::Function, x::Vector, output::Matrix, gradvec::Vector)
+function take_jacobian!(f, x::Vector, output::Matrix, gradvec::Vector)
     return load_jacobian!(calc_jacnum!(f, x, gradvec), output)
 end
 
-function take_jacobian!(f::Function, x::Vector, gradvec::Vector)
+function take_jacobian!(f, x::Vector, gradvec::Vector)
     return load_jacobian(calc_jacnum!(f, x, gradvec))
 end
 
 # Exposed API methods #
 #---------------------#
-function jacobian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
+function jacobian!{N,T}(f, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
     return take_jacobian!(f, x, output, grad_workvec(P, T))
 end
 
-function jacobian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+function jacobian{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
     return take_jacobian!(f, x, grad_workvec(P, T))
 end
 
-function jacobian_func{N}(f::Function, P::Type{Partials{N}}; mutates=false)
+function jacobian_func{N}(f, P::Type{Partials{N}}; mutates=false)
     if mutates
         jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, P)
         return jacf!
@@ -181,7 +185,7 @@ load_hessian{N,T}(n::ForwardDiffNum{N,T}) = load_hessian!(n, Array(T, N, N))
 
 # Hessian from function #
 #-----------------------#
-function calc_hessnum!{N,T,C}(f::Function,
+function calc_hessnum!{N,T,C}(f,
                               x::Vector{T},
                               hessvec::Vector{HessianNum{N,T,C}}) 
     Grad = GradientNum{N,T,C}
@@ -199,25 +203,25 @@ function calc_hessnum!{N,T,C}(f::Function,
     return f(hessvec)
 end
 
-function take_hessian!(f::Function, x::Vector, output::Matrix, hessvec::Vector)
+function take_hessian!(f, x::Vector, output::Matrix, hessvec::Vector)
     return load_hessian!(calc_hessnum!(f, x, hessvec), output)
 end
 
-function take_hessian!(f::Function, x::Vector, hessvec::Vector)
+function take_hessian!(f, x::Vector, hessvec::Vector)
     return load_hessian(calc_hessnum!(f, x, hessvec))
 end
 
 # Exposed API methods #
 #---------------------#
-function hessian!{N,T}(f::Function, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
+function hessian!{N,T}(f, x::Vector{T}, output::Matrix, P::Type{Partials{N}})
     return take_hessian!(f, x, output, hess_workvec(P, T))
 end
 
-function hessian{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+function hessian{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
     return take_hessian!(f, x, hess_workvec(P, T))
 end
 
-function hessian_func{N}(f::Function, P::Type{Partials{N}}; mutates=false)
+function hessian_func{N}(f, P::Type{Partials{N}}; mutates=false)
     if mutates
         hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, P)
         return hessf!
@@ -274,7 +278,7 @@ load_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_tensor!(n, Array(T, N, N, N)
 
 # Tensor from function #
 #----------------------#
-function calc_tensnum!{N,T,C}(f::Function,
+function calc_tensnum!{N,T,C}(f,
                               x::Vector{T},
                               tensvec::Vector{TensorNum{N,T,C}}) 
     Grad = GradientNum{N,T,C}
@@ -293,25 +297,25 @@ function calc_tensnum!{N,T,C}(f::Function,
     return f(tensvec)
 end
 
-function take_tensor!{S}(f::Function, x::Vector, output::Array{S,3}, tensvec::Vector)
+function take_tensor!{S}(f, x::Vector, output::Array{S,3}, tensvec::Vector)
     return load_tensor!(calc_tensnum!(f, x, tensvec), output)
 end
 
-function take_tensor!(f::Function, x::Vector, tensvec::Vector)
+function take_tensor!(f, x::Vector, tensvec::Vector)
     return load_tensor(calc_tensnum!(f, x, tensvec))
 end
 
 # Exposed API methods #
 #---------------------#
-function tensor!{N,T,S}(f::Function, x::Vector{T}, output::Array{S,3}, P::Type{Partials{N}})
+function tensor!{N,T,S}(f, x::Vector{T}, output::Array{S,3}, P::Type{Partials{N}})
     return take_tensor!(f, x, output, tens_workvec(P, T))
 end
 
-function tensor{N,T}(f::Function, x::Vector{T}, P::Type{Partials{N}})
+function tensor{N,T}(f, x::Vector{T}, P::Type{Partials{N}})
     return take_tensor!(f, x, tens_workvec(P, T))
 end
 
-function tensor_func{N}(f::Function, ::Type{Partials{N}}; mutates=false)
+function tensor_func{N}(f, ::Type{Partials{N}}; mutates=false)
     if mutates
         tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, P)
         return tensf!
