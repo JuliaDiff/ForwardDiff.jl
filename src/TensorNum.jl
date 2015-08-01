@@ -140,7 +140,7 @@ function t_inds_2_h_ind(i, j)
     end
 end
 
-function loadtens_deriv!(t::HessianNum{N}, deriv1, deriv2, deriv3, output)
+function loadtens_deriv!{N}(t::TensorNum{N}, deriv1, deriv2, deriv3, output)
     q = 1
     for i in 1:N
         for j in i:N
@@ -157,14 +157,15 @@ end
 
 # Bivariate functions on TensorNums #
 #-----------------------------------#
+
 function loadtens_mul!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
-    q = 1
     t1val = value(t1)
     t2val = value(t2)
+    q = 1
     for i in 1:N
         for j in i:N
             for k in i:j
-                a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+                a,b,c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(j,k), t_inds_2_h_ind(k,i)
                 output[q] = (tens(t1,q)*t2val +
                              hess(t1,c)*grad(t2,i) +
                              hess(t1,b)*grad(t2,j) +
@@ -183,23 +184,27 @@ end
 function loadtens_div!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
     t1val = value(t1)
     t2val = value(t2)
-    coeff0 = inv(t2val)
-    coeff1 = abs2(coeff0)
-    coeff2 = 2*coeff1*coeff0
-    coeff3 = 2*coeff1*(2*coeff0^2 + coeff1)
+    inv_t2val = inv(t2val)
+    abs2_inv_t2val = abs2(inv_t2val)
+
+    coeff0 = inv_t2val
+    coeff1 = -abs2_inv_t2val
+    coeff2 = 2*abs2_inv_t2val*inv_t2val
+    coeff3 = -2*abs2_inv_t2val*(2*inv_t2val*inv_t2val + abs2_inv_t2val)
+
     q = 1
     for i in 1:N
         for j in i:N
             for k in i:j
-                a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
+                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(j,k), t_inds_2_h_ind(k,i)
                 t1_gi, t1_gj, t1_gk = grad(t1,i), grad(t1,j), grad(t1,k)
-                t2_gj, t2_gk = grad(t2,j), grad(t2,k)
+                t2_gi, t2_gj, t2_gk = grad(t2,i), grad(t2,j), grad(t2,k)
                 t1_ha, t1_hb, t1_hc = hess(t1,a), hess(t1,b), hess(t1,c)
                 t2_ha, t2_hb, t2_hc = hess(t2,a), hess(t2,b), hess(t2,c)
-                loop_coeff1 = (tens(t1,q)*t1val + t2_hc*t1_gi + t2_hb*t1_gj + t2_ha*t1_gk + t2_gk*t1_ha + t2_gj*t1_hb + t1_hc)
-                loop_coeff2 = (t2_gk*t2_ha*t1val + t2_gj*t2_hb*t1val + t2_hc*t1val + t2_gj*t2_gk*t1_gi + t2_gk*t1_gj + t2_gj*t1_gk)
-                loop_coeff3 = (t2_gj*t2_gk*t1val)
-                output[q] = coeff0*tens(t2,q) - coeff1*loop_coeff1 - coeff2*loop_coeff2 - coeff3*loop_coeff3
+                loop_coeff1 = (tens(t2,q)*t1val + t2_hc*t1_gi + t2_hb*t1_gj + t2_ha*t1_gk + t2_gk*t1_ha + t2_gj*t1_hb + t2_gi*t1_hc)
+                loop_coeff2 = (t2_gk*t2_ha*t1val + t2_gj*t2_hb*t1val + t2_gi*t2_hc*t1val + t2_gj*t2_gk*t1_gi + t2_gi*t2_gk*t1_gj + t2_gi*t2_gj*t1_gk)
+                loop_coeff3 = (t2_gi*t2_gj*t2_gk*t1val)
+                output[q] = coeff0*tens(t1,q) + coeff1*loop_coeff1 + coeff2*loop_coeff2 + coeff3*loop_coeff3
                 q += 1
             end
         end
@@ -213,7 +218,7 @@ function loadtens_div!{N}(x::Real, t::TensorNum{N}, output)
     abs2_inv_tval = abs2(inv_tval)
 
     inv_deriv1 = -x*abs2_inv_tval
-    inv_deriv2 = -2*x*abs2_inv_tval*inv_tval
+    inv_deriv2 = 2*x*abs2_inv_tval*inv_tval
     inv_deriv3 = -2*x*abs2_inv_tval*(2*inv_tval*inv_tval + abs2_inv_tval)
 
     return loadtens_deriv!(t, inv_deriv1, inv_deriv2, inv_deriv3, output)
@@ -257,15 +262,15 @@ for (fsym, loadfsym) in [(:*, symbol("loadtens_mul!")),
 end
 
 function /{N,T}(x::Real, t::TensorNum{N,T})
-    new_hess = Array(promote_type(T, typeof(x)), halftenslen(N))
+    new_tens = Array(promote_type(T, typeof(x)), halftenslen(N))
     return TensorNum(x / hessnum(t), loadtens_div!(x, t, new_tens))
 end
 
 for T in (:Rational, :Integer, :Real)
     @eval begin
         function ^{N}(t::TensorNum{N}, p::$(T))
-            new_hess = Array(promote_type(eltype(t), typeof(p)), halftenslen(N))
-            return TensorNum(hessnum(t)^p, loadtens_exp!(h, p, new_tens))
+            new_tens = Array(promote_type(eltype(t), typeof(p)), halftenslen(N))
+            return TensorNum(hessnum(t)^p, loadtens_exp!(t, p, new_tens))
         end
     end
 end
@@ -294,13 +299,13 @@ const univar_tens_funcs = filter!(sym -> !in(sym, unsupported_univar_tens_funcs)
 for fsym in univar_tens_funcs
     loadfsym = symbol(string("loadtens_", fsym, "!"))
 
-    hval = :hval
-    call_expr = :($(fsym)($hval))
-    deriv1 = differentiate(call_expr, hval)
-    deriv2 = differentiate(deriv1, hval)
-    deriv3 = differentiate(deriv2, hval)
+    tval = :tval
+    call_expr = :($(fsym)($tval))
+    deriv1 = differentiate(call_expr, tval)
+    deriv2 = differentiate(deriv1, tval)
+    deriv3 = differentiate(deriv2, tval)
 
-    @eval function $(loadfsym){N}(t::HessianNum{N}, output)
+    @eval function $(loadfsym){N}(t::TensorNum{N}, output)
         tval = value(t)
         deriv1 = $deriv1
         deriv2 = $deriv2
@@ -313,7 +318,7 @@ for fsym in univar_tens_funcs
             ResultType = typeof($(fsym)(one(T)))
             return quote 
                 new_tens = Array(\$ResultType, halftenslen(N))
-                return TensorNum($(fsym)(hessnum(h)), $(loadfsym)(h, new_tens))
+                return TensorNum($(fsym)(hessnum(t)), $(loadfsym)(t, new_tens))
             end
         end
     """)
