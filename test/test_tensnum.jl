@@ -167,8 +167,8 @@ rand_tens = TensorNum(rand_hess, rand_tensvec)
 
 @test -test_tens == TensorNum(-test_hess, -test_tensvec)
 
-# Multiplication #
-#----------------#
+# Multiplication/Division #
+#-------------------------#
 function tens_approx_eq(a::TensorNum, b::TensorNum)
     eps = 1e-12
     @test_approx_eq_eps value(a) value(b) eps
@@ -181,29 +181,6 @@ rand_x_test = rand_tens * test_tens
 
 @test hessnum(rand_x_test) == rand_hess * test_hess
 
-# tried:
-# 
-#
-#
-# q = 1
-# for i in 1:N
-#     for j in i:N
-#         for k in i:j
-#             a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
-#             term = (tens(rand_tens,q)*value(test_tens) +
-#                     hess(rand_tens,c)*grad(test_tens,i) +
-#                     hess(rand_tens,b)*grad(test_tens,j) +
-#                     hess(rand_tens,a)*grad(test_tens,k) +
-#                     grad(rand_tens,k)*hess(test_tens,a) +
-#                     grad(rand_tens,j)*hess(test_tens,b) +
-#                     grad(rand_tens,i)*hess(test_tens,c) +
-#                     value(rand_tens)*tens(test_tens,q))
-#             @test tens(rand_x_test, q) == term
-#             q += 1
-#         end
-#     end
-# end
-
 @test rand_val * test_tens == TensorNum(rand_val * test_hess, rand_val * test_tensvec)
 @test test_tens * rand_val == rand_val * test_tens
 
@@ -215,11 +192,9 @@ rand_x_test = rand_tens * test_tens
 tens_approx_eq(test_tens, test_tens * (test_tens/test_tens))
 tens_approx_eq(test_tens, (test_tens * test_tens)/test_tens)
 
-# tens_approx_eq(2 * test_tens, test_tens + test_tens)
-# tens_approx_eq(test_tens * inv(test_tens), one(test_tens))
+tens_approx_eq(2 * test_tens, test_tens + test_tens)
+tens_approx_eq(test_tens * inv(test_tens), one(test_tens))
 
-# Division #
-#----------#
 tens_approx_eq(rand_val / test_tens, rand_val * inv(test_tens))
 tens_approx_eq(rand_val / test_tens, rand_val * 1/test_tens)
 tens_approx_eq(rand_tens / test_tens, rand_tens * inv(test_tens))
