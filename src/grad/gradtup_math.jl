@@ -77,7 +77,7 @@ end
 
 # from Calculus.jl #
 #------------------#
-for (funsym, exp) in Calculus.symbolic_derivatives_1arg()
+for (funsym, exp) in fad_supported_univar_funcs
     funsym == :exp && continue
     
     @eval function $(funsym){N,T}(z::GradNumTup{N,T})

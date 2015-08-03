@@ -283,7 +283,7 @@ end
 # the second derivatives of functions in unsupported_univar_hess_funcs involves differentiating 
 # elementary functions that are unsupported by Calculus.jl
 const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
-const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), map(first, Calculus.symbolic_derivatives_1arg()))
+const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), map(first, fad_supported_univar_funcs))
 
 for fsym in univar_hess_funcs
 

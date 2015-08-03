@@ -18,14 +18,10 @@ load_derivative(n::ForwardDiffNum{1}) = grad(n, 1)
 
 # Derivative from function/Exposed API methods #
 #----------------------------------------------#
+fad_derivative!(f, x::Number, output::Array) = load_derivative!(f(GradientNum(x, one(x))), output)
+fad_derivative(f, x::Number) = load_derivative(f(GradientNum(x, one(x))))
 
-derivative!(f, x::Number, output::Array) = load_derivative!(f(GradientNum(x, one(x))), output)
-
-# redundant definition to resolve ambiguity warnings
-derivative(f::Function, x::Number) = load_derivative(f(GradientNum(x, one(x))))
-derivative(f, x::Number) = load_derivative(f(GradientNum(x, one(x))))
-
-function derivative_func(f; mutates=false)
+function fad_derivative(f; mutates=false)
     if mutates
         derivf(x::Number, output::Array) = derivative!(f, x, output)
     else
@@ -69,32 +65,34 @@ function calc_gradnum!{N,T,C}(f,
     return f(gradvec)
 end
 
-function take_gradient!(f, x::Vector, output::Vector, gradvec::Vector) 
-    return load_gradient!(calc_gradnum!(f, x, gradvec), output)
-end
-
-function take_gradient!(f, x::Vector, gradvec::Vector)
-    return load_gradient(calc_gradnum!(f, x, gradvec))
-end
+take_gradient!(f, x::Vector, output::Vector, gradvec::Vector) = load_gradient!(calc_gradnum!(f, x, gradvec), output)
+take_gradient!(f, x::Vector, gradvec::Vector) = load_gradient(calc_gradnum!(f, x, gradvec))
+take_gradient!{T,D<:Dim}(f, x::Vector{T}, output::Vector, ::Type{D}) = take_gradient!(f, x, output, grad_workvec(D, T))
+take_gradient{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_gradient!(f, x, grad_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-function gradient!{T,D<:Dim}(f, x::Vector{T}, output::Vector, ::Type{D})
-    return take_gradient!(f, x, output, grad_workvec(D, T))
-end
+fad_gradient!{T,S}(f, x::Vector{T}, output::Vector{S}) = take_gradient!(f, x, output, Dim{length(x)})::Vector{S}
+fad_gradient{T,S}(f, x::Vector{T}, ::Type{S}) = take_gradient(f, x, Dim{length(x)})::Vector{S}
+fad_gradient{T}(f, x::Vector{T}) = fad_gradient(f, x, T)
 
-function gradient{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
-    return take_gradient!(f, x, grad_workvec(D, T))
-end
-
-function gradient_func{D<:Dim}(f, ::Type{D}; mutates=false)
+if_gradf_mutates = (quote
     if mutates
-        gradf!{T}(x::Vector{T}, output::Vector) = gradient!(f, x, output, D)
+        gradf!(x::Vector, output::Vector) = fad_gradient!(f, x, output)
         return gradf!
-    else
-        gradf{T}(x::Vector{T}) = gradient(f, x, D)
-        return gradf
     end
+end)
+
+@eval function fad_gradient{S}(f, ::Type{S}; mutates=false)
+    $if_gradf_mutates
+    gradf(x::Vector) = fad_gradient(f, x, S)
+    return gradf
+end
+
+@eval function fad_gradient(f; mutates=false)
+    $if_gradf_mutates
+    gradf(x::Vector) = fad_gradient(f, x)
+    return gradf
 end
 
 ####################
@@ -133,32 +131,34 @@ function calc_jacnum!{N,T,C}(f,
     return f(gradvec)
 end
 
-function take_jacobian!(f, x::Vector, output::Matrix, gradvec::Vector)
-    return load_jacobian!(calc_jacnum!(f, x, gradvec), output)
-end
-
-function take_jacobian!(f, x::Vector, gradvec::Vector)
-    return load_jacobian(calc_jacnum!(f, x, gradvec))
-end
+take_jacobian!(f, x::Vector, output::Matrix, gradvec::Vector) = load_jacobian!(calc_jacnum!(f, x, gradvec), output)
+take_jacobian!(f, x::Vector, gradvec::Vector) = load_jacobian(calc_jacnum!(f, x, gradvec))
+take_jacobian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D}) = take_jacobian!(f, x, output, grad_workvec(D, T))
+take_jacobian{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_jacobian!(f, x, grad_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-function jacobian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D})
-    return take_jacobian!(f, x, output, grad_workvec(D, T))
-end
+fad_jacobian!{T}(f, x::Vector{T}, output::Matrix{T}) = take_jacobian!(f, x, output, Dim{length(x)})::Matrix{T}
+fad_jacobian{T,S}(f, x::Vector{T}, ::Type{S}) = take_jacobian(f, x, Dim{length(x)})::Matrix{S}
+fad_jacobian{T}(f, x::Vector{T}) = fad_jacobian(f, x, T)
 
-function jacobian{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
-    return take_jacobian!(f, x, grad_workvec(D, T))
-end
-
-function jacobian_func{D<:Dim}(f, ::Type{D}; mutates=false)
+if_jacf_mutates = (quote
     if mutates
-        jacf!{T}(x::Vector{T}, output::Matrix) = jacobian!(f, x, output, D)
+        jacf!(x::Vector, output::Matrix) = fad_jacobian!(f, x, output)
         return jacf!
-    else
-        jacf{T}(x::Vector{T}) = jacobian(f, x, D)
-        return jacf
     end
+end)
+
+@eval function fad_jacobian{S}(f, ::Type{S}; mutates=false)
+    $if_jacf_mutates
+    jacf(x::Vector) = fad_jacobian(f, x, S)
+    return jacf
+end
+
+@eval function fad_jacobian(f; mutates=false)
+    $if_jacf_mutates
+    jacf(x::Vector) = fad_jacobian(f, x)
+    return jacf
 end
 
 ###################
@@ -203,32 +203,34 @@ function calc_hessnum!{N,T,C}(f,
     return f(hessvec)
 end
 
-function take_hessian!(f, x::Vector, output::Matrix, hessvec::Vector)
-    return load_hessian!(calc_hessnum!(f, x, hessvec), output)
-end
-
-function take_hessian!(f, x::Vector, hessvec::Vector)
-    return load_hessian(calc_hessnum!(f, x, hessvec))
-end
+take_hessian!(f, x::Vector, output::Matrix, hessvec::Vector) = load_hessian!(calc_hessnum!(f, x, hessvec), output)
+take_hessian!(f, x::Vector, hessvec::Vector) = load_hessian(calc_hessnum!(f, x, hessvec))
+take_hessian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D}) = take_hessian!(f, x, output, hess_workvec(D, T))
+take_hessian{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_hessian!(f, x, hess_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-function hessian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D})
-    return take_hessian!(f, x, output, hess_workvec(D, T))
-end
+fad_hessian!{T,S}(f, x::Vector{T}, output::Matrix{S}) = take_hessian!(f, x, output, Dim{length(x)})::Matrix{S}
+fad_hessian{T,S}(f, x::Vector{T}, ::Type{S}) = take_hessian(f, x, Dim{length(x)})::Matrix{S}
+fad_hessian{T}(f, x::Vector{T}) = fad_hessian(f, x, T)
 
-function hessian{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
-    return take_hessian!(f, x, hess_workvec(D, T))
-end
-
-function hessian_func{D<:Dim}(f, ::Type{D}; mutates=false)
+if_hessf_mutates = (quote
     if mutates
-        hessf!{T}(x::Vector{T}, output::Matrix) = hessian!(f, x, output, D)
+        hessf!(x::Vector, output::Matrix) = fad_hessian!(f, x, output)
         return hessf!
-    else
-        hessf{T}(x::Vector{T}) = hessian(f, x, D)
-        return hessf
     end
+end)
+
+@eval function fad_hessian{S}(f, ::Type{S}; mutates=false)
+    $if_hessf_mutates
+    hessf(x::Vector) = fad_hessian(f, x, S)
+    return hessf
+end
+
+@eval function fad_hessian(f; mutates=false)
+    $if_hessf_mutates
+    hessf(x::Vector) = fad_hessian(f, x)
+    return hessf
 end
 
 ##################
@@ -297,32 +299,34 @@ function calc_tensnum!{N,T,C}(f,
     return f(tensvec)
 end
 
-function take_tensor!{S}(f, x::Vector, output::Array{S,3}, tensvec::Vector)
-    return load_tensor!(calc_tensnum!(f, x, tensvec), output)
-end
-
-function take_tensor!(f, x::Vector, tensvec::Vector)
-    return load_tensor(calc_tensnum!(f, x, tensvec))
-end
+take_tensor!{S}(f, x::Vector, output::Array{S,3}, tensvec::Vector) = load_tensor!(calc_tensnum!(f, x, tensvec), output)
+take_tensor!(f, x::Vector, tensvec::Vector) = load_tensor(calc_tensnum!(f, x, tensvec))
+take_tensor!{T,S,D<:Dim}(f, x::Vector{T}, output::Array{S,3}, ::Type{D}) = take_tensor!(f, x, output, tens_workvec(D, T))
+take_tensor{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_tensor!(f, x, tens_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-function tensor!{T,S,D<:Dim}(f, x::Vector{T}, output::Array{S,3}, ::Type{D})
-    return take_tensor!(f, x, output, tens_workvec(D, T))
-end
+fad_tensor!{T,S}(f, x::Vector{T}, output::Array{S,3}) = take_tensor!(f, x, output, Dim{length(x)})::Array{S,3}
+fad_tensor{T,S}(f, x::Vector{T}, ::Type{S}) = take_tensor(f, x, Dim{length(x)})::Array{S,3}
+fad_tensor{T}(f, x::Vector{T}) = fad_tensor(f, x, T)
 
-function tensor{T,D<:Dim}(f, x::Vector{T}, ::Type{D})
-    return take_tensor!(f, x, tens_workvec(D, T))
-end
-
-function tensor_func{D<:Dim}(f, ::Type{D}; mutates=false)
+if_tensf_mutates = (quote
     if mutates
-        tensf!{T,S}(x::Vector{T}, output::Array{S,3}) = tensor!(f, x, output, D)
+        tensf!{T}(x::Vector, output::Array{T,3}) = fad_tensor!(f, x, output)
         return tensf!
-    else
-        tensf{T}(x::Vector{T}) = tensor(f, x, D)
-        return tensf
     end
+end)
+
+@eval function fad_tensor{S}(f, ::Type{S}; mutates=false)
+    $if_tensf_mutates
+    tensf(x::Vector) = fad_tensor(f, x, S)
+    return tensf
+end
+
+@eval function fad_tensor(f; mutates=false)
+    $if_tensf_mutates
+    tensf(x::Vector) = fad_tensor(f, x)
+    return tensf
 end
 
 ####################

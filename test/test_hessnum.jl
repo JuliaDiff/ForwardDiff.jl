@@ -196,7 +196,6 @@ hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 # Univariate functions/API usage testing #
 #----------------------------------------#
 N = 4
-P = Dim{N}
 testout = Array(Float64, N, N)
 
 function hess_deriv_ij(f_expr, x::Vector, i, j)
@@ -235,15 +234,15 @@ for fsym in ForwardDiff.univar_hess_funcs
     testx = hess_test_x(fsym, N)
     testresult = hess_test_result(testexpr, testx)
 
-    hessian!(testf, testx, testout, P)
+    fad_hessian!(testf, testx, testout)
     @test_approx_eq testout testresult
 
-    @test_approx_eq hessian(testf, testx, P) testresult
+    @test_approx_eq fad_hessian(testf, testx) testresult
 
-    hessf! = hessian_func(testf, P, mutates=true)
+    hessf! = fad_hessian(testf, mutates=true)
     hessf!(testx, testout)
     @test_approx_eq testout testresult
 
-    hessf = hessian_func(testf, P, mutates=false)
+    hessf = fad_hessian(testf, mutates=false)
     @test_approx_eq hessf(testx) testresult
 end

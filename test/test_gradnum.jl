@@ -218,7 +218,6 @@ end
 # API Usage Testing #
 #####################
 N = 4
-P = Dim{N}
 testout = Array(Float64, N)
 
 function grad_deriv_i(f_expr, x::Vector, i)
@@ -256,15 +255,15 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
     testx = grad_test_x(fsym, N)
     testresult = grad_test_result(testexpr, testx)
 
-    gradient!(testf, testx, testout, P)
+    fad_gradient!(testf, testx, testout)
     @test_approx_eq testout testresult
 
-    @test_approx_eq gradient(testf, testx, P) testresult
+    @test_approx_eq fad_gradient(testf, testx) testresult
 
-    gradf! = gradient_func(testf, P, mutates=true)
+    gradf! = fad_gradient(testf, mutates=true)
     gradf!(testx, testout)
     @test_approx_eq testout testresult
 
-    gradf = gradient_func(testf, P, mutates=false)
+    gradf = fad_gradient(testf, mutates=false)
     @test_approx_eq gradf(testx) testresult
 end

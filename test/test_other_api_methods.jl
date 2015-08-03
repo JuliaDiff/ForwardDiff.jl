@@ -6,7 +6,6 @@ using Calculus
 # Test taking the Jacobian #
 ############################
 N = 4
-P = Dim{N}
 floatrange = 0.01:.01:.99
 testx = rand(floatrange, N)
 
@@ -34,14 +33,14 @@ end
 testout = Array(Float64, 5, N)
 testresult = jac_test_result(testx)
 
-jacobian!(jac_testf, testx, testout, P)
+fad_jacobian!(jac_testf, testx, testout)
 @test testout == testresult
 
-@test jacobian(jac_testf, testx, P) == testresult
+@test fad_jacobian(jac_testf, testx) == testresult
 
-jacf! = jacobian_func(jac_testf, P, mutates=true)
+jacf! = fad_jacobian(jac_testf, mutates=true)
 jacf!(testx, testout)
 @test testout == testresult
 
-jacf = jacobian_func(jac_testf, P, mutates=false)
+jacf = fad_jacobian(jac_testf, mutates=false)
 @test jacf(testx) == testresult

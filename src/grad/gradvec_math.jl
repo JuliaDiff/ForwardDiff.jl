@@ -109,7 +109,7 @@ end
 
 # from Calculus.jl #
 #------------------#
-for (funsym, ex) in Calculus.symbolic_derivatives_1arg()
+for (funsym, ex) in fad_supported_univar_funcs
     funsym == :exp && continue
     
     @eval function $(funsym){N,A}(z::GradNumVec{N,A})

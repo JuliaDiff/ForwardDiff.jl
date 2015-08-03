@@ -212,7 +212,6 @@ tens_approx_eq(rand_val^test_tens, exp(test_tens * log(rand_val)))
 # Univariate functions/API usage testing #
 #----------------------------------------#
 N = 4
-P = Dim{N}
 testout = Array(Float64, N, N, N)
 
 function tens_deriv_ijk(f_expr, x::Vector, i, j, k)
@@ -252,15 +251,15 @@ for fsym in ForwardDiff.univar_tens_funcs
     testx = tens_test_x(fsym, N)
     testresult = tens_test_result(testexpr, testx)
 
-    tensor!(testf, testx, testout, P)
+    fad_tensor!(testf, testx, testout)
     @test_approx_eq testout testresult
 
-    @test_approx_eq tensor(testf, testx, P) testresult
+    @test_approx_eq fad_tensor(testf, testx) testresult
 
-    tensf! = tensor_func(testf, P, mutates=true)
+    tensf! = fad_tensor(testf, mutates=true)
     tensf!(testx, testout)
     @test_approx_eq testout testresult
 
-    tensf = tensor_func(testf, P, mutates=false)
+    tensf = fad_tensor(testf, mutates=false)
     @test_approx_eq tensf(testx) testresult
 end

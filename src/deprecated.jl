@@ -1,26 +1,13 @@
-old_new_pairs = [
-    (:forwarddiff_gradient, :(gradient_func{N}(f::Function, ::Type{Dim{N}}; mutates=false))),
-    (:forwarddiff_gradient!, :(gradient_func{N}(f::Function, ::Type{Dim{N}}; mutates=true))),
-    (:forwarddiff_jacobian, :(jacobian_func{N}(f::Function, ::Type{Dim{N}}; mutates=false))),
-    (:forwarddiff_jacobian!, :(jacobian_func{N}(f::Function, ::Type{Dim{N}}; mutates=true))),
-    (:forwarddiff_hessian, :(hessian_func{N}(f::Function, ::Type{Dim{N}}; mutates=false))),
-    (:forwarddiff_hessian!, :(hessian_func{N}(f::Function, ::Type{Dim{N}}; mutates=true))),
-    (:forwarddiff_tensor, :(tensor_func{N}(f::Function, ::Type{Dim{N}}; mutates=false))),
-    (:forwarddiff_tensor!, :(tensor_func{N}(f::Function, ::Type{Dim{N}}; mutates=true)))
-]
+using Base.depwarn
 
-for (old_func_name, new_func_sig) in old_new_pairs
-
-    err_str = string("The function:\n",
-                     "\t$(old_func_name){T}(f::Function, ::Type{T}; fadtype::Symbol, args...)\n",
-                     " is deprecated. Use:\n",
-                     "\t$(new_func_sig)\n",
-                     " instead of the deprecated function.")
-    
-    @eval begin
-        $(old_func_name)(args...) = error($err_str)
-    end
-end
+Base.@deprecate forwarddiff_gradient(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_gradient(f, mutates=false)
+Base.@deprecate forwarddiff_gradient!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_gradient(f, mutates=true)
+Base.@deprecate forwarddiff_jacobian(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_jacobian(f, mutates=false)
+Base.@deprecate forwarddiff_jacobian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_jacobian(f, mutates=true)
+Base.@deprecate forwarddiff_hessian(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_hessian(f, mutates=false)
+Base.@deprecate forwarddiff_hessian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_hessian(f, mutates=true)
+Base.@deprecate forwarddiff_tensor(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_tensor(f, mutates=false)
+Base.@deprecate forwarddiff_tensor!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) fad_tensor(f, mutates=true)
 
 export forwarddiff_gradient, 
     forwarddiff_gradient!,
