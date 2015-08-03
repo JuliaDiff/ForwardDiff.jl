@@ -16,6 +16,7 @@ module ForwardDiff
     include("HessianNum.jl")
     include("TensorNum.jl")
     include("fad_api.jl")
+    include("deprecated.jl")
 
     export Dim,
            derivative!,
