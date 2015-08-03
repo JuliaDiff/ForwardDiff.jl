@@ -1,10 +1,20 @@
 module ForwardDiff
 
-    importall Base
-    using Calculus
-    using NaNMath
+    import Calculus
+    import NaNMath
+    import Base: *, /, +, -, ^,
+                 hash, ==, isequal, copy,
+                 zero, one, convert, promote_rule,
+                 read, write, isless, isreal,
+                 isnan, isfinite, eps, conj,
+                 transpose, ctranspose, eltype,
+                 abs, abs2
 
-    const fad_supported_univar_funcs = symbolic_derivatives_1arg()
+    const fad_supported_univar_funcs = Calculus.symbolic_derivatives_1arg()
+
+    for (fsym,expr) in fad_supported_univar_funcs
+        @eval import Base.$(fsym)
+    end
 
     if VERSION < v"0.4-"
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
@@ -19,15 +29,15 @@ module ForwardDiff
     include("fad_api.jl")
     include("deprecated.jl")
 
-    export fad_derivative!,
-           fad_derivative,
-           fad_gradient!,
-           fad_gradient,
-           fad_jacobian!,
-           fad_jacobian,
-           fad_hessian!,
-           fad_hessian,
-           fad_tensor!,
-           fad_tensor
+    export derivative!,
+           derivative,
+           gradient!,
+           gradient,
+           jacobian!,
+           jacobian,
+           hessian!,
+           hessian,
+           tensor!,
+           tensor
 
 end # module ForwardDiff

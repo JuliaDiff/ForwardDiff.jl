@@ -234,15 +234,15 @@ for fsym in ForwardDiff.univar_hess_funcs
     testx = hess_test_x(fsym, N)
     testresult = hess_test_result(testexpr, testx)
 
-    fad_hessian!(testf, testx, testout)
+    ForwardDiff.hessian!(testf, testx, testout)
     @test_approx_eq testout testresult
 
-    @test_approx_eq fad_hessian(testf, testx) testresult
+    @test_approx_eq ForwardDiff.hessian(testf, testx) testresult
 
-    hessf! = fad_hessian(testf, mutates=true)
+    hessf! = ForwardDiff.hessian(testf, mutates=true)
     hessf!(testx, testout)
     @test_approx_eq testout testresult
 
-    hessf = fad_hessian(testf, mutates=false)
+    hessf = ForwardDiff.hessian(testf, mutates=false)
     @test_approx_eq hessf(testx) testresult
 end

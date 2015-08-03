@@ -19,7 +19,7 @@ function jac_testf(x::Vector)
             sqrt(x[4])]
 end
 
-# hard code the correct jacobian for
+# hard code the correct ForwardDiff.jacobian for
 # jac_testf at the given vector x
 function jac_test_result(x::Vector)
     @assert length(x) == 4
@@ -33,14 +33,14 @@ end
 testout = Array(Float64, 5, N)
 testresult = jac_test_result(testx)
 
-fad_jacobian!(jac_testf, testx, testout)
+ForwardDiff.jacobian!(jac_testf, testx, testout)
 @test testout == testresult
 
-@test fad_jacobian(jac_testf, testx) == testresult
+@test ForwardDiff.jacobian(jac_testf, testx) == testresult
 
-jacf! = fad_jacobian(jac_testf, mutates=true)
+jacf! = ForwardDiff.jacobian(jac_testf, mutates=true)
 jacf!(testx, testout)
 @test testout == testresult
 
-jacf = fad_jacobian(jac_testf, mutates=false)
+jacf = ForwardDiff.jacobian(jac_testf, mutates=false)
 @test jacf(testx) == testresult

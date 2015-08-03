@@ -291,8 +291,8 @@ for fsym in univar_hess_funcs
 
     hval = :hval
     call_expr = :($(fsym)($hval))
-    deriv1 = differentiate(call_expr, hval)
-    deriv2 = differentiate(deriv1, hval)
+    deriv1 = Calculus.differentiate(call_expr, hval)
+    deriv2 = Calculus.differentiate(deriv1, hval)
 
     @eval function $(loadfsym){N}(h::HessianNum{N}, output)
         hval = value(h)

@@ -299,9 +299,9 @@ for fsym in univar_tens_funcs
 
     tval = :tval
     call_expr = :($(fsym)($tval))
-    deriv1 = differentiate(call_expr, tval)
-    deriv2 = differentiate(deriv1, tval)
-    deriv3 = differentiate(deriv2, tval)
+    deriv1 = Calculus.differentiate(call_expr, tval)
+    deriv2 = Calculus.differentiate(deriv1, tval)
+    deriv3 = Calculus.differentiate(deriv2, tval)
 
     @eval function $(loadfsym){N}(t::TensorNum{N}, output)
         tval = value(t)

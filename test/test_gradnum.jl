@@ -255,15 +255,15 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
     testx = grad_test_x(fsym, N)
     testresult = grad_test_result(testexpr, testx)
 
-    fad_gradient!(testf, testx, testout)
+    ForwardDiff.gradient!(testf, testx, testout)
     @test_approx_eq testout testresult
 
-    @test_approx_eq fad_gradient(testf, testx) testresult
+    @test_approx_eq ForwardDiff.gradient(testf, testx) testresult
 
-    gradf! = fad_gradient(testf, mutates=true)
+    gradf! = ForwardDiff.gradient(testf, mutates=true)
     gradf!(testx, testout)
     @test_approx_eq testout testresult
 
-    gradf = fad_gradient(testf, mutates=false)
+    gradf = ForwardDiff.gradient(testf, mutates=false)
     @test_approx_eq gradf(testx) testresult
 end

@@ -251,15 +251,15 @@ for fsym in ForwardDiff.univar_tens_funcs
     testx = tens_test_x(fsym, N)
     testresult = tens_test_result(testexpr, testx)
 
-    fad_tensor!(testf, testx, testout)
+    ForwardDiff.tensor!(testf, testx, testout)
     @test_approx_eq testout testresult
 
-    @test_approx_eq fad_tensor(testf, testx) testresult
+    @test_approx_eq ForwardDiff.tensor(testf, testx) testresult
 
-    tensf! = fad_tensor(testf, mutates=true)
+    tensf! = ForwardDiff.tensor(testf, mutates=true)
     tensf!(testx, testout)
     @test_approx_eq testout testresult
 
-    tensf = fad_tensor(testf, mutates=false)
+    tensf = ForwardDiff.tensor(testf, mutates=false)
     @test_approx_eq tensf(testx) testresult
 end
