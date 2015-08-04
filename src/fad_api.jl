@@ -6,11 +6,10 @@ abstract Dim{N} # used to configure the input dimension of objective function
 
 # Load derivative from ForwardDiffNum #
 #-------------------------------------#
-# generalize to arbitrary array dimensions?
-function load_derivative!{F<:ForwardDiffNum}(v::Vector{F}, output::Vector)
-    @assert length(v) == length(output)
-    @inbounds @simd for i in eachindex(result)
-        output[i] = grad(v[i], 1)
+function load_derivative!{F<:ForwardDiffNum}(arr::Array{F}, output::Array)
+    @assert length(arr) == length(output)
+    @inbounds @simd for i in eachindex(output)
+        output[i] = grad(arr[i], 1)
     end
     return output
 end
@@ -25,11 +24,12 @@ derivative(f, x::Number) = load_derivative(f(GradientNum(x, one(x))))
 
 function derivative(f; mutates=false)
     if mutates
-        derivf(x::Number, output::Array) = derivative!(f, x, output)
+        derivf!(x::Number, output::Array) = derivative!(f, x, output)
+        return derivf!
     else
         derivf(x::Number) = derivative(f, x)
+        return derivf
     end
-    return derivf
 end
 
 ####################
