@@ -241,39 +241,36 @@ end
 #---------------------------------#
 function load_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     @assert (N, N, N) == size(output) "The output array must have size (length(input), length(input), length(input))"
+    
     q = 1
     for i in 1:N
         for j in i:N
             for k in i:j
-                tval = tens(n, q)
-                output[i, j, k] = tval
-                output[i, k, j] = tval
-                output[j, i, k] = tval
-                output[j, k, i] = tval
-                output[k, i, j] = tval
-                output[k, j, i] = tval
+                @inbounds output[j, k, i] = tens(n, q)
                 q += 1
             end
         end
 
-        # for j in 1:(i-1)
-        #     for k in 1:j
-        #         output[i, j, k] = output[, j, k]
-        #     end
-        # end
+        for j in 1:(i-1)
+            for k in 1:j
+                @inbounds output[j, k, i] = output[i, j, k]
+            end
+        end
 
-        # for j in i:N
-        #     for k in 1:(i-1)
-        #         output[j, k, i] = output[i, j, k]
-        #     end
-        # end
+        for j in i:N
+            for k in 1:(i-1)
+                @inbounds output[j, k, i] = output[i, j, k]
+            end
+        end
 
-        # for j in 1:N
-        #     for k in (j+1):N
-        #         output[j, k, i] = output[k, j, i]
-        #     end
-        # end
+        for j in 1:N
+            for k in (j+1):N
+                @inbounds output[j, k, i] = output[k, j, i]
+            end
+        end
     end
+
+    return output
 end
 
 load_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_tensor!(n, Array(T, N, N, N))
