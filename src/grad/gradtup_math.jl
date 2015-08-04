@@ -77,27 +77,30 @@ end
 
 # from Calculus.jl #
 #------------------#
-for (funsym, exp) in fad_supported_univar_funcs
-    funsym == :exp && continue
+for fsym in fad_supported_univar_funcs
+    fsym == :exp && continue
     
-    @eval function $(funsym){N,T}(z::GradNumTup{N,T})
-        x = value(z) # `x` is the variable name for $exp
-        df = $exp
-        return GradientNum($(funsym)(x), scale_tuple(df, grad(z)))
+    valexpr = :($(fsym)(x))
+    dfexpr = Calculus.differentiate(valexpr)
+
+    @eval function $(fsym){N,T}(z::GradNumTup{N,T})
+        x = value(z)
+        df = $dfexpr
+        return GradientNum($valexpr, scale_tuple(df, grad(z)))
     end
 
     # extend corresponding NaNMath methods
-    if funsym in (:sin, :cos, :tan, 
-                  :asin, :acos, :acosh, 
-                  :atanh, :log, :log2, 
-                  :log10, :lgamma, :log1p)
+    if fsym in (:sin, :cos, :tan, 
+                :asin, :acos, :acosh, 
+                :atanh, :log, :log2, 
+                :log10, :lgamma, :log1p)
 
-        funsym = Expr(:.,:NaNMath,Base.Meta.quot(funsym))
+        nan_fsym = Expr(:.,:NaNMath,Base.Meta.quot(fsym))
 
-        @eval function $(funsym){N,T}(z::GradNumTup{N,T})
-            x = value(z) # `x` is the variable name for $exp
-            df = $(to_nanmath(exp))
-            return GradientNum($(funsym)(x), scale_tuple(df, grad(z)))
+        @eval function $(nan_fsym){N,T}(z::GradNumTup{N,T})
+            x = value(z)
+            df = $(to_nanmath(dfexpr))
+            return GradientNum($(nan_fsym)(x), scale_tuple(df, grad(z)))
         end
 
     end

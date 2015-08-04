@@ -1,3 +1,5 @@
+abstract Dim{N} # used to configure the input dimension of objective function
+
 ######################
 # Taking Derivatives #
 ######################

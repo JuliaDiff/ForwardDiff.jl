@@ -10,17 +10,15 @@ module ForwardDiff
                  transpose, ctranspose, eltype,
                  abs, abs2
 
-    const fad_supported_univar_funcs = Calculus.symbolic_derivatives_1arg()
+    const fad_supported_univar_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 
-    for (fsym,expr) in fad_supported_univar_funcs
+    for fsym in fad_supported_univar_funcs
         @eval import Base.$(fsym)
     end
 
     if VERSION < v"0.4-"
         warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
-
-    abstract Dim{N}
 
     include("ForwardDiffNum.jl")
     include("GradientNum.jl")

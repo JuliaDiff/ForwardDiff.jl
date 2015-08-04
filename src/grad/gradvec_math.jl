@@ -109,35 +109,54 @@ end
 
 # from Calculus.jl #
 #------------------#
-for (funsym, ex) in fad_supported_univar_funcs
-    funsym == :exp && continue
+for fsym in fad_supported_univar_funcs
+    fsym == :exp && continue
     
-    @eval function $(funsym){N,A}(z::GradNumVec{N,A})
-        x = value(z) # `x` is the variable name for $exp
-        df = $ex
-        T = promote_type(A, typeof(df), Float64)
-        return GradNumVec{N,T}($(funsym)(x), df*grad(z))
-    end
+    valexpr = :($(fsym)(x))
+    dfexpr = Calculus.differentiate(valexpr)
+
+    expr = parse("""
+        @generated function $(fsym){N,A}(z::GradNumVec{N,A})
+            T = typeof($(fsym)(one(A)))
+            return quote
+                x = value(z)
+                df = $dfexpr
+                return GradNumVec{N,\$T}($valexpr, df*grad(z))
+            end
+        end
+    """)
+
+    @eval $expr
 
     # extend corresponding NaNMath methods
-    if funsym in (:sin, :cos, :tan,
-                  :asin, :acos, :acosh,
-                  :atanh, :log, :log2,
-                  :log10, :lgamma, :log1p)
+    if fsym in (:sin, :cos, :tan,
+                :asin, :acos, :acosh,
+                :atanh, :log, :log2,
+                :log10, :lgamma, :log1p)
 
-        nan_funsym = Expr(:.,:NaNMath,Base.Meta.quot(funsym))
+        nan_fsym = Expr(:.,:NaNMath,Base.Meta.quot(fsym))
+        nan_valexpr = :($(nan_fsym)(x))
+        nan_dfexpr = to_nanmath(dfexpr)
 
-        @eval function $(nan_funsym){N,A}(z::GradNumVec{N,A})
-            x = value(z) # `x` is the variable name for $ex
-            df = $(to_nanmath(ex))
-            T = promote_type(A, typeof(df), Float64)
-            return GradNumVec{N,T}($(nan_funsym)(x), df*grad(z))
-        end
+        expr = parse("""
+            @generated function $(nan_fsym){N,A}(z::GradNumVec{N,A})
+                T = typeof($(nan_fsym)(one(A)))
+                return quote
+                    x = value(z)
+                    df = $nan_dfexpr
+                    return GradNumVec{N,\$T}($nan_valexpr, df*grad(z))
+                end
+            end
+        """)
+
+        @eval $expr
     end
 end
 
-function exp{N,A}(z::GradNumVec{N,A})
-    df = exp(value(z))
-    T = promote_type(A, typeof(df), Float64)
-    return GradNumVec{N,T}(df, df*grad(z))
+@generated function exp{N,A}(z::GradNumVec{N,A})
+    T = typeof(exp(one(A)))
+    return quote 
+        df = exp(value(z))
+        return GradNumVec{N,$T}(df, df*grad(z))
+    end
 end
