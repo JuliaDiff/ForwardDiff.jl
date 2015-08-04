@@ -172,31 +172,14 @@ function loadhess_div!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     return output
 end
 
-
 function loadhess_div!{N}(x::Real, h::HessianNum{N}, output)
     hval = value(h)
     hval_sq = hval * hval
     inv_hval_sq = inv(hval_sq) * x
     inv_hval_cb = inv(hval_sq * hval)
     two_inv_hval_cb = (inv_hval_cb + inv_hval_cb) * x
-    q = 1
-    for i in 1:N
-        for j in 1:i
-            output[q] = (grad(h,i)*grad(h,j)*two_inv_hval_cb) - (hess(h,q)*inv_hval_sq)
-            q += 1
-        end
-    end
-    return output
+    return loadhess_deriv!(h, -inv_hval_sq, two_inv_hval_cb, output)
 end
-
-# function loadhess_div!{N}(x::Real, h::HessianNum{N}, output)
-#     hval = value(h)
-#     hval_sq = hval * hval
-#     inv_hval_sq = inv(hval_sq) * x
-#     deriv1 = -inv(hval_sq * hval)
-#     deriv2 = -2 * deriv1 * x
-#     return loadhess_deriv!(h, deriv1, deriv2, output)
-# end
 
 function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     aval = value(a)
