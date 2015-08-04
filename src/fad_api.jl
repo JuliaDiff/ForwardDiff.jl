@@ -75,26 +75,16 @@ take_gradient{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_gradient!(f, x, grad_
 # Exposed API methods #
 #---------------------#
 gradient!{T,S}(f, x::Vector{T}, output::Vector{S}) = take_gradient!(f, x, output, Dim{length(x)})::Vector{S}
-gradient{T,S}(f, x::Vector{T}, ::Type{S}) = take_gradient(f, x, Dim{length(x)})::Vector{S}
-gradient{T}(f, x::Vector{T}) = gradient(f, x, T)
+gradient{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_gradient(f, x, Dim{length(x)})::Vector{S}
 
-if_gradf_mutates = (quote
+function gradient(f; mutates=false)
     if mutates
         gradf!(x::Vector, output::Vector) = gradient!(f, x, output)
         return gradf!
+    else
+        gradf{T,S}(x::Vector{T}, ::Type{S}=T) = gradient(f, x, S)
+        return gradf
     end
-end)
-
-@eval function gradient{S}(f, ::Type{S}; mutates=false)
-    $if_gradf_mutates
-    gradf(x::Vector) = gradient(f, x, S)
-    return gradf
-end
-
-@eval function gradient(f; mutates=false)
-    $if_gradf_mutates
-    gradf(x::Vector) = gradient(f, x)
-    return gradf
 end
 
 ####################
@@ -141,26 +131,16 @@ take_jacobian{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_jacobian!(f, x, grad_
 # Exposed API methods #
 #---------------------#
 jacobian!{T}(f, x::Vector{T}, output::Matrix{T}) = take_jacobian!(f, x, output, Dim{length(x)})::Matrix{T}
-jacobian{T,S}(f, x::Vector{T}, ::Type{S}) = take_jacobian(f, x, Dim{length(x)})::Matrix{S}
-jacobian{T}(f, x::Vector{T}) = jacobian(f, x, T)
+jacobian{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_jacobian(f, x, Dim{length(x)})::Matrix{S}
 
-if_jacf_mutates = (quote
+function jacobian(f; mutates=false)
     if mutates
         jacf!(x::Vector, output::Matrix) = jacobian!(f, x, output)
         return jacf!
+    else
+        jacf{T,S}(x::Vector{T}, ::Type{S}=T) = jacobian(f, x, S)
+        return jacf
     end
-end)
-
-@eval function jacobian{S}(f, ::Type{S}; mutates=false)
-    $if_jacf_mutates
-    jacf(x::Vector) = jacobian(f, x, S)
-    return jacf
-end
-
-@eval function jacobian(f; mutates=false)
-    $if_jacf_mutates
-    jacf(x::Vector) = jacobian(f, x)
-    return jacf
 end
 
 ###################
@@ -213,26 +193,16 @@ take_hessian{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_hessian!(f, x, hess_wo
 # Exposed API methods #
 #---------------------#
 hessian!{T,S}(f, x::Vector{T}, output::Matrix{S}) = take_hessian!(f, x, output, Dim{length(x)})::Matrix{S}
-hessian{T,S}(f, x::Vector{T}, ::Type{S}) = take_hessian(f, x, Dim{length(x)})::Matrix{S}
-hessian{T}(f, x::Vector{T}) = hessian(f, x, T)
+hessian{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_hessian(f, x, Dim{length(x)})::Matrix{S}
 
-if_hessf_mutates = (quote
+function hessian(f; mutates=false)
     if mutates
         hessf!(x::Vector, output::Matrix) = hessian!(f, x, output)
         return hessf!
+    else
+        hessf{T,S}(x::Vector{T}, ::Type{S}=T) = hessian(f, x, S)
+        return hessf
     end
-end)
-
-@eval function hessian{S}(f, ::Type{S}; mutates=false)
-    $if_hessf_mutates
-    hessf(x::Vector) = hessian(f, x, S)
-    return hessf
-end
-
-@eval function hessian(f; mutates=false)
-    $if_hessf_mutates
-    hessf(x::Vector) = hessian(f, x)
-    return hessf
 end
 
 ##################
@@ -306,26 +276,16 @@ take_tensor{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_tensor!(f, x, tens_work
 # Exposed API methods #
 #---------------------#
 tensor!{T,S}(f, x::Vector{T}, output::Array{S,3}) = take_tensor!(f, x, output, Dim{length(x)})::Array{S,3}
-tensor{T,S}(f, x::Vector{T}, ::Type{S}) = take_tensor(f, x, Dim{length(x)})::Array{S,3}
-tensor{T}(f, x::Vector{T}) = tensor(f, x, T)
+tensor{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_tensor(f, x, Dim{length(x)})::Array{S,3}
 
-if_tensf_mutates = (quote
+function tensor(f; mutates=false)
     if mutates
         tensf!{T}(x::Vector, output::Array{T,3}) = tensor!(f, x, output)
         return tensf!
+    else
+        tensf{T}(x::Vector{T}, ::Type{S}=T) = tensor(f, x, S)
+        return tensf
     end
-end)
-
-@eval function tensor{S}(f, ::Type{S}; mutates=false)
-    $if_tensf_mutates
-    tensf(x::Vector) = tensor(f, x, S)
-    return tensf
-end
-
-@eval function tensor(f; mutates=false)
-    $if_tensf_mutates
-    tensf(x::Vector) = tensor(f, x)
-    return tensf
 end
 
 ####################
