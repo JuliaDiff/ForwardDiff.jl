@@ -18,65 +18,65 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 ##### Derivative of functions `f: R -> R^M` (scalar-to-scalar, or scalar-to-vector)
 ---
 
-**`derivative!(f, x::Number, output::Vector)`**
+- **`derivative!(f, x::Number, output::Vector)`**
     
-Compute `f'(x)`, storing the output in `output`.
+    Compute `f'(x)`, storing the output in `output`.
 
-**`derivative(f, x::Number)`**
+- **`derivative(f, x::Number)`**
+    
+    Compute `f'(x)`.
 
-Compute `f'(x)`.
-
-**`derivative(f; mutates=false)`**
-
-Return the function `f'`. If `mutates=false`, then the returned function has the form `derivf(x) -> derivative(f, x)`. If `mutates = true`, then the returned function has the form `derivf!(x, output) -> derivative!(f, x, output)`.
+- **`derivative(f; mutates=false)`**
+    
+    Return the function `f'`. If `mutates=false`, then the returned function has the form `derivf(x) -> derivative(f, x)`. If `mutates = true`, then the returned function has the form `derivf!(x, output) -> derivative!(f, x, output)`.
 
 ---
 ##### Gradients of functions `f: R^N -> R` (vector-to-scalar)
 ---
 
-**`gradient!(f, x::Vector, output::Vector)`**
+- **`gradient!(f, x::Vector, output::Vector)`**
 
-Compute `∇f(x)`, storing the output in `output`.
+    Compute `∇f(x)`, storing the output in `output`.
 
-**`gradient{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
+- **`gradient{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
 
-Compute `∇f(x)`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
+    Compute `∇f(x)`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
 
-**`gradient(f; mutates=false)`**
+- **`gradient(f; mutates=false)`**
 
-Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x, ::Type{S}=T) -> gradient(f, x, S)`. If `mutates = true`, then the returned function has the form `gradf!(x, output) -> gradient!(f, x, output)`. By default, `mutates` is set to `false`.
+    Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x, ::Type{S}=T) -> gradient(f, x, S)`. If `mutates = true`, then the returned function has the form `gradf!(x, output) -> gradient!(f, x, output)`. By default, `mutates` is set to `false`.
 
 ---
 ##### Jacobians of functions `f: R^N -> R^M` (vector-to-vector)
 ---
 
-**`jacobian!(f, x::Vector, output::Matrix)`**
+- **`jacobian!(f, x::Vector, output::Matrix)`**
 
-Compute `J(f(x))`, storing the output in `output`.
+    Compute `J(f(x))`, storing the output in `output`.
 
-**`jacobian{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
+- **`jacobian{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
 
-Compute `J(f(x))`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
+    Compute `J(f(x))`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
 
-**`jacobian(f; mutates=false)`**
+- **`jacobian(f; mutates=false)`**
 
-Return the function `J(f)`. If `mutates=false`, then the returned function has the form `jacf(x, ::Type{S}=T) -> jacobian(f, x, S)`. If `mutates = true`, then the returned function has the form `jacf!(x, output) -> jacobian!(f, x, output)`. By default, `mutates` is set to `false`.
+    Return the function `J(f)`. If `mutates=false`, then the returned function has the form `jacf(x, ::Type{S}=T) -> jacobian(f, x, S)`. If `mutates = true`, then the returned function has the form `jacf!(x, output) -> jacobian!(f, x, output)`. By default, `mutates` is set to `false`.
 
 ---
 ##### Hessians of functions `f: R^N -> R` (vector-to-scalar)
 ---
 
-**`hessian!(f, x::Vector, output::Matrix)`**
+- **`hessian!(f, x::Vector, output::Matrix)`**
 
-Compute `H(f(x))`, storing the output in `output`.
+    Compute `H(f(x))`, storing the output in `output`.
 
-**`hessian{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
+- **`hessian{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
 
-Compute `H(f(x))`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
+    Compute `H(f(x))`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
 
-**`hessian(f; mutates=false)`**
+- **`hessian(f; mutates=false)`**
 
-Return the function `H(f)`. If `mutates=false`, then the returned function has the form `hessf(x, ::Type{S}=T) -> hessian(f, x, S)`. If `mutates = true`, then the returned function has the form `hessf!(x, output) -> hessian!(f, x, output)`. By default, `mutates` is set to `false`.
+    Return the function `H(f)`. If `mutates=false`, then the returned function has the form `hessf(x, ::Type{S}=T) -> hessian(f, x, S)`. If `mutates = true`, then the returned function has the form `hessf!(x, output) -> hessian!(f, x, output)`. By default, `mutates` is set to `false`.
 
 ---
 ##### Third-order Taylor series term for functions `f: R^N -> R` (vector-to-scalar)
@@ -84,14 +84,14 @@ Return the function `H(f)`. If `mutates=false`, then the returned function has t
 
 [This Math StackExchange post](http://math.stackexchange.com/questions/556951/third-order-term-in-taylor-series) actually has an answer that explains this term fairly clearly.
 
-**`tensor!(f, x::Vector, output::Matrix)`**
+- **`tensor!(f, x::Vector, output::Matrix)`**
 
-Compute `∑D³f(x)`, storing the output in `output`.
+    Compute `∑D³f(x)`, storing the output in `output`.
 
-**`tensor{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
+- **`tensor{T,S}(f, x::Vector{T}, ::Type{S}=T)`**
 
-Compute `∑D³f(x)`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
+    Compute `∑D³f(x)`, where `S` is the element type of the output. By default, `S` is set to the element type of the input (`T`).
 
-**`tensor(f; mutates=false)`**
+- **`tensor(f; mutates=false)`**
 
-Return the function ``∑D³f``. If `mutates=false`, then the returned function has the form `tensf(x, ::Type{S}=T) -> tensor(f, x, S)`. If `mutates = true`, then the returned function has the form `tensf!(x, output) -> tensor!(f, x, output)`. By default, `mutates` is set to `false`.
+    Return the function ``∑D³f``. If `mutates=false`, then the returned function has the form `tensf(x, ::Type{S}=T) -> tensor(f, x, S)`. If `mutates = true`, then the returned function has the form `tensf!(x, output) -> tensor!(f, x, output)`. By default, `mutates` is set to `false`.
