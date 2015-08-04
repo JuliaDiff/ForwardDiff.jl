@@ -8,8 +8,8 @@ abstract Dim{N} # used to configure the input dimension of objective function
 #-------------------------------------#
 function load_derivative!{F<:ForwardDiffNum}(arr::Array{F}, output::Array)
     @assert length(arr) == length(output)
-    @inbounds @simd for i in eachindex(output)
-        output[i] = grad(arr[i], 1)
+    @simd for i in eachindex(output)
+        @inbounds output[i] = grad(arr[i], 1)
     end
     return output
 end
@@ -40,8 +40,8 @@ end
 #-----------------------------------#
 function load_gradient!(n::ForwardDiffNum, output::Vector)
     @assert npartials(n) == length(output) "The output vector must be the same length as the input vector"
-    @inbounds @simd for i in eachindex(output)
-        output[i] = grad(n, i)
+    @simd for i in eachindex(output)
+        @inbounds output[i] = grad(n, i)
     end
     return output
 end
@@ -60,8 +60,8 @@ function calc_gradnum!{N,T,C}(f,
 
     pchunk = partials_chunk(Grad)
 
-    @inbounds @simd for i in 1:N
-        gradvec[i] = Grad(x[i], pchunk[i])
+    @simd for i in eachindex(gradvec)
+        @inbounds gradvec[i] = Grad(x[i], pchunk[i])
     end
 
     return f(gradvec)
@@ -116,8 +116,8 @@ function calc_jacnum!{N,T,C}(f,
 
     pchunk = partials_chunk(Grad)
 
-    @inbounds @simd for j in 1:N
-        gradvec[j] = Grad(x[j], pchunk[j])
+    @simd for i in eachindex(gradvec)
+       @inbounds gradvec[i] = Grad(x[i], pchunk[i])
     end
 
     return f(gradvec)
@@ -155,8 +155,8 @@ function load_hessian!{N}(n::ForwardDiffNum{N}, output)
     for i in 1:N
         for j in 1:i
             val = hess(n, q)
-            output[i, j] = val
-            output[j, i] = val
+            @inbounds output[i, j] = val
+            @inbounds output[j, i] = val
             q += 1
         end
     end
@@ -178,8 +178,8 @@ function calc_hessnum!{N,T,C}(f,
     pchunk = partials_chunk(Grad)
     zhess = zero_partials(eltype(hessvec))
 
-    @inbounds @simd for i in 1:N
-        hessvec[i] = HessianNum(Grad(x[i], pchunk[i]), zhess)
+    @simd for i in eachindex(hessvec)
+        @inbounds hessvec[i] = HessianNum(Grad(x[i], pchunk[i]), zhess)
     end
 
     return f(hessvec)
@@ -261,8 +261,8 @@ function calc_tensnum!{N,T,C}(f,
     zhess = zero_partials(HessianNum{N,T,C})
     ztens = zero_partials(eltype(tensvec))
 
-    @inbounds @simd for i in 1:N
-        tensvec[i] = TensorNum(HessianNum(Grad(x[i], pchunk[i]), zhess), ztens)
+    @simd for i in eachindex(tensvec)
+        @inbounds tensvec[i] = TensorNum(HessianNum(Grad(x[i], pchunk[i]), zhess), ztens)
     end
 
     return f(tensvec)
@@ -350,8 +350,8 @@ end
 
 @generated function partials_chunk{N,T}(::Type{GradNumVec{N,T}})
     dus_arr = Array(Vector{T}, N)
-    for i in 1:length(dus_arr)
-        dus_arr[i] = setindex!(zeros(T,N), one(T), i)
+    @simd for i in eachindex(dus_arr)
+        @inbounds dus_arr[i] = setindex!(zeros(T,N), one(T), i)
     end
     return :($dus_arr)
 end
@@ -360,8 +360,8 @@ end
     dus_arr = Array(NTuple{N,T}, N)
     z = zero(T)
     o = one(T)
-    for i in 1:length(dus_arr)
-        dus_arr[i] = ntuple(x -> ifelse(x == i, o, z), Val{N})
+    @simd for i in eachindex(dus_arr)
+        @inbounds dus_arr[i] = ntuple(x -> ifelse(x == i, o, z), Val{N})
     end
     return :($dus_arr)
 end
