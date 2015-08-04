@@ -177,9 +177,7 @@ function tens_approx_eq(a::TensorNum, b::TensorNum)
     @test_approx_eq_eps tens(a) tens(b) eps
 end
 
-rand_x_test = rand_tens * test_tens
-
-@test hessnum(rand_x_test) == rand_hess * test_hess
+@test hessnum(rand_tens * test_tens) == rand_hess * test_hess
 
 @test rand_val * test_tens == TensorNum(rand_val * test_hess, rand_val * test_tensvec)
 @test test_tens * rand_val == rand_val * test_tens
@@ -189,8 +187,10 @@ rand_x_test = rand_tens * test_tens
 @test test_tens * false == zero(test_tens)
 @test false * test_tens == test_tens * false
 
-tens_approx_eq(test_tens, test_tens * (test_tens/test_tens))
-tens_approx_eq(test_tens, (test_tens * test_tens)/test_tens)
+tens_approx_eq(rand_tens, rand_tens * (test_tens/test_tens))
+tens_approx_eq(rand_tens, test_tens * (rand_tens/test_tens))
+tens_approx_eq(rand_tens, (rand_tens * test_tens)/test_tens)
+tens_approx_eq(test_tens, (rand_tens * test_tens)/rand_tens)
 
 tens_approx_eq(2 * test_tens, test_tens + test_tens)
 tens_approx_eq(test_tens * inv(test_tens), one(test_tens))
@@ -232,7 +232,7 @@ end
 function tens_test_x(fsym, N)
     randrange = 0.01:.01:.99
 
-    needs_modification = tuple()#(:acosh, :acoth)
+    needs_modification = tuple(:acosh, :acoth)
     if fsym in needs_modification
         randrange += 1
     end
@@ -241,7 +241,7 @@ function tens_test_x(fsym, N)
 end
 
 for fsym in ForwardDiff.univar_tens_funcs    
-    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
 
     @eval function testf(x::Vector) 
         a,b,c,d = x
