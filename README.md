@@ -18,7 +18,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 #### Derivative of `f: R -> R` or `f: R -> R^M`
 ---
 
-- **`derivative!(f, x::Number, output::Vector)`**
+- **`derivative!(f, x::Number, output::Array)`**
     
     Compute `f'(x)`, storing the output in `output`.
 
@@ -84,7 +84,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 
 [This Math StackExchange post](http://math.stackexchange.com/questions/556951/third-order-term-in-taylor-series) actually has an answer that explains this term fairly clearly.
 
-- **`tensor!(f, x::Vector, output::Matrix)`**
+- **`tensor!{S}(f, x::Vector, output::Array{S,3})`**
 
     Compute `∑D³f(x)`, storing the output in `output`.
 
