@@ -14,7 +14,9 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 
 ## Usage
 
-### Derivative of functions `f: R -> R^M` (scalar-to-scalar, or scalar-to-vector)
+---
+##### Derivative of functions `f: R -> R^M` (scalar-to-scalar, or scalar-to-vector)
+---
 
 **`derivative!(f, x::Number, output::Vector)`**
     
@@ -28,7 +30,9 @@ Compute `f'(x)`.
 
 Return the function `f'`. If `mutates=false`, then the returned function has the form `derivf(x) -> derivative(f, x)`. If `mutates = true`, then the returned function has the form `derivf!(x, output) -> derivative!(f, x, output)`.
 
-### Gradients of functions `f: R^N -> R` (vector-to-scalar)
+---
+##### Gradients of functions `f: R^N -> R` (vector-to-scalar)
+---
 
 **`gradient!(f, x::Vector, output::Vector)`**
 
@@ -42,7 +46,9 @@ Compute `∇f(x)`, where `S` is the element type of the output. By default, `S` 
 
 Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x, ::Type{S}=T) -> gradient(f, x, S)`. If `mutates = true`, then the returned function has the form `gradf!(x, output) -> gradient!(f, x, output)`. By default, `mutates` is set to `false`.
 
-### Jacobians of functions `f: R^N -> R^M` (vector-to-vector)
+---
+##### Jacobians of functions `f: R^N -> R^M` (vector-to-vector)
+---
 
 **`jacobian!(f, x::Vector, output::Matrix)`**
 
@@ -56,7 +62,9 @@ Compute `J(f(x))`, where `S` is the element type of the output. By default, `S` 
 
 Return the function `J(f)`. If `mutates=false`, then the returned function has the form `jacf(x, ::Type{S}=T) -> jacobian(f, x, S)`. If `mutates = true`, then the returned function has the form `jacf!(x, output) -> jacobian!(f, x, output)`. By default, `mutates` is set to `false`.
 
-### Hessians of functions `f: R^N -> R` (vector-to-scalar)
+---
+##### Hessians of functions `f: R^N -> R` (vector-to-scalar)
+---
 
 **`hessian!(f, x::Vector, output::Matrix)`**
 
@@ -70,7 +78,9 @@ Compute `H(f(x))`, where `S` is the element type of the output. By default, `S` 
 
 Return the function `H(f)`. If `mutates=false`, then the returned function has the form `hessf(x, ::Type{S}=T) -> hessian(f, x, S)`. If `mutates = true`, then the returned function has the form `hessf!(x, output) -> hessian!(f, x, output)`. By default, `mutates` is set to `false`.
 
-### Third-order Taylor series term for functions `f: R^N -> R` (vector-to-scalar)
+---
+##### Third-order Taylor series term for functions `f: R^N -> R` (vector-to-scalar)
+---
 
 [This Math StackExchange post](http://math.stackexchange.com/questions/556951/third-order-term-in-taylor-series) actually has an answer that explains this term fairly clearly.
 
