@@ -283,7 +283,7 @@ function tensor(f; mutates=false)
         tensf!{T}(x::Vector, output::Array{T,3}) = tensor!(f, x, output)
         return tensf!
     else
-        tensf{T}(x::Vector{T}, ::Type{S}=T) = tensor(f, x, S)
+        tensf{T,S}(x::Vector{T}, ::Type{S}=T) = tensor(f, x, S)
         return tensf
     end
 end
