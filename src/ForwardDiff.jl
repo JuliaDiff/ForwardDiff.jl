@@ -1,4 +1,8 @@
 module ForwardDiff
+    
+    if VERSION < v"0.4-"
+        warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
+    end
 
     import Calculus
     import NaNMath
@@ -14,10 +18,6 @@ module ForwardDiff
 
     for fsym in fad_supported_univar_funcs
         @eval import Base.$(fsym)
-    end
-
-    if VERSION < v"0.4-"
-        warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
     end
 
     include("ForwardDiffNum.jl")
