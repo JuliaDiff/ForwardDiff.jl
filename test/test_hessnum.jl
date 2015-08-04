@@ -150,21 +150,16 @@ rand_hess = HessianNum(rand_grad, rand_hessvec)
 
 @test -test_hess == HessianNum(-test_grad, -test_hessvec)
 
-# Multiplication #
-#----------------#
-rand_x_test = rand_hess * test_hess
-
-@test gradnum(rand_x_test) == rand_grad * test_grad
-
-q = 1
-for i in 1:N
-    for j in 1:i
-        term = (rand_hessvec[q]*test_val + rand_partials[i]*test_partials[j]
-                + rand_partials[j]*test_partials[i] + rand_val*test_hessvec[q])
-        @test hess(rand_x_test, q) == term
-        q += 1
-    end
+# Multiplication/Division #
+#-------------------------#
+function hess_approx_eq(a::HessianNum, b::HessianNum)
+    eps = 1e-12
+    @test_approx_eq_eps value(a) value(b) eps
+    @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
+    @test_approx_eq_eps hess(a) hess(b) eps
 end
+
+@test gradnum(rand_hess * test_hess) == rand_grad * test_grad
 
 @test rand_val * test_hess == HessianNum(rand_val * test_grad, rand_val * test_hessvec)
 @test test_hess * rand_val == rand_val * test_hess
@@ -174,16 +169,19 @@ end
 @test test_hess * false == zero(test_hess)
 @test false * test_hess == test_hess * false
 
-# Division #
-#----------#
-function hess_approx_eq(a::HessianNum, b::HessianNum)
-    @test_approx_eq value(a) value(b)
-    @test_approx_eq collect(grad(a)) collect(grad(b))
-    @test_approx_eq hess(a) hess(b)
-end
+hess_approx_eq(rand_hess, rand_hess * (test_hess/test_hess))
+hess_approx_eq(rand_hess, test_hess * (rand_hess/test_hess))
+hess_approx_eq(rand_hess, (rand_hess * test_hess)/test_hess)
+hess_approx_eq(test_hess, (rand_hess * test_hess)/rand_hess)
 
-hess_approx_eq(rand_hess / test_hess, rand_hess * inv(test_hess))
+hess_approx_eq(2 * test_hess, test_hess + test_hess)
+hess_approx_eq(test_hess * inv(test_hess), one(test_hess))
+
 hess_approx_eq(rand_val / test_hess, rand_val * inv(test_hess))
+hess_approx_eq(rand_val / test_hess, rand_val * 1/test_hess)
+hess_approx_eq(rand_hess / test_hess, rand_hess * inv(test_hess))
+hess_approx_eq(rand_hess / test_hess, rand_hess * 1/test_hess)
+hess_approx_eq(test_hess / test_hess, one(test_hess))
 
 @test test_hess / rand_val == HessianNum(test_grad / rand_val, test_hessvec / rand_val)
 
