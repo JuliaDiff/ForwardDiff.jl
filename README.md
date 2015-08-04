@@ -15,7 +15,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 ## Usage
 
 ---
-#### Derivative of `f: R → R` or `f: R → Rᵐ`
+#### Derivative of `f: R → R` or `f: R → Rᵐ¹ × Rᵐ² × ⋯ × Rᵐⁱ`
 ---
 
 - **`derivative!(f, x::Number, output::Array)`**
