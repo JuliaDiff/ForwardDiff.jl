@@ -193,7 +193,6 @@ hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 
 # Univariate functions/API usage testing #
 #----------------------------------------#
-N = 4
 testout = Array(Float64, N, N)
 
 function hess_deriv_ij(f_expr, x::Vector, i, j)
