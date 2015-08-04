@@ -114,7 +114,7 @@ end
 #          f''(t₀)  * (t₁t₂ϵ₂ϵ₁ + t₁t₃ϵ₃ϵ₁ + t₃t₄ϵ₂ϵ₃ϵ₁ + t₂t₅ϵ₂ϵ₃ϵ₁ + t₁t₆ϵ₂ϵ₃ϵ₁ + t₂t₃ϵ₂ϵ₃) +
 #          f'''(t₀) * (t₁t₂t₃ϵ₂ϵ₃ϵ₁)
 #
-# The coefficients of ϵ₁ϵ₂ are what's stored by TensorNum's `tens` field:
+# The coefficients of ϵ₁ϵ₂ϵ₃ are what's stored by TensorNum's `tens` field:
 #
 #   f(t)_ϵ₁ϵ₂ϵ₃ = (f'(t₀)*t₇ + f''(t₀)*(t₃t₄ + t₂t₅ + t₁t₆) + f'''(t₀)*t₁t₂t₃
 #
@@ -145,7 +145,7 @@ function loadtens_deriv!{N}(t::TensorNum{N}, deriv1, deriv2, deriv3, output)
         for j in i:N
             for k in i:j
                 a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(i,k), t_inds_2_h_ind(j,k)
-                g_i,g_j,g_k = grad(t,i), grad(t,j), grad(t,k)
+                g_i, g_j, g_k = grad(t,i), grad(t,j), grad(t,k)
                 output[q] = deriv1*tens(t,q) + deriv2*(g_k*hess(t,a) + g_j*hess(t,b) + g_i*hess(t,c)) + deriv3*g_i*g_j*g_k
                 q += 1
             end
@@ -222,33 +222,8 @@ function loadtens_div!{N}(x::Real, t::TensorNum{N}, output)
     return loadtens_deriv!(t, inv_deriv1, inv_deriv2, inv_deriv3, output)
 end
 
-# function loadtens_exp!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
-#     q = 1
-#     for i in 1:N
-#         for j in i:N
-#             for k in i:j
-#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
-#                 output[q] = 
-#                 q += 1
-#             end
-#         end
-#     end
-#     return output
-# end
-
-# function loadtens_exp!{N}(h::TensorNum{N}, p::Real, output)
-#     q = 1
-#     for i in 1:N
-#         for j in i:N
-#             for k in i:j
-#                 a, b, c = t_inds_2_h_ind(i, j), t_inds_2_h_ind(j, k), t_inds_2_h_ind(k, i)
-#                 output[q] = 
-#                 q += 1
-#             end
-#         end
-#     end
-#     return output
-# end
+loadtens_exp!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output) = error("loadtens_exp!(t1::TensorNum, t2::TensorNum, output) is not yet implemented.")
+loadtens_exp!{N}(t::TensorNum{N}, p::Real, output) = error("loadtens_exp!(t::TensorNum, p::Real, output) is not yet implemented.")
 
 for (fsym, loadfsym) in [(:*, symbol("loadtens_mul!")),
                          (:/, symbol("loadtens_div!")), 
