@@ -6,7 +6,7 @@ abstract Dim{N} # used to configure the input dimension of objective function
 
 # Load derivative from ForwardDiffNum #
 #-------------------------------------#
-function load_derivative!{F<:ForwardDiffNum}(arr::Array{F}, output::Array)
+function load_derivative!(arr::Array, output::Array)
     @assert length(arr) == length(output)
     @simd for i in eachindex(output)
         @inbounds output[i] = grad(arr[i], 1)
@@ -14,7 +14,7 @@ function load_derivative!{F<:ForwardDiffNum}(arr::Array{F}, output::Array)
     return output
 end
 
-load_derivative{F<:ForwardDiffNum}(arr::Array{F}) = load_derivative!(arr, similar(arr, eltype(F)))
+load_derivative(arr::Array) = load_derivative!(arr, similar(arr, eltype(eltype(arr))))
 load_derivative(n::ForwardDiffNum{1}) = grad(n, 1)
 
 # Derivative from function/Exposed API methods #
@@ -93,16 +93,19 @@ end
 
 # Load Jacobian from ForwardDiffNum #
 #-----------------------------------#
-function load_jacobian!{F<:ForwardDiffNum}(v::Vector{F}, output)
-    N = npartials(F)
-    @assert (length(v), N) == size(output)
-    for i in 1:length(v), j in 1:N
-        output[i,j] = grad(v[i], j)
+function load_jacobian!(jacvec::Vector, output)
+    for i in 1:length(jacvec), j in 1:N
+        output[i,j] = grad(jacvec[i], j)
     end
     return output
 end
 
-load_jacobian{F<:ForwardDiffNum}(v::Vector{F}) = load_jacobian!(v, Array(eltype(F), length(v), npartials(F)))
+function load_jacobian(jacvec::Vector)
+    # assumes jacvec is actually homogenous,
+    # though it may not be well-inferenced.
+    F = typeof(first(jacvec))
+    return load_jacobian!(jacvec, Array(eltype(F), length(jacvec), npartials(F)))
+end
 
 # Jacobian from function #
 #------------------------#
