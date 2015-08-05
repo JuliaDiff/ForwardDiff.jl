@@ -94,6 +94,9 @@ end
 # Load Jacobian from ForwardDiffNum #
 #-----------------------------------#
 function load_jacobian!(jacvec::Vector, output)
+    # assumes jacvec is actually homogenous,
+    # though it may not be well-inferenced.
+    N = npartials(first(jacvec))
     for i in 1:length(jacvec), j in 1:N
         output[i,j] = grad(jacvec[i], j)
     end

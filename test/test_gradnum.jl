@@ -245,25 +245,29 @@ function grad_test_x(fsym, N)
 end
 
 for fsym in map(first, Calculus.symbolic_derivatives_1arg())
-    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+    try
+        testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
 
-    @eval function testf(x::Vector) 
-        a,b,c,d = x
-        return $testexpr
+        @eval function testf(x::Vector) 
+            a,b,c,d = x
+            return $testexpr
+        end
+
+        testx = grad_test_x(fsym, N)
+        testresult = grad_test_result(testexpr, testx)
+
+        ForwardDiff.gradient!(testf, testx, testout)
+        @test_approx_eq testout testresult
+
+        @test_approx_eq ForwardDiff.gradient(testf, testx) testresult
+
+        gradf! = ForwardDiff.gradient(testf, mutates=true)
+        gradf!(testx, testout)
+        @test_approx_eq testout testresult
+
+        gradf = ForwardDiff.gradient(testf, mutates=false)
+        @test_approx_eq gradf(testx) testresult
+    catch err
+        error("Failure when testing gradients involving $fsym: $err")
     end
-
-    testx = grad_test_x(fsym, N)
-    testresult = grad_test_result(testexpr, testx)
-
-    ForwardDiff.gradient!(testf, testx, testout)
-    @test_approx_eq testout testresult
-
-    @test_approx_eq ForwardDiff.gradient(testf, testx) testresult
-
-    gradf! = ForwardDiff.gradient(testf, mutates=true)
-    gradf!(testx, testout)
-    @test_approx_eq testout testresult
-
-    gradf = ForwardDiff.gradient(testf, mutates=false)
-    @test_approx_eq gradf(testx) testresult
 end

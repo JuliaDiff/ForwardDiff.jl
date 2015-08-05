@@ -153,7 +153,7 @@ rand_hess = HessianNum(rand_grad, rand_hessvec)
 # Multiplication/Division #
 #-------------------------#
 function hess_approx_eq(a::HessianNum, b::HessianNum)
-    eps = 1e-12
+    eps = 1e-10
     @test_approx_eq_eps value(a) value(b) eps
     @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
     @test_approx_eq_eps hess(a) hess(b) eps
@@ -220,26 +220,30 @@ function hess_test_x(fsym, N)
     return rand(randrange, N)
 end
 
-for fsym in ForwardDiff.univar_hess_funcs    
-    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+for fsym in ForwardDiff.univar_hess_funcs
+    try    
+        testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
 
-    @eval function testf(x::Vector) 
-        a,b,c,d = x
-        return $testexpr
+        @eval function testf(x::Vector) 
+            a,b,c,d = x
+            return $testexpr
+        end
+
+        testx = hess_test_x(fsym, N)
+        testresult = hess_test_result(testexpr, testx)
+
+        ForwardDiff.hessian!(testf, testx, testout)
+        @test_approx_eq testout testresult
+
+        @test_approx_eq ForwardDiff.hessian(testf, testx) testresult
+
+        hessf! = ForwardDiff.hessian(testf, mutates=true)
+        hessf!(testx, testout)
+        @test_approx_eq testout testresult
+
+        hessf = ForwardDiff.hessian(testf, mutates=false)
+        @test_approx_eq hessf(testx) testresult
+    catch err
+        error("Failure when testing Hessians involving $fsym: $err")
     end
-
-    testx = hess_test_x(fsym, N)
-    testresult = hess_test_result(testexpr, testx)
-
-    ForwardDiff.hessian!(testf, testx, testout)
-    @test_approx_eq testout testresult
-
-    @test_approx_eq ForwardDiff.hessian(testf, testx) testresult
-
-    hessf! = ForwardDiff.hessian(testf, mutates=true)
-    hessf!(testx, testout)
-    @test_approx_eq testout testresult
-
-    hessf = ForwardDiff.hessian(testf, mutates=false)
-    @test_approx_eq hessf(testx) testresult
 end

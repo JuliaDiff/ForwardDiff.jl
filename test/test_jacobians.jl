@@ -2,46 +2,62 @@ using Base.Test
 using ForwardDiff
 using Calculus
 
-############################
-# Test taking the Jacobian #
-############################
-
 N = 4
-floatrange = 0.01:.01:.99
-testx = rand(floatrange, N)
+M = 5
 
-# jac_testf: R⁴ -> R⁵
-function jac_testf(x::Vector)
-    @assert length(x) == N
-    return [x[1], 
-            5*x[3], 
-            4*x[2]^2 - 2*x[3], 
-            x[3]*sin(x[1]),
-            sqrt(x[4])]
+testout = Array(Float64, M, N)
+
+function jacob_deriv_ij(fs::Vector{Expr}, x::Vector, i, j)
+    var_syms = [:a, :b, :c, :d]
+    diff_expr = differentiate(fs[i], var_syms[j])
+    @eval begin
+        a,b,c,d = $x
+        return $diff_expr
+    end
 end
 
-# hard code the correct ForwardDiff.jacobian for
-# jac_testf at the given vector x
-function jac_test_result(x::Vector)
-    @assert length(x) == 4
-    return [    1              0         0              0        ;
-                0              0         5              0        ;
-                0             8*x[2]    -2              0        ; 
-            x[3]*cos(x[1])     0      sin(x[1])         0        ;
-                0              0         0       1/(2*sqrt(x[4]))]
+function jacob_test_result(fs::Vector{Expr}, x::Vector)
+    return [jacob_deriv_ij(fs, x, i, j) for i in 1:M, j in 1:N]
 end
 
-testout = Array(Float64, 5, N)
-testresult = jac_test_result(testx)
+function jacob_test_x(fsym, N)
+    randrange = 0.01:.01:.99
+    needs_rand_mod = tuple(:acosh, :acoth, :asec, :acsc, :asecd, :acscd)
 
-ForwardDiff.jacobian!(jac_testf, testx, testout)
-@test testout == testresult
+    if fsym in needs_rand_mod
+        randrange += 1
+    end
 
-@test ForwardDiff.jacobian(jac_testf, testx) == testresult
+    return rand(randrange, N)
+end
 
-jacf! = ForwardDiff.jacobian(jac_testf, mutates=true)
-jacf!(testx, testout)
-@test testout == testresult
+for fsym in ForwardDiff.fad_supported_univar_funcs
+    try    
+        testexprs = [:($(fsym)(a) + $(fsym)(b)),
+                    :(- $(fsym)(c)),
+                    :(4 * $(fsym)(d)),
+                    :($(fsym)(b)^5),
+                    :($(fsym)(a))]
 
-jacf = ForwardDiff.jacobian(jac_testf, mutates=false)
-@test jacf(testx) == testresult
+        @eval function testf(x::Vector) 
+            a,b,c,d = x
+            return [$(testexprs...)]
+        end
+
+        testx = jacob_test_x(fsym, N)
+        testresult = jacob_test_result(testexprs, testx)
+        ForwardDiff.jacobian!(testf, testx, testout)
+        @test_approx_eq testout testresult
+
+        @test_approx_eq ForwardDiff.jacobian(testf, testx) testresult
+
+        jacf! = ForwardDiff.jacobian(testf, mutates=true)
+        jacf!(testx, testout)
+        @test_approx_eq testout testresult
+
+        jacf = ForwardDiff.jacobian(testf, mutates=false)
+        @test_approx_eq jacf(testx) testresult
+    catch err
+        error("Failure when testing Jacobians involving $fsym: $err")
+    end
+end
