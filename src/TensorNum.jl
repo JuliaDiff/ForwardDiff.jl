@@ -19,6 +19,7 @@ TensorNum(value::Real) = TensorNum(HessianNum(value))
 ##############################
 zero{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(zero(HessianNum{N,T,C}))
 one{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(one(HessianNum{N,T,C}))
+rand{N,T,C}(::Type{TensorNum{N,T,C}}) = TensorNum(rand(HessianNum{N,T,C}), rand(T, halftenslen(N)))
 
 hessnum(t::TensorNum) = t.hessnum
 

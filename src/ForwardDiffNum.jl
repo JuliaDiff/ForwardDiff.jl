@@ -16,8 +16,9 @@ abstract ForwardDiffNum{N,T<:Number,C} <: Number
 #...as well as:
 #    ==(a::F, b::F)
 #    isequal(a::F, b::F)
-#    zero(a::F)/zero(::Type{F})
-#    one(a::F)/one(::Type{F})
+#    zero(::Type{F})
+#    one(::Type{F})
+#    rand(::Type{F})
 #    hash(n::F)
 #    read(io::IO, ::Type{F})
 #    write(io::IO, n::F)
@@ -41,6 +42,9 @@ eltype{N,T}(::ForwardDiffNum{N,T}) = T
 
 npartials{N,T,C}(::Type{ForwardDiffNum{N,T,C}}) = N
 eltype{N,T,C}(::Type{ForwardDiffNum{N,T,C}}) = T
+
+zero(n::ForwardDiffNum) = zero(typeof(n))
+one(n::ForwardDiffNum) = one(typeof(n))
 
 ==(n::ForwardDiffNum, x::Real) = isconstant(n) && (value(n) == x)
 ==(x::Real, n::ForwardDiffNum) = ==(n, x)

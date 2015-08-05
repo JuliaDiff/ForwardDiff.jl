@@ -19,6 +19,7 @@ HessianNum(value::Real) = HessianNum(GradientNum(value))
 ##############################
 zero{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(zero(GradientNum{N,T,C}))
 one{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(one(GradientNum{N,T,C}))
+rand{N,T,C}(::Type{HessianNum{N,T,C}}) = HessianNum(rand(GradientNum{N,T,C}), rand(T, halfhesslen(N)))
 
 gradnum(h::HessianNum) = h.gradnum
 

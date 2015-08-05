@@ -24,6 +24,10 @@ end
 
 zero_tuple(::Type{Tuple{}}) = tuple()
 
+@generated rand_tuple{N,T}(::Type{NTuple{N,T}}) = tupexpr(i -> :(rand($T)), N)
+
+rand_tuple(::Type{Tuple{}}) = tuple()
+
 @generated scale_tuple{N}(x, tup::NTuple{N}) = tupexpr(i -> :(x * tup[$i]), N)
 
 @generated div_tuple_by_scalar{N}(tup::NTuple{N}, x) = tupexpr(i -> :(tup[$i]/x), N)

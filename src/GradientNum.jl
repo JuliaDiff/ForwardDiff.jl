@@ -30,6 +30,8 @@ include("grad/tuple_funcs.jl")
 
 zero_partials{N,T,C<:Tuple}(::Type{GradientNum{N,T,C}}) = zero_tuple(C)
 zero_partials{N,T,C<:Vector}(::Type{GradientNum{N,T,C}}) = zeros(T, N)
+rand_partials{N,T,C<:Tuple}(::Type{GradientNum{N,T,C}}) = rand_tuple(C)
+rand_partials{N,T,C<:Vector}(::Type{GradientNum{N,T,C}}) = rand(T, N)
 
 #####################
 # Generic Functions #
@@ -63,11 +65,9 @@ end
 ########################
 # Conversion/Promotion #
 ########################
-zero{N,T,C}(g::GradientNum{N,T,C}) = GradientNum{N,T,C}(zero(value(g)), zero_partials(typeof(g)))
-zero{N,T,C}(::Type{GradientNum{N,T,C}}) = GradientNum{N,T,C}(zero(T), zero_partials(GradientNum{N,T,C}))
-
-one{N,T,C}(g::GradientNum{N,T,C}) = GradientNum{N,T,C}(one(value(g)), zero_partials(typeof(g)))
-one{N,T,C}(::Type{GradientNum{N,T,C}}) = GradientNum{N,T,C}(one(T), zero_partials(GradientNum{N,T,C}))
+zero{N,T,C}(G::Type{GradientNum{N,T,C}}) = G(zero(T), zero_partials(G))
+one{N,T,C}(G::Type{GradientNum{N,T,C}}) = G(one(T), zero_partials(G))
+rand{N,T,C}(G::Type{GradientNum{N,T,C}}) = G(rand(T), rand_partials(G))
 
 for F in (:GradNumVec, :GradNumTup)
     @eval begin

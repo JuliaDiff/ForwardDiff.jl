@@ -8,11 +8,11 @@ module ForwardDiff
     import NaNMath
     import Base: *, /, +, -, ^,
                  hash, ==, isequal, copy,
-                 zero, one, convert, promote_rule,
-                 read, write, isless, isreal,
-                 isnan, isfinite, eps, conj,
-                 transpose, ctranspose, eltype,
-                 abs, abs2
+                 zero, one, rand, convert,
+                 promote_rule, read, write,
+                 isless, isreal, isnan, isfinite,
+                 eps, conj, transpose, ctranspose,
+                 eltype, abs, abs2
 
     const fad_supported_univar_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 
