@@ -134,9 +134,9 @@ end
 
 function t_inds_2_h_ind(i, j)
     if i < j
-        return div(j*(j-1), 2+i) + 1
+        return div(j*(j-1), 2) + i
     else
-        return div(i*(i-1), 2+j) + 1
+        return div(i*(i-1), 2) + j
     end
 end
 
