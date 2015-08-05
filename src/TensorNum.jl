@@ -223,8 +223,72 @@ function loadtens_div!{N}(x::Real, t::TensorNum{N}, output)
     return loadtens_deriv!(t, inv_deriv1, inv_deriv2, inv_deriv3, output)
 end
 
-loadtens_exp!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output) = error("loadtens_exp!(t1::TensorNum, t2::TensorNum, output) is not yet implemented.")
-loadtens_exp!{N}(t::TensorNum{N}, p::Real, output) = error("loadtens_exp!(t::TensorNum, p::Real, output) is not yet implemented.")
+function loadtens_exp!{N}(t1::TensorNum{N}, t2::TensorNum{N}, output)
+    t1val = value(t1)
+    t2val = value(t2)
+    
+    inv_t1val = inv(t1val)
+    abs2_inv_t1val = abs2(inv_t1val)
+
+    f_0 = log(t1val)
+    f_1 = inv_t1val
+    f_2 = -abs2_inv_t1val
+    f_3 = 2*abs2_inv_t1val*inv_t1val
+
+    deriv = t1val^t2val
+
+    q = 1
+    for i in 1:N
+        for j in i:N
+            for k in i:j
+                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(i,k), t_inds_2_h_ind(j,k)
+                
+                t1_gi, t1_gj, t1_gk = grad(t1,i), grad(t1,j), grad(t1,k)
+                t2_gi, t2_gj, t2_gk = grad(t2,i), grad(t2,j), grad(t2,k)
+                t1_ha, t1_hb, t1_hc = hess(t1,a), hess(t1,b), hess(t1,c)
+                t2_ha, t2_hb, t2_hc = hess(t2,a), hess(t2,b), hess(t2,c)
+
+                d_1 = t1_gi*f_1
+                d_2 = t1_gj*f_1
+                d_3 = t1_gk*f_1
+                d_4 = t1_ha*f_1 + t1_gi*t1_gj*f_2
+                d_5 = t1_hb*f_1 + t1_gi*t1_gk*f_2
+                d_6 = t1_hc*f_1 + t1_gj*t1_gk*f_2
+                d_7 = tens(t1,q)*f_1 + (t1_gk*t1_ha + t1_gj*t1_hb + t1_gi*t1_hc)*f_2 + t1_gi*t1_gj*t1_gk*f_3
+
+                e_1 = t2_gi*f_0 + t2val*d_1
+                e_2 = t2_gj*f_0 + t2val*d_2
+                e_3 = t2_gk*f_0 + t2val*d_3
+                e_4 = t2_ha*f_0 + t2_gj*d_1 + t2_gi*d_2 + t2val*d_4
+                e_5 = t2_hb*f_0 + t2_gk*d_1 + t2_gi*d_3 + t2val*d_5
+                e_6 = t2_hc*f_0 + t2_gk*d_2 + t2_gj*d_3 + t2val*d_6
+                e_7 = tens(t2,q)*f_0 + t2_hc*d_1 + t2_hb*d_2 + t2_ha*d_3 + t2_gk*d_4 + t2_gj*d_5 + t2_gi*d_6 + t2val*d_7
+
+                output[q] = deriv*(e_7 + e_3*e_4 + e_2*e_5 + e_1*e_6 + e_1*e_2*e_3)
+                q += 1
+            end
+        end
+    end
+    return output
+end
+
+function loadtens_exp!{N}(t::TensorNum{N}, x::Real, output)
+    tval = value(t)
+    x_min_one = x - 1
+    x_min_two = x - 2
+    deriv1 = x * tval^x_min_one
+    deriv2 = x * x_min_one * tval^x_min_two
+    deriv3 = x * x_min_one * x_min_two * tval^(x - 3)
+    return loadtens_deriv!(t, deriv1, deriv2, deriv3, output)
+end
+
+function loadtens_exp!{N}(x::Real, t::TensorNum{N}, output)
+    log_x = log(x)
+    deriv1 = x^value(t) * log_x
+    deriv2 = deriv1 * log_x
+    deriv3 = deriv2 * log_x
+    return loadtens_deriv!(t, deriv1, deriv2, deriv3, output)
+end
 
 for (fsym, loadfsym) in [(:*, symbol("loadtens_mul!")),
                          (:/, symbol("loadtens_div!")), 
@@ -235,18 +299,25 @@ for (fsym, loadfsym) in [(:*, symbol("loadtens_mul!")),
     end
 end
 
-function /{N,T}(x::Real, t::TensorNum{N,T})
-    new_tens = Array(promote_type(T, typeof(x)), halftenslen(N))
-    return TensorNum(x / hessnum(t), loadtens_div!(x, t, new_tens))
-end
+^{N}(::Base.Irrational{:e}, t::TensorNum{N}) = exp(t)
 
 for T in (:Rational, :Integer, :Real)
     @eval begin
-        function ^{N}(t::TensorNum{N}, p::$(T))
-            new_tens = Array(promote_type(eltype(t), typeof(p)), halftenslen(N))
-            return TensorNum(hessnum(t)^p, loadtens_exp!(t, p, new_tens))
+        function ^{N}(t::TensorNum{N}, x::$(T))
+            new_tens = Array(promote_type(eltype(t), typeof(x)), halftenslen(N))
+            return TensorNum(hessnum(t)^x, loadtens_exp!(t, x, new_tens))
+        end
+
+        function ^{N}(x::$(T), t::TensorNum{N})
+            new_tens = Array(promote_type(eltype(t), typeof(x)), halftenslen(N))
+            return TensorNum(x^hessnum(t), loadtens_exp!(x, t, new_tens))
         end
     end
+end
+
+function /{N,T}(x::Real, t::TensorNum{N,T})
+    new_tens = Array(promote_type(T, typeof(x)), halftenslen(N))
+    return TensorNum(x / hessnum(t), loadtens_div!(x, t, new_tens))
 end
 
 +{N}(a::TensorNum{N}, b::TensorNum{N}) = TensorNum(hessnum(a) + hessnum(b), tens(a) + tens(b))

@@ -217,13 +217,21 @@ function loadhess_exp!{N}(a::HessianNum{N}, b::HessianNum{N}, output)
     return output
 end
 
-function loadhess_exp!{N}(h::HessianNum{N}, p::Real, output)
+function loadhess_exp!{N}(h::HessianNum{N}, x::Real, output)
     hval = value(h)
-    p_coeff = p*hval^(p - 2)
-    deriv1 = p_coeff * hval
-    deriv2 = p_coeff * (p - 1)
+    x_min_one = x - 1
+    deriv1 = x * hval^x_min_one
+    deriv2 = x * x_min_one * hval^(x - 2)
     return loadhess_deriv!(h, deriv1, deriv2, output)
 end
+
+function loadhess_exp!{N}(x::Real, h::HessianNum{N}, output)
+    log_x = log(x)
+    deriv1 = x^value(h) * log_x
+    deriv2 = deriv1 * log_x
+    return loadhess_deriv!(h, deriv1, deriv2, output)
+end
+
 
 for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
                          (:/, symbol("loadhess_div!")), 
@@ -239,11 +247,18 @@ function /{N,T}(x::Real, h::HessianNum{N,T})
     return HessianNum(x / gradnum(h), loadhess_div!(x, h, new_hess))
 end
 
+^{N}(::Base.Irrational{:e}, h::HessianNum{N}) = exp(h)
+
 for T in (:Rational, :Integer, :Real)
     @eval begin
-        function ^{N}(h::HessianNum{N}, p::$(T))
-            new_hess = Array(promote_type(eltype(h), typeof(p)), halfhesslen(N))
-            return HessianNum(gradnum(h)^p, loadhess_exp!(h, p, new_hess))
+        function ^{N}(h::HessianNum{N}, x::$(T))
+            new_hess = Array(promote_type(eltype(h), typeof(x)), halfhesslen(N))
+            return HessianNum(gradnum(h)^x, loadhess_exp!(h, x, new_hess))
+        end
+
+        function ^{N}(x::$(T), h::HessianNum{N})
+            new_hess = Array(promote_type(eltype(h), typeof(x)), halfhesslen(N))
+            return HessianNum(x^gradnum(h), loadhess_exp!(x, h, new_hess))
         end
     end
 end

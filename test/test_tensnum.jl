@@ -205,9 +205,9 @@ tens_approx_eq(test_tens / test_tens, one(test_tens))
 
 # Exponentiation #
 #----------------#
-# tens_approx_eq(test_tens^rand_tens, exp(rand_tens * log(test_tens)))
-# tens_approx_eq(test_tens^rand_val, exp(rand_val * log(test_tens)))
-# tens_approx_eq(rand_val^test_tens, exp(test_tens * log(rand_val)))
+tens_approx_eq(test_tens^rand_tens, exp(rand_tens * log(test_tens)))
+tens_approx_eq(test_tens^rand_val, exp(rand_val * log(test_tens)))
+tens_approx_eq(rand_val^test_tens, exp(test_tens * log(rand_val)))
 
 # Univariate functions/API usage testing #
 #----------------------------------------#
