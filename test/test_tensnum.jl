@@ -170,7 +170,7 @@ rand_tens = TensorNum(rand_hess, rand_tensvec)
 # Multiplication/Division #
 #-------------------------#
 function tens_approx_eq(a::TensorNum, b::TensorNum)
-    eps = 1e-10
+    eps = 1e-9
     try
         @test_approx_eq_eps value(a) value(b) eps
         @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
