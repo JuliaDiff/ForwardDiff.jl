@@ -14,8 +14,8 @@ using ForwardDiff:
         hessnum,
         t_inds_2_h_ind
 
-floatrange = 0.0:.01:.99
-intrange = 0:10
+floatrange = .01:.01:.99
+intrange = 1:10
 N = 4
 T = Float64
 C = NTuple{N,T}
@@ -171,10 +171,14 @@ rand_tens = TensorNum(rand_hess, rand_tensvec)
 #-------------------------#
 function tens_approx_eq(a::TensorNum, b::TensorNum)
     eps = 1e-10
-    @test_approx_eq_eps value(a) value(b) eps
-    @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
-    @test_approx_eq_eps hess(a) hess(b) eps
-    @test_approx_eq_eps tens(a) tens(b) eps
+    try
+        @test_approx_eq_eps value(a) value(b) eps
+        @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
+        @test_approx_eq_eps hess(a) hess(b) eps
+        @test_approx_eq_eps tens(a) tens(b) eps
+    catch err
+        error("Failure: TensorNum a and TensorNum b should be equal.\n Error: $err\n rand_tens = $rand_tens\n test_tens = $test_tens")
+    end
 end
 
 @test hessnum(rand_tens * test_tens) == rand_hess * test_hess
@@ -229,7 +233,7 @@ function tens_test_result(f_expr, x::Vector)
 end
 
 function tens_test_x(fsym, N)
-    randrange = 0.01:.01:.99
+    randrange = .01:.01:.99
 
     needs_modification = tuple(:acosh, :acoth)
     if fsym in needs_modification

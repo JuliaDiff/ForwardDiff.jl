@@ -11,8 +11,8 @@ using ForwardDiff:
         isconstant,
         gradnum
 
-floatrange = 0.0:.01:.99
-intrange = 0:10
+floatrange = .01:.01:.99
+intrange = 1:10
 N = 4
 T = Float64
 C = NTuple{N,T}
@@ -154,9 +154,13 @@ rand_hess = HessianNum(rand_grad, rand_hessvec)
 #-------------------------#
 function hess_approx_eq(a::HessianNum, b::HessianNum)
     eps = 1e-10
-    @test_approx_eq_eps value(a) value(b) eps
-    @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
-    @test_approx_eq_eps hess(a) hess(b) eps
+    try
+        @test_approx_eq_eps value(a) value(b) eps
+        @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
+        @test_approx_eq_eps hess(a) hess(b) eps
+    catch err
+        error("Failure: HessianNum a and HessianNum b should be equal.\n Error: $err\n rand_hess = $rand_hess\n test_hess = $test_hess")
+    end
 end
 
 @test gradnum(rand_hess * test_hess) == rand_grad * test_grad
@@ -210,7 +214,7 @@ function hess_test_result(f_expr, x::Vector)
 end
 
 function hess_test_x(fsym, N)
-    randrange = 0.01:.01:.99
+    randrange = .01:.01:.99
 
     needs_modification = (:acosh, :acoth)
     if fsym in needs_modification
