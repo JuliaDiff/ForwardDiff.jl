@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=nduals-refactor)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl)
 
+[![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=nduals-refactor&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=nduals-refactor)
+
 # ForwardDiff.jl
 
 The `ForwardDiff` package provides a type-based implementation of forward mode automatic differentiation (FAD) in Julia. [The wikipedia page on automatic differentiation](https://en.wikipedia.org/wiki/Automatic_differentiation) is a useful resource for learning about the advantages of FAD techniques over other common differentiation methods (such as [finite differencing](https://en.wikipedia.org/wiki/Numerical_differentiation)).
