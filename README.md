@@ -38,13 +38,13 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 
     Compute `∇f(x)`, storing the output in `output`.
 
-- **`gradient{T}(f, x::Vector{T})`**
+- **`ForwardDiff.gradient{T}(f, x::Vector{T})`**
 
-    Compute `∇f(x)`, where `T` is the element type of both the input and output.
+    Compute `∇f(x)`, where `T` is the element type of both the input and output. `ForwardDiff` must be used as a qualifier when calling `gradient` to avoid conflict with `Base.gradient`.
 
-- **`gradient(f; mutates=false)`**
+- **`ForwardDiff.gradient(f; mutates=false)`**
 
-    Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x) -> gradient(f, x)`. If `mutates = true`, then the returned function has the form `gradf!(output, x) -> gradient!(output, f, x)`. By default, `mutates` is set to `false`.
+    Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x) -> gradient(f, x)`. If `mutates = true`, then the returned function has the form `gradf!(output, x) -> gradient!(output, f, x)`. By default, `mutates` is set to `false`. `ForwardDiff` must be used as a qualifier when calling `gradient` to avoid conflict with `Base.gradient`.
 
 ---
 #### Jacobian of `f: Rⁿ → Rᵐ`

@@ -45,7 +45,6 @@ module ForwardDiff
     export derivative!,
            derivative,
            gradient!,
-           gradient,
            jacobian!,
            jacobian,
            hessian!,
