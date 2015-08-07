@@ -84,7 +84,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 
 [This Math StackExchange post](http://math.stackexchange.com/questions/556951/third-order-term-in-taylor-series) actually has an answer that explains this term fairly clearly.
 
-- **`tensor!{S}(output::Array{S,3}, f, x::Vector)`**
+- **`tensor!{T}(output::Array{T,3}, f, x::Vector)`**
 
     Compute `∑D³f(x)`, storing the output in `output`.
 
