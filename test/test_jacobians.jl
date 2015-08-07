@@ -46,13 +46,13 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
 
         testx = jacob_test_x(fsym, N)
         testresult = jacob_test_result(testexprs, testx)
-        ForwardDiff.jacobian!(testf, testx, testout)
+        ForwardDiff.jacobian!(testout, testf, testx)
         @test_approx_eq testout testresult
 
         @test_approx_eq ForwardDiff.jacobian(testf, testx) testresult
 
         jacf! = ForwardDiff.jacobian(testf, mutates=true)
-        jacf!(testx, testout)
+        jacf!(testout, testx)
         @test_approx_eq testout testresult
 
         jacf = ForwardDiff.jacobian(testf, mutates=false)

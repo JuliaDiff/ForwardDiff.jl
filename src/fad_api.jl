@@ -6,7 +6,7 @@ abstract Dim{N} # used to configure the input dimension of objective function
 
 # Load derivative from ForwardDiffNum #
 #-------------------------------------#
-function load_derivative!(arr::Array, output::Array)
+function load_derivative!(output::Array, arr::Array)
     @assert length(arr) == length(output)
     @simd for i in eachindex(output)
         @inbounds output[i] = grad(arr[i], 1)
@@ -14,17 +14,17 @@ function load_derivative!(arr::Array, output::Array)
     return output
 end
 
-load_derivative(arr::Array) = load_derivative!(arr, similar(arr, eltype(eltype(arr))))
+load_derivative(arr::Array) = load_derivative!(similar(arr, eltype(eltype(arr))), arr)
 load_derivative(n::ForwardDiffNum{1}) = grad(n, 1)
 
 # Derivative from function/Exposed API methods #
 #----------------------------------------------#
-derivative!(f, x::Number, output::Array) = load_derivative!(f(GradientNum(x, one(x))), output)
+derivative!(output::Array, f, x::Number) = load_derivative!(output, f(GradientNum(x, one(x))))
 derivative(f, x::Number) = load_derivative(f(GradientNum(x, one(x))))
 
 function derivative(f; mutates=false)
     if mutates
-        derivf!(x::Number, output::Array) = derivative!(f, x, output)
+        derivf!(output::Array, x::Number) = derivative!(output, f, x)
         return derivf!
     else
         derivf(x::Number) = derivative(f, x)
@@ -38,7 +38,7 @@ end
 
 # Load gradient from ForwardDiffNum #
 #-----------------------------------#
-function load_gradient!(n::ForwardDiffNum, output::Vector)
+function load_gradient!(output::Vector, n::ForwardDiffNum)
     @assert npartials(n) == length(output) "The output vector must be the same length as the input vector"
     @simd for i in eachindex(output)
         @inbounds output[i] = grad(n, i)
@@ -46,7 +46,7 @@ function load_gradient!(n::ForwardDiffNum, output::Vector)
     return output
 end
 
-load_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_gradient!(n, Array(T, N))
+load_gradient{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_gradient!(Array(T, N), n)
 
 # Gradient from function #
 #------------------------#
@@ -67,22 +67,22 @@ function calc_gradnum!{N,T,C}(f,
     return f(gradvec)
 end
 
-take_gradient!(f, x::Vector, output::Vector, gradvec::Vector) = load_gradient!(calc_gradnum!(f, x, gradvec), output)
+take_gradient!(output::Vector, f, x::Vector, gradvec::Vector) = load_gradient!(output, calc_gradnum!(f, x, gradvec))
 take_gradient!(f, x::Vector, gradvec::Vector) = load_gradient(calc_gradnum!(f, x, gradvec))
-take_gradient!{T,D<:Dim}(f, x::Vector{T}, output::Vector, ::Type{D}) = take_gradient!(f, x, output, grad_workvec(D, T))
+take_gradient!{T,D<:Dim}(output::Vector, f, x::Vector{T}, ::Type{D}) = take_gradient!(output, f, x, grad_workvec(D, T))
 take_gradient{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_gradient!(f, x, grad_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-gradient!{T,S}(f, x::Vector{T}, output::Vector{S}) = take_gradient!(f, x, output, Dim{length(x)})::Vector{S}
-gradient{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_gradient(f, x, Dim{length(x)})::Vector{S}
+gradient!{T}(output::Vector{T}, f, x::Vector) = take_gradient!(output, f, x, Dim{length(x)})::Vector{T}
+gradient{T}(f, x::Vector{T}) = take_gradient(f, x, Dim{length(x)})::Vector{T}
 
 function gradient(f; mutates=false)
     if mutates
-        gradf!(x::Vector, output::Vector) = gradient!(f, x, output)
+        gradf!(output::Vector, x::Vector) = gradient!(output, f, x)
         return gradf!
     else
-        gradf{T,S}(x::Vector{T}, ::Type{S}=T) = gradient(f, x, S)
+        gradf(x::Vector) = gradient(f, x)
         return gradf
     end
 end
@@ -93,7 +93,7 @@ end
 
 # Load Jacobian from ForwardDiffNum #
 #-----------------------------------#
-function load_jacobian!(jacvec::Vector, output)
+function load_jacobian!(output, jacvec::Vector)
     # assumes jacvec is actually homogenous,
     # though it may not be well-inferenced.
     N = npartials(first(jacvec))
@@ -107,7 +107,7 @@ function load_jacobian(jacvec::Vector)
     # assumes jacvec is actually homogenous,
     # though it may not be well-inferenced.
     F = typeof(first(jacvec))
-    return load_jacobian!(jacvec, Array(eltype(F), length(jacvec), npartials(F)))
+    return load_jacobian!(Array(eltype(F), length(jacvec), npartials(F)), jacvec)
 end
 
 # Jacobian from function #
@@ -129,22 +129,22 @@ function calc_jacnum!{N,T,C}(f,
     return f(gradvec)
 end
 
-take_jacobian!(f, x::Vector, output::Matrix, gradvec::Vector) = load_jacobian!(calc_jacnum!(f, x, gradvec), output)
+take_jacobian!(output::Matrix, f, x::Vector, gradvec::Vector) = load_jacobian!(output, calc_jacnum!(f, x, gradvec))
 take_jacobian!(f, x::Vector, gradvec::Vector) = load_jacobian(calc_jacnum!(f, x, gradvec))
-take_jacobian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D}) = take_jacobian!(f, x, output, grad_workvec(D, T))
+take_jacobian!{T,D<:Dim}(output::Matrix, f, x::Vector{T}, ::Type{D}) = take_jacobian!(output, f, x, grad_workvec(D, T))
 take_jacobian{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_jacobian!(f, x, grad_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-jacobian!{T}(f, x::Vector{T}, output::Matrix{T}) = take_jacobian!(f, x, output, Dim{length(x)})::Matrix{T}
-jacobian{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_jacobian(f, x, Dim{length(x)})::Matrix{S}
+jacobian!{T}(output::Matrix{T}, f, x::Vector) = take_jacobian!(output, f, x, Dim{length(x)})::Matrix{T}
+jacobian{T}(f, x::Vector{T}) = take_jacobian(f, x, Dim{length(x)})::Matrix{T}
 
 function jacobian(f; mutates=false)
     if mutates
-        jacf!(x::Vector, output::Matrix) = jacobian!(f, x, output)
+        jacf!(output::Matrix, x::Vector) = jacobian!(output, f, x)
         return jacf!
     else
-        jacf{T,S}(x::Vector{T}, ::Type{S}=T) = jacobian(f, x, S)
+        jacf(x::Vector) = jacobian(f, x)
         return jacf
     end
 end
@@ -155,7 +155,7 @@ end
 
 # Load Hessian from ForwardDiffNum #
 #----------------------------------#
-function load_hessian!{N}(n::ForwardDiffNum{N}, output)
+function load_hessian!{N}(output, n::ForwardDiffNum{N})
     @assert (N, N) == size(output) "The output matrix must have size (length(input), length(input))"
     q = 1
     for i in 1:N
@@ -169,7 +169,7 @@ function load_hessian!{N}(n::ForwardDiffNum{N}, output)
     return output
 end
 
-load_hessian{N,T}(n::ForwardDiffNum{N,T}) = load_hessian!(n, Array(T, N, N))
+load_hessian{N,T}(n::ForwardDiffNum{N,T}) = load_hessian!(Array(T, N, N), n)
 
 # Hessian from function #
 #-----------------------#
@@ -191,22 +191,22 @@ function calc_hessnum!{N,T,C}(f,
     return f(hessvec)
 end
 
-take_hessian!(f, x::Vector, output::Matrix, hessvec::Vector) = load_hessian!(calc_hessnum!(f, x, hessvec), output)
+take_hessian!(output::Matrix, f, x::Vector, hessvec::Vector) = load_hessian!(output, calc_hessnum!(f, x, hessvec))
 take_hessian!(f, x::Vector, hessvec::Vector) = load_hessian(calc_hessnum!(f, x, hessvec))
-take_hessian!{T,D<:Dim}(f, x::Vector{T}, output::Matrix, ::Type{D}) = take_hessian!(f, x, output, hess_workvec(D, T))
+take_hessian!{T,D<:Dim}(output::Matrix, f, x::Vector{T}, ::Type{D}) = take_hessian!(output, f, x, hess_workvec(D, T))
 take_hessian{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_hessian!(f, x, hess_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-hessian!{T,S}(f, x::Vector{T}, output::Matrix{S}) = take_hessian!(f, x, output, Dim{length(x)})::Matrix{S}
-hessian{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_hessian(f, x, Dim{length(x)})::Matrix{S}
+hessian!{T}(output::Matrix{T}, f, x::Vector) = take_hessian!(output, f, x, Dim{length(x)})::Matrix{T}
+hessian{T}(f, x::Vector{T}) = take_hessian(f, x, Dim{length(x)})::Matrix{T}
 
 function hessian(f; mutates=false)
     if mutates
-        hessf!(x::Vector, output::Matrix) = hessian!(f, x, output)
+        hessf!(output::Matrix, x::Vector) = hessian!(output, f, x)
         return hessf!
     else
-        hessf{T,S}(x::Vector{T}, ::Type{S}=T) = hessian(f, x, S)
+        hessf(x::Vector) = hessian(f, x)
         return hessf
     end
 end
@@ -217,7 +217,7 @@ end
 
 # Load Tensor from ForwardDiffNum #
 #---------------------------------#
-function load_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
+function load_tensor!{N,T,C}(output, n::ForwardDiffNum{N,T,C})
     @assert (N, N, N) == size(output) "The output array must have size (length(input), length(input), length(input))"
     
     q = 1
@@ -251,7 +251,7 @@ function load_tensor!{N,T,C}(n::ForwardDiffNum{N,T,C}, output)
     return output
 end
 
-load_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_tensor!(n, Array(T, N, N, N))
+load_tensor{N,T,C}(n::ForwardDiffNum{N,T,C}) = load_tensor!(Array(T, N, N, N), n)
 
 # Tensor from function #
 #----------------------#
@@ -274,22 +274,22 @@ function calc_tensnum!{N,T,C}(f,
     return f(tensvec)
 end
 
-take_tensor!{S}(f, x::Vector, output::Array{S,3}, tensvec::Vector) = load_tensor!(calc_tensnum!(f, x, tensvec), output)
+take_tensor!{S}(output::Array{S,3}, f, x::Vector, tensvec::Vector) = load_tensor!(output, calc_tensnum!(f, x, tensvec))
 take_tensor!(f, x::Vector, tensvec::Vector) = load_tensor(calc_tensnum!(f, x, tensvec))
-take_tensor!{T,S,D<:Dim}(f, x::Vector{T}, output::Array{S,3}, ::Type{D}) = take_tensor!(f, x, output, tens_workvec(D, T))
+take_tensor!{T,S,D<:Dim}(output::Array{S,3}, f, x::Vector{T}, ::Type{D}) = take_tensor!(output, f, x, tens_workvec(D, T))
 take_tensor{T,D<:Dim}(f, x::Vector{T}, ::Type{D}) = take_tensor!(f, x, tens_workvec(D, T))
 
 # Exposed API methods #
 #---------------------#
-tensor!{T,S}(f, x::Vector{T}, output::Array{S,3}) = take_tensor!(f, x, output, Dim{length(x)})::Array{S,3}
-tensor{T,S}(f, x::Vector{T}, ::Type{S}=T) = take_tensor(f, x, Dim{length(x)})::Array{S,3}
+tensor!{T}(output::Array{T,3}, f, x::Vector) = take_tensor!(output, f, x, Dim{length(x)})::Array{T,3}
+tensor{T}(f, x::Vector{T}) = take_tensor(f, x, Dim{length(x)})::Array{T,3}
 
 function tensor(f; mutates=false)
     if mutates
-        tensf!{T}(x::Vector, output::Array{T,3}) = tensor!(f, x, output)
+        tensf!{T}(output::Array{T,3}, x::Vector) = tensor!(output, f, x)
         return tensf!
     else
-        tensf{T,S}(x::Vector{T}, ::Type{S}=T) = tensor(f, x, S)
+        tensf(x::Vector) = tensor(f, x)
         return tensf
     end
 end

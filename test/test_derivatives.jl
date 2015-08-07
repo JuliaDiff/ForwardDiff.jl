@@ -9,6 +9,8 @@ N = 4
 M = 2N
 L = 3N
 
+testout = Array(Float64, N, M, L)
+
 function deriv_test_x(fsym)
     randrange = 0.01:.01:.99
     needs_rand_mod = tuple(acosh, acoth, asec, acsc, asecd, acscd)
@@ -44,7 +46,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
 
             test_approx_deriv(result_arr, ForwardDiff.derivative(testdf_arr, x))
             test_approx_deriv(result_arr, ForwardDiff.derivative(testdf_arr)(x))
-            test_approx_deriv(result_arr, ForwardDiff.derivative!(testdf_arr, x, Array(Float64, N, M, L)))
+            test_approx_deriv(result_arr, ForwardDiff.derivative!(testout, testdf_arr, x))
         end
     catch err
         error("Failure when testing derivative of $fsym: $err")

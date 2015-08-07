@@ -236,13 +236,13 @@ for fsym in ForwardDiff.univar_hess_funcs
         testx = hess_test_x(fsym, N)
         testresult = hess_test_result(testexpr, testx)
 
-        ForwardDiff.hessian!(testf, testx, testout)
+        ForwardDiff.hessian!(testout, testf, testx)
         @test_approx_eq testout testresult
 
         @test_approx_eq ForwardDiff.hessian(testf, testx) testresult
 
         hessf! = ForwardDiff.hessian(testf, mutates=true)
-        hessf!(testx, testout)
+        hessf!(testout, testx)
         @test_approx_eq testout testresult
 
         hessf = ForwardDiff.hessian(testf, mutates=false)
