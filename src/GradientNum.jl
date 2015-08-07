@@ -1,12 +1,19 @@
 immutable GradientNum{N,T,C} <: ForwardDiffNum{N,T,C}
     value::T
     grad::C
-    GradientNum(value, grad::Tuple) = new(value, grad)
-    GradientNum(value, grad::Vector) = new(value, grad)
+    GradientNum(value::T, grad::NTuple{N,T}) = new(value, grad)
+    GradientNum(value::T, grad::Vector{T}) = new(value, grad)
+    GradientNum(value, grad::Tuple) = GradientNum{N,T,C}(convert(T,value), convert(NTuple{N,T}, grad))
+    GradientNum(value, grad::Vector) = GradientNum{N,T,C}(convert(T,value), convert(Vector{T}, grad))
 end
 
 typealias GradNumTup{N,T} GradientNum{N,T,NTuple{N,T}}
 typealias GradNumVec{N,T} GradientNum{N,T,Vector{T}}
+
+function GradientNum{N,T}(value, grad::NTuple{N,T})
+    S = promote_type(typeof(value), T)
+    return GradientNum{N,S,NTuple{N,S}}(convert(S, value), convert(NTuple{N,S},grad))
+end
 
 GradientNum{N,T}(value::T, grad::NTuple{N,T}) = GradientNum{N,T,NTuple{N,T}}(value, grad)
 GradientNum{T}(value::T, grad::T...) = GradientNum(value, grad)
