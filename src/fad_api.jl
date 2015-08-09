@@ -4,8 +4,8 @@
 
 # Exposed API methods #
 #---------------------#
-derivative!(output::Array, f, x::Number) = load_derivative!(output, f(GradientNum(x, one(x))))
-derivative(f, x::Number) = load_derivative(f(GradientNum(x, one(x))))
+derivative!(output::Array, f, x::Number) = load_derivative!(output, f(GradientNumber(x, one(x))))
+derivative(f, x::Number) = load_derivative(f(GradientNumber(x, one(x))))
 
 function derivative(f; mutates=false)
     if mutates
@@ -28,7 +28,7 @@ function load_derivative!(output::Array, arr::Array)
 end
 
 load_derivative(arr::Array) = load_derivative!(similar(arr, eltype(eltype(arr))), arr)
-load_derivative(n::ForwardDiffNum{1}) = grad(n, 1)
+load_derivative(n::ForwardDiffNumber{1}) = grad(n, 1)
 
 ####################
 # Taking Gradients #
@@ -71,13 +71,13 @@ end
 function calc_gradient!{S,N,T,C}(output::Vector{S},
                                  f::Function,
                                  x::Vector{T},
-                                 gradvec::Vector{GradientNum{N,T,C}},
+                                 gradvec::Vector{GradientNumber{N,T,C}},
                                  pchunk=gen_partials_chunk(eltype(gradvec))) 
     xlen = length(x)
     G = eltype(gradvec)
 
     @assert xlen == length(output) "The output array must be the same length as x"
-    @assert xlen == length(gradvec) "The GradientNum vector must be the same length as the input vector"
+    @assert xlen == length(gradvec) "The GradientNumber vector must be the same length as the input vector"
     @assert xlen % N == 0 "Length of input vector is indivisible by chunk size (length(x) = $xlen, chunk size = $N)"
 
     # We can do less work filling and
@@ -95,13 +95,13 @@ function calc_gradient!{S,N,T,C}(output::Vector{S},
     else
         zpartials = zero_partials(G)
 
-        # load x[i]-valued GradientNums into gradvec 
+        # load x[i]-valued GradientNumbers into gradvec 
         @simd for i in 1:xlen
             @inbounds gradvec[i] = G(x[i], zpartials)
         end
 
         for i in 1:N:xlen
-            # load GradientNums with single
+            # load GradientNumbers with single
             # partial components into current 
             # chunk of gradvec
             @simd for j in 0:(N-1)
@@ -141,7 +141,7 @@ function pick_gradvec!{T}(gradvecs::Dict, x::Vector{T}, chunk_size)
     end
 end
 
-function pick_partials!{N,T,C}(partial_chunks::Dict, G::Type{GradientNum{N,T,C}})
+function pick_partials!{N,T,C}(partial_chunks::Dict, G::Type{GradientNumber{N,T,C}})
     if haskey(partial_chunks, G)
         return partial_chunks[G]
     else
@@ -153,12 +153,12 @@ end
 
 function gen_gradvec{T}(x::Vector{T}, chunk_size::Int)
     N = chunk_size
-    return Vector{GradientNum{N,T,NTuple{N,T}}}(length(x))
+    return Vector{GradientNumber{N,T,NTuple{N,T}}}(length(x))
 end
 
 function gen_gradvec{T}(x::Vector{T}, chunk_size::Void)
     N = length(x)
-    return Vector{GradientNum{N,T,pick_implementation(T, N)}}(length(x))
+    return Vector{GradientNumber{N,T,pick_implementation(T, N)}}(length(x))
 end
 
 ####################
@@ -191,7 +191,7 @@ end
 
 # Helper functions #
 #------------------#
-zero_partials{N,T,C}(::Type{HessianNum{N,T,C}}) = zeros(T, halfhesslen(N))
+zero_partials{N,T,C}(::Type{HessianNumber{N,T,C}}) = zeros(T, halfhesslen(N))
 
 ##################
 # Taking Tensors #
@@ -207,7 +207,7 @@ zero_partials{N,T,C}(::Type{HessianNum{N,T,C}}) = zeros(T, halfhesslen(N))
 
 # Helper functions #
 #------------------#
-zero_partials{N,T,C}(::Type{TensorNum{N,T,C}}) = zeros(T, halftenslen(N))
+zero_partials{N,T,C}(::Type{TensorNumber{N,T,C}}) = zeros(T, halftenslen(N))
 
 ############################
 # General Helper Functions #

@@ -2,7 +2,7 @@ using Base.Test
 using Calculus
 using ForwardDiff
 using ForwardDiff: 
-        GradientNum,
+        GradientNumber,
         value,
         grad,
         npartials,
@@ -60,7 +60,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     const_grad = Grad{N,T}(float_val)
 
     @test convert(typeof(test_grad), test_grad) == test_grad
-    @test convert(GradientNum, test_grad) == test_grad
+    @test convert(GradientNumber, test_grad) == test_grad
     @test convert(Grad{N,T}, int_grad) == float_grad
     @test convert(Grad{0,T}, 1) == Grad{0,T}(1.0, ForwardDiff.zero_partials(Grad{0,T}))
     @test convert(Grad{3,T}, 1) == Grad{3,T}(1.0, ForwardDiff.zero_partials(Grad{3,T}))
@@ -153,7 +153,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     # Division #
     #----------#
-    function grad_approx_eq(a::GradientNum, b::GradientNum)
+    function grad_approx_eq(a::GradientNumber, b::GradientNumber)
         @test_approx_eq value(a) value(b)
         @test_approx_eq collect(grad(a)) collect(grad(b))
     end
@@ -191,7 +191,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
             catch DomainError
                 # some of the provided functions
                 # have a domain x > 1, so we simply
-                # add 1 to our test GradientNum if
+                # add 1 to our test GradientNumber if
                 # a DomainError is thrown
                 orig_grad = $test_grad + 1
                 f_grad = func(orig_grad)
