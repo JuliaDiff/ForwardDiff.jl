@@ -6,7 +6,7 @@ The `ForwardDiff` package provides a type-based implementation of forward mode a
 
 ## What can I do with this package?
 
-This package contains methods to efficiently take derivatives, Jacobians, and Hessians of native Julia functions (or any callable object, really). While performance varies depending on the functions you evaluate, this package generally outperforms non-AD methods in memory usage, speed, and accuracy.
+This package contains methods to take derivatives, gradients, Jacobians, and Hessians of native Julia functions (or any callable object, really). While performance varies depending on the functions you evaluate, this package generally outperforms non-AD methods in memory usage, speed, and accuracy.
 
 A third-order generalization of the Hessian is also implemented (see `tensor` below). 
 
