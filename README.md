@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=nduals-refactor)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=nduals-refactor&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=nduals-refactor)
+[![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=api-refactor)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=api-refactor&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=api-refactor)
 
 # ForwardDiff.jl
 
@@ -15,7 +15,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
 ## Usage
 
 ---
-#### Derivative of `f: R → R` or `f: R → Rᵐ¹ × Rᵐ² × ⋯ × Rᵐⁱ`
+#### Derivative of `f(x::Number) → Number` or `f(x::Number) → Array`
 ---
 
 - **`derivative!(output::Array, f, x::Number)`**
@@ -31,7 +31,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
     Return the function `f'`. If `mutates=false`, then the returned function has the form `derivf(x) -> derivative(f, x)`. If `mutates = true`, then the returned function has the form `derivf!(output, x) -> derivative!(output, f, x)`.
 
 ---
-#### Gradient of `f: Rⁿ → R`
+#### Gradient of `f(x::Vector) → Number`
 ---
 
 - **`gradient!(output::Vector, f, x::Vector)`**
@@ -47,7 +47,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
     Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x) -> gradient(f, x)`. If `mutates = true`, then the returned function has the form `gradf!(output, x) -> gradient!(output, f, x)`. By default, `mutates` is set to `false`. `ForwardDiff` must be used as a qualifier when calling `gradient` to avoid conflict with `Base.gradient`.
 
 ---
-#### Jacobian of `f: Rⁿ → Rᵐ`
+#### Jacobian of `f(x:Vector) → Vector`
 ---
 
 - **`jacobian!(output::Matrix, f, x::Vector)`**
@@ -63,7 +63,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
     Return the function `J(f)`. If `mutates=false`, then the returned function has the form `jacf(x) -> jacobian(f, x)`. If `mutates = true`, then the returned function has the form `jacf!(output, x) -> jacobian!(output, f, x)`. By default, `mutates` is set to `false`.
 
 ---
-#### Hessian of `f: Rⁿ → R`
+#### Hessian of `f(x::Vector) → Number`
 ---
 
 - **`hessian!(output::Matrix, f, x::Vector)`**
@@ -79,7 +79,7 @@ For now, we only support for functions involving `T<:Real`s, but we believe exte
     Return the function `H(f)`. If `mutates=false`, then the returned function has the form `hessf(x) -> hessian(f, x, S)`. If `mutates = true`, then the returned function has the form `hessf!(output, x) -> hessian!(output, f, x)`. By default, `mutates` is set to `false`.
 
 ---
-#### Third-order Taylor series term of `f: Rⁿ → R`
+#### Third-order Taylor series term of `f(x::Vector) → Number`
 ---
 
 [This Math StackExchange post](http://math.stackexchange.com/questions/556951/third-order-term-in-taylor-series) actually has an answer that explains this term fairly clearly.
