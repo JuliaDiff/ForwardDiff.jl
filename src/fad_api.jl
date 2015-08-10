@@ -1,3 +1,8 @@
+# NOTE: Following convention, methods whose names are
+# prefixed with an underscore are unsafe to use outside of
+# a strictly controlled context - such methods assume that
+# all boundary-checking is done by the caller.
+
 ######################
 # Taking Derivatives #
 ######################
@@ -36,12 +41,12 @@ load_derivative(n::ForwardDiffNumber{1}) = grad(n, 1)
 
 # Exposed API methods #
 #---------------------#
-function gradient!{T}(output::Vector{T}, f, x::Vector; chunk_size=nothing)
+function gradient!(output::Vector, f, x::Vector; chunk_size=nothing)
     gradvec = gen_gradvec(x, chunk_size)
     return calc_gradient!(output, f, x, gradvec)
 end
 
-function gradient{T}(f, x::Vector{T}; chunk_size=nothing)
+function gradient(f, x::Vector; chunk_size=nothing)
     gradvec = gen_gradvec(x, chunk_size)
     return calc_gradient!(similar(x), f, x, gradvec)
 end
@@ -50,14 +55,14 @@ function gradient(f; mutates=false)
     gradvecs = Dict()
     partial_chunks = Dict()
     if mutates
-        function gradf!{T}(output::Vector, x::Vector{T}; chunk_size=nothing)
+        function gradf!(output::Vector, x::Vector; chunk_size=nothing)
             gradvec = pick_gradvec!(gradvecs, x, chunk_size)
             pchunk = pick_partials!(partial_chunks, eltype(gradvec))
             return calc_gradient!(output, f, x, gradvec, pchunk)
         end
         return gradf!
     else
-        function gradf{T}(x::Vector{T}; chunk_size=nothing)
+        function gradf(x::Vector; chunk_size=nothing)
             gradvec = pick_gradvec!(gradvecs, x, chunk_size)
             pchunk = pick_partials!(partial_chunks, eltype(gradvec))
             return calc_gradient!(similar(x), f, x, gradvec, pchunk)
@@ -69,23 +74,18 @@ end
 # Calculate gradient of a given function #
 #----------------------------------------#
 function calc_gradient!{S,N,T,C}(output::Vector{S},
-                                 f::Function,
+                                 f,
                                  x::Vector{T},
                                  gradvec::Vector{GradientNumber{N,T,C}},
                                  pchunk=gen_partials_chunk(eltype(gradvec))) 
     xlen = length(x)
     G = eltype(gradvec)
 
-    @assert xlen == length(output) "The output array must be the same length as x"
-    @assert xlen == length(gradvec) "The GradientNumber vector must be the same length as the input vector"
-    @assert xlen % N == 0 "Length of input vector is indivisible by chunk size (length(x) = $xlen, chunk size = $N)"
+    @assert xlen == length(output) "The output vector must be the same length as the input vector"
+    perform_gradvec_assertions(xlen, gradvec)
 
-    # We can do less work filling and
-    # zeroing out gradvec if xlen == N
     if xlen == N
-        @simd for i in eachindex(gradvec)
-            @inbounds gradvec[i] = G(x[i], pchunk[i])
-        end
+        _load_gradvec_with_x_partials!(gradvec, x, pchunk)
 
         result = f(gradvec)
 
@@ -95,20 +95,11 @@ function calc_gradient!{S,N,T,C}(output::Vector{S},
     else
         zpartials = zero_partials(G)
 
-        # load x[i]-valued GradientNumbers into gradvec 
-        @simd for i in 1:xlen
-            @inbounds gradvec[i] = G(x[i], zpartials)
-        end
+        _load_gradvec_with_x_zeros!(gradvec, x, zpartials)
 
         for i in 1:N:xlen
-            # load GradientNumbers with single
-            # partial components into current 
-            # chunk of gradvec
-            @simd for j in 0:(N-1)
-                m = i+j
-                @inbounds gradvec[m] = G(x[m], pchunk[j+1])
-            end
-
+            _load_gradvec_with_x_partials!(gradvec, x, zpartials, i)
+            
             chunk_result = f(gradvec)
 
             # load resultant partials components
@@ -127,8 +118,38 @@ end
 
 # Helper functions #
 #------------------#
+function perform_gradvec_assertions{N,T,C}(xlen, gradvec::Vector{GradientNumber{N,T,C}})
+    @assert xlen == length(gradvec) "The GradientNumber vector must be the same length as the input vector"
+    @assert xlen % N == 0 "Length of input vector is indivisible by chunk size (length(x) = $xlen, chunk size = $N)"
+end
+
+function _load_gradvec_with_x_partials!(gradvec, x, pchunk)
+    # fill gradvec with GradientNumbers of single partial components
+    G = eltype(gradvec)
+    @simd for i in eachindex(gradvec)
+        @inbounds gradvec[i] = G(x[i], pchunk[i])
+    end
+end
+
+function _load_gradvec_with_x_partials!{N,T,C}(gradvec::Vector{GradientNumber{N,T,C}}, x, pchunk, init)
+    # fill current chunk gradvec with GradientNumbers of single partial components
+    G = eltype(gradvec)
+    @simd for j in 0:(N-1)
+        m = init+j
+        @inbounds gradvec[m] = G(x[m], pchunk[j+1])
+    end
+end
+
+function _load_gradvec_with_x_zeros!(gradvec, x, zpartials)
+    # fill gradvec with x[i]-valued GradientNumbers
+    G = eltype(gradvec)
+    @simd for i in eachindex(x)
+        @inbounds gradvec[i] = G(x[i], zpartials)
+    end
+end
+
 zero_partials{N,T}(::Type{GradNumVec{N,T}}) = zeros(T, N)
-zero_partials{N,T}(::Type{GradNumTup{N,T}}) = (z = zero(T); return ntuple(i->z, Val{N}))
+zero_partials{N,T}(::Type{GradNumTup{N,T}}) = zero_tuple(NTuple{N,T})
 
 function pick_gradvec!{T}(gradvecs::Dict, x::Vector{T}, chunk_size)
     key = (T, length(x), chunk_size)
@@ -167,15 +188,145 @@ end
 
 # Exposed API methods #
 #---------------------#
-# TODO
+function jacobian!(output::Matrix, f, x::Vector; chunk_size=nothing)
+    gradvec = gen_gradvec(x, chunk_size)
+    return calc_jacobian!(output, f, x, gradvec)
+end
+
+function jacobian(f, x::Vector; chunk_size=nothing)
+    gradvec = gen_gradvec(x, chunk_size)
+    return calc_jacobian(f, x, gradvec)
+end
+
+function jacobian(f; mutates=false)
+    gradvecs = Dict()
+    partial_chunks = Dict()
+    if mutates
+        function jacf!(output::Matrix, x::Vector; chunk_size=nothing)
+            gradvec = pick_gradvec!(gradvecs, x, chunk_size)
+            pchunk = pick_partials!(partial_chunks, eltype(gradvec))
+            return calc_jacobian!(output, f, x, gradvec, pchunk)
+        end
+        return jacf!
+    else
+        function jacf(x::Vector; chunk_size=nothing)
+            gradvec = pick_gradvec!(gradvecs, x, chunk_size)
+            pchunk = pick_partials!(partial_chunks, eltype(gradvec))
+            return calc_jacobian(f, x, gradvec, pchunk)
+        end
+        return jacf
+    end
+end
 
 # Calculate Jacobian of a given function #
 #----------------------------------------#
-# TODO
+function calc_jacobian!{S,N,T,C}(output::Matrix{S},
+                                 f,
+                                 x::Vector{T},
+                                 gradvec::Vector{GradientNumber{N,T,C}},
+                                 pchunk=gen_partials_chunk(eltype(gradvec))) 
+    xlen = length(x)
+    G = eltype(gradvec)
+
+    @assert xlen == size(output, 2) "The output matrix must have a number of columns equal to the length of the input vector"
+    perform_gradvec_assertions(xlen, gradvec)
+
+    if xlen == N
+        _load_gradvec_with_x_partials!(gradvec, x, pchunk)
+
+        result = f(gradvec)
+
+        for i in eachindex(result), j in eachindex(x)
+            output[i,j] = grad(result[i], j)
+        end
+    else
+        zpartials = zero_partials(G)
+
+        _load_gradvec_with_x_zeros!(gradvec, x, zpartials)
+
+        _calc_jac_chunks!(output, f, x, gradvec, pchunk, zpartials, 1)
+    end
+
+    return output::Matrix{S}
+end
+
+function calc_jacobian{N,T,C}(f,
+                              x::Vector{T},
+                              gradvec::Vector{GradientNumber{N,T,C}},
+                              pchunk=gen_partials_chunk(eltype(gradvec))) 
+    xlen = length(x)
+    G = eltype(gradvec)
+
+    perform_gradvec_assertions(xlen, gradvec)
+
+    if xlen == N
+        _load_gradvec_with_x_partials!(gradvec, x, pchunk)
+
+        result = f(gradvec)
+        output = Array(T, length(result), xlen)
+
+        for i in eachindex(result), j in eachindex(x)
+            output[i,j] = grad(result[i], j)
+        end
+    else
+        zpartials = zero_partials(G)
+
+        _load_gradvec_with_x_zeros!(gradvec, x, zpartials)
+
+        # Perform the first chunk "manually" so that
+        # we get to inspect the size of the output
+        i = 1
+
+        _load_gradvec_with_x_partials!(gradvec, x, pchunk, i)
+
+        chunk_result = f(gradvec)
+
+        output = Array(T, length(chunk_result), xlen)
+
+        for j in 0:(N-1)
+            m = i+j
+            current_partial = j+1
+            for n in 1:size(output,1)
+                @inbounds output[n,m] = grad(chunk_result[n], current_partial)
+            end
+            @inbounds gradvec[m] = G(x[m], zpartials)
+        end
+
+        # Now perform the rest of the chunks, filling in the output matrix
+        _calc_jac_chunks!(output, f, x, gradvec, pchunk, zpartials, N+1)
+    end
+
+    return output::Matrix{T}
+end
 
 # Helper functions #
 #------------------#
-# TODO
+function _calc_jac_chunks!{N,T,C}(output,
+                                  f,
+                                  x::Vector{T}, 
+                                  gradvec::Vector{GradientNumber{N,T,C}},
+                                  pchunk, 
+                                  zpartials, 
+                                  init)
+    G = eltype(gradvec)
+
+    for i in init:N:length(x)
+        _load_gradvec_with_x_partials!(gradvec, x, pchunk, i)
+
+        chunk_result = f(gradvec)
+
+        for j in 0:(N-1)
+            m = i+j
+            current_partial = j+1
+            for n in 1:size(output,1)
+                @inbounds output[n,m] = grad(chunk_result[n], current_partial)
+            end
+            @inbounds gradvec[m] = G(x[m], zpartials)
+        end
+    end
+
+    return output
+end
 
 ###################
 # Taking Hessians #
