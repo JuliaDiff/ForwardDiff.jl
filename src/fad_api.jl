@@ -98,7 +98,7 @@ function calc_gradient!{S,N,T,C}(output::Vector{S},
         _load_gradvec_with_x_zeros!(gradvec, x, zpartials)
 
         for i in 1:N:xlen
-            _load_gradvec_with_x_partials!(gradvec, x, zpartials, i)
+            _load_gradvec_with_x_partials!(gradvec, x, pchunk, i)
             
             chunk_result = f(gradvec)
 
