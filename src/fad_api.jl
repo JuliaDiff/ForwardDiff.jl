@@ -514,7 +514,7 @@ function build_workvec{F,T}(::Type{F}, x::Vector{T}, chunk_size::Void)
 end
 
 function build_workvec{T}(::Type{HessianNumber}, x::Vector{T}, chunk_size::Int)
-    N = chunk_size + 1
+    N = chunk_size == length(x) ? chunk_size : chunk_size + 1
     return Vector{HessianNumber{N,T,NTuple{N,T}}}(length(x))
 end
 
