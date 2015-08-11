@@ -399,7 +399,7 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
         # |   |   |   |   | 3 | 3 |
         # -------------------------
         for i in 1:M:xlen
-            @simd for j in 1:N
+            @simd for j in 1:M
                 q = i+j-1
                 @inbounds hessvec[q] = HessianNumber(G(x[q], partials_chunk[j]), zero_hess_partials)
             end
@@ -416,7 +416,7 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
                 end
             end
 
-            @simd for j in 1:N
+            @simd for j in 1:M
                 q = i+j-1
                 @inbounds hessvec[q] = HessianNumber(G(x[q], zero_grad_partials), zero_hess_partials)
             end
