@@ -81,7 +81,6 @@ function _calc_gradient!{S,N,T,C}(output::Vector{S},
     G = eltype(gradvec)
 
     @assert xlen == length(output) "The output vector must be the same length as the input vector"
-    chunk_assertion(xlen, N)
 
     if xlen == N
         _load_gradvec_with_x_partials!(gradvec, x, partials_chunk)
@@ -92,6 +91,8 @@ function _calc_gradient!{S,N,T,C}(output::Vector{S},
             @inbounds output[i] = grad(result, i)
         end
     else
+        chunk_assertion(xlen, N)
+
         zero_partials = build_zero_partials(G)
 
         _load_gradvec_with_x_zeros!(gradvec, x, zero_partials)
@@ -193,7 +194,6 @@ function _calc_jacobian!{S,N,T,C}(output::Matrix{S},
     G = eltype(gradvec)
 
     @assert xlen == size(output, 2) "The output matrix must have a number of columns equal to the length of the input vector"
-    chunk_assertion(xlen, N)
 
     if xlen == N
         _load_gradvec_with_x_partials!(gradvec, x, partials_chunk)
@@ -204,6 +204,8 @@ function _calc_jacobian!{S,N,T,C}(output::Matrix{S},
             output[i,j] = grad(result[i], j)
         end
     else
+        chunk_assertion(xlen, N)
+
         zero_partials = build_zero_partials(G)
 
         _load_gradvec_with_x_zeros!(gradvec, x, zero_partials)
@@ -221,8 +223,6 @@ function _calc_jacobian{N,T,C}(f,
     xlen = length(x)
     G = eltype(gradvec)
 
-    chunk_assertion(xlen, N)
-
     if xlen == N
         _load_gradvec_with_x_partials!(gradvec, x, partials_chunk)
 
@@ -233,6 +233,8 @@ function _calc_jacobian{N,T,C}(f,
             output[i,j] = grad(result[i], j)
         end
     else
+        chunk_assertion(xlen, N)
+
         zero_partials = build_zero_partials(G)
 
         _load_gradvec_with_x_zeros!(gradvec, x, zero_partials)
@@ -336,7 +338,6 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
                                  partials_chunk=build_partials_chunk(eltype(hessvec))) 
     xlen = length(x)
     G = GradientNumber{N,T,C}
-    H = eltype(hessvec)
 
     @assert (xlen, xlen) == size(output) "The output matrix must have size (length(input), length(input))"
     
@@ -344,10 +345,8 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
     zero_hess_partials = zeros(T, halfhesslen(N))
 
     if xlen == N
-        chunk_assertion(xlen, N)
-
         @simd for i in eachindex(hessvec)
-            @inbounds hessvec[i] = H(G(x[i], partials_chunk[i]), zero_hess_partials)
+            @inbounds hessvec[i] = HessianNumber(G(x[i], partials_chunk[i]), zero_hess_partials)
         end
 
         result = f(hessvec)
@@ -373,7 +372,7 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
         zero_grad_partials = build_zero_partials(G)
 
         @simd for i in eachindex(x)
-            @inbounds hessvec[i] = H(G(x[i], zero_grad_partials), zero_hess_partials) 
+            @inbounds hessvec[i] = HessianNumber(G(x[i], zero_grad_partials), zero_hess_partials) 
         end
 
         # The below loop fills triangular blocks 
@@ -402,7 +401,7 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
         for i in 1:M:xlen
             @simd for j in 1:N
                 q = i+j-1
-                @inbounds hessvec[q] = H(G(x[q], partials_chunk[j]), zero_hess_partials)
+                @inbounds hessvec[q] = HessianNumber(G(x[q], partials_chunk[j]), zero_hess_partials)
             end
 
             chunk_result = f(hessvec)
@@ -419,7 +418,7 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
 
             @simd for j in 1:N
                 q = i+j-1
-                @inbounds hessvec[q] = H(G(x[q], zero_grad_partials), zero_hess_partials)
+                @inbounds hessvec[q] = HessianNumber(G(x[q], zero_grad_partials), zero_hess_partials)
             end
         end
 
@@ -446,11 +445,11 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
             col_offset = offset - M
             for j in 1:M
                 col = col_offset + j
-                @inbounds hessvec[col] = H(G(x[col], partials_chunk[1]), zero_hess_partials)
+                @inbounds hessvec[col] = HessianNumber(G(x[col], partials_chunk[1]), zero_hess_partials)
                 for row_offset in offset:M:(xlen-1)
                     for i in 1:M
                         row = row_offset + i
-                        @inbounds hessvec[row] = H(G(x[row], partials_chunk[i+1]), zero_hess_partials)
+                        @inbounds hessvec[row] = HessianNumber(G(x[row], partials_chunk[i+1]), zero_hess_partials)
                     end
 
                     chunk_result = f(hessvec)
@@ -461,10 +460,10 @@ function _calc_hessian!{S,N,T,C}(output::Matrix{S},
                         val = hess(chunk_result, q)
                         @inbounds output[row, col] = val
                         @inbounds output[col, row] = val
-                        @inbounds hessvec[row] = H(G(x[row], zero_grad_partials), zero_hess_partials)
+                        @inbounds hessvec[row] = HessianNumber(G(x[row], zero_grad_partials), zero_hess_partials)
                     end
                 end
-                @inbounds hessvec[col] = H(G(x[col], zero_grad_partials), zero_hess_partials)
+                @inbounds hessvec[col] = HessianNumber(G(x[col], zero_grad_partials), zero_hess_partials)
             end
         end
     end
@@ -478,15 +477,91 @@ end
 
 # Exposed API methods #
 #---------------------#
-# TODO
+function tensor!{T}(output::Array{T,3}, f, x::Vector; chunk_size=nothing)
+    tensvec = build_workvec(TensorNumber, x, chunk_size)
+    return _calc_tensor!(output, f, x, tensvec)
+end
+
+function tensor(f, x::Vector; chunk_size=nothing)
+    xlen = length(x)
+    return tensor!(similar(x, xlen, xlen, xlen), f, x, chunk_size=chunk_size)
+end
+
+function tensor(f; mutates=false)
+    tensvecs = Dict()
+    partial_chunks = Dict()
+    if mutates
+        function tensf!{T}(output::Array{T,3}, x::Vector; chunk_size=nothing)
+            tensvec = pick_workvec!(tensvecs, TensorNumber, x, chunk_size)
+            partials_chunk = pick_partials!(partial_chunks, eltype(tensvec))
+            return _calc_tensor!(output, f, x, tensvec, partials_chunk)
+        end
+        return tensf!
+    else
+        function tensf(x::Vector; chunk_size=nothing)
+            tensvec = pick_workvec!(tensvecs, TensorNumber, x, chunk_size)
+            partials_chunk = pick_partials!(partial_chunks, eltype(tensvec))
+            xlen = length(x)
+            return _calc_tensor!(similar(x, xlen, xlen, xlen), f, x, tensvec, partials_chunk)
+        end
+        return tensf
+    end
+end
 
 # Calculate third order Taylor series term of a given function #
 #--------------------------------------------------------------#
-# TODO
+function _calc_tensor!{S,N,T,C}(output::Array{S,3},
+                                f,
+                                x::Vector{T},
+                                tensvec::Vector{TensorNumber{N,T,C}},
+                                partials_chunk=build_partials_chunk(eltype(tensvec))) 
+    xlen = length(x)
+    G = GradientNumber{N,T,C}
+    H = HessianNumber{N,T,C}
 
-# Helper functions #
-#------------------#
-build_zero_partials{N,T,C}(::Type{TensorNumber{N,T,C}}) = zeros(T, halftenslen(N))
+    @assert (xlen, xlen, xlen) == size(output) "The output array must have size (length(input), length(input), length(input))"
+    
+    partials_chunk = build_partials_chunk(G)
+    zero_hess_partials = zeros(T, halfhesslen(N))
+    zero_tens_partials = zeros(T, halftenslen(N))
+
+    if xlen == N
+        @simd for i in eachindex(tensvec)
+            @inbounds tensvec[i] = TensorNumber(H(G(x[i], partials_chunk[i]), zero_hess_partials), zero_tens_partials)
+        end
+
+        result = f(tensvec)
+
+        q = 1
+        for i in 1:N
+            for j in i:N
+                for k in i:j
+                    @inbounds output[j, k, i] = tens(result, q)
+                    q += 1
+                end
+            end
+            for j in 1:(i-1)
+                for k in 1:j
+                    @inbounds output[j, k, i] = output[i, j, k]
+                end
+            end    
+            for j in i:N
+                for k in 1:(i-1)
+                    @inbounds output[j, k, i] = output[i, j, k]
+                end
+            end
+            for j in 1:N
+                for k in (j+1):N
+                    @inbounds output[j, k, i] = output[k, j, i]
+                end
+            end
+        end
+    else
+        error("chunk_size configuration for ForwardDiff.tensor is not yet supported")
+    end
+
+    return output::Array{S,3}
+end
 
 ############################
 # General Helper Functions #
