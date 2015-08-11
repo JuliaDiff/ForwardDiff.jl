@@ -252,7 +252,7 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
         return $testexpr
     end
     
-    for chunk in (nothing, Int(N/2), N)
+    for chunk in (nothing, 1, Int(N/2), N)
         try
             testx = grad_test_x(fsym, N)
             testresult = grad_test_result(testexpr, testx)

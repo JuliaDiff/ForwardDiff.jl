@@ -197,14 +197,16 @@ hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 
 # Univariate functions/API usage testing #
 #----------------------------------------#
+N = 6
+chunk_sizes = (nothing, 2, 3, N)
 testout = Array(Float64, N, N)
 
 function hess_deriv_ij(f_expr, x::Vector, i, j)
-    var_syms = [:a, :b, :c, :d]
+    var_syms = [:a, :b, :c, :l, :m, :r]
     diff_expr = differentiate(f_expr, var_syms[j])
     diff_expr = differentiate(diff_expr, var_syms[i])
     @eval begin
-        a,b,c,d = $x
+        a,b,c,l,m,r = $x
         return $diff_expr
     end
 end
@@ -225,29 +227,32 @@ function hess_test_x(fsym, N)
 end
 
 for fsym in ForwardDiff.univar_hess_funcs
-    try    
-        testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(l) - $(fsym)(m) + $(fsym)(r)) 
 
-        @eval function testf(x::Vector) 
-            a,b,c,d = x
-            return $testexpr
+    @eval function testf(x::Vector) 
+        a,b,c,l,m,r = x
+        return $testexpr
+    end
+
+    for chunk in chunk_sizes
+        try
+            testx = hess_test_x(fsym, N)
+            testresult = hess_test_result(testexpr, testx)
+
+            ForwardDiff.hessian!(testout, testf, testx, chunk_size=chunk)
+            @test_approx_eq testout testresult
+
+            @test_approx_eq ForwardDiff.hessian(testf, testx, chunk_size=chunk) testresult
+
+            hessf! = ForwardDiff.hessian(testf, mutates=true)
+            hessf!(testout, testx, chunk_size=chunk)
+            @test_approx_eq testout testresult
+
+            hessf = ForwardDiff.hessian(testf, mutates=false)
+            @test_approx_eq hessf(testx, chunk_size=chunk) testresult
+        catch err
+            warn("Failure when testing Hessians involving $fsym with chunk_size=$chunk:")
+            throw(err)            
         end
-
-        testx = hess_test_x(fsym, N)
-        testresult = hess_test_result(testexpr, testx)
-
-        ForwardDiff.hessian!(testout, testf, testx)
-        @test_approx_eq testout testresult
-
-        @test_approx_eq ForwardDiff.hessian(testf, testx) testresult
-
-        hessf! = ForwardDiff.hessian(testf, mutates=true)
-        hessf!(testout, testx)
-        @test_approx_eq testout testresult
-
-        hessf = ForwardDiff.hessian(testf, mutates=false)
-        @test_approx_eq hessf(testx) testresult
-    catch err
-        error("Failure when testing Hessians involving $fsym: $err")
     end
 end

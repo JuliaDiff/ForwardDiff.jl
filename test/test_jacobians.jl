@@ -43,7 +43,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
         return [$(testexprs...)]
     end
 
-    for chunk in (nothing, Int(N/2), N)
+    for chunk in (nothing, 1, Int(N/2), N)
         try
             testx = jacob_test_x(fsym, N)
             testresult = jacob_test_result(testexprs, testx)
