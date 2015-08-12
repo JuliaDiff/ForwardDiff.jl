@@ -198,7 +198,6 @@ hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 # Univariate functions/API usage testing #
 #----------------------------------------#
 N = 6
-chunk_sizes = (nothing, 2, 3, N)
 testout = Array(Float64, N, N)
 
 function hess_deriv_ij(f_expr, x::Vector, i, j)
@@ -225,6 +224,8 @@ function hess_test_x(fsym, N)
 
     return rand(randrange, N)
 end
+
+chunk_sizes = (0, 2, Int(N/2), N)
 
 for fsym in ForwardDiff.univar_hess_funcs
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(l) - $(fsym)(m) + $(fsym)(r)) 

@@ -244,6 +244,8 @@ function grad_test_x(fsym, N)
     return rand(randrange, N)
 end
 
+chunk_sizes = (0, 1, Int(N/2), N)
+
 for fsym in map(first, Calculus.symbolic_derivatives_1arg())
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
 
@@ -252,14 +254,13 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
         return $testexpr
     end
     
-    for chunk in (nothing, 1, Int(N/2), N)
+    for chunk in chunk_sizes
         try
             testx = grad_test_x(fsym, N)
             testresult = grad_test_result(testexpr, testx)
 
-            ForwardDiff.gradient!(testout, testf, testx, chunk_size=chunk)
+            ForwardDiff.gradient!(testout, testf, testx; chunk_size=chunk)
             @test_approx_eq testout testresult
-
             @test_approx_eq ForwardDiff.gradient(testf, testx, chunk_size=chunk) testresult
 
             gradf! = ForwardDiff.gradient(testf, mutates=true)

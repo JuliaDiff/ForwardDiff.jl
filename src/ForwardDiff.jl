@@ -39,8 +39,7 @@ module ForwardDiff
     include("GradientNumber.jl")
     include("HessianNumber.jl")
     include("TensorNumber.jl")
-    include("fad_api.jl")
-    include("deprecated.jl")
+    include("fad_api/fad_api.jl")
 
     export derivative!,
            derivative,
@@ -50,6 +49,10 @@ module ForwardDiff
            hessian!,
            hessian,
            tensor!,
-           tensor
+           tensor,
+           GradientCache,
+           JacobianCache,
+           HessianCache,
+           TensorCache
 
 end # module ForwardDiff

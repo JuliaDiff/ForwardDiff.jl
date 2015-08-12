@@ -31,6 +31,8 @@ function jacob_test_x(fsym, N)
     return rand(randrange, N)
 end
 
+chunk_sizes = (0, 1, Int(N/2), N)
+
 for fsym in ForwardDiff.fad_supported_univar_funcs
     testexprs = [:($(fsym)(a) + $(fsym)(b)),
                 :(- $(fsym)(c)),
@@ -43,7 +45,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
         return [$(testexprs...)]
     end
 
-    for chunk in (nothing, 1, Int(N/2), N)
+    for chunk in chunk_sizes
         try
             testx = jacob_test_x(fsym, N)
             testresult = jacob_test_result(testexprs, testx)
