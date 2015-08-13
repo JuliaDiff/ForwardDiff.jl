@@ -28,13 +28,13 @@ end
 function tensor(f; mutates=false)
     cache = TensorCache()
     if mutates
-        function tensf!(output::Array, x::Vector; chunk_size::Int=default_chunk)
-            return tensor!(output, f, x, chunk_size=chunk_size, cache=cache)
+        function tensf!{T}(output::Array{T,3}, x::Vector; chunk_size::Int=default_chunk)
+            return tensor!(output, f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
         end
         return tensf!
     else
-        function tensf(x::Vector; chunk_size::Int=default_chunk)
-            return tensor(f, x, chunk_size=chunk_size, cache=cache)
+        function tensf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+            return tensor(f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
         end
         return tensf
     end
@@ -45,7 +45,7 @@ end
 gradnum_type{N,T,C}(::Vector{TensorNumber{N,T,C}}) = GradientNumber{N,T,C}
 hessnum_type{N,T,C}(::Vector{TensorNumber{N,T,C}}) = HessianNumber{N,T,C}
 
-function _take_tensor!(output::Array, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
+function _take_tensor!{T}(output::Array{T,3}, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
     tensvec = get_workvec!(cache, x, chunk_size)
     partials = get_partials!(cache, eltype(tensvec))
     hesszeros = get_zeros!(cache, hessnum_type(tensvec))
@@ -53,12 +53,12 @@ function _take_tensor!(output::Array, f, x::Vector, chunk_size::Int, cache::Forw
     if chunk_size_matches_full(x, chunk_size)
         return _calc_tensor_full!(output, f, x, tensvec, 
                                   partials, tenszeros, 
-                                  hesszeros)
+                                  hesszeros)::Array{T,3}
     else
         gradzeros = get_zeros!(cache, gradnum_type(tensvec))
         return _calc_tensor_chunks!(output, f, x, tensvec, 
                                     partials, tenszeros, 
-                                    hesszeros, gradzeros)
+                                    hesszeros, gradzeros)::Array{T,3}
     end
 end
 
@@ -80,7 +80,7 @@ function _calc_tensor_full!{S,N,T,C}(output::Array{S,3},
     for i in 1:N
         for j in i:N
             for k in i:j
-                @inbounds output[j, k, i] = tens(result, q)
+                @inbounds output[j, k, i] = tens(result, q)::S
                 q += 1
             end
         end

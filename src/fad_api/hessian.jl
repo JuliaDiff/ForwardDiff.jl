@@ -28,13 +28,13 @@ end
 function hessian(f; mutates=false)
     cache = HessianCache()
     if mutates
-        function hessf!(output::Matrix, x::Vector; chunk_size::Int=default_chunk)
-            return hessian!(output, f, x, chunk_size=chunk_size, cache=cache)
+        function hessf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk)
+            return hessian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return hessf!
     else
-        function hessf(x::Vector; chunk_size::Int=default_chunk)
-            return hessian(f, x, chunk_size=chunk_size, cache=cache)
+        function hessf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+            return hessian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return hessf
     end
@@ -44,17 +44,17 @@ end
 #---------------------------------------#
 gradnum_type{N,T,C}(::Vector{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
 
-function _take_hessian!(output::Matrix, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
+function _take_hessian!{T}(output::Matrix{T}, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
     full_bool = chunk_size_matches_full(x, chunk_size)
     N = full_bool ? chunk_size : chunk_size+1
     hessvec = get_workvec!(cache, x, N)
     partials = get_partials!(cache, eltype(hessvec))
     hesszeros = get_zeros!(cache, eltype(hessvec))
     if full_bool
-        return _calc_hessian_full!(output, f, x, hessvec, partials, hesszeros)
+        return _calc_hessian_full!(output, f, x, hessvec, partials, hesszeros)::Matrix{T}
     else
         gradzeros = get_zeros!(cache, gradnum_type(hessvec))
-        return _calc_hessian_chunks!(output, f, x, hessvec, partials, hesszeros, gradzeros)
+        return _calc_hessian_chunks!(output, f, x, hessvec, partials, hesszeros, gradzeros)::Matrix{T}
     end
 end
 
@@ -74,7 +74,7 @@ function _calc_hessian_full!{S,N,T,C}(output::Matrix{S},
     q = 1
     for i in 1:N
         for j in 1:i
-            val = hess(result, q)
+            val = hess(result, q)::S
             @inbounds output[i, j] = val
             @inbounds output[j, i] = val
             q += 1
@@ -138,7 +138,7 @@ function _calc_hessian_chunks!{S,N,T,C}(output::Matrix{S},
         q = 1
         for j in i:(i+M-1)
             for k in i:j
-                val = hess(chunk_result, q)
+                val = hess(chunk_result, q)::S
                 @inbounds output[j, k] = val
                 @inbounds output[k, j] = val
                 q += 1
@@ -186,7 +186,7 @@ function _calc_hessian_chunks!{S,N,T,C}(output::Matrix{S},
                 for i in 1:M
                     row = row_offset + i
                     q = halfhesslen(i) + 1
-                    val = hess(chunk_result, q)
+                    val = hess(chunk_result, q)::S
                     @inbounds output[row, col] = val
                     @inbounds output[col, row] = val
                     @inbounds hessvec[row] = HessianNumber(G(x[row], gradzeros), hesszeros)

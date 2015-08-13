@@ -25,13 +25,13 @@ end
 function jacobian(f; mutates=false)
     cache = JacobianCache()
     if mutates
-        function jacf!(output::Matrix, x::Vector; chunk_size::Int=default_chunk)
-            return jacobian!(output, f, x, chunk_size=chunk_size, cache=cache)
+        function jacf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk)
+            return jacobian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return jacf!
     else
-        function jacf(x::Vector; chunk_size::Int=default_chunk)
-            return jacobian(f, x, chunk_size=chunk_size, cache=cache)
+        function jacf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+            return jacobian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return jacf
     end
@@ -39,25 +39,25 @@ end
 
 # Calculate Jacobian of a given function #
 #----------------------------------------#
-function _take_jacobian!(output::Matrix, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
+function _take_jacobian!{T}(output::Matrix{T}, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
     gradvec = get_workvec!(cache, x, chunk_size)
     partials = get_partials!(cache, eltype(gradvec))
     if chunk_size_matches_full(x, chunk_size)
-        return _calc_jacobian_full!(output, f, x, gradvec, partials)
+        return _calc_jacobian_full!(output, f, x, gradvec, partials)::Matrix{T}
     else
         gradzeros = get_zeros!(cache, eltype(gradvec))
-        return _calc_jacobian_chunks!(output, f, x, gradvec, partials, gradzeros)
+        return _calc_jacobian_chunks!(output, f, x, gradvec, partials, gradzeros)::Matrix{T}
     end
 end
 
-function _take_jacobian(f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
+function _take_jacobian{T}(f, x::Vector{T}, chunk_size::Int, cache::ForwardDiffCache)
     gradvec = get_workvec!(cache, x, chunk_size)
     partials = get_partials!(cache, eltype(gradvec))
     if chunk_size_matches_full(x, chunk_size)
-        return _calc_jacobian_full(f, x, gradvec, partials)
+        return _calc_jacobian_full(f, x, gradvec, partials)::Matrix{T}
     else
         gradzeros = get_zeros!(cache, eltype(gradvec))
-        return _calc_jacobian_chunks(f, x, gradvec, partials, gradzeros)
+        return _calc_jacobian_chunks(f, x, gradvec, partials, gradzeros)::Matrix{T}
     end
 end
 
@@ -71,7 +71,7 @@ function _calc_jacobian_full!{S,N,T,C}(output::Matrix{S},
     result = f(gradvec)
 
     for i in eachindex(result), j in eachindex(x)
-        output[i,j] = grad(result[i], j)
+        output[i,j] = grad(result[i], j)::S
     end
 
     return output::Matrix{S}
@@ -102,7 +102,7 @@ function _calc_jacobian_full{N,T,C}(f,
     output = Array(T, length(result), length(x))
 
     for i in eachindex(result), j in eachindex(x)
-        output[i,j] = grad(result[i], j)
+        output[i,j] = grad(result[i], j)::T
     end
 
     return output::Matrix{T}
@@ -132,7 +132,7 @@ function _calc_jacobian_chunks{N,T,C}(f,
     for j in 1:N
         m = i+j-1
         for n in 1:size(output,1)
-            @inbounds output[n,m] = grad(chunk_result[n], j)
+            @inbounds output[n,m] = grad(chunk_result[n], j)::T
         end
         @inbounds gradvec[m] = G(x[m], gradzeros)
     end
@@ -145,11 +145,11 @@ end
 
 # Helper functions #
 #------------------#
-function _fill_jac_chunks!{N,T,C}(output,
-                                  f,
-                                  x::Vector{T}, 
-                                  gradvec::Vector{GradientNumber{N,T,C}},
-                                  partials, gradzeros, init)
+function _fill_jac_chunks!{S,N,T,C}(output::Matrix{S},
+                                    f,
+                                    x::Vector{T}, 
+                                    gradvec::Vector{GradientNumber{N,T,C}},
+                                    partials, gradzeros, init)
     G = eltype(gradvec)
 
     for i in init:N:length(x)
@@ -160,11 +160,11 @@ function _fill_jac_chunks!{N,T,C}(output,
         for j in 1:N
             m = i+j-1
             for n in 1:size(output,1)
-                @inbounds output[n,m] = grad(chunk_result[n], j)
+                @inbounds output[n,m] = grad(chunk_result[n], j)::S
             end
             @inbounds gradvec[m] = G(x[m], gradzeros)
         end
     end
 
-    return output
+    return output::Matrix{S}
 end

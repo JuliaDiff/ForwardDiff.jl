@@ -25,13 +25,13 @@ end
 function gradient(f; mutates=false)
     cache = GradientCache()
     if mutates
-        function gradf!(output::Vector, x::Vector; chunk_size::Int=default_chunk)
-            return gradient!(output, f, x, chunk_size=chunk_size, cache=cache)
+        function gradf!{T}(output::Vector{T}, x::Vector; chunk_size::Int=default_chunk)
+            return gradient!(output, f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
         end
         return gradf!
     else
-        function gradf(x::Vector; chunk_size::Int=default_chunk)
-            return gradient(f, x, chunk_size=chunk_size, cache=cache)
+        function gradf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+            return gradient(f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
         end
         return gradf
     end
@@ -39,14 +39,14 @@ end
     
 # Calculate gradient of a given function #
 #----------------------------------------#
-function _take_gradient!(output::Vector, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
+function _take_gradient!{T}(output::Vector{T}, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
     gradvec = get_workvec!(cache, x, chunk_size)
     partials = get_partials!(cache, eltype(gradvec))
     if chunk_size_matches_full(x, chunk_size)
-        return _calc_gradient_full!(output, f, x, gradvec, partials)
+        return _calc_gradient_full!(output, f, x, gradvec, partials)::Vector{T}
     else
         gradzeros = get_zeros!(cache, eltype(gradvec))
-        return _calc_gradient_chunks!(output, f, x, gradvec, partials, gradzeros)
+        return _calc_gradient_chunks!(output, f, x, gradvec, partials, gradzeros)::Vector{T}
     end
 end
 
@@ -60,7 +60,7 @@ function _calc_gradient_full!{S,N,T,C}(output::Vector{S},
     result = f(gradvec)
 
     @simd for i in eachindex(output)
-        @inbounds output[i] = grad(result, i)
+        @inbounds output[i] = grad(result, i)::S
     end                     
 
     return output::Vector{S}
@@ -88,7 +88,7 @@ function _calc_gradient_chunks!{S,N,T,C}(output::Vector{S},
         # zeros in gradvec
         @simd for j in 1:N
             q = i+j-1
-            @inbounds output[q] = grad(chunk_result, j)
+            @inbounds output[q] = grad(chunk_result, j)::S
             @inbounds gradvec[q] = G(x[q], gradzeros)
         end
     end
