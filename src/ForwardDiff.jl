@@ -50,9 +50,6 @@ module ForwardDiff
            hessian,
            tensor!,
            tensor,
-           GradientCache,
-           JacobianCache,
-           HessianCache,
-           TensorCache
+           ForwardDiffCache
 
 end # module ForwardDiff

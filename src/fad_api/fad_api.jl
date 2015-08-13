@@ -7,15 +7,27 @@
 const tuple_usage_threshold = 10
 const default_chunk = 0
 
-function check_chunk_size(x::Vector, chunk_size::Int)
-    @assert length(x) % chunk_size == 0 "Length of input vector is indivisible by chunk size (length(x) = $(length(x)), chunk size = $chunk_size)"
+for F in (:GradientNumber, :HessianNumber, :TensorNumber)
+    @eval begin
+        switch_eltype{N,T,S}(::Type{$F{N,T,NTuple{N,T}}}, ::Type{S}) = $F{N,S,NTuple{N,S}}
+        switch_eltype{N,T,S}(::Type{$F{N,T,Vector{T}}}, ::Type{S}) = $F{N,S,Vector{S}}
+    end
 end
 
-function chunk_size_matches_full(x::Vector, chunk_size::Int)
-    return (chunk_size == default_chunk) || (chunk_size == length(x))
+function check_chunk_size(xlen::Int, chunk_size::Int)
+    if chunk_size != default_chunk
+        @assert xlen % chunk_size == 0 "Length of input vector is indivisible by chunk size (length(x) = $xlen, chunk size = $chunk_size)"
+    end
+end
+
+function chunk_size_matches_full(xlen::Int, chunk_size::Int)
+    return (chunk_size == default_chunk) || (chunk_size == xlen)
 end
 
 include("cache.jl")
+
+const void_cache = make_void_cache()
+
 include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")

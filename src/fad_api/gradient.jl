@@ -1,8 +1,6 @@
 ####################
 # Taking Gradients #
 ####################
-GradientCache() = ForwardDiffCache(GradientNumber)
-const grad_void_cache = void_cache(GradientNumber)
 
 # Exposed API methods #
 #---------------------#
@@ -10,20 +8,21 @@ function gradient!{T}(output::Vector{T},
                       f,
                       x::Vector;
                       chunk_size::Int=default_chunk,
-                      cache::ForwardDiffCache=grad_void_cache)
-    @assert length(x) == length(output) "The output vector must be the same length as the input vector"
-    return _take_gradient!(output, f, x, chunk_size, cache)::Vector{T}
+                      cache::ForwardDiffCache=void_cache)
+    xlen = length(x)
+    @assert xlen == length(output) "The output vector must be the same length as the input vector"
+    return _calc_gradient!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Vector{T}
 end
 
 function gradient{T}(f,
                      x::Vector{T};
                      chunk_size::Int=default_chunk,
-                     cache::ForwardDiffCache=grad_void_cache)
-    return _take_gradient!(similar(x), f, x, chunk_size, cache)::Vector{T}
+                     cache::ForwardDiffCache=void_cache)
+    return _calc_gradient!(similar(x), f, x, Val{length(x)}, Val{chunk_size}, cache)::Vector{T}
 end
 
 function gradient(f; mutates=false)
-    cache = GradientCache()
+    cache = ForwardDiffCache()
     if mutates
         function gradf!{T}(output::Vector{T}, x::Vector; chunk_size::Int=default_chunk)
             return gradient!(output, f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
@@ -39,87 +38,63 @@ end
     
 # Calculate gradient of a given function #
 #----------------------------------------#
-function _take_gradient!{T}(output::Vector{T}, f, x::Vector, chunk_size::Int, cache::ForwardDiffCache)
-    gradvec = get_workvec!(cache, x, chunk_size)
-    partials = get_partials!(cache, eltype(gradvec))
-    if chunk_size_matches_full(x, chunk_size)
-        return _calc_gradient_full!(output, f, x, gradvec, partials)::Vector{T}
+@generated function _calc_gradient!{S,T,xlen,chunk_size}(output::Vector{S}, f, x::Vector{T}, 
+                                                         X::Type{Val{xlen}}, C::Type{Val{chunk_size}},
+                                                         cache::ForwardDiffCache)
+    check_chunk_size(xlen, chunk_size)
+
+    full_bool = chunk_size_matches_full(xlen, chunk_size)
+    G = workvec_eltype(GradientNumber, T, Val{xlen}, Val{chunk_size})
+
+    if full_bool
+        body = quote
+            @simd for i in eachindex(x)
+                @inbounds gradvec[i] = G(x[i], partials[i])
+            end
+
+            result::ResultType = f(gradvec)
+
+            @simd for i in eachindex(output)
+                @inbounds output[i] = grad(result, i)
+            end
+        end
     else
-        gradzeros = get_zeros!(cache, eltype(gradvec))
-        return _calc_gradient_chunks!(output, f, x, gradvec, partials, gradzeros)::Vector{T}
-    end
-end
+        body = quote
+            gradzeros = get_zeros!(cache, G)
 
-function _calc_gradient_full!{S,N,T,C}(output::Vector{S},
-                                       f,
-                                       x::Vector{T},
-                                       gradvec::Vector{GradientNumber{N,T,C}},
-                                       partials)
-    _load_gradvec_with_x_partials!(gradvec, x, partials)
+            @simd for i in eachindex(x)
+                @inbounds gradvec[i] = G(x[i], gradzeros)
+            end
 
-    result = f(gradvec)
+            for i in 1:N:xlen
+                offset = i-1
 
-    @simd for i in eachindex(output)
-        @inbounds output[i] = grad(result, i)::S
-    end                     
+                @simd for j in 1:N
+                    q = j+offset
+                    @inbounds gradvec[q] = G(x[q], partials[j])
+                end
 
-    return output::Vector{S}
-end
+                chunk_result::ResultType = f(gradvec)
 
-function _calc_gradient_chunks!{S,N,T,C}(output::Vector{S},
-                                         f,
-                                         x::Vector{T},
-                                         gradvec::Vector{GradientNumber{N,T,C}},
-                                         partials, gradzeros)
-    xlen = length(x)
-    G = eltype(gradvec)
-
-    check_chunk_size(x, N)
-
-    _load_gradvec_with_x_zeros!(gradvec, x, gradzeros)
-
-    for i in 1:N:xlen
-        _load_gradvec_with_x_partials!(gradvec, x, partials, i)
-        
-        chunk_result = f(gradvec)
-
-        # load resultant partials components
-        # into output, replacing them with 
-        # zeros in gradvec
-        @simd for j in 1:N
-            q = i+j-1
-            @inbounds output[q] = grad(chunk_result, j)::S
-            @inbounds gradvec[q] = G(x[q], gradzeros)
+                @simd for j in 1:N
+                    q = j+offset
+                    @inbounds output[q] = grad(chunk_result, j)
+                    @inbounds gradvec[q] = G(x[q], gradzeros)
+                end
+            end
         end
     end
 
-    return output::Vector{S}
-end
+    return quote 
+        G = $G
+        N = npartials(G)
+        ResultType = switch_eltype(G, S)
 
-# Helper functions #
-#------------------#
-function _load_gradvec_with_x_partials!(gradvec, x, partials)
-    # fill gradvec with GradientNumbers of single partial components
-    G = eltype(gradvec)
-    @simd for i in eachindex(gradvec)
-        @inbounds gradvec[i] = G(x[i], partials[i])
-    end
-end
+        gradvec = get_workvec!(cache, GradientNumber, T, X, C)
+        partials = get_partials!(cache, G)
+        
+        $body
 
-function _load_gradvec_with_x_partials!{N,T,C}(gradvec::Vector{GradientNumber{N,T,C}}, x, partials, init)
-    # fill current chunk gradvec with GradientNumbers of single partial components
-    G = eltype(gradvec)
-    i = init-1
-    @simd for j in 1:N
-        m = i+j
-        @inbounds gradvec[m] = G(x[m], partials[j])
-    end
-end
-
-function _load_gradvec_with_x_zeros!(gradvec, x, gradzeros)
-    # fill gradvec with x[i]-valued GradientNumbers
-    G = eltype(gradvec)
-    @simd for i in eachindex(x)
-        @inbounds gradvec[i] = G(x[i], gradzeros)
+        return output::Vector{S}
     end
 end
