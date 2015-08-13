@@ -184,6 +184,10 @@ acosh{T<:Real, n}(x::GraDual{T, n}) =
   GraDual{T, n}(acosh(x.v), x.g/sqrt(x.v*x.v-1))
 atanh{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(atanh(x.v), x.g/(1-x.v*x.v))
 
+lgamma{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(lgamma(x.v), digamma(x.v)*x.g)
+digamma{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(digamma(x.v), trigamma(x.v)*x.g)
+trigamma{T<:Real, n}(x::GraDual{T, n}) = GraDual{T, n}(trigamma(x.v), polygamma(2, x.v)*x.g)
+
 function typed_fad_gradient!{T<:Real}(f::Function, ::Type{T})
   function g!(x::Vector{T}, gradient_output::Vector{T})
     fvalue = f(GraDual(x))

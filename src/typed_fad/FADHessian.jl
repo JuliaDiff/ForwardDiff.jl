@@ -381,6 +381,30 @@ function atanh{T<:Real, n}(x::FADHessian{T, n})
   FADHessian{T, n}(atanh(x.d), h)
 end
 
+function lgamma{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = digamma(x.d.v)*x.h[k]+trigamma(x.d.v)*x.d.g[i]*x.d.g[j]
+      k += 1
+    end
+  end
+  FADHessian{T, n}(lgamma(x.d), h)
+end
+
+function digamma{T<:Real, n}(x::FADHessian{T, n})
+  h = Array(T, convert(Int, n*(n+1)/2))
+  k = 1
+  for i in 1:n
+    for j in 1:i
+      h[k] = trigamma(x.d.v)*x.h[k]+polygamma(2,x.d.v)*x.d.g[i]*x.d.g[j]
+      k += 1
+    end
+  end
+  FADHessian{T, n}(digamma(x.d), h)
+end
+
 function typed_fad_hessian!{T<:Real}(f::Function, ::Type{T})
   function g!(x::Vector{T}, hessian_output::Matrix{T})
     fvalue = f(FADHessian(x))

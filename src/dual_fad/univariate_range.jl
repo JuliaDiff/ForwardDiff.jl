@@ -1,4 +1,6 @@
 function dual_fad{T <: Real}(f::Function, x::Vector{T}, gradient_output, dualvec)
+  @assert(length(dualvec) == length(x),
+          "The length of x ($(length(x))) is different from n ($(length(dualvec))).")
   for i in 1:length(x)
     dualvec[i] = Dual(x[i], zero(T))
   end
