@@ -1,13 +1,14 @@
 ############################################
 # Methods for building work vectors/tuples #
 ############################################
-function build_workvec{F,T}(::Type{F}, x::Vector{T}, chunk_size::Int)
-    xlen = length(x)
+@generated function build_workvec{F,T,xlen,chunk_size}(::Type{F}, ::Type{T}, 
+                                                       ::Type{Val{xlen}}, 
+                                                       ::Type{Val{chunk_size}})
     if chunk_size == default_chunk
         C = xlen > tuple_usage_threshold ? Vector{T} : NTuple{xlen,T}
-        return Vector{F{xlen,T,C}}(xlen)
+        return :(Vector{$F{$xlen,$T,$C}}($xlen))
     else
-        return Vector{F{chunk_size,T,NTuple{chunk_size,T}}}(xlen)
+        return :(Vector{$F{$chunk_size,$T,NTuple{$chunk_size,$T}}}($xlen))
     end
 end
 
@@ -51,59 +52,48 @@ build_zeros{N,T,C}(::Type{TensorNumber{N,T,C}}) = zeros(T, halftenslen(N))
 #######################
 # Cache Types/Methods #
 #######################
-type ForwardDiffCache{F,W,P,Z}
+immutable ForwardDiffCache{F}
     fad_type::Type{F}
-    workvecs::W
-    partials::P
-    zeros::Z
+    workvec_cache::Function
+    partials_cache::Function
+    zeros_cache::Function
 end
 
-typealias VoidCache{F} ForwardDiffCache{F,Void,Void,Void}
+function ForwardDiffCache{F}(::Type{F})
+    @generated function workvec_cache{T,xlen,chunk_size}(::Type{T}, 
+                                                         ::Type{Val{xlen}}, 
+                                                         ::Type{Val{chunk_size}})
+        result = build_workvec(F, T, Val{xlen}, Val{chunk_size})
+        return :($result)
+    end
+    @generated function partials_cache{G}(::Type{G})
+        result = build_partials(G)
+        return :($result)
+    end
+    @generated function zeros_cache{G}(::Type{G})
+        result = build_zeros(G)
+        return :($result)
+    end
+    return ForwardDiffCache(F, workvec_cache, partials_cache, zeros_cache)
+end
 
-ForwardDiffCache{F}(::Type{F}) = ForwardDiffCache(F, Dict(), Dict(), Dict())
-void_cache{F}(::Type{F}) = ForwardDiffCache(F, nothing, nothing, nothing) 
+function void_cache{F}(::Type{F})
+    workvec_cache(args...) = build_workvec(F, args...) 
+    partials_cache(args...) = build_partials(args...)
+    zeros_cache(args...) = build_zeros(args...)
+    return ForwardDiffCache(F, workvec_cache, partials_cache, zeros_cache)
+end
 
 # Retrieval methods #
 #-------------------#
-function get_workvec!{F,T}(cache::ForwardDiffCache{F}, x::Vector{T}, chunk_size::Int)
-    key = tuple(length(x), T, chunk_size)
-    if haskey(cache.workvecs, key)
-        return cache.workvecs[key]
-    else
-        workvec = build_workvec(F, x, chunk_size)
-        cache.workvecs[key] = workvec
-        return workvec
-    end
+function get_workvec!{T}(cache::ForwardDiffCache, x::Vector{T}, chunk_size::Int)
+    return cache.workvec_cache(T, Val{length(x)}, Val{chunk_size})
 end
 
-function get_workvec!{F,T}(cache::VoidCache{F}, x::Vector{T}, chunk_size::Int)
-    return build_workvec(F, x, chunk_size)
+function get_partials!{G}(cache::ForwardDiffCache, ::Type{G})
+    return cache.partials_cache(G)
 end
 
-function get_partials!{F}(cache::ForwardDiffCache, ::Type{F})
-    if haskey(cache.partials, F)
-        return cache.partials[F]
-    else
-        partials = build_partials(F)
-        cache.partials[F] = partials
-        return partials
-    end
-end
-
-function get_partials!{F1,F2}(cache::VoidCache{F1}, ::Type{F2})
-    return build_partials(F2)
-end
-
-function get_zeros!{F}(cache::ForwardDiffCache, ::Type{F})
-    if haskey(cache.zeros, F)
-        return cache.zeros[F]
-    else
-        zeros = build_zeros(F)
-        cache.zeros[F] = zeros
-        return zeros
-    end
-end
-
-function get_zeros!{F1,F2}(cache::VoidCache{F1}, ::Type{F2})
-    return build_zeros(F2)
+function get_zeros!{G}(cache::ForwardDiffCache, ::Type{G})
+    return cache.zeros_cache(G)
 end

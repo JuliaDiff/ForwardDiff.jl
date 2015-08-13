@@ -1,7 +1,7 @@
 ####################
 # Taking Gradients #
 ####################
-GradientCache() = ForwardDiffCache(GradientNumber, Dict(), Dict(), Dict())
+GradientCache() = ForwardDiffCache(GradientNumber)
 const grad_void_cache = void_cache(GradientNumber)
 
 # Exposed API methods #
