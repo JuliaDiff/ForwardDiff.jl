@@ -26,7 +26,7 @@ end
 
 include("cache.jl")
 
-const void_cache = make_void_cache()
+const dummy_cache = make_dummy_cache()
 
 include("derivative.jl")
 include("gradient.jl")

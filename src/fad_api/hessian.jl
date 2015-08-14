@@ -8,7 +8,7 @@ function hessian!{T}(output::Matrix{T},
                      f,
                      x::Vector;
                      chunk_size::Int=default_chunk,
-                     cache::ForwardDiffCache=void_cache)
+                     cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     @assert (xlen, xlen) == size(output) "The output matrix must have size (length(input), length(input))"
     return _calc_hessian!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Matrix{T}
@@ -17,7 +17,7 @@ end
 function hessian{T}(f,
                     x::Vector{T};
                     chunk_size::Int=default_chunk,
-                    cache::ForwardDiffCache=void_cache)
+                    cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     output = similar(x, xlen, xlen)
     return _calc_hessian!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Matrix{T}

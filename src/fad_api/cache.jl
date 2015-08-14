@@ -85,28 +85,30 @@ immutable ForwardDiffCache
 end
 
 function ForwardDiffCache()
-    @generated function workvec_cache{F,T,xlen,chunk_size}(::Type{F},::Type{T}, 
-                                                           ::Type{Val{xlen}}, 
-                                                           ::Type{Val{chunk_size}})
-        result = build_workvec(F, T, Val{xlen}, Val{chunk_size})
-        return :($result)
-    end
-    @generated function partials_cache{F}(::Type{F})
-        result = build_partials(F)
-        return :($result)
-    end
-    @generated function zeros_cache{F}(::Type{F})
-        result = build_zeros(F)
-        return :($result)
-    end
+    const workvec_dict = Dict()
+    const partials_dict = Dict()
+    const zeros_dict = Dict()
+    workvec_cache(args...) = cache_retrieve!(workvec_dict, build_workvec, args...)
+    partials_cache(args...) = cache_retrieve!(partials_dict, build_partials, args...)
+    zeros_cache(args...) = cache_retrieve!(zeros_dict, build_zeros, args...)
     return ForwardDiffCache(workvec_cache, partials_cache, zeros_cache)
 end
 
-function make_void_cache()
+function make_dummy_cache()
     workvec_cache(args...) = build_workvec(args...) 
     partials_cache(args...) = build_partials(args...)
     zeros_cache(args...) = build_zeros(args...)
     return ForwardDiffCache(workvec_cache, partials_cache, zeros_cache)
+end
+
+function cache_retrieve!(dict, build_func, args...)
+    if haskey(dict, args)
+        return dict[args]
+    else
+        item = build_func(args...)
+        dict[args] = item
+        return item
+    end
 end
 
 # Retrieval methods #

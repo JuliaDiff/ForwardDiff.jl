@@ -8,7 +8,7 @@ function tensor!{T}(output::Array{T,3},
                     f,
                     x::Vector;
                     chunk_size::Int=default_chunk,
-                    cache::ForwardDiffCache=void_cache)
+                    cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     @assert (xlen, xlen, xlen) == size(output) "The output array must have size (length(input), length(input), length(input))"
     return _calc_tensor!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Array{T,3}
@@ -17,7 +17,7 @@ end
 function tensor{T}(f,
                    x::Vector{T};
                    chunk_size::Int=default_chunk,
-                   cache::ForwardDiffCache=void_cache)
+                   cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     output = similar(x, xlen, xlen, xlen)
     return _calc_tensor!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Array{T,3}
