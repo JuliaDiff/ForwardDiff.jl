@@ -3,15 +3,18 @@ using ForwardDiff
 ##################
 # Test functions #
 ##################
-ackley_term(a,b) = (-20 * exp(-0.2 * sqrt(0.5*(a^2 + b^2))) 
-                   - exp(0.5 * (cos(2pi * a) + cos(2pi * b))) + e + 20)
+sqr(i) = i^2
+twopicos(i) = cos(2*π*i)
 
-function ackley_sum(x::Vector)
-    result = zero(eltype(x))
-    @simd for i in 1:length(x)-1
-        @inbounds result += ackley_term(x[i], x[i+1])
+function ackley(x)
+    len_recip = 1/length(x)
+    sum_sqrs = zero(eltype(x))
+    sum_cos = sum_sqrs
+    for i in x
+        sum_cos += twopicos(i)
+        sum_sqrs += sqr(i)
     end
-    return result
+    return -20 * exp(-0.2 * sqrt(len_recip*sum_sqrs)) - exp(len_recip * sum_cos) + 20 + e
 end
 
 #############################
@@ -20,11 +23,17 @@ end
 # Usage:
 #
 # # The values of the Dict are Arrays of time values where indices correspond to length(x)
-# julia> t = bench_fad(ackley_sum, 10:10:100, 4) # benchmark ackley_sum where length(x) = 10:10:100, taking the minimum of 4 trials
-# Dict{Symbol,Array{Float64,1}} with 3 entries: 
-#   :gtimes => [6.184e-6,2.8753e-5,5.4635e-5,6.8362e-5,9.353e-5,0.000115482,0.00014288,0.00017434,0.000209135,0.0002428…
-#   :htimes => [6.0639e-5,0.000191262,0.000569371,0.001274732,0.00284165,0.00518009,0.010288519,0.016470037,0.021582144…
-#   :ftimes => [1.227e-6,1.888e-6,2.586e-6,3.264e-6,4.062e-6,4.943e-6,5.547e-6,6.325e-6,6.808e-6,7.728e-6]
+# julia> t = bench_fad(ackley, 10:10:100, 4) # benchmark ackley where length(x) = 10:10:100, taking the minimum of 4 trials
+# Dict{Symbol,Array{Float64,1}} with 3 entries:
+#   :gtimes => [4.152e-6,1.8057e-5,2.0612e-5,3.546e-5,3.9163e-5,9.3705e-5,5.6879e-5,6.3378e-5,9.8352e-5,0.000106597]
+#   :htimes => [2.5515e-5,7.4746e-5,0.000164618,0.000345889,0.000773864,0.00110334,0.002396697,0.003085223,0.004590107,…
+#   :ftimes => [7.83e-7,9.26e-7,1.11e-6,1.162e-6,1.324e-6,1.504e-6,1.569e-6,1.766e-6,2.002e-6,2.056e-6]
+#
+# julia> t = bench_fad(ackley, 400, 4)
+# Dict{Symbol,Array{Float64,1}} with 3 entries:
+#   :gtimes => [0.00109457]
+#   :htimes => [0.725081113]
+#   :ftimes => [6.836e-6]
 
 function bench_fad(f, range, repeat=3)
     g = ForwardDiff.gradient(f)
