@@ -12,7 +12,7 @@ This package contains methods to take derivatives, gradients, Jacobians, and Hes
 
 A third-order generalization of the Hessian is also implemented (see the `tensor` method). 
 
-For now, we only support for functions involving `T<:Real`s, but we believe extension to numbers of type `T<:Complex` is possible.
+For now, we only support functions involving `T<:Real`s, but we believe extension to numbers of type `T<:Complex` is possible.
 
 ## Usage Example
 
