@@ -1,2 +1,0 @@
-Implement forward mode automatic differentiation of matrix functions based on this article:
-http://link.springer.com/chapter/10.1007%2F978-3-642-30023-3_7

@@ -1,17 +1,11 @@
-language: cpp
-compiler:
-  - clang
+language: julia
+julia:
+    - nightly
 notifications:
-  email: false
-env:
-  matrix:
-    - JULIAVERSION="julianightlies" 
-before_install:
-  - sudo add-apt-repository ppa:staticfloat/julia-deps -y
-  - sudo add-apt-repository ppa:staticfloat/${JULIAVERSION} -y
-  - sudo apt-get update -qq -y
-  - sudo apt-get install libpcre3-dev julia -y
+    email: false
+sudo: false
 script:
-  - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("ForwardDiff"))`); Pkg.pin("ForwardDiff"); Pkg.resolve()'
-  - julia -e 'using ForwardDiff; @assert isdefined(:ForwardDiff); @assert typeof(ForwardDiff) === Module'
-  - julia -e 'Pkg.test("ForwardDiff")'
+    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+    - julia -e 'Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.test("ForwardDiff"; coverage=true)';
+after_success:
+    - julia -e 'cd(Pkg.dir("ForwardDiff")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
