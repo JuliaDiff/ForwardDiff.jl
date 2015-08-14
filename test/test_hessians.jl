@@ -225,7 +225,7 @@ function hess_test_x(fsym, N)
     return rand(randrange, N)
 end
 
-chunk_sizes = (0, 2, Int(N/2), N)
+chunk_sizes = (ForwardDiff.default_chunk, 2, Int(N/2), N)
 
 for fsym in ForwardDiff.univar_hess_funcs
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(l) - $(fsym)(m) + $(fsym)(r)) 

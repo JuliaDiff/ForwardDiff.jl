@@ -31,7 +31,7 @@ function jacob_test_x(fsym, N)
     return rand(randrange, N)
 end
 
-chunk_sizes = (0, 1, Int(N/2), N)
+chunk_sizes = (ForwardDiff.default_chunk, 1, Int(N/2), N)
 
 for fsym in ForwardDiff.fad_supported_univar_funcs
     testexprs = [:($(fsym)(a) + $(fsym)(b)),
