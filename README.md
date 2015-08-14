@@ -72,7 +72,7 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 
 - **`derivative(f; mutates=false)`**
     
-    Return the function `f'`. If `mutates=false`, then the returned function has the form `derivf(x) -> derivative(f, x)`. If `mutates = true`, then the returned function has the form `derivf!(output, x) -> derivative!(output, f, x)`.
+    Return the function `f'`. If `mutates=false`, then the returned function has the form `derivf(x)`. If `mutates = true`, then the returned function has the form `derivf!(output, x)`.
 
 #### Gradient of `f(x::Vector) → Number`
 
@@ -86,7 +86,7 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 
 - **`ForwardDiff.gradient(f; mutates=false)`**
 
-    Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x) -> gradient(f, x)`. If `mutates = true`, then the returned function has the form `gradf!(output, x) -> gradient!(output, f, x)`. By default, `mutates` is set to `false`. `ForwardDiff` must be used as a qualifier when calling `gradient` to avoid conflict with `Base.gradient`.
+    Return the function `∇f`. If `mutates=false`, then the returned function has the form `gradf(x)`. If `mutates = true`, then the returned function has the form `gradf!(output, x)`. `ForwardDiff` must be used as a qualifier when calling `gradient` to avoid conflict with `Base.gradient`.
 
 #### Jacobian of `f(x:Vector) → Vector`
 
@@ -100,7 +100,7 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 
 - **`jacobian(f; mutates=false)`**
 
-    Return the function `J(f)`. If `mutates=false`, then the returned function has the form `jacf(x) -> jacobian(f, x)`. If `mutates = true`, then the returned function has the form `jacf!(output, x) -> jacobian!(output, f, x)`. By default, `mutates` is set to `false`.
+    Return the function `J(f)`. If `mutates=false`, then the returned function has the form `jacf(x)`. If `mutates = true`, then the returned function has the form `jacf!(output, x)`.
 
 #### Hessian of `f(x::Vector) → Number`
 
@@ -114,7 +114,7 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 
 - **`hessian(f; mutates=false)`**
 
-    Return the function `H(f)`. If `mutates=false`, then the returned function has the form `hessf(x) -> hessian(f, x, S)`. If `mutates = true`, then the returned function has the form `hessf!(output, x) -> hessian!(output, f, x)`. By default, `mutates` is set to `false`.
+    Return the function `H(f)`. If `mutates=false`, then the returned function has the form `hessf(x)`. If `mutates = true`, then the returned function has the form `hessf!(output, x)`.
 
 #### Third-order Taylor series term of `f(x::Vector) → Number`
 
@@ -130,7 +130,7 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 
 - **`tensor(f; mutates=false)`**
 
-    Return the function ``∑D³f``. If `mutates=false`, then the returned function has the form `tensf(x) -> tensor(f, x)`. If `mutates = true`, then the returned function has the form `tensf!(output, x) -> tensor!(output, f, x)`. By default, `mutates` is set to `false`.
+    Return the function ``∑D³f``. If `mutates=false`, then the returned function has the form `tensf(x)`. If `mutates = true`, then the returned function has the form `tensf!(output, x)`.
 
 ## Performance Tips
 
