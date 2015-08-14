@@ -142,7 +142,7 @@ Make sure that your target function is [type-stable](http://julia.readthedocs.or
 ERROR: TypeError: typeassert: ...
 ```
 
-It might be because Julia's type inference can't predict the output of your target function to be the output expected by ForwardDiff (these expectations are outlined in the API above).
+...then it might be because Julia's type inference can't predict the output of your target function to be the output expected by ForwardDiff (these expectations are outlined in the API above).
 
 #### Caching Options
 
@@ -156,7 +156,7 @@ for x in inputs
 end
 ```
 
-should really be written like this:
+...should really be written like this:
 
 ```julia
 h = hessian(f) # generate H(f) first
@@ -167,7 +167,7 @@ for x in inputs
 end
 ```
 
-The reason this is the case is that `hessian(f, x)` (and `hessian!(output, f, x)`, as well as the other methods like `gradient`/`jacobian`/etc.) must create various temporary "work arrays" over the course of evaluation. Generating `h = hessian(f)` *first* allows the temporary arrays to be cached in subsequent calls to `h`, saving both time and memory over the course of the loop.
+This is because calling`hessian(f, x)` (as well as the other methods like `gradient`/`jacobian`/etc.) creates various temporary "work arrays" over the course of evaluation. Generating `h = hessian(f)` *first* allows the temporary arrays to be cached in subsequent calls to `h`, saving both time and memory over the course of the loop.
 
 This caching can also be handled manually, if one wishes, by utilizing the provided `ForwardDiffCache` type and the `cache` keyword argument:
 
@@ -187,7 +187,7 @@ Manually passing in a `FowardDiffCache` is useful when `f` might change over the
 
 #### Chunk-based calculation modes
 
-If the dimensions you're working in are very large, ForwardDiff supports calculation of gradients/Jacobians/etc. by "chunks" of the input vector rather than performing the entire computation at once. This mode is triggered by use of the `chunk_size` keyword argument, like so:
+If the dimensions you're working in are very large, ForwardDiff supports calculation of gradients/Jacobians/etc. by "chunks" of the input vector rather than over the entire input vector at once. This mode is triggered by use of the `chunk_size` keyword argument, like so:
 
 ```julia
 x = rand(1000000)
@@ -210,6 +210,6 @@ ERROR: AssertionError: Length of input vector is indivisible by chunk size (leng
  in _calc_hessian! at /Users/jarrettrevels/.julia/ForwardDiff/src/fad_api/hessian.jl:48
 ```
 
-Thus, chunking of input vectors whose length is a prime number is unsupported. We're currently working on removing this limitation.
+Thus, chunking up input vectors whose length is a prime number is unsupported. We're currently working on removing this limitation.
 
-Note that it is generally always much faster to **not** provide a `chunk_size`. This option is provided for the cases in which performing an entire calculation at once would consume too much memory.
+Note that it is generally always much faster to **not** provide a `chunk_size`. The `chunk_size` option should only be used in cases where performing the entire calculation at once would consume too much memory.
