@@ -199,7 +199,7 @@ j! = jacobian(f, mutates=true)
 j!(output, x, chunk_size=10)
 ```
 
-Note that `chunk_size` must always evenly divide the length of the input vector:
+The given `chunk_size` must always evenly divide the length of the input vector:
 
 ```julia
 julia> hessian(f, rand(100), chunk_size=11)
@@ -209,3 +209,5 @@ ERROR: AssertionError: Length of input vector is indivisible by chunk size (leng
 ```
 
 Thus, chunking of input vectors whose length is a prime number is unsupported. We're currently working on removing this limitation.
+
+Note that it is generally always much faster to **not** provide a `chunk_size`. This option is provided for the cases in which performing an entire calculation at once would consume too much memory.
