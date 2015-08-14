@@ -14,8 +14,9 @@ for F in (:GradientNumber, :HessianNumber, :TensorNumber)
     end
 end
 
-function check_chunk_size(xlen::Int, chunk_size::Int)
+function check_chunk_size(xlen::Int, chunk_size::Int)        
     if chunk_size != default_chunk
+        @assert chunk_size > 0 "Invalid chunk_size: $chunk_size. chunk_size cannot be negative."
         @assert xlen % chunk_size == 0 "Length of input vector is indivisible by chunk size (length(x) = $xlen, chunk size = $chunk_size)"
     end
 end
