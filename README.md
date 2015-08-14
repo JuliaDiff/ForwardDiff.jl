@@ -1,3 +1,5 @@
+Note: This README describes the current version of the package on the `master` branch, which is only supported on Julia v0.4. The documentation for the old version of this package can still be found [here](http://forwarddiffjl.readthedocs.org/en/latest/).
+
 [![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=master)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
 
 # ForwardDiff.jl
