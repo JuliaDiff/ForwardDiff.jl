@@ -31,33 +31,38 @@ function jacob_test_x(fsym, N)
     return rand(randrange, N)
 end
 
+chunk_sizes = (ForwardDiff.default_chunk, 1, Int(N/2), N)
+
 for fsym in ForwardDiff.fad_supported_univar_funcs
-    try    
-        testexprs = [:($(fsym)(a) + $(fsym)(b)),
-                    :(- $(fsym)(c)),
-                    :(4 * $(fsym)(d)),
-                    :($(fsym)(b)^5),
-                    :($(fsym)(a))]
+    testexprs = [:($(fsym)(a) + $(fsym)(b)),
+                :(- $(fsym)(c)),
+                :(4 * $(fsym)(d)),
+                :($(fsym)(b)^5),
+                :($(fsym)(a))]
 
-        @eval function testf(x::Vector) 
-            a,b,c,d = x
-            return [$(testexprs...)]
+    @eval function testf(x::Vector) 
+        a,b,c,d = x
+        return [$(testexprs...)]
+    end
+
+    for chunk in chunk_sizes
+        try
+            testx = jacob_test_x(fsym, N)
+            testresult = jacob_test_result(testexprs, testx)
+            ForwardDiff.jacobian!(testout, testf, testx, chunk_size=chunk)
+            @test_approx_eq testout testresult
+
+            @test_approx_eq ForwardDiff.jacobian(testf, testx, chunk_size=chunk) testresult
+
+            jacf! = ForwardDiff.jacobian(testf, mutates=true)
+            jacf!(testout, testx, chunk_size=chunk)
+            @test_approx_eq testout testresult
+
+            jacf = ForwardDiff.jacobian(testf, mutates=false)
+            @test_approx_eq jacf(testx, chunk_size=chunk) testresult
+        catch err
+            warn("Failure when testing Jacobians involving $fsym with chunk_size=$chunk:")
+            throw(err)
         end
-
-        testx = jacob_test_x(fsym, N)
-        testresult = jacob_test_result(testexprs, testx)
-        ForwardDiff.jacobian!(testout, testf, testx)
-        @test_approx_eq testout testresult
-
-        @test_approx_eq ForwardDiff.jacobian(testf, testx) testresult
-
-        jacf! = ForwardDiff.jacobian(testf, mutates=true)
-        jacf!(testout, testx)
-        @test_approx_eq testout testresult
-
-        jacf = ForwardDiff.jacobian(testf, mutates=false)
-        @test_approx_eq jacf(testx) testresult
-    catch err
-        error("Failure when testing Jacobians involving $fsym: $err")
     end
 end

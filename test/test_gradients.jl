@@ -2,7 +2,7 @@ using Base.Test
 using Calculus
 using ForwardDiff
 using ForwardDiff: 
-        GradientNum,
+        GradientNumber,
         value,
         grad,
         npartials,
@@ -60,7 +60,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     const_grad = Grad{N,T}(float_val)
 
     @test convert(typeof(test_grad), test_grad) == test_grad
-    @test convert(GradientNum, test_grad) == test_grad
+    @test convert(GradientNumber, test_grad) == test_grad
     @test convert(Grad{N,T}, int_grad) == float_grad
     @test convert(Grad{0,T}, 1) == Grad{0,T}(1.0, ForwardDiff.zero_partials(Grad{0,T}))
     @test convert(Grad{3,T}, 1) == Grad{3,T}(1.0, ForwardDiff.zero_partials(Grad{3,T}))
@@ -153,7 +153,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     # Division #
     #----------#
-    function grad_approx_eq(a::GradientNum, b::GradientNum)
+    function grad_approx_eq(a::GradientNumber, b::GradientNumber)
         @test_approx_eq value(a) value(b)
         @test_approx_eq collect(grad(a)) collect(grad(b))
     end
@@ -191,7 +191,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
             catch DomainError
                 # some of the provided functions
                 # have a domain x > 1, so we simply
-                # add 1 to our test GradientNum if
+                # add 1 to our test GradientNumber if
                 # a DomainError is thrown
                 orig_grad = $test_grad + 1
                 f_grad = func(orig_grad)
@@ -244,30 +244,34 @@ function grad_test_x(fsym, N)
     return rand(randrange, N)
 end
 
+chunk_sizes = (ForwardDiff.default_chunk, 1, Int(N/2), N)
+
 for fsym in map(first, Calculus.symbolic_derivatives_1arg())
-    try
-        testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
 
-        @eval function testf(x::Vector) 
-            a,b,c,d = x
-            return $testexpr
+    @eval function testf(x::Vector) 
+        a,b,c,d = x
+        return $testexpr
+    end
+    
+    for chunk in chunk_sizes
+        try
+            testx = grad_test_x(fsym, N)
+            testresult = grad_test_result(testexpr, testx)
+
+            ForwardDiff.gradient!(testout, testf, testx; chunk_size=chunk)
+            @test_approx_eq testout testresult
+            @test_approx_eq ForwardDiff.gradient(testf, testx, chunk_size=chunk) testresult
+
+            gradf! = ForwardDiff.gradient(testf, mutates=true)
+            gradf!(testout, testx, chunk_size=chunk)
+            @test_approx_eq testout testresult
+
+            gradf = ForwardDiff.gradient(testf, mutates=false)
+            @test_approx_eq gradf(testx, chunk_size=chunk) testresult
+        catch err
+            warn("Failure when testing gradients involving $fsym with chunk_size=$chunk:")
+            throw(err)
         end
-
-        testx = grad_test_x(fsym, N)
-        testresult = grad_test_result(testexpr, testx)
-
-        ForwardDiff.gradient!(testout, testf, testx)
-        @test_approx_eq testout testresult
-
-        @test_approx_eq ForwardDiff.gradient(testf, testx) testresult
-
-        gradf! = ForwardDiff.gradient(testf, mutates=true)
-        gradf!(testout, testx)
-        @test_approx_eq testout testresult
-
-        gradf = ForwardDiff.gradient(testf, mutates=false)
-        @test_approx_eq gradf(testx) testresult
-    catch err
-        error("Failure when testing gradients involving $fsym: $err")
     end
 end

@@ -35,12 +35,11 @@ module ForwardDiff
     #     @eval import Base.$(fsym);
     # end
 
-    include("ForwardDiffNum.jl")
-    include("GradientNum.jl")
-    include("HessianNum.jl")
-    include("TensorNum.jl")
-    include("fad_api.jl")
-    include("deprecated.jl")
+    include("ForwardDiffNumber.jl")
+    include("GradientNumber.jl")
+    include("HessianNumber.jl")
+    include("TensorNumber.jl")
+    include("fad_api/fad_api.jl")
 
     export derivative!,
            derivative,
@@ -50,6 +49,7 @@ module ForwardDiff
            hessian!,
            hessian,
            tensor!,
-           tensor
+           tensor,
+           ForwardDiffCache
 
 end # module ForwardDiff
