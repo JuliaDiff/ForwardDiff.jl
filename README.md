@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=api-refactor)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=api-refactor&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=api-refactor)
+[![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=master)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
 
 # ForwardDiff.jl
 
