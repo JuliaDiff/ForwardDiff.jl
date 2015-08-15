@@ -210,6 +210,6 @@ ERROR: AssertionError: Length of input vector is indivisible by chunk size (leng
  in _calc_hessian! at /Users/jarrettrevels/.julia/ForwardDiff/src/fad_api/hessian.jl:48
 ```
 
-Thus, chunking up input vectors whose length is a prime number is unsupported. We're currently working on removing this limitation.
+Note that, given the divisibility restriction, the only allowable options when `length(x)` is prime are `chunk_size=1` or `chunk_size=length(x)`. We're currently working on removing this limitation.
 
-Note that it is generally always much faster to **not** provide a `chunk_size`. The `chunk_size` option should only be used in cases where performing the entire calculation at once would consume too much memory.
+In general, one should do their own benchmarks to determine the appropriate `chunk_size` for their use case. In many cases, the fastest option might be to not specify a `chunk_size` at all. The `chunk_size` option is mainly useful in cases where performing the entire calculation at once raises memory concerns.
