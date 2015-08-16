@@ -27,12 +27,12 @@ function tensor(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
         function tensf!{T}(output::Array{T,3}, x::Vector; chunk_size::Int=default_chunk)
-            return tensor!(output, f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
+            return ForwardDiff.tensor!(output, f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
         end
         return tensf!
     else
         function tensf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
-            return tensor(f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
+            return ForwardDiff.tensor(f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
         end
         return tensf
     end

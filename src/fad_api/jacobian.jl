@@ -25,12 +25,12 @@ function jacobian(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
         function jacf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk)
-            return jacobian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
+            return ForwardDiff.jacobian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return jacf!
     else
         function jacf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
-            return jacobian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
+            return ForwardDiff.jacobian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return jacf
     end

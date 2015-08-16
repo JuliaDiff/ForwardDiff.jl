@@ -1,9 +1,9 @@
 using Base.depwarn
 
-Base.@deprecate forwarddiff_gradient(f::Function, T::DataType; fadtype::Symbol=:dual, args...) gradient(f, mutates=false)
-Base.@deprecate forwarddiff_jacobian(f::Function, T::DataType; fadtype::Symbol=:dual, args...) jacobian(f, mutates=false)
-Base.@deprecate forwarddiff_hessian(f::Function, T::DataType; fadtype::Symbol=:dual, args...) hessian(f, mutates=false)
-Base.@deprecate forwarddiff_tensor(f::Function, T::DataType; fadtype::Symbol=:dual, args...) tensor(f, mutates=false)
+Base.@deprecate forwarddiff_gradient(f::Function, T::DataType; fadtype::Symbol=:dual, args...) ForwardDiff.gradient(f, mutates=false)
+Base.@deprecate forwarddiff_jacobian(f::Function, T::DataType; fadtype::Symbol=:dual, args...) ForwardDiff.jacobian(f, mutates=false)
+Base.@deprecate forwarddiff_hessian(f::Function, T::DataType; fadtype::Symbol=:dual, args...) ForwardDiff.hessian(f, mutates=false)
+Base.@deprecate forwarddiff_tensor(f::Function, T::DataType; fadtype::Symbol=:dual, args...) ForwardDiff.tensor(f, mutates=false)
 
 function depr_inplace_fad(fad_func, f)
     warn("Addendum to the deprecation warning above:\n"*
@@ -17,10 +17,10 @@ function depr_inplace_fad(fad_func, f)
     return fad!
 end
 
-Base.@deprecate forwarddiff_gradient!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(gradient, f)
-Base.@deprecate forwarddiff_jacobian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(jacobian, f)
-Base.@deprecate forwarddiff_hessian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(hessian, f)
-Base.@deprecate forwarddiff_tensor!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(tensor, f)
+Base.@deprecate forwarddiff_gradient!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(ForwardDiff.gradient, f)
+Base.@deprecate forwarddiff_jacobian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(ForwardDiff.jacobian, f)
+Base.@deprecate forwarddiff_hessian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(ForwardDiff.hessian, f)
+Base.@deprecate forwarddiff_tensor!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(ForwardDiff.tensor, f)
 
 export forwarddiff_gradient, 
     forwarddiff_gradient!,

@@ -27,12 +27,12 @@ function hessian(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
         function hessf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk)
-            return hessian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
+            return ForwardDiff.hessian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return hessf!
     else
         function hessf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
-            return hessian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
+            return ForwardDiff.hessian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return hessf
     end

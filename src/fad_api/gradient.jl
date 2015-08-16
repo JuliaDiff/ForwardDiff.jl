@@ -25,12 +25,12 @@ function gradient(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
         function gradf!{T}(output::Vector{T}, x::Vector; chunk_size::Int=default_chunk)
-            return gradient!(output, f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
+            return ForwardDiff.gradient!(output, f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
         end
         return gradf!
     else
         function gradf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
-            return gradient(f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
+            return ForwardDiff.gradient(f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
         end
         return gradf
     end
