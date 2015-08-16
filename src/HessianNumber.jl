@@ -91,9 +91,9 @@ function promote_rule{N,T1,C1,T2,C2}(::Type{HessianNumber{N,T1,C1}}, ::Type{Hess
     return HessianNumber{N,R,switch_eltype(C1, R)}
 end
 
-#######################
+##########################
 # Math on HessianNumbers #
-#######################
+##########################
 # Math on HessianNumbers is developed by examining hyperdual numbers
 # with 2 different infinitesmal parts (ϵ₁, ϵ₂). These numbers
 # can be formulated like the following:
@@ -137,7 +137,7 @@ function loadhess_deriv!{N}(h::HessianNumber{N}, deriv1, deriv2, output)
 end
 
 # Bivariate functions on HessianNumbers #
-#------------------------------------#
+#---------------------------------------#
 function loadhess_mul!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
     aval = value(a)
     bval = value(b)
@@ -276,7 +276,7 @@ end
 /(h::HessianNumber, x::Real) = HessianNumber(gradnum(h) / x, hess(h) / x)
 
 # Univariate functions on HessianNumbers #
-#-------------------------------------#
+#----------------------------------------#
 -(h::HessianNumber) = HessianNumber(-gradnum(h), -hess(h))
 
 # the second derivatives of functions in unsupported_univar_hess_funcs involves differentiating 

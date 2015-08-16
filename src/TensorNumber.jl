@@ -91,9 +91,9 @@ function promote_rule{N,T1,C1,T2,C2}(::Type{TensorNumber{N,T1,C1}}, ::Type{Tenso
     return TensorNumber{N,R,switch_eltype(C1, R)}
 end
 
-######################
+#########################
 # Math on TensorNumbers #
-######################
+#########################
 # Math on TensorNumbers is developed by examining hyperdual numbers
 # with 3 different infinitesmal parts (ϵ₁, ϵ₂, ϵ₃). These numbers
 # can be formulated like the following:
@@ -156,7 +156,7 @@ function loadtens_deriv!{N}(t::TensorNumber{N}, deriv1, deriv2, deriv3, output)
 end
 
 # Bivariate functions on TensorNumbers #
-#-----------------------------------#
+#--------------------------------------#
 function loadtens_mul!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
     t1val = value(t1)
     t2val = value(t2)
@@ -333,7 +333,7 @@ end
 /(t::TensorNumber, x::Real) = TensorNumber(hessnum(t) / x, tens(t) / x)
 
 # Univariate functions on TensorNumbers #
-#------------------------------------#
+#---------------------------------------#
 -(t::TensorNumber) = TensorNumber(-hessnum(t), -tens(t))
 
 # the third derivatives of functions in unsupported_univar_tens_funcs involves differentiating 
