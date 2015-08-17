@@ -7,7 +7,7 @@
 function gradient!{T}(output::Vector{T},
                       f,
                       x::Vector;
-                      chunk_size::Int=default_chunk,
+                      chunk_size::Int=default_chunk_size,
                       cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     @assert xlen == length(output) "The output vector must be the same length as the input vector"
@@ -16,7 +16,7 @@ end
 
 function gradient{T}(f,
                      x::Vector{T};
-                     chunk_size::Int=default_chunk,
+                     chunk_size::Int=default_chunk_size,
                      cache::ForwardDiffCache=dummy_cache)
     return _calc_gradient!(similar(x), f, x, Val{length(x)}, Val{chunk_size}, cache)::Vector{T}
 end
@@ -24,12 +24,12 @@ end
 function gradient(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
-        function gradf!{T}(output::Vector{T}, x::Vector; chunk_size::Int=default_chunk)
+        function gradf!{T}(output::Vector{T}, x::Vector; chunk_size::Int=default_chunk_size)
             return ForwardDiff.gradient!(output, f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
         end
         return gradf!
     else
-        function gradf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+        function gradf{T}(x::Vector{T}; chunk_size::Int=default_chunk_size)
             return ForwardDiff.gradient(f, x, chunk_size=chunk_size, cache=cache)::Vector{T}
         end
         return gradf

@@ -4,7 +4,7 @@
 @generated function workvec_eltype{F,T,xlen,chunk_size}(::Type{F}, ::Type{T}, 
                                                         ::Type{Val{xlen}}, 
                                                         ::Type{Val{chunk_size}})
-    if chunk_size == default_chunk
+    if chunk_size == default_chunk_size
         C = xlen > tuple_usage_threshold ? Vector{T} : NTuple{xlen,T}
         return :($F{$xlen,$T,$C})
     else

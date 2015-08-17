@@ -7,7 +7,7 @@
 function tensor!{T}(output::Array{T,3},
                     f,
                     x::Vector;
-                    chunk_size::Int=default_chunk,
+                    chunk_size::Int=default_chunk_size,
                     cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     @assert (xlen, xlen, xlen) == size(output) "The output array must have size (length(input), length(input), length(input))"
@@ -16,7 +16,7 @@ end
 
 function tensor{T}(f,
                    x::Vector{T};
-                   chunk_size::Int=default_chunk,
+                   chunk_size::Int=default_chunk_size,
                    cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     output = similar(x, xlen, xlen, xlen)
@@ -26,12 +26,12 @@ end
 function tensor(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
-        function tensf!{T}(output::Array{T,3}, x::Vector; chunk_size::Int=default_chunk)
+        function tensf!{T}(output::Array{T,3}, x::Vector; chunk_size::Int=default_chunk_size)
             return ForwardDiff.tensor!(output, f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
         end
         return tensf!
     else
-        function tensf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+        function tensf{T}(x::Vector{T}; chunk_size::Int=default_chunk_size)
             return ForwardDiff.tensor(f, x, chunk_size=chunk_size, cache=cache)::Array{T,3}
         end
         return tensf

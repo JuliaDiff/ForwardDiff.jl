@@ -7,7 +7,7 @@
 function jacobian!{T}(output::Matrix{T},
                       f,
                       x::Vector;
-                      chunk_size::Int=default_chunk,
+                      chunk_size::Int=default_chunk_size,
                       cache::ForwardDiffCache=dummy_cache)
     xlen = length(x)
     @assert xlen == size(output, 2) "The output matrix must have a number of columns equal to the length of the input vector"
@@ -16,7 +16,7 @@ end
 
 function jacobian{T}(f,
                      x::Vector{T};
-                     chunk_size::Int=default_chunk,
+                     chunk_size::Int=default_chunk_size,
                      cache::ForwardDiffCache=dummy_cache)
     return _calc_jacobian(f, x, Val{length(x)}, Val{chunk_size}, cache)::Matrix{T}
 end
@@ -24,12 +24,12 @@ end
 function jacobian(f; mutates=false)
     cache = ForwardDiffCache()
     if mutates
-        function jacf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk)
+        function jacf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk_size)
             return ForwardDiff.jacobian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return jacf!
     else
-        function jacf{T}(x::Vector{T}; chunk_size::Int=default_chunk)
+        function jacf{T}(x::Vector{T}; chunk_size::Int=default_chunk_size)
             return ForwardDiff.jacobian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
         end
         return jacf

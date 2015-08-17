@@ -5,7 +5,7 @@
 # boundary-checking is done by the caller.
 
 const tuple_usage_threshold = 10
-const default_chunk = 0
+const default_chunk_size = 0
 
 for F in (:GradientNumber, :HessianNumber, :TensorNumber)
     @eval begin
@@ -15,14 +15,14 @@ for F in (:GradientNumber, :HessianNumber, :TensorNumber)
 end
 
 function check_chunk_size(xlen::Int, chunk_size::Int)        
-    if chunk_size != default_chunk
+    if chunk_size != default_chunk_size
         @assert chunk_size > 0 "Invalid chunk_size: $chunk_size. chunk_size cannot be negative."
         @assert xlen % chunk_size == 0 "Length of input vector is indivisible by chunk size (length(x) = $xlen, chunk size = $chunk_size)"
     end
 end
 
 function chunk_size_matches_full(xlen::Int, chunk_size::Int)
-    return (chunk_size == default_chunk) || (chunk_size == xlen)
+    return (chunk_size == default_chunk_size) || (chunk_size == xlen)
 end
 
 include("cache.jl")
