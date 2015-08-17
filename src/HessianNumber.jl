@@ -39,8 +39,6 @@ function isconstant(h::HessianNumber)
     return isconstant(gradnum(h)) && all(x -> x == zeroT, hess(h))
 end
 
-isconstant(h::HessianNumber{0}) = true
-
 =={N}(a::HessianNumber{N}, b::HessianNumber{N}) = (gradnum(a) == gradnum(b)) && (hess(a) == hess(b))
 
 isequal{N}(a::HessianNumber{N}, b::HessianNumber{N}) = isequal(gradnum(a), gradnum(b)) && isequal(hess(a),hess(b))

@@ -5,6 +5,7 @@ using ForwardDiff:
         GradientNumber,
         HessianNumber,
         TensorNumber,
+        Partials,
         value,
         grad,
         hess,
@@ -35,7 +36,7 @@ test_tens = TensorNumber(test_hess, test_tensvec)
 # Accessor Functions #
 ######################
 @test value(test_tens) == test_val
-@test grad(test_tens) == test_partials
+@test grad(test_tens) == Partials(test_partials)
 @test hess(test_tens) == test_hessvec
 @test tens(test_tens) == test_tensvec
 
@@ -83,12 +84,11 @@ float_tensvec= map(float, int_tensvec)
 
 int_tens = TensorNumber(HessianNumber(GradientNumber(int_val, int_partials), int_hessvec), int_tensvec)
 float_tens = TensorNumber(HessianNumber(GradientNumber(float_val, float_partials), float_hessvec), float_tensvec)
-const_tens = TensorNumber(float_val)
+const_tens = TensorNumber{N,T,C}(float_val)
 
 @test convert(typeof(test_tens), test_tens) == test_tens
 @test convert(TensorNumber, test_tens) == test_tens
 @test convert(TensorNumber{N,T,C}, int_tens) == float_tens
-@test convert(TensorNumber{0,T,Tuple{}}, 1) == TensorNumber(1.0)
 @test convert(TensorNumber{3,T,NTuple{3,T}}, 1) == TensorNumber{3,T,NTuple{3,T}}(1.0)
 @test convert(T, TensorNumber(HessianNumber(GradientNumber(1, tuple(0, 0))))) == 1.0
 
@@ -117,7 +117,7 @@ FloatTens = TensorNumber{N,Float64,NTuple{N,Float64}}
 # is____ Functions #
 ####################
 @test isnan(test_tens) == isnan(test_val)
-@test isnan(TensorNumber(NaN))
+@test isnan(TensorNumber{N,T,C}(NaN))
 
 not_const_tens = TensorNumber(HessianNumber(GradientNumber(one(T), map(one, test_partials))))
 @test !(isconstant(not_const_tens) || isreal(not_const_tens))
@@ -125,7 +125,7 @@ not_const_tens = TensorNumber(HessianNumber(GradientNumber(one(T), map(one, test
 @test isconstant(zero(not_const_tens)) && isreal(zero(not_const_tens))
 
 @test isfinite(test_tens) == isfinite(test_val)
-@test !isfinite(TensorNumber(Inf))
+@test !isfinite(TensorNumber{N,T,C}(Inf))
 
 @test isless(test_tens-1, test_tens)
 @test isless(test_val-1, test_tens)

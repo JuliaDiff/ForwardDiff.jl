@@ -3,6 +3,7 @@ using Calculus
 using ForwardDiff
 using ForwardDiff: 
         GradientNumber,
+        Partials,
         value,
         grad,
         npartials,
@@ -18,13 +19,13 @@ test_partialstup = tuple(rand(floatrange, N)...)
 test_partialsvec = collect(test_partialstup)
 
 for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_partialsvec, ForwardDiff.GradNumVec))
-    test_grad = Grad{N,T}(test_val, test_partials)
+    test_grad = GradientNumber(Val{N}, test_val, test_partials)
 
     ######################
     # Accessor Functions #
     ######################
     @test value(test_grad) == test_val
-    @test grad(test_grad) == test_partials
+    @test grad(test_grad) == Partials(test_partials)
 
     for i in 1:N
         @test grad(test_grad, i) == test_partials[i]
@@ -38,8 +39,8 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test eps(test_grad) == eps(test_val)
     @test eps(typeof(test_grad)) == eps(T)
 
-    grad_zero = Grad{N,T}(zero(test_val), map(zero, test_partials))
-    grad_one = Grad{N,T}(one(test_val), map(zero, test_partials))
+    grad_zero = GradientNumber(Val{N}, zero(test_val), map(zero, test_partials))
+    grad_one = GradientNumber(Val{N}, one(test_val), map(zero, test_partials))
 
     @test zero(test_grad) == grad_zero
     @test zero(typeof(test_grad)) == grad_zero
@@ -55,15 +56,14 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     float_val = float(int_val)
     float_partials = map(float, int_partials)
 
-    int_grad = Grad{N,Int}(int_val, int_partials)
-    float_grad = Grad{N,T}(float_val, float_partials)
+    int_grad = GradientNumber(Val{N}, int_val, int_partials)
+    float_grad = GradientNumber(Val{N}, float_val, float_partials)
     const_grad = Grad{N,T}(float_val)
 
     @test convert(typeof(test_grad), test_grad) == test_grad
     @test convert(GradientNumber, test_grad) == test_grad
     @test convert(Grad{N,T}, int_grad) == float_grad
-    @test convert(Grad{0,T}, 1) == Grad{0,T}(1.0, ForwardDiff.zero_partials(Grad{0,T}))
-    @test convert(Grad{3,T}, 1) == Grad{3,T}(1.0, ForwardDiff.zero_partials(Grad{3,T}))
+    @test convert(Grad{3,T}, 1) == Grad{3,T}(1.0)
     @test convert(T, Grad{2,T}(1)) == 1.0
 
     @test promote_type(Grad{N,Int}, Grad{N,Int}) == Grad{N,Int}
@@ -88,7 +88,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     # is____ Functions #
     ####################
     @test isnan(test_grad) == isnan(test_val)
-    @test isnan(Grad{0,T}(NaN))
+    @test isnan(Grad{3,T}(NaN))
 
     not_const_grad = Grad{N,T}(1, map(one, test_partials))
     @test !(isconstant(not_const_grad) || isreal(not_const_grad))
