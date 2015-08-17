@@ -81,7 +81,7 @@ for G in (:GradNumVec, :GradNumTup)
         convert{N,T}(::Type{($G){N,T}}, g::($G){N,T}) = g
 
         promote_rule{N,A,B}(::Type{($G){N,A}}, ::Type{($G){N,B}}) = ($G){N,promote_type(A,B)}
-        promote_rule{N,A,B}(::Type{($G){N,A}}, ::Type{B}) = ($G){N,promote_type(A,B)}
+        promote_rule{N,A,B<:Number}(::Type{($G){N,A}}, ::Type{B}) = ($G){N,promote_type(A,B)}
     end
 end
 

@@ -77,9 +77,9 @@ function convert{T<:Real}(::Type{T}, t::TensorNumber)
     end
 end
 
-promote_rule{N,T,C}(::Type{TensorNumber{N,T,C}}, ::Type{T}) = TensorNumber{N,T,C}
+promote_rule{N,T<:Number,C}(::Type{TensorNumber{N,T,C}}, ::Type{T}) = TensorNumber{N,T,C}
 
-function promote_rule{N,T,C,S}(::Type{TensorNumber{N,T,C}}, ::Type{S})
+function promote_rule{N,T,C,S<:Number}(::Type{TensorNumber{N,T,C}}, ::Type{S})
     R = promote_type(T, S)
     return TensorNumber{N,R,switch_eltype(C, R)}
 end

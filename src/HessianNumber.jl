@@ -77,9 +77,9 @@ function convert{T<:Real}(::Type{T}, h::HessianNumber)
     end
 end
 
-promote_rule{N,T,C}(::Type{HessianNumber{N,T,C}}, ::Type{T}) = HessianNumber{N,T,C}
+promote_rule{N,T<:Number,C}(::Type{HessianNumber{N,T,C}}, ::Type{T}) = HessianNumber{N,T,C}
 
-function promote_rule{N,T,C,S}(::Type{HessianNumber{N,T,C}}, ::Type{S})
+function promote_rule{N,T,C,S<:Number}(::Type{HessianNumber{N,T,C}}, ::Type{S})
     R = promote_type(T, S)
     return HessianNumber{N,R,switch_eltype(C, R)}
 end
