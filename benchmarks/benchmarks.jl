@@ -3,27 +3,17 @@ using ForwardDiff
 ##################
 # Test functions #
 ##################
-sqr(i) = i^2
-twopicos(i) = cos(2*π*i)
-
 function ackley(x)
-    len_recip = 1/length(x)
+    a, b = 20.0, -0.2
+    len_recip = inv(length(x))
     sum_sqrs = zero(eltype(x))
     sum_cos = sum_sqrs
     for i in x
-        sum_cos += twopicos(i)
-        sum_sqrs += sqr(i)
+        sum_cos += cos(2.0*π*i)
+        sum_sqrs += i*i
     end
-    return -20 * exp(-0.2 * sqrt(len_recip*sum_sqrs)) - exp(len_recip * sum_cos) + 20 + e
-end
-
-function ackley_sum(x)
-    result = zero(eltype(x))
-    xlen = length(x)
-    for i in x
-        result += i*ackley(rand(x, xlen))
-    end
-    return result
+    return (-a * exp(b * sqrt(len_recip*sum_sqrs)) -
+            exp(len_recip*sum_cos) + a + e)
 end
 
 #############################
@@ -32,10 +22,10 @@ end
 # Usage:
 #
 # benchmark ackley where length(x) = 10:10:100, taking the minimum of 4 trials:
-# bench_fad(ackley_sum, 10:10:100, 4)
+# bench_fad(ackley, 10:10:100, 4)
 #
 # benchmark ackley where len(x) = 400, taking the minimum of 8 trials:
-# bench_fad(ackley_sum, 400, 4)
+# bench_fad(ackley, 400, 4)
 
 function bench_fad(f, range, repeat=3)
     g = ForwardDiff.gradient(f)
