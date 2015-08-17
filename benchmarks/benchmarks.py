@@ -25,16 +25,20 @@ def ackley(x):
     return (-20 * algopy.exp(-0.2*algopy.sqrt(len_recip*sum_sqrs)) - 
             algopy.exp(0.5*sum_cos) + 20 + math.e)
 
+def ackley_sum(x):
+    xlen = len(x)
+    return sum(i*ackley(numpy.random.choice(x, xlen)) for i in x)
+
 #############################
 # Benchmark utility methods #
 #############################
 # Usage:
 #
-# benchmark ackley where len(x) = range(10,100,10), taking the minimum of 4 trials:
-# bench_fad(ackley, range(10,100,10), 4)
+# benchmark ackley_sum where len(x) = range(10,100,10), taking the minimum of 4 trials:
+# bench_fad(ackley_sum, range(10,100,10), 4)
 #
-# benchmark ackley where len(x) = 400, taking the minimum of 8 trials:
-# bench_fad(ackley, (400,), 8)
+# benchmark ackley_sum where len(x) = 400, taking the minimum of 8 trials:
+# bench_fad(ackley_sum, (400,), 8)
 
 def bench_fad(f, itr, repeat):
     fname = f.__name__
