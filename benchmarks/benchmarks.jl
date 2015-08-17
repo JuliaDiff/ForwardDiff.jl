@@ -3,18 +3,31 @@ using ForwardDiff
 ##################
 # Test functions #
 ##################
+sqr(i) = i*i
+
 function ackley(x)
-    a, b = 20.0, -0.2
+    a, b, c = 20.0, -0.2, 2.0*π
     len_recip = inv(length(x))
     sum_sqrs = zero(eltype(x))
     sum_cos = sum_sqrs
     for i in x
-        sum_cos += cos(2.0*π*i)
-        sum_sqrs += i*i
+        sum_cos += cos(c*i)
+        sum_sqrs += sqr(i)
     end
     return (-a * exp(b * sqrt(len_recip*sum_sqrs)) -
             exp(len_recip*sum_cos) + a + e)
 end
+
+function rosenbrock(x)
+    a, b = 100.0, 1.0
+    result = zero(eltype(x))
+    for i in 1:length(x)-1
+        result += sqr(b - x[i]) + a*sqr(x[i+1] - sqr(x[i]))
+    end
+    return result
+end
+
+self_weighted_logit(x) = inv(1.0 + exp(-dot(x, x)))
 
 #############################
 # Benchmark utility methods #

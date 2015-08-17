@@ -1,4 +1,4 @@
-import numpy, algopy, math, timeit
+import numpy, algopy, timeit
 
 ################
 # AD functions #
@@ -18,15 +18,28 @@ def hessian(f):
 ##################
 # Test functions #
 ##################
+def sqr(i):
+    return i*i
+
 def ackley(x):
-    a, b = 20.0, -0.2
+    a, b, c = 20.0, -0.2, 2.0*numpy.pi
     len_recip = 1.0/len(x)
     sum_sqrs, sum_cos = 0.0, 0.0
     for i in x:
-        sum_sqrs += i**2
-        sum_cos += algopy.cos(2.0*math.pi*i)
+        sum_cos += algopy.cos(c*i)
+        sum_sqrs += sqr(i)
     return (-a * algopy.exp(b*algopy.sqrt(len_recip*sum_sqrs)) -
-            algopy.exp(len_recip*sum_cos) + a + math.e)
+            algopy.exp(len_recip*sum_cos) + a + numpy.e)
+
+def rosenbrock(x):
+    a, b = 100.0, 1.0
+    result = 0.0
+    for i in xrange(len(x)-1):
+        result += sqr(b - x[i]) + a*sqr(x[i+1] - sqr(x[i]))
+    return result
+
+def self_weighted_logit(x):
+    return 1.0/(1.0 + algopy.exp(-algopy.dot(x,x)))
 
 #############################
 # Benchmark utility methods #
@@ -41,7 +54,7 @@ def ackley(x):
 
 def bench_fad(f, itr, repeat):
     fname = f.__name__
-    import_stmt = 'import numpy, algopy, math; from __main__ import ' + fname + ', gradient, hessian;'
+    import_stmt = 'import numpy as np, algopy, math; from __main__ import ' + fname + ', gradient, hessian;'
     return {'ftimes': bench_range(fname + '(x)', import_stmt, itr, repeat),
             'gtimes': bench_range('g(x)', import_stmt + 'g = gradient(' + fname + ');', itr, repeat), 
             'htimes': bench_range('h(x)', import_stmt + 'h = hessian(' + fname + ');', itr, repeat)}
