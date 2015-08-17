@@ -39,8 +39,6 @@ function isconstant(t::TensorNumber)
     return isconstant(hessnum(t)) && all(x -> x == zeroT, tens(t))
 end
 
-isconstant(t::TensorNumber{0}) = true
-
 =={N}(a::TensorNumber{N}, b::TensorNumber{N}) = (hessnum(a) == hessnum(b)) && (tens(a) == tens(b))
 
 isequal{N}(a::TensorNumber{N}, b::TensorNumber{N}) = isequal(hessnum(a), hessnum(b)) && isequal(tens(a), tens(b))

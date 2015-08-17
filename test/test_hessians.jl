@@ -4,6 +4,7 @@ using ForwardDiff
 using ForwardDiff: 
         GradientNumber,
         HessianNumber,
+        Partials,
         value,
         grad,
         hess,
@@ -28,7 +29,7 @@ test_hess = HessianNumber(test_grad, test_hessvec)
 # Accessor Functions #
 ######################
 @test value(test_hess) == test_val
-@test grad(test_hess) == test_partials
+@test grad(test_hess) == Partials(test_partials)
 @test hess(test_hess) == test_hessvec
 
 for i in 1:N
@@ -69,12 +70,11 @@ float_hessvec= map(float, int_hessvec)
 
 int_hess = HessianNumber(GradientNumber(int_val, int_partials), int_hessvec)
 float_hess = HessianNumber(GradientNumber(float_val, float_partials), float_hessvec)
-const_hess = HessianNumber(float_val)
+const_hess = HessianNumber{N,T,C}(float_val)
 
 @test convert(typeof(test_hess), test_hess) == test_hess
 @test convert(HessianNumber, test_hess) == test_hess
 @test convert(HessianNumber{N,T,C}, int_hess) == float_hess
-@test convert(HessianNumber{0,T,Tuple{}}, 1) == HessianNumber(1.0)
 @test convert(HessianNumber{3,T,NTuple{3,T}}, 1) == HessianNumber{3,T,NTuple{3,T}}(1.0)
 @test convert(T, HessianNumber(GradientNumber(1, tuple(0, 0)))) == 1.0
 
@@ -103,7 +103,7 @@ FloatHess = HessianNumber{N,Float64,NTuple{N,Float64}}
 # is____ Functions #
 ####################
 @test isnan(test_hess) == isnan(test_val)
-@test isnan(HessianNumber(NaN))
+@test isnan(HessianNumber{N,T,C}(NaN))
 
 not_const_hess = HessianNumber(GradientNumber(one(T), map(one, test_partials)))
 @test !(isconstant(not_const_hess) || isreal(not_const_hess))
@@ -111,7 +111,7 @@ not_const_hess = HessianNumber(GradientNumber(one(T), map(one, test_partials)))
 @test isconstant(zero(not_const_hess)) && isreal(zero(not_const_hess))
 
 @test isfinite(test_hess) == isfinite(test_val)
-@test !isfinite(HessianNumber(Inf))
+@test !isfinite(HessianNumber{N,T,C}(Inf))
 
 @test isless(test_hess-1, test_hess)
 @test isless(test_val-1, test_hess)

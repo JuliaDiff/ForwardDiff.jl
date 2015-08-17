@@ -6,13 +6,13 @@ module ForwardDiff
 
     import Calculus
     import NaNMath
-    import Base: *, /, +, -, ^,
-                 hash, ==, isequal, copy,
-                 zero, one, rand, convert,
-                 promote_rule, read, write,
-                 isless, isreal, isnan, isfinite,
-                 eps, conj, transpose, ctranspose,
-                 eltype, abs, abs2
+    import Base: *, /, +, -, ^, getindex, length,
+                 hash, ==, isequal, copy, zero, 
+                 one, rand, convert, promote_rule, 
+                 read, write, isless, isreal, isnan, 
+                 isfinite, eps, conj, transpose, 
+                 ctranspose, eltype, abs, abs2, start, 
+                 next, done
     # Import fad_supported_univar_funcs - use the below commented-out
     # loop to do auto-gen these imports once
     # https://github.com/jakebolewski/JuliaParser.jl/issues/19
@@ -35,6 +35,7 @@ module ForwardDiff
     #     @eval import Base.$(fsym);
     # end
 
+    include("Partials.jl")
     include("ForwardDiffNumber.jl")
     include("GradientNumber.jl")
     include("HessianNumber.jl")
