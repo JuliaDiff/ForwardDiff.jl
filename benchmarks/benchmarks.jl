@@ -1,4 +1,6 @@
 using ForwardDiff
+using DataFrames
+using JLD
 
 ##################
 # Test functions #
@@ -32,42 +34,59 @@ self_weighted_logit(x) = inv(1.0 + exp(-dot(x, x)))
 #############################
 # Benchmark utility methods #
 #############################
-# Usage:
-#
-# benchmark ackley where length(x) = 10:10:100, taking the minimum of 4 trials:
-# bench_fad(ackley, 10:10:100, 4)
-#
-# benchmark ackley where len(x) = 400, taking the minimum of 8 trials:
-# bench_fad(ackley, 400, 4)
+function bench_func(f_expr::Expr, x, repeat)
 
-function bench_fad(f, range, repeat=3)
-    g = ForwardDiff.gradient(f)
-    h = ForwardDiff.hessian(f)
+    @eval function test()
+        x = $x
+        return $f_expr
+    end
 
-    # warm up
-    bench_range(f, range, 1)
-    bench_range(g, range, 1)
-    bench_range(h, range, 1)
-
-    # actual
-    return Dict(
-        :ftimes => bench_range(f,range,repeat),
-        :gtimes => bench_range(g,range,repeat),
-        :htimes => bench_range(h,range,repeat)
-    )
-end
-
-function bench_func(f, xlen, repeat)
-    x=rand(xlen)
     min_time = Inf
-    for i in 1:repeat
-        this_time = (tic(); f(x); toq())
+
+    for i in 1:(repeat+1) # +1 for warm-up
+        gc()
+        this_time = @elapsed test()
         min_time = min(this_time, min_time)
     end
+
     return min_time
 end
 
-function bench_range(f, range, repeat=3)
-    return [bench_func(f, xlen, repeat) for xlen in range]
+function bench_fad(f;
+                   repeat=5,
+                   xlens=(16,1600,16000),
+                   chunk_sizes=(ForwardDiff.default_chunk_size,1,2,4,8,16))
+
+    benchdf = DataFrame(time=Float64[],
+                        func=Char[],
+                        xlen=Int[],
+                        chunk_size=Int[])
+    f_expr = :(($f)(x))
+    g = ForwardDiff.gradient(f)
+
+    for xlen in xlens
+        x = rand(xlen)
+        push!(benchdf, [bench_func(f_expr, xlen, repeat), 'f', xlen, -1])
+        for c in chunk_sizes
+            g_expr = :(($g)(x, chunk_size=$c))
+            push!(benchdf, [bench_func(g_expr, xlen, repeat), 'g', xlen, c])
+        end
+    end
+
+    return benchdf
 end
 
+function default_benchmark(fs...)
+    folder_path = joinpath(Pkg.dir("ForwardDiff"), "benchmarks", "benchmark_data")
+    for f in fs
+        print("Performing default benchmarks for $f...")
+        tic()
+        result = bench_fad(f)
+        println("done (took $(toq()) seconds).")
+        file_path =  joinpath(folder_path, "$(f)_times.jld")
+        print("\tSaving data to $(file_path)...")
+        save(file_path, "$(f)_times", result)
+        println("done.")
+    end
+    println("Done with all benchmarks!")
+end

@@ -1,4 +1,4 @@
-import numpy, algopy, timeit
+import numpy, algopy, timeit, os, pickle
 
 ################
 # AD functions #
@@ -44,22 +44,35 @@ def self_weighted_logit(x):
 #############################
 # Benchmark utility methods #
 #############################
-# Usage:
-#
-# benchmark ackley where len(x) = range(10,100,10), taking the minimum of 4 trials:
-# bench_fad(ackley, range(10,100,10), 4)
-#
-# benchmark ackley where len(x) = 400, taking the minimum of 8 trials:
-# bench_fad(ackley, (400,), 8)
+def bench_func(f, x, repeat):
+    def wrapped_f():
+        return f(x)
+    return min(timeit.repeat(wrapped_f, number=1, repeat=repeat))
 
-def bench_fad(f, itr, repeat):
-    fname = f.__name__
-    import_stmt = 'import numpy as np, algopy, math; from __main__ import ' + fname + ', gradient, hessian;'
-    return {'ftimes': bench_range(fname + '(x)', import_stmt, itr, repeat),
-            'gtimes': bench_range('g(x)', import_stmt + 'g = gradient(' + fname + ');', itr, repeat), 
-            'htimes': bench_range('h(x)', import_stmt + 'h = hessian(' + fname + ');', itr, repeat)}
+def bench_fad(f, repeat=5, xlens=(16,1600,16000)):
+    bench_dict = {'time': [], 'func': [], 'xlen': []}
+    g = gradient(f)
+    for xlen in xlens:
+        x = numpy.random.rand(xlen)
+        bench_dict['time'].append(bench_func(f, x, repeat))
+        bench_dict['func'].append('f')
+        bench_dict['xlen'].append(xlen)
+        bench_dict['time'].append(bench_func(g, x, repeat))
+        bench_dict['func'].append('g')
+        bench_dict['xlen'].append(xlen)
+    return bench_dict
 
-def bench_range(stmt, setup, itr, repeat):
-    x_stmt = lambda xlen: 'x = numpy.random.rand(' + str(xlen) + ')'
-    return [min(timeit.repeat(stmt, setup=(setup + x_stmt(i)), number=1, repeat=repeat)) for i in itr]
+script_path = os.path.dirname(os.path.realpath(__file__))
+
+def default_benchmark(*fs):
+    folder_path = os.path.join(script_path, 'benchmark_data')
+    for f in fs:
+        filename = os.path.join(folder_path, f.__name__ + '_times.p')
+        with open(filename, 'wb') as file:
+            print 'Performing default benchmarks for ' + f.__name__ + '...'
+            result = bench_fad(f)
+            print '\tdone. Pickling results...'
+            pickle.dump(result, file)
+            print '\tdone.'
+    print 'Done with all benchmarks!'
 
