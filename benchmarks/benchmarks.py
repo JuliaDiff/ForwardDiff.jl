@@ -79,7 +79,6 @@ def run_benchmarks(*fs):
             print '\tdone. Pickling results...'
             pickle.dump(result, file)
             print '\tdone.'
-    print 'Done with all benchmarks!'
 
 def get_benchmark(f):
     with open(data_filename(f), 'rb') as file:

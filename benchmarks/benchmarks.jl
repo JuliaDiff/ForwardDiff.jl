@@ -93,7 +93,6 @@ function run_benchmarks(fs...)
         save(file, data_name(f), result)
         println("done.")
     end
-    println("Done with all benchmarks!")
 end
 
 get_benchmark(f) = first(values(load(data_file(f))))
