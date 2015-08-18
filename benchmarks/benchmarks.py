@@ -44,12 +44,21 @@ def self_weighted_logit(x):
 #############################
 # Benchmark utility methods #
 #############################
+folder_path = os.path.dirname(os.path.realpath(__file__))
+data_path = os.path.join(folder_path, 'benchmark_data')
+
+def data_name(f):
+    return f.__name__ + '_times'
+
+def data_filename(f):
+    return os.path.join(data_path, data_name(f) + '.p')
+
 def bench_func(f, x, repeat):
     def wrapped_f():
         return f(x)
     return min(timeit.repeat(wrapped_f, number=1, repeat=repeat))
 
-def bench_fad(f, repeat=5, xlens=(16,160)):
+def run_benchmark(f, repeat=5, xlens=(16,1600,16000)):
     bench_dict = {'time': [], 'func': [], 'xlen': []}
     g = gradient(f)
     for xlen in xlens:
@@ -62,25 +71,33 @@ def bench_fad(f, repeat=5, xlens=(16,160)):
         bench_dict['xlen'].append(xlen)
     return bench_dict
 
-script_path = os.path.dirname(os.path.realpath(__file__))
-
-def default_benchmark(*fs):
-    folder_path = os.path.join(script_path, 'benchmark_data')
+def run_benchmarks(*fs):
     for f in fs:
-        filename = os.path.join(folder_path, f.__name__ + '_times.p')
-        with open(filename, 'wb') as file:
+        with open(data_filename(f), 'wb') as file:
             print 'Performing default benchmarks for ' + f.__name__ + '...'
-            result = bench_fad(f)
+            result = run_benchmark(f)
             print '\tdone. Pickling results...'
             pickle.dump(result, file)
             print '\tdone.'
     print 'Done with all benchmarks!'
 
+def get_benchmark(f):
+    with open(data_filename(f), 'rb') as file:
+        return pickle.load(file)
+
+def get_benchmarks(*fs):
+    return {f.__name__: get_benchmark(f) for f in fs}
+
 ##################
 # Run benchmarks #
 ##################
-def main():
-    default_benchmark(ackley, rosenbrock, self_weighted_logit)
+default_fs = (ackley, rosenbrock, self_weighted_logit)
+
+def run_default_benchmarks(): 
+    return run_benchmarks(*default_fs)
+
+def get_default_benchmarks(): 
+    return get_benchmarks(*default_fs)
 
 if __name__ == '__main__':
-    main()
+    run_default_benchmarks()

@@ -34,6 +34,12 @@ self_weighted_logit(x) = inv(1.0 + exp(-dot(x, x)))
 #############################
 # Benchmark utility methods #
 #############################
+const folder_path = joinpath(Pkg.dir("ForwardDiff"), "benchmarks")
+const data_path = joinpath(folder_path, "benchmark_data")
+
+data_name(f) = "$(f)_benchmarks"
+data_file(f) = joinpath(data_path, "$(data_name(f)).jld")
+
 function bench_func(f_expr::Expr, x, repeat)
 
     @eval function test()
@@ -52,10 +58,10 @@ function bench_func(f_expr::Expr, x, repeat)
     return min_time
 end
 
-function bench_fad(f;
-                   repeat=5,
-                   xlens=(16,160),#1600,16000),
-                   chunk_sizes=(ForwardDiff.default_chunk_size,1,2,4,8,16))
+function run_benchmark(f;
+                       repeat=5,
+                       xlens=(16,1600,16000),
+                       chunk_sizes=(ForwardDiff.default_chunk_size,1,2,4,8,16))
 
     benchdf = DataFrame(time=Float64[],
                         func=Char[],
@@ -76,22 +82,27 @@ function bench_fad(f;
     return benchdf
 end
 
-function default_benchmark(fs...)
-    folder_path = joinpath(Pkg.dir("ForwardDiff"), "benchmarks", "benchmark_data")
+function run_benchmarks(fs...)
     for f in fs
         print("Performing default benchmarks for $f...")
         tic()
-        result = bench_fad(f)
+        result = run_benchmark(f)
         println("done (took $(toq()) seconds).")
-        file_path =  joinpath(folder_path, "$(f)_times.jld")
-        print("\tSaving data to $(file_path)...")
-        save(file_path, "$(f)_times", result)
+        file = data_file(f)
+        print("\tSaving data to $(file)...")
+        save(file, data_name(f), result)
         println("done.")
     end
     println("Done with all benchmarks!")
 end
 
+get_benchmark(f) = first(values(load(data_file(f))))
+get_benchmarks(fs...) = [symbol(f) => get_benchmark(f) for f in fs]
+
 ##################
 # Run Benchmarks #
 ##################
-main() = default_benchmark(ackley, rosenbrock, self_weighted_logit)
+const default_fs = (ackley, rosenbrock, self_weighted_logit)
+
+run_default_benchmarks() = run_benchmarks(default_fs...)
+get_default_benchmarks() = get_benchmarks(default_fs...)
