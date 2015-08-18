@@ -54,7 +54,7 @@ end
 
 function bench_fad(f;
                    repeat=5,
-                   xlens=(16,1600,16000),
+                   xlens=(16,160),#1600,16000),
                    chunk_sizes=(ForwardDiff.default_chunk_size,1,2,4,8,16))
 
     benchdf = DataFrame(time=Float64[],
@@ -66,10 +66,10 @@ function bench_fad(f;
 
     for xlen in xlens
         x = rand(xlen)
-        push!(benchdf, [bench_func(f_expr, xlen, repeat), 'f', xlen, -1])
+        push!(benchdf, [bench_func(f_expr, x, repeat), 'f', xlen, -1])
         for c in chunk_sizes
             g_expr = :(($g)(x, chunk_size=$c))
-            push!(benchdf, [bench_func(g_expr, xlen, repeat), 'g', xlen, c])
+            push!(benchdf, [bench_func(g_expr, x, repeat), 'g', xlen, c])
         end
     end
 
@@ -90,3 +90,8 @@ function default_benchmark(fs...)
     end
     println("Done with all benchmarks!")
 end
+
+##################
+# Run Benchmarks #
+##################
+main() = default_benchmark(ackley, rosenbrock, self_weighted_logit)

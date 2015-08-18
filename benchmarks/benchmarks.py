@@ -49,7 +49,7 @@ def bench_func(f, x, repeat):
         return f(x)
     return min(timeit.repeat(wrapped_f, number=1, repeat=repeat))
 
-def bench_fad(f, repeat=5, xlens=(16,1600,16000)):
+def bench_fad(f, repeat=5, xlens=(16,160)):
     bench_dict = {'time': [], 'func': [], 'xlen': []}
     g = gradient(f)
     for xlen in xlens:
@@ -76,3 +76,11 @@ def default_benchmark(*fs):
             print '\tdone.'
     print 'Done with all benchmarks!'
 
+##################
+# Run benchmarks #
+##################
+def main():
+    default_benchmark(ackley, rosenbrock, self_weighted_logit)
+
+if __name__ == '__main__':
+    main()
