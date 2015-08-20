@@ -49,6 +49,10 @@ Dual operator*(double x, const Dual &rhs) {
     return Dual(x*rhs.real_part(), x*rhs.eps_part());
 }
 
+Dual operator-(double x, const Dual &rhs) {
+    return Dual(x - rhs.real_part(), -rhs.eps_part());
+}
+
 Dual sin(const Dual& x) {
     return Dual(sin(x.real_part()), x.eps_part()*cos(x.real_part()));
 }
@@ -95,13 +99,35 @@ template<typename T> T ackley(const vector<T> &x) {
             exp(len_recip*sum_cos) + a + M_E);
 }
 
+/*
+function rosenbrock(x)
+    a, b = 100.0, 1.0
+    result = zero(eltype(x))
+    for i in 1:length(x)-1
+        result += sqr(b - x[i]) + a*sqr(x[i+1] - sqr(x[i]))
+    end
+    return result
+end
+*/
+
+template <typename T> T rosenbrock(const vector<T> &x) {
+    double a = 100.0;
+    double b = 1.0;
+    T result(0);
+    for (size_t i = 0; i < x.size()-1; i++) {
+        T t1 = b-x[i];
+        T t2 = x[i+1]-x[i]*x[i];
+        result = result + t1*t1 + a*t2*t2;
+    }
+    return result;
+}
 
 int main() {
 
     int len = 16000;
     vector<double> vec(len);
     for (int i = 0; i < len; i++) {
-        vec[i] = i;
+        vec[i] = i+1;
     }
     double start = clock_now();
     double val = ackley(vec);
@@ -123,6 +149,31 @@ int main() {
     }
     double endgrad = clock_now();
 
+    cout << "Ackley" << endl;
+    cout << val << endl;
+    cout << end-start << " sec for function value" << endl;
+    cout << endgrad-startgrad << " sec for gradient" << endl;
+
+
+    start = clock_now();
+    val = rosenbrock(vec);
+    end = clock_now();
+
+    for (int i = 0; i < len; i++) {
+        dualvec[i] = Dual(vec[i]);
+    }
+
+    // compute gradient in a loop
+    startgrad = clock_now();
+    for (int i = 0; i < len; i++) {
+        dualvec[i] = Dual(vec[i],1.0);
+        Dual val = rosenbrock(dualvec);
+        gradient[i] = val.eps_part();
+        dualvec[i] = Dual(vec[i],0.0);
+    }
+    endgrad = clock_now();
+
+    cout << "Rosenbrock" << endl;
     cout << val << endl;
     cout << end-start << " sec for function value" << endl;
     cout << endgrad-startgrad << " sec for gradient" << endl;
