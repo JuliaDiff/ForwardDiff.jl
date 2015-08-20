@@ -115,7 +115,7 @@ unshift!(PyVector(pyimport("sys")["path"]), "")
 @pyimport benchmarks
 
 # Grab ForwardDiff benchmarks from benchmark_data
-get_fordiff_benchmarks() = get_default_benchmarks()
+get_fordiff_benchmarks() = get_benchmarks(default_fs...)
 
 # Grab AlgoPy benchmarks from benchmark_data
 function algopy_bench_to_df(bench::Dict)
