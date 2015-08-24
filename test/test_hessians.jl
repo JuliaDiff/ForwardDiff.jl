@@ -4,7 +4,6 @@ using ForwardDiff
 using ForwardDiff: 
         GradientNumber,
         HessianNumber,
-        Partials,
         value,
         grad,
         hess,
@@ -29,7 +28,7 @@ test_hess = HessianNumber(test_grad, test_hessvec)
 # Accessor Functions #
 ######################
 @test value(test_hess) == test_val
-@test grad(test_hess) == Partials(test_partials)
+@test grad(test_hess) == test_partials
 @test hess(test_hess) == test_hessvec
 
 for i in 1:N

@@ -3,7 +3,6 @@ using Calculus
 using ForwardDiff
 using ForwardDiff: 
         GradientNumber,
-        Partials,
         value,
         grad,
         npartials,
@@ -25,7 +24,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     # Accessor Functions #
     ######################
     @test value(test_grad) == test_val
-    @test grad(test_grad) == Partials(test_partials)
+    @test grad(test_grad) == test_partials
 
     for i in 1:N
         @test grad(test_grad, i) == test_partials[i]
@@ -58,7 +57,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     int_grad = GradientNumber(Val{N}, int_val, int_partials)
     float_grad = GradientNumber(Val{N}, float_val, float_partials)
-    const_grad = Grad{N,T}(float_val)
+    const_grad = GradientNumber(float_val)
 
     @test convert(typeof(test_grad), test_grad) == test_grad
     @test convert(GradientNumber, test_grad) == test_grad
@@ -90,7 +89,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test isnan(test_grad) == isnan(test_val)
     @test isnan(Grad{3,T}(NaN))
 
-    not_const_grad = Grad{N,T}(1, map(one, test_partials))
+    not_const_grad = GradientNumber(Val{N}, one(T), map(one, test_partials))
     @test !(isconstant(not_const_grad) || isreal(not_const_grad))
     @test isconstant(const_grad) && isreal(const_grad)
     @test isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
@@ -118,20 +117,20 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     #####################################
     rand_val = rand(T)
     rand_partials = map(x -> rand(T), test_partials)
-    rand_grad = Grad{N,T}(rand_val, rand_partials)
+    rand_grad = GradientNumber(Val{N}, rand_val, rand_partials)
 
     # Addition/Subtraction #
     #----------------------#
-    @test rand_grad + test_grad == Grad{N,T}(rand_val+test_val, map(+, rand_partials, test_partials))
+    @test rand_grad + test_grad == GradientNumber(Val{N}, rand_val+test_val, map(+, rand_partials, test_partials))
     @test rand_grad + test_grad == test_grad + rand_grad
-    @test rand_grad - test_grad == Grad{N,T}(rand_val-test_val, map(-, rand_partials, test_partials))
+    @test rand_grad - test_grad == GradientNumber(Val{N}, rand_val-test_val, map(-, rand_partials, test_partials))
 
-    @test rand_val + test_grad == Grad{N,T}(rand_val+test_val, test_partials)
+    @test rand_val + test_grad == GradientNumber(Val{N}, rand_val+test_val, test_partials)
     @test rand_val + test_grad == test_grad + rand_val
-    @test rand_val - test_grad == Grad{N,T}(rand_val-test_val, map(-, test_partials))
-    @test test_grad - rand_val == Grad{N,T}(test_val-rand_val, test_partials)
+    @test rand_val - test_grad == GradientNumber(Val{N}, rand_val-test_val, map(-, test_partials))
+    @test test_grad - rand_val == GradientNumber(Val{N}, test_val-rand_val, test_partials)
     
-    @test -test_grad == Grad{N,T}(-test_val, map(-, test_partials))
+    @test -test_grad == GradientNumber(Val{N}, -test_val, map(-, test_partials))
 
     # Multiplication #
     #----------------#
@@ -143,7 +142,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
         @test grad(rand_x_test, i) == (rand_partials[i] * test_val) + (rand_val * test_partials[i])
     end
 
-    @test rand_val * test_grad == Grad{N,T}(rand_val*test_val, map(x -> rand_val*x, test_partials))
+    @test rand_val * test_grad == GradientNumber(Val{N}, rand_val*test_val, map(x -> rand_val*x, test_partials))
     @test test_grad * rand_val == rand_val * test_grad
 
     @test test_grad * false == zero(test_grad)
@@ -161,7 +160,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     grad_approx_eq(rand_grad / test_grad, rand_grad * inv(test_grad))
     grad_approx_eq(rand_val / test_grad, rand_val * inv(test_grad))
 
-    @test test_grad / rand_val == Grad{N,T}(test_val/rand_val, map(x -> x/rand_val, test_partials))
+    @test test_grad / rand_val == GradientNumber(Val{N}, test_val/rand_val, map(x -> x/rand_val, test_partials))
 
     # Exponentiation #
     #----------------#

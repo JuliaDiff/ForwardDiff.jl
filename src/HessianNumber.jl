@@ -8,7 +8,7 @@ immutable HessianNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
 end
 
 function HessianNumber{N,T,C}(gradnum::GradientNumber{N,T,C},
-                           hess::Vector=zeros(T, halfhesslen(N)))
+                              hess::Vector=zeros(T, halfhesslen(N)))
     return HessianNumber{N,T,C}(gradnum, hess)
 end
 

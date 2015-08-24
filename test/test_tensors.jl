@@ -5,7 +5,6 @@ using ForwardDiff:
         GradientNumber,
         HessianNumber,
         TensorNumber,
-        Partials,
         value,
         grad,
         hess,
@@ -36,7 +35,7 @@ test_tens = TensorNumber(test_hess, test_tensvec)
 # Accessor Functions #
 ######################
 @test value(test_tens) == test_val
-@test grad(test_tens) == Partials(test_partials)
+@test grad(test_tens) == test_partials
 @test hess(test_tens) == test_hessvec
 @test tens(test_tens) == test_tensvec
 

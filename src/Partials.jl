@@ -38,8 +38,8 @@ rand_partials{T}(::Type{Vector{T}}, n::Int) = Partials(rand(T, n))
 # Generic Functions #
 #####################
 function iszero{T}(partials::Partials{T})
-    z = zero(T)
-    return any(x -> x == z, data(partials))
+    p = data(partials)
+    return isempty(p) || (z = zero(T); any(x -> x == z, p))
 end
 
 ==(a::Partials, b::Partials) = data(a) == data(b)
@@ -64,7 +64,7 @@ function write(io::IO, partials::Partials)
     end
 end
 
-convert{T,C}(::Type{Partials{T,C}}, partials::Partials) = Partials(convert(C, data(partials)))
+convert{T,C}(::Type{Partials{T,C}}, partials::Partials) = Partials{T,C}(convert(C, data(partials)))
 convert{T,C}(::Type{Partials{T,C}}, partials::Partials{T,C}) = partials
 
 ##################
@@ -104,15 +104,16 @@ end
 
 *(x::Number, partials::Partials) = partials*x
 
-@generated function _mul_partials{A,B,C,D}(a::PartialsVec{A}, b::PartialsVec{B}, afactor::C, bfactor::D)
-    T = promote_type(A, B, C, D)
-    return quote
-        result = Vector{$T}(length(a))
-        @simd for i in eachindex(result)
-            @inbounds result[i] = (afactor * a[i]) + (bfactor * b[i])
-        end
-        return Partials(result)
+function _load_mul_partials!(result::Vector, a, b, afactor, bfactor)
+    @simd for i in eachindex(result)
+        @inbounds result[i] = (afactor * a[i]) + (bfactor * b[i])
     end
+    return result
+end
+
+function _mul_partials{A,B,C,D}(a::PartialsVec{A}, b::PartialsVec{B}, afactor::C, bfactor::D)
+    T = promote_type(A, B, C, D)
+    return Partials(_load_mul_partials!(Vector{T}(length(a)), a, b, afactor, bfactor))
 end
 
 function _mul_partials{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B}, afactor, bfactor)
@@ -130,12 +131,12 @@ function /{T}(partials::PartialsVec{T}, x::Number)
 end
 
 function _div_partials(x, partials::Partials, val)
-    return ((-x) / (val^2)) * partials
+    return ((-x) / (val*val)) * partials
 end
 
 function _div_partials(a::Partials, b::Partials, aval, bval)
     afactor = inv(bval)
-    bfactor = -aval/(bval^2)
+    bfactor = -aval/(bval*bval)
     return _mul_partials(a, b, afactor, bfactor)
 end
 

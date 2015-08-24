@@ -8,7 +8,7 @@ immutable TensorNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
 end
 
 function TensorNumber{N,T,C}(hessnum::HessianNumber{N,T,C},
-                          tens::Vector=zeros(T, halftenslen(N)))
+                             tens::Vector=zeros(T, halftenslen(N)))
     return TensorNumber{N,T,C}(hessnum, tens)
 end
 

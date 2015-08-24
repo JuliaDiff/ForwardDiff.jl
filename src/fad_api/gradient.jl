@@ -92,7 +92,7 @@ end
 
         gradvec = get_workvec!(cache, GradientNumber, T, X, C)
         partials = get_partials!(cache, G)
-        
+
         $body
 
         return output::Vector{S}

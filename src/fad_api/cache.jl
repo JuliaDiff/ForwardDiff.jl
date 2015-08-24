@@ -19,61 +19,41 @@ end
     return :(Vector{$G}($xlen))
 end
 
-partials_type{N,T}(::Type{GradNumVec{N,T}}) = Vector{Vector{T}}
-
-@generated function partials_type{N,T}(::Type{GradNumTup{N,T}})
-    if N > tuple_usage_threshold
-        ex = :(Vector{NTuple{$N,$T}})
-    else
-        ex = :(NTuple{$N,NTuple{$N,$T}})
-    end
-    return ex
-end
-
+partials_type{N,T}(::Type{GradNumVec{N,T}}) = Partials{T,Vector{T}}
+partials_type{N,T}(::Type{GradNumTup{N,T}}) = Partials{T,NTuple{N,T}}
 partials_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = partials_type(GradientNumber{N,T,C})
 partials_type{N,T,C}(::Type{TensorNumber{N,T,C}}) = partials_type(GradientNumber{N,T,C})
 
 function build_partials{N,T}(::Type{GradNumVec{N,T}})
-    chunk_arr = Array(Vector{T}, N)
+    chunk_arr = Array(Partials{T,Vector{T}}, N)
     @simd for i in eachindex(chunk_arr)
-        @inbounds chunk_arr[i] = setindex!(zeros(T, N), one(T), i)
+        @inbounds chunk_arr[i] = Partials(setindex!(zeros(T, N), one(T), i))
     end
     return chunk_arr
 end
 
-@generated function build_partials{N,T}(::Type{GradNumTup{N,T}})
-    if N > tuple_usage_threshold
-        ex = quote
-            partials_chunk = Vector{NTuple{$N,$T}}($N)
-            @simd for i in eachindex(partials_chunk)
-                @inbounds partials_chunk[i] = ntuple(x -> ifelse(x == i, o, z), Val{$N})
-            end
-            return partials_chunk
-        end
-    else
-        ex = quote
-            return ntuple(i -> ntuple(x -> ifelse(x == i, o, z), Val{$N}), Val{$N})
-        end
+function build_partials{N,T}(::Type{GradNumTup{N,T}})
+    z = zero(T)
+    o = one(T)
+    partials_chunk = Vector{Partials{T, NTuple{N,T}}}(N)
+    @simd for i in eachindex(partials_chunk)
+        @inbounds partials_chunk[i] = Partials(ntuple(x -> ifelse(x == i, o, z), Val{N}))
     end
-    return quote
-        z = zero(T)
-        o = one(T)
-        $ex
-    end
+    return partials_chunk
 end
 
 build_partials{N,T,C}(::Type{HessianNumber{N,T,C}}) = build_partials(GradientNumber{N,T,C})
 build_partials{N,T,C}(::Type{TensorNumber{N,T,C}}) = build_partials(GradientNumber{N,T,C})
 
-build_zeros{N,T}(::Type{GradNumVec{N,T}}) = zeros(T, N)
-build_zeros{N,T}(::Type{GradNumTup{N,T}}) = zero_tuple(NTuple{N,T})
-build_zeros{N,T,C}(::Type{HessianNumber{N,T,C}}) = zeros(T, halfhesslen(N))
-build_zeros{N,T,C}(::Type{TensorNumber{N,T,C}}) = zeros(T, halftenslen(N))
-
-zeros_type{N,T}(::Type{GradNumVec{N,T}}) = Vector{T}
-zeros_type{N,T}(::Type{GradNumTup{N,T}}) = NTuple{N,T}
+zeros_type{N,T}(::Type{GradNumVec{N,T}}) = Partials{T,Vector{T}}
+zeros_type{N,T}(::Type{GradNumTup{N,T}}) = Partials{T,NTuple{N,T}}
 zeros_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = Vector{T}
 zeros_type{N,T,C}(::Type{TensorNumber{N,T,C}}) = Vector{T}
+
+build_zeros{N,T}(::Type{GradNumVec{N,T}}) = Partials(zeros(T, N))
+build_zeros{N,T}(::Type{GradNumTup{N,T}}) = Partials(zero_tuple(NTuple{N,T}))
+build_zeros{N,T,C}(::Type{HessianNumber{N,T,C}}) = zeros(T, halfhesslen(N))
+build_zeros{N,T,C}(::Type{TensorNumber{N,T,C}}) = zeros(T, halftenslen(N))
 
 #######################
 # Cache Types/Methods #
@@ -120,7 +100,7 @@ function get_workvec!{F,T,xlen,chunk_size}(cache::ForwardDiffCache,
 end
 
 function get_partials!{F}(cache::ForwardDiffCache, ::Type{F})
-    return cache.partials_cache(F)::partials_type(F)
+    return cache.partials_cache(F)::Vector{partials_type(F)}
 end
 
 function get_zeros!{F}(cache::ForwardDiffCache, ::Type{F})
