@@ -1,20 +1,14 @@
 immutable GradientNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
     value::T
     partials::Partials{T,C}
+    GradientNumber(value, partials::Partials) = new(value, partials)
+    GradientNumber(value, partials::Tuple) = new(value, Partials(partials))
+    GradientNumber(value, partials::Vector) = new(value, Partials(partials))
 end
 
 typealias GradNumTup{N,T} GradientNumber{N,T,NTuple{N,T}}
 typealias GradNumVec{N,T} GradientNumber{N,T,Vector{T}}
 
-function GradientNumber{N,A,B,C}(::Type{Val{N}}, value::A, partials::Partials{B,C})
-    T = promote_type(A, B)
-    C2 = switch_eltype(C, T)
-    return GradientNumber{N,T,C2}(value, partials)
-end
-
-GradientNumber{N,T,C}(::Type{Val{N}}, value::T, partials::Partials{T,C}) = GradientNumber{N,T,C}(value, partials)
-GradientNumber{N,T}(::Type{Val{N}}, value::T, grad::NTuple{N,T}) = GradientNumber{N,T,NTuple{N,T}}(value, Partials(grad))
-GradientNumber{N,T}(::Type{Val{N}}, value::T, grad::Vector{T}) = GradientNumber{N,T,Vector{T}}(value, Partials(grad))
 GradientNumber{N,T}(value::T, grad::NTuple{N,T}) = GradientNumber{N,T,NTuple{N,T}}(value, Partials(grad))
 GradientNumber{T}(value::T, grad::T...) = GradientNumber(value, grad)
 
@@ -80,16 +74,19 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 # Math with GradientNumber #
 ############################
 
+promote_typeof(a, b, c) = promote_type(typeof(a), typeof(b), typeof(c))
+promote_typeof(a, b) = promote_type(typeof(a), typeof(b))
+
 # Addition/Subtraction #
 #----------------------#
-+{N}(a::GradientNumber{N}, b::GradientNumber{N}) = GradientNumber(Val{N}, value(a)+value(b), partials(a)+partials(b))
-+{N}(g::GradientNumber{N}, x::Real) = GradientNumber(Val{N}, value(g)+x, partials(g))
-+{N}(x::Real, g::GradientNumber{N}) = g+x
++{N}(a::GradientNumber{N}, b::GradientNumber{N}) = promote_typeof(a, b)(value(a)+value(b), partials(a)+partials(b))
++(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)+x, partials(g))
++(x::Real, g::GradientNumber) = g+x
 
--{N}(g::GradientNumber{N}) = GradientNumber(Val{N}, -value(g), -partials(g))
--{N}(a::GradientNumber{N}, b::GradientNumber{N}) = GradientNumber(Val{N}, value(a)-value(b), partials(a)-partials(b))
--{N}(g::GradientNumber{N}, x::Real) = GradientNumber(Val{N}, value(g)-x, partials(g))
--{N}(x::Real, g::GradientNumber{N}) = GradientNumber(Val{N}, x-value(g), -partials(g))
+-(g::GradientNumber) = typeof(g)(-value(g), -partials(g))
+-{N}(a::GradientNumber{N}, b::GradientNumber{N}) = promote_typeof(a, b)(value(a)-value(b), partials(a)-partials(b))
+-(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)-x, partials(g))
+-(x::Real, g::GradientNumber) = promote_typeof(g, x)(x-value(g), -partials(g))
 
 # Multiplication #
 #----------------#
@@ -98,25 +95,30 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 
 function *{N}(a::GradientNumber{N}, b::GradientNumber{N})
     aval, bval = value(a), value(b)
-    return GradientNumber(Val{N}, aval*bval, _mul_partials(partials(a), partials(b), bval, aval))
+    return promote_typeof(a, b)(aval*bval, _mul_partials(partials(a), partials(b), bval, aval))
 end
 
-*{N}(g::GradientNumber{N}, x::Real) = GradientNumber(Val{N}, value(g)*x, partials(g)*x)
-*{N}(x::Real, g::GradientNumber{N}) = g*x
+*(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)*x, partials(g)*x)
+*(x::Real, g::GradientNumber) = g*x
 
 # Division #
 #----------#
 function /{N}(a::GradientNumber{N}, b::GradientNumber{N})
     aval, bval = value(a), value(b)
-    return GradientNumber(Val{N}, aval/bval, _div_partials(partials(a), partials(b), aval, bval))
+    result_val = aval/bval
+    return promote_typeof(a, b, result_val)(result_val, _div_partials(partials(a), partials(b), aval, bval))
 end
 
-function /{N}(x::Real, g::GradientNumber{N})
+function /(x::Real, g::GradientNumber)
     gval = value(g)
-    return GradientNumber(Val{N}, x/gval, _div_partials(x, partials(g), gval))   
+    result_val = x/gval
+    return promote_typeof(g, result_val)(result_val, _div_partials(x, partials(g), gval))
 end
 
-/{N}(g::GradientNumber{N}, x::Real) = GradientNumber(Val{N}, value(g)/x, partials(g)/x)
+function /(g::GradientNumber, x::Real)
+    result_val = value(g)/x
+    return promote_typeof(g, result_val)(result_val, partials(g)/x)
+end
 
 # Exponentiation #
 #----------------#
@@ -127,24 +129,24 @@ for f in (:^, :(NaNMath.pow))
         powval = bval * ($f)(aval, bval-1)
         logval = result_val * log(aval)
         result_partials = _mul_partials(partials(a), partials(b), powval, logval)
-        return GradientNumber(Val{N}, result_val, result_partials)
+        return promote_typeof(a, b, result_val)(result_val, result_partials)
     end
 
     @eval ($f)(::Base.MathConst{:e}, g::GradientNumber) = exp(g)
 
     # generate redundant definitions to resolve ambiguity warnings
     for R in (:Integer, :Rational, :Real)
-        @eval function ($f){N}(g::GradientNumber{N}, x::$R)
+        @eval function ($f)(g::GradientNumber, x::$R)
             gval = value(g)
             powval = x*($f)(gval, x-1)
-            return GradientNumber(Val{N}, ($f)(gval, x), powval*partials(g))
+            return promote_typeof(g, powval)(($f)(gval, x), powval*partials(g))
         end
 
-        @eval function ($f){N}(x::$R, g::GradientNumber{N})
+        @eval function ($f)(x::$R, g::GradientNumber)
             gval = value(g)
             result_val = ($f)(x, gval)
             logval = result_val*log(x)
-            return GradientNumber(Val{N}, result_val, logval*partials(g))
+            return promote_typeof(logval, g)(result_val, logval*partials(g))
         end
     end
 end
@@ -170,10 +172,10 @@ for fsym in fad_supported_univar_funcs
     valexpr = :($(fsym)(gval))
     dfexpr = Calculus.differentiate(valexpr, :gval)
 
-    @eval function $(fsym){N}(g::GradientNumber{N})
+    @eval function $(fsym)(g::GradientNumber)
         gval = value(g)
         df = $dfexpr
-        return GradientNumber(Val{N}, $valexpr, df*partials(g))
+        return promote_typeof(g, df)($valexpr, df*partials(g))
     end
 
     # extend corresponding NaNMath methods
@@ -186,17 +188,17 @@ for fsym in fad_supported_univar_funcs
         nan_valexpr = :($(nan_fsym)(gval))
         nan_dfexpr = to_nanmath(dfexpr)
 
-        @eval function $(nan_fsym){N}(g::GradientNumber{N})
+        @eval function $(nan_fsym)(g::GradientNumber)
             gval = value(g)
             df = $nan_dfexpr
-            return GradientNumber(Val{N}, $nan_valexpr, df*partials(g))
+            return promote_typeof(g, df)($nan_valexpr, df*partials(g))
         end
     end
 end
 
-function exp{N}(g::GradientNumber{N})
+function exp(g::GradientNumber)
     df = exp(value(g))
-    return GradientNumber(Val{N}, df, df*partials(g))
+    return promote_typeof(g, df)(df, df*partials(g))
 end
 
 abs(g::GradientNumber) = (value(g) >= 0) ? g : -g
