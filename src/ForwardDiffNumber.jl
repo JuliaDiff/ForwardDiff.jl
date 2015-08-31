@@ -30,18 +30,18 @@ abstract ForwardDiffNumber{N,T<:Number,C} <: Number
 halfhesslen(n) = div(n*(n+1),2) # correct length(hess(::ForwardDiffNumber))
 halftenslen(n) = div(n*(n+1)*(n+2),6) # correct length(tens(::ForwardDiffNumber))
 
-switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
-switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
+@inline switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
+@inline switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
 
-grad(n::ForwardDiffNumber, i) = grad(n)[i]
-hess(n::ForwardDiffNumber, i) = hess(n)[i]
-tens(n::ForwardDiffNumber, i) = tens(n)[i]
+@inline grad(n::ForwardDiffNumber, i) = grad(n)[i]
+@inline hess(n::ForwardDiffNumber, i) = hess(n)[i]
+@inline tens(n::ForwardDiffNumber, i) = tens(n)[i]
 
-npartials{N}(::ForwardDiffNumber{N}) = N
-eltype{N,T}(::ForwardDiffNumber{N,T}) = T
+@inline npartials{N}(::ForwardDiffNumber{N}) = N
+@inline eltype{N,T}(::ForwardDiffNumber{N,T}) = T
 
-npartials{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = N
-eltype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = T
+@inline npartials{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = N
+@inline eltype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = T
 
 zero(n::ForwardDiffNumber) = zero(typeof(n))
 one(n::ForwardDiffNumber) = one(typeof(n))

@@ -21,15 +21,15 @@ zero{N,T,C}(::Type{HessianNumber{N,T,C}}) = HessianNumber(zero(GradientNumber{N,
 one{N,T,C}(::Type{HessianNumber{N,T,C}}) = HessianNumber(one(GradientNumber{N,T,C}))
 rand{N,T,C}(::Type{HessianNumber{N,T,C}}) = HessianNumber(rand(GradientNumber{N,T,C}), rand(T, halfhesslen(N)))
 
-gradnum(h::HessianNumber) = h.gradnum
+@inline gradnum(h::HessianNumber) = h.gradnum
 
-value(h::HessianNumber) = value(gradnum(h))
-grad(h::HessianNumber) = grad(gradnum(h))
-hess(h::HessianNumber) = h.hess
-tens(h::HessianNumber) = error("HessianNumbers do not store tensor values")
+@inline value(h::HessianNumber) = value(gradnum(h))
+@inline grad(h::HessianNumber) = grad(gradnum(h))
+@inline hess(h::HessianNumber) = h.hess
+@inline tens(h::HessianNumber) = error("HessianNumbers do not store tensor values")
 
-npartials{N,T,C}(::Type{HessianNumber{N,T,C}}) = N
-eltype{N,T,C}(::Type{HessianNumber{N,T,C}}) = T
+@inline npartials{N,T,C}(::Type{HessianNumber{N,T,C}}) = N
+@inline eltype{N,T,C}(::Type{HessianNumber{N,T,C}}) = T
 
 #####################
 # Generic Functions #

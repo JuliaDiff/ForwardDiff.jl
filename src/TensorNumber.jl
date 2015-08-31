@@ -21,15 +21,15 @@ zero{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(zero(HessianNumber{N,T,C
 one{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(one(HessianNumber{N,T,C}))
 rand{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(rand(HessianNumber{N,T,C}), rand(T, halftenslen(N)))
 
-hessnum(t::TensorNumber) = t.hessnum
+@inline hessnum(t::TensorNumber) = t.hessnum
 
-value(t::TensorNumber) = value(hessnum(t))
-grad(t::TensorNumber) = grad(hessnum(t))
-hess(t::TensorNumber) = hess(hessnum(t))
-tens(t::TensorNumber) = t.tens
+@inline value(t::TensorNumber) = value(hessnum(t))
+@inline grad(t::TensorNumber) = grad(hessnum(t))
+@inline hess(t::TensorNumber) = hess(hessnum(t))
+@inline tens(t::TensorNumber) = t.tens
 
-npartials{N,T,C}(::Type{TensorNumber{N,T,C}}) = N
-eltype{N,T,C}(::Type{TensorNumber{N,T,C}}) = T
+@inline npartials{N,T,C}(::Type{TensorNumber{N,T,C}}) = N
+@inline eltype{N,T,C}(::Type{TensorNumber{N,T,C}}) = T
 
 #####################
 # Generic Functions #
