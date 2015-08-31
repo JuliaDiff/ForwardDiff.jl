@@ -7,6 +7,8 @@
 const tuple_usage_threshold = 10
 const default_chunk_size = 0
 
+abstract AllInfo
+
 for F in (:GradientNumber, :HessianNumber, :TensorNumber)
     @eval begin
         switch_eltype{N,T,S}(::Type{$F{N,T,NTuple{N,T}}}, ::Type{S}) = $F{N,S,NTuple{N,S}}
@@ -29,6 +31,7 @@ include("cache.jl")
 
 const dummy_cache = make_dummy_cache()
 
+include("ForwardDiffResult.jl")
 include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")

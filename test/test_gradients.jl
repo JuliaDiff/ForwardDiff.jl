@@ -262,12 +262,12 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             @test_approx_eq testout testresult
             @test_approx_eq ForwardDiff.gradient(testf, testx, chunk_size=chunk) testresult
 
-            gradf! = ForwardDiff.gradient(testf, mutates=true)
-            gradf!(testout, testx, chunk_size=chunk)
+            gradf! = ForwardDiff.gradient(testf, mutates=true, chunk_size=chunk)
+            gradf!(testout, testx)
             @test_approx_eq testout testresult
 
-            gradf = ForwardDiff.gradient(testf, mutates=false)
-            @test_approx_eq gradf(testx, chunk_size=chunk) testresult
+            gradf = ForwardDiff.gradient(testf, mutates=false, chunk_size=chunk)
+            @test_approx_eq gradf(testx) testresult
         catch err
             warn("Failure when testing gradients involving $fsym with chunk_size=$chunk:")
             throw(err)
