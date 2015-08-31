@@ -12,14 +12,14 @@ Partials(data) = Partials{eltype(data),typeof(data)}(data)
 ##############################
 # Utility/Accessor Functions #
 ##############################
-data(partials::Partials) = partials.data
+@inline data(partials::Partials) = partials.data
 
-eltype{T,C}(::Type{Partials{T,C}}) = T
-eltype{T}(::Partials{T}) = T
+@inline eltype{T,C}(::Type{Partials{T,C}}) = T
+@inline eltype{T}(::Partials{T}) = T
 
-getindex(partials::Partials, i) = data(partials)[i]
+@inline getindex(partials::Partials, i) = data(partials)[i]
 
-length(partials::Partials) = length(data(partials))
+@inline length(partials::Partials) = length(data(partials))
 
 start(partials) = start(data(partials))
 next(partials, i) = next(data(partials), i)
@@ -28,10 +28,10 @@ done(partials, i) = done(data(partials), i)
 ################
 # Constructors #
 ################
-zero_partials{N,T}(::Type{NTuple{N,T}}, n::Int) = Partials(zero_tuple(NTuple{N,T}))
+@inline zero_partials{N,T}(::Type{NTuple{N,T}}, n::Int) = Partials(zero_tuple(NTuple{N,T}))
 zero_partials{T}(::Type{Vector{T}}, n) = Partials(zeros(T, n))
 
-rand_partials{N,T}(::Type{NTuple{N,T}}, n::Int) = Partials(rand_tuple(NTuple{N,T}))
+@inline rand_partials{N,T}(::Type{NTuple{N,T}}, n::Int) = Partials(rand_tuple(NTuple{N,T}))
 rand_partials{T}(::Type{Vector{T}}, n::Int) = Partials(rand(T, n))
 
 #####################
@@ -48,7 +48,7 @@ isequal(a::Partials, b::Partials) = isequal(data(a), data(b))
 hash(partials::Partials) = hash(data(partials))
 hash(partials::Partials, hsh::Uint64) = hash(hash(partials), hsh)
 
-copy(partials::Partials) = partials
+@inline copy(partials::Partials) = partials
 
 function read{N,T}(io::IO, ::Type{PartialsTup{N,T}}, n::Int)
     return Partials(ntuple(i->read(io, T), Val{N}))
@@ -73,7 +73,7 @@ convert{T,C}(::Type{Partials{T,C}}, partials::Partials{T,C}) = partials
 
 # Addition/Subtraction #
 #----------------------#
-function +{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B})
+@inline function +{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B})
     return Partials(add_tuples(data(a), data(b)))
 end
 
@@ -81,7 +81,7 @@ function +{A,B}(a::PartialsVec{A}, b::PartialsVec{B})
     return Partials(data(a) + data(b))
 end
 
-function -{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B})
+@inline function -{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B})
     return Partials(subtract_tuples(data(a), data(b)))
 end
 
@@ -89,12 +89,12 @@ function -{A,B}(a::PartialsVec{A}, b::PartialsVec{B})
     return Partials(data(a) - data(b))
 end
 
--{N,T}(partials::PartialsTup{N,T}) = Partials(minus_tuple(data(partials)))
+@inline -{N,T}(partials::PartialsTup{N,T}) = Partials(minus_tuple(data(partials)))
 -{T}(partials::PartialsVec{T}) = Partials(-data(partials))
 
 # Multiplication #
 #----------------#
-function *{N,T}(partials::PartialsTup{N,T}, x::Number)
+@inline function *{N,T}(partials::PartialsTup{N,T}, x::Number)
     return Partials(scale_tuple(data(partials), x))
 end
 
@@ -102,7 +102,7 @@ function *{T}(partials::PartialsVec{T}, x::Number)
     return Partials(data(partials)*x)
 end
 
-*(x::Number, partials::Partials) = partials*x
+@inline *(x::Number, partials::Partials) = partials*x
 
 function _load_mul_partials!(result::Vector, a, b, afactor, bfactor)
     @simd for i in eachindex(result)
@@ -116,13 +116,13 @@ function _mul_partials{A,B,C,D}(a::PartialsVec{A}, b::PartialsVec{B}, afactor::C
     return Partials(_load_mul_partials!(Vector{T}(length(a)), a, b, afactor, bfactor))
 end
 
-function _mul_partials{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B}, afactor, bfactor)
+@inline function _mul_partials{N,A,B}(a::PartialsTup{N,A}, b::PartialsTup{N,B}, afactor, bfactor)
     return Partials(mul_tuples(data(a), data(b), afactor, bfactor))
 end
 
 # Division #
 #----------#
-function /{N,T}(partials::PartialsTup{N,T}, x::Number)
+@inline function /{N,T}(partials::PartialsTup{N,T}, x::Number)
     return Partials(div_tuple_by_scalar(data(partials), x))
 end
 
@@ -130,11 +130,11 @@ function /{T}(partials::PartialsVec{T}, x::Number)
     return Partials(data(partials) / x)
 end
 
-function _div_partials(x, partials::Partials, val)
+@inline function _div_partials(x, partials::Partials, val)
     return ((-x) / (val*val)) * partials
 end
 
-function _div_partials(a::Partials, b::Partials, aval, bval)
+@inline function _div_partials(a::Partials, b::Partials, aval, bval)
     afactor = inv(bval)
     bfactor = -aval/(bval*bval)
     return _mul_partials(a, b, afactor, bfactor)
