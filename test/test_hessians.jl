@@ -229,7 +229,7 @@ chunk_sizes = (ForwardDiff.default_chunk_size, 2, Int(N/2), N)
 for fsym in ForwardDiff.univar_hess_funcs
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(l) - $(fsym)(m) + $(fsym)(r)) 
 
-    @eval function testf(x::Vector) 
+    @eval function testf(x::Vector)
         a,b,c,l,m,r = x
         return $testexpr
     end

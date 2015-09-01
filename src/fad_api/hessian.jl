@@ -213,8 +213,7 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
     end
 
     return quote
-        H = $H
-        G = $G
+        H, G = $H, $G
         hessvec = get_workvec!(cache, HessianNumber, T, X, $C2)
         partials = get_partials!(cache, H)
         hesszeros = get_zeros!(cache, H)
