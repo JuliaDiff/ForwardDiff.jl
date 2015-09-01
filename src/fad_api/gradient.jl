@@ -43,14 +43,14 @@ function gradient{A}(f, ::Type{A}=Void;
                      chunk_size::Int=default_chunk_size,
                      cache::ForwardDiffCache=ForwardDiffCache())
     if mutates
-        function g!{T}(output::Vector{T}, x::Vector)
+        function g!(output::Vector, x::Vector)
             return ForwardDiff.gradient!(output, f, x, A;
                                          chunk_size=chunk_size,
                                          cache=cache)
         end
         return g!
     else
-        function g{T}(x::Vector{T})
+        function g(x::Vector)
             return ForwardDiff.gradient(f, x, A;
                                         chunk_size=chunk_size,
                                         cache=cache)
