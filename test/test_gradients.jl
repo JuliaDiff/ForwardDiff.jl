@@ -258,7 +258,7 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             testx = grad_test_x(fsym, N)
             grad_result = grad_test_result(testexpr, testx)
             val_result = testf(testx)
-            
+
             # Non-AllInfo
             test_grad = (testout) -> @test_approx_eq testout grad_result
 
@@ -266,7 +266,7 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             test_grad(testout)
 
             test_grad(ForwardDiff.gradient(testf, testx; chunk_size=chunk))
-            
+
             gradf! = ForwardDiff.gradient(testf; mutates=true, chunk_size=chunk)
             testout = similar(testout)
             gradf!(testout, testx)
@@ -299,7 +299,6 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             testout = similar(testout)
             testout, results4 = gradf(testx)
             test_all_results(testout, results4)
-
         catch err
             warn("Failure when testing gradients involving $fsym with chunk_size=$chunk:")
             throw(err)
