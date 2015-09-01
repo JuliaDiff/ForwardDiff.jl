@@ -90,9 +90,9 @@ jacobian(result::ForwardDiffResult) = get_jacobian(data(result))
 
 function _load_jacobian!(output, arr::Array)
     nrows, ncols = size(output)
-    for i in 1:nrows
-        @simd for j in 1:ncols
-            @inbounds output[i,j] = grad(result[i], j)
+    for j in 1:ncols
+        @simd for i in 1:nrows
+            @inbounds output[i,j] = grad(arr[i], j)
         end
     end
     return output
