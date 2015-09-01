@@ -12,7 +12,7 @@ using ForwardDiff:
         npartials,
         isconstant,
         hessnum,
-        t_inds_2_h_ind
+        hess_inds
 
 floatrange = .01:.01:.99
 intrange = 1:10

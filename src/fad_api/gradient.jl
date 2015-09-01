@@ -75,7 +75,7 @@ end
                                                         cache::ForwardDiffCache)
     check_chunk_size(xlen, chunk_size)
     G = workvec_eltype(GradientNumber, T, Val{xlen}, Val{chunk_size})
-    if chunk_size_matches_full(xlen, chunk_size)
+    if chunk_size_matches_vec_mode(xlen, chunk_size)
         # Vector-Mode
         ResultType = switch_eltype(G, S)
         body = quote

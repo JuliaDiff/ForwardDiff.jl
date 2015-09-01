@@ -46,7 +46,7 @@ hessnum_type{N,T,C}(::Type{TensorNumber{N,T,C}}) = HessianNumber{N,T,C}
                                                        X::Type{Val{xlen}}, C::Type{Val{chunk_size}},
                                                        cache::ForwardDiffCache)
     check_chunk_size(xlen, chunk_size)
-    full_bool = chunk_size_matches_full(xlen, chunk_size)
+    full_bool = chunk_size_matches_vec_mode(xlen, chunk_size)
     
     F = workvec_eltype(TensorNumber, T, Val{xlen}, Val{chunk_size})
     H = hessnum_type(F)

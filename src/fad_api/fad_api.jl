@@ -23,7 +23,7 @@ function check_chunk_size(xlen::Int, chunk_size::Int)
     end
 end
 
-function chunk_size_matches_full(xlen::Int, chunk_size::Int)
+function chunk_size_matches_vec_mode(xlen::Int, chunk_size::Int)
     return (chunk_size == default_chunk_size) || (chunk_size == xlen)
 end
 

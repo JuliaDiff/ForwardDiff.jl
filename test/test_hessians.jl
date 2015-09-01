@@ -237,22 +237,54 @@ for fsym in ForwardDiff.univar_hess_funcs
     for chunk in chunk_sizes
         try
             testx = hess_test_x(fsym, N)
-            testresult = hess_test_result(testexpr, testx)
+            val_result = testf(testx)
+            grad_result = ForwardDiff.gradient(testf, testx)
+            hess_result = hess_test_result(testexpr, testx)
 
-            ForwardDiff.hessian!(testout, testf, testx, chunk_size=chunk)
-            @test_approx_eq testout testresult
+            # Non-AllInfo
+            test_hess = (testout) -> @test_approx_eq testout hess_result
 
-            @test_approx_eq ForwardDiff.hessian(testf, testx, chunk_size=chunk) testresult
+            ForwardDiff.hessian!(testout, testf, testx; chunk_size=chunk)
+            test_hess(testout)
 
-            hessf! = ForwardDiff.hessian(testf, mutates=true)
-            hessf!(testout, testx, chunk_size=chunk)
-            @test_approx_eq testout testresult
+            test_hess(ForwardDiff.hessian(testf, testx; chunk_size=chunk))
 
-            hessf = ForwardDiff.hessian(testf, mutates=false)
-            @test_approx_eq hessf(testx, chunk_size=chunk) testresult
+            hessf! = ForwardDiff.hessian(testf; mutates=true, chunk_size=chunk)
+            testout = similar(testout)
+            hessf!(testout, testx)
+            test_hess(testout)
+
+            hessf = ForwardDiff.hessian(testf; mutates=false, chunk_size=chunk)
+            test_hess(hessf(testx))
+
+            # AllInfo
+            test_all_results = (testout, results) -> begin
+                @test_approx_eq ForwardDiff.value(results) val_result
+                @test_approx_eq ForwardDiff.gradient(results) grad_result
+                test_hess(ForwardDiff.hessian(results))
+                test_hess(testout)
+            end
+
+            testout = similar(testout)
+            results = ForwardDiff.hessian!(testout, testf, testx, AllInfo; chunk_size=chunk)
+            test_all_results(testout, results[2])
+
+            testout = similar(testout)
+            testout, results2 = ForwardDiff.hessian(testf, testx, AllInfo; chunk_size=chunk)
+            test_all_results(testout, results2)
+
+            hessf! = ForwardDiff.hessian(testf, AllInfo; mutates=true, chunk_size=chunk)
+            testout = similar(testout)
+            results3 = hessf!(testout, testx)
+            test_all_results(testout, results3[2])
+
+            hessf = ForwardDiff.hessian(testf, AllInfo; mutates=false, chunk_size=chunk)
+            testout = similar(testout)
+            testout, results4 = hessf(testx)
+            test_all_results(testout, results4)
         catch err
             warn("Failure when testing Hessians involving $fsym with chunk_size=$chunk:")
-            throw(err)            
+            throw(err)
         end
     end
 end

@@ -48,8 +48,8 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
     for chunk in chunk_sizes
         try
             testx = jacob_test_x(fsym, N)
-            jacob_result = jacob_test_result(testexprs, testx)
             val_result = testf(testx)
+            jacob_result = jacob_test_result(testexprs, testx)
             
             # Non-AllInfo
             test_jacob = (testout) -> @test_approx_eq testout jacob_result
@@ -69,9 +69,9 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
 
             # AllInfo
             test_all_results = (testout, results) -> begin
-                test_jacob(testout)
-                test_jacob(ForwardDiff.jacobian(results))
                 @test_approx_eq ForwardDiff.value(results) val_result
+                test_jacob(ForwardDiff.jacobian(results))
+                test_jacob(testout)
             end
 
             testout = similar(testout)

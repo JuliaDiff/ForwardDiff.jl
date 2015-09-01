@@ -256,8 +256,8 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
     for chunk in chunk_sizes
         try
             testx = grad_test_x(fsym, N)
-            grad_result = grad_test_result(testexpr, testx)
             val_result = testf(testx)
+            grad_result = grad_test_result(testexpr, testx)
 
             # Non-AllInfo
             test_grad = (testout) -> @test_approx_eq testout grad_result
@@ -277,9 +277,9 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
 
             # AllInfo
             test_all_results = (testout, results) -> begin
-                test_grad(testout)
-                test_grad(ForwardDiff.gradient(results))
                 @test_approx_eq ForwardDiff.value(results) val_result
+                test_grad(ForwardDiff.gradient(results))
+                test_grad(testout)
             end
 
             testout = similar(testout)
