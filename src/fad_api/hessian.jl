@@ -12,7 +12,7 @@
     elseif A <: AllInfo
         return_stmt = :(hessian!(output, result)::Matrix{T}, result)
     else
-        error("invalid argument $A passed to FowardDiff.gradient")
+        error("invalid argument $A passed to FowardDiff.hessian")
     end
 
     return quote
@@ -29,7 +29,7 @@ end
     elseif A <: AllInfo
         return_stmt = :(hessian(result)::Matrix{T}, result)
     else
-        error("invalid argument $A passed to FowardDiff.gradient")
+        error("invalid argument $A passed to FowardDiff.hessian")
     end
 
     return quote

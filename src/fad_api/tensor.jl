@@ -12,7 +12,7 @@
     elseif A <: AllInfo
         return_stmt = :(tensor!(output, result)::Array{T,3}, result)
     else
-        error("invalid argument $A passed to FowardDiff.gradient")
+        error("invalid argument $A passed to FowardDiff.tensor")
     end
 
     return quote
@@ -29,7 +29,7 @@ end
     elseif A <: AllInfo
         return_stmt = :(tensor(result)::Array{T,3}, result)
     else
-        error("invalid argument $A passed to FowardDiff.gradient")
+        error("invalid argument $A passed to FowardDiff.tensor")
     end
 
     return quote
