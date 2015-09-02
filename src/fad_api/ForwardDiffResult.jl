@@ -1,13 +1,6 @@
 # This file contains methods to handle the results
 # of ForwardDiff calculations (generally either 
 # ForwardDiffNumbers or Arrays of ForwardDiffNumbers. 
-#
-# Note that in the case where the result is an Array, the
-# below methods work under the assumption that the result
-# contains elements of homogenous type, even if the actual 
-# eltype of the array is ambiguous due to poor type 
-# inferencing (hence the use of `eltype(first(...))` in 
-# a lot of places).
 
 immutable ForwardDiffResult{T}
     data::T
@@ -37,7 +30,7 @@ function get_value!(output::Array, arr::Array)
     return _load_value!(output, arr)
 end
 
-get_value(arr::Array) = _load_value!(similar(arr, eltype(first(arr))), arr)
+get_value{F}(arr::Array{F}) = _load_value!(similar(arr, eltype(F)), arr)
 get_value(n::ForwardDiffNumber) = value(n)
 
 ###############
@@ -54,11 +47,11 @@ function _load_derivative!(output::Array, arr::Array)
 end
 
 function get_derivative!(output::Array, arr::Array)
-    @assert length(arr) == length(output)
+    @assert length(output) == length(arr)
     return _load_derivative!(output, arr)
 end
 
-get_derivative(arr::Array) = _load_derivative!(similar(arr, eltype(first(arr))), arr)
+get_derivative{F}(arr::Array{F}) = _load_derivative!(similar(arr, eltype(F)), arr)
 get_derivative(n::ForwardDiffNumber{1}) = first(grad(n))
 
 #############
@@ -98,15 +91,14 @@ function _load_jacobian!(output, arr::Array)
     return output
 end
 
-function get_jacobian!(output, arr::Array)
+function get_jacobian!{F}(output, arr::Array{F})
     @assert size(output, 1) == length(arr)
-    @assert size(output, 2) == npartials(first(arr))
+    @assert size(output, 2) == npartials(F)
     return _load_jacobian!(output, arr)
 end
 
-function get_jacobian(arr::Array)
-    init = first(arr)
-    output = Array(eltype(init), length(arr), npartials(init))
+function get_jacobian{F}(arr::Array{F})
+    output = Array(eltype(F), length(arr), npartials(F))
     return _load_jacobian!(output, arr)
 end
 
