@@ -9,7 +9,7 @@
                                    cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(jacobian!(output, result)::Matrix{T})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(jacobian!(output, result)::Matrix{T}, result)
     else
         error("invalid argument $A passed to FowardDiff.jacobian")
@@ -26,7 +26,7 @@ end
                                   cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(jacobian(result)::Matrix{T})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(jacobian(result)::Matrix{T}, result)
     else
         error("invalid argument $A passed to FowardDiff.jacobian")

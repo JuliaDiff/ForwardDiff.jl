@@ -7,7 +7,7 @@
 const tuple_usage_threshold = 10
 const default_chunk_size = 0
 
-abstract AllInfo
+abstract AllResults
 
 for F in (:GradientNumber, :HessianNumber, :TensorNumber)
     @eval begin

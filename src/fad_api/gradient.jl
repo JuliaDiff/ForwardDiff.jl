@@ -9,7 +9,7 @@
                                    cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(gradient!(output, result)::Vector{T})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(gradient!(output, result)::Vector{T}, result)
     else
         error("invalid argument $A passed to FowardDiff.gradient")
@@ -26,7 +26,7 @@ end
                                   cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(gradient(result)::Vector{T})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(gradient(result)::Vector{T}, result)
     else
         error("invalid argument $A passed to FowardDiff.gradient")

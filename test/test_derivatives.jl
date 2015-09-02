@@ -46,11 +46,11 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             end
 
             @test_approx_eq deriv_result ForwardDiff.derivative(testdf, x)
-            testout, result = ForwardDiff.derivative(testdf, x, AllInfo)
+            testout, result = ForwardDiff.derivative(testdf, x, AllResults)
             test_all_results(testout, result)
 
             @test_approx_eq deriv_result ForwardDiff.derivative(testdf)(x)
-            testout2, result2 = ForwardDiff.derivative(testdf, AllInfo)(x)
+            testout2, result2 = ForwardDiff.derivative(testdf, AllResults)(x)
             test_all_results(testout2, result2)
 
             testdf_arr = t -> [testdf(t) for i in 1:N, j in 1:M, k in 1:L]
@@ -64,11 +64,11 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             end
 
             test_approx_deriv(deriv_result_arr, ForwardDiff.derivative(testdf_arr, x))
-            testout, result = ForwardDiff.derivative(testdf_arr, x, AllInfo)
+            testout, result = ForwardDiff.derivative(testdf_arr, x, AllResults)
             test_all_results(testout, result)
 
             test_approx_deriv(deriv_result_arr, ForwardDiff.derivative(testdf_arr)(x))
-            testout2, result2 = ForwardDiff.derivative(testdf_arr, AllInfo)(x)
+            testout2, result2 = ForwardDiff.derivative(testdf_arr, AllResults)(x)
             test_all_results(testout2, result2)
 
             testout = similar(testout)
@@ -76,7 +76,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             test_approx_deriv(deriv_result_arr, testout)
 
             testout = similar(testout)
-            results = ForwardDiff.derivative!(testout, testdf_arr, x, AllInfo)
+            results = ForwardDiff.derivative!(testout, testdf_arr, x, AllResults)
             test_all_results(testout, results[2])
 
             testout = similar(testout)
@@ -84,7 +84,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             test_approx_deriv(deriv_result_arr, testout)
 
             testout = similar(testout)
-            results2 = ForwardDiff.derivative(testdf_arr, AllInfo; mutates=true)(testout, x)
+            results2 = ForwardDiff.derivative(testdf_arr, AllResults; mutates=true)(testout, x)
             test_all_results(testout, results[2])
         end
     catch err

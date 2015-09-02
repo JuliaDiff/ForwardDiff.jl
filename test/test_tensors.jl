@@ -257,7 +257,7 @@ for fsym in ForwardDiff.univar_tens_funcs
         hess_result = ForwardDiff.hessian(testf, testx)
         tens_result = tens_test_result(testexpr, testx)
 
-        # Non-AllInfo
+        # Non-AllResults
         test_tens = (testout) -> @test_approx_eq testout tens_result
 
         ForwardDiff.tensor!(testout, testf, testx)
@@ -273,7 +273,7 @@ for fsym in ForwardDiff.univar_tens_funcs
         tensf = ForwardDiff.tensor(testf; mutates=false)
         test_tens(tensf(testx))
 
-        # AllInfo
+        # AllResults
         test_all_results = (testout, results) -> begin
             @test_approx_eq ForwardDiff.value(results) val_result
             @test_approx_eq ForwardDiff.gradient(results) grad_result
@@ -283,19 +283,19 @@ for fsym in ForwardDiff.univar_tens_funcs
         end
 
         testout = similar(testout)
-        results = ForwardDiff.tensor!(testout, testf, testx, AllInfo)
+        results = ForwardDiff.tensor!(testout, testf, testx, AllResults)
         test_all_results(testout, results[2])
 
         testout = similar(testout)
-        testout, results2 = ForwardDiff.tensor(testf, testx, AllInfo)
+        testout, results2 = ForwardDiff.tensor(testf, testx, AllResults)
         test_all_results(testout, results2)
 
-        tensf! = ForwardDiff.tensor(testf, AllInfo; mutates=true)
+        tensf! = ForwardDiff.tensor(testf, AllResults; mutates=true)
         testout = similar(testout)
         results3 = tensf!(testout, testx)
         test_all_results(testout, results3[2])
 
-        tensf = ForwardDiff.tensor(testf, AllInfo; mutates=false)
+        tensf = ForwardDiff.tensor(testf, AllResults; mutates=false)
         testout = similar(testout)
         testout, results4 = tensf(testx)
         test_all_results(testout, results4)

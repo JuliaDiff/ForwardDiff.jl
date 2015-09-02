@@ -7,7 +7,7 @@
 @generated function derivative!{A}(output, f, x::Number, ::Type{A}=Void)
     if A <: Void
         return_stmt = :(derivative!(output, result))
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(derivative!(output, result), result)
     else
         error("invalid argument $A passed to FowardDiff.hessian")
@@ -23,7 +23,7 @@ end
 
     if A <: Void
         return_stmt = :(derivative(result))
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(derivative(result), result)
     else
         error("invalid argument $A passed to FowardDiff.hessian")

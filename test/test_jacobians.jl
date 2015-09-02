@@ -51,7 +51,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             val_result = testf(testx)
             jacob_result = jacob_test_result(testexprs, testx)
             
-            # Non-AllInfo
+            # Non-AllResults
             test_jacob = (testout) -> @test_approx_eq testout jacob_result
 
             ForwardDiff.jacobian!(testout, testf, testx; chunk_size=chunk)
@@ -67,7 +67,7 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             jacf = ForwardDiff.jacobian(testf; mutates=false, chunk_size=chunk)
             test_jacob(jacf(testx))
 
-            # AllInfo
+            # AllResults
             test_all_results = (testout, results) -> begin
                 @test_approx_eq ForwardDiff.value(results) val_result
                 test_jacob(ForwardDiff.jacobian(results))
@@ -75,19 +75,19 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             end
 
             testout = similar(testout)
-            results = ForwardDiff.jacobian!(testout, testf, testx, AllInfo; chunk_size=chunk)
+            results = ForwardDiff.jacobian!(testout, testf, testx, AllResults; chunk_size=chunk)
             test_all_results(testout, results[2])
 
             testout = similar(testout)
-            testout, results2 = ForwardDiff.jacobian(testf, testx, AllInfo; chunk_size=chunk)
+            testout, results2 = ForwardDiff.jacobian(testf, testx, AllResults; chunk_size=chunk)
             test_all_results(testout, results2)
 
-            jacf! = ForwardDiff.jacobian(testf, AllInfo; mutates=true, chunk_size=chunk)
+            jacf! = ForwardDiff.jacobian(testf, AllResults; mutates=true, chunk_size=chunk)
             testout = similar(testout)
             results3 = jacf!(testout, testx)
             test_all_results(testout, results3[2])
 
-            jacf = ForwardDiff.jacobian(testf, AllInfo; mutates=false, chunk_size=chunk)
+            jacf = ForwardDiff.jacobian(testf, AllResults; mutates=false, chunk_size=chunk)
             testout = similar(testout)
             testout, results4 = jacf(testx)
             test_all_results(testout, results4)

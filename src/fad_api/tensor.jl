@@ -9,7 +9,7 @@
                                  cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(tensor!(output, result)::Array{T,3})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(tensor!(output, result)::Array{T,3}, result)
     else
         error("invalid argument $A passed to FowardDiff.tensor")
@@ -26,7 +26,7 @@ end
                                 cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(tensor(result)::Array{T,3})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(tensor(result)::Array{T,3}, result)
     else
         error("invalid argument $A passed to FowardDiff.tensor")

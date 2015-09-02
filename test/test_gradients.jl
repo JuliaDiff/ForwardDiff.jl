@@ -259,7 +259,7 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             val_result = testf(testx)
             grad_result = grad_test_result(testexpr, testx)
 
-            # Non-AllInfo
+            # Non-AllResults
             test_grad = (testout) -> @test_approx_eq testout grad_result
 
             ForwardDiff.gradient!(testout, testf, testx; chunk_size=chunk)
@@ -275,7 +275,7 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             gradf = ForwardDiff.gradient(testf; mutates=false, chunk_size=chunk)
             test_grad(gradf(testx))
 
-            # AllInfo
+            # AllResults
             test_all_results = (testout, results) -> begin
                 @test_approx_eq ForwardDiff.value(results) val_result
                 test_grad(ForwardDiff.gradient(results))
@@ -283,19 +283,19 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
             end
 
             testout = similar(testout)
-            results = ForwardDiff.gradient!(testout, testf, testx, AllInfo; chunk_size=chunk)
+            results = ForwardDiff.gradient!(testout, testf, testx, AllResults; chunk_size=chunk)
             test_all_results(testout, results[2])
 
             testout = similar(testout)
-            testout, results2 = ForwardDiff.gradient(testf, testx, AllInfo; chunk_size=chunk)
+            testout, results2 = ForwardDiff.gradient(testf, testx, AllResults; chunk_size=chunk)
             test_all_results(testout, results2)
 
-            gradf! = ForwardDiff.gradient(testf, AllInfo; mutates=true, chunk_size=chunk)
+            gradf! = ForwardDiff.gradient(testf, AllResults; mutates=true, chunk_size=chunk)
             testout = similar(testout)
             results3 = gradf!(testout, testx)
             test_all_results(testout, results3[2])
 
-            gradf = ForwardDiff.gradient(testf, AllInfo; mutates=false, chunk_size=chunk)
+            gradf = ForwardDiff.gradient(testf, AllResults; mutates=false, chunk_size=chunk)
             testout = similar(testout)
             testout, results4 = gradf(testx)
             test_all_results(testout, results4)

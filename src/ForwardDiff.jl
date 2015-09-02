@@ -42,7 +42,7 @@ module ForwardDiff
     include("TensorNumber.jl")
     include("fad_api/fad_api.jl")
 
-    export AllInfo,
+    export AllResults,
            ForwardDiffCache,
            value,
            value!,

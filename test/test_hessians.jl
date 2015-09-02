@@ -241,7 +241,7 @@ for fsym in ForwardDiff.univar_hess_funcs
             grad_result = ForwardDiff.gradient(testf, testx)
             hess_result = hess_test_result(testexpr, testx)
 
-            # Non-AllInfo
+            # Non-AllResults
             test_hess = (testout) -> @test_approx_eq testout hess_result
 
             ForwardDiff.hessian!(testout, testf, testx; chunk_size=chunk)
@@ -257,7 +257,7 @@ for fsym in ForwardDiff.univar_hess_funcs
             hessf = ForwardDiff.hessian(testf; mutates=false, chunk_size=chunk)
             test_hess(hessf(testx))
 
-            # AllInfo
+            # AllResults
             test_all_results = (testout, results) -> begin
                 @test_approx_eq ForwardDiff.value(results) val_result
                 @test_approx_eq ForwardDiff.gradient(results) grad_result
@@ -266,19 +266,19 @@ for fsym in ForwardDiff.univar_hess_funcs
             end
 
             testout = similar(testout)
-            results = ForwardDiff.hessian!(testout, testf, testx, AllInfo; chunk_size=chunk)
+            results = ForwardDiff.hessian!(testout, testf, testx, AllResults; chunk_size=chunk)
             test_all_results(testout, results[2])
 
             testout = similar(testout)
-            testout, results2 = ForwardDiff.hessian(testf, testx, AllInfo; chunk_size=chunk)
+            testout, results2 = ForwardDiff.hessian(testf, testx, AllResults; chunk_size=chunk)
             test_all_results(testout, results2)
 
-            hessf! = ForwardDiff.hessian(testf, AllInfo; mutates=true, chunk_size=chunk)
+            hessf! = ForwardDiff.hessian(testf, AllResults; mutates=true, chunk_size=chunk)
             testout = similar(testout)
             results3 = hessf!(testout, testx)
             test_all_results(testout, results3[2])
 
-            hessf = ForwardDiff.hessian(testf, AllInfo; mutates=false, chunk_size=chunk)
+            hessf = ForwardDiff.hessian(testf, AllResults; mutates=false, chunk_size=chunk)
             testout = similar(testout)
             testout, results4 = hessf(testx)
             test_all_results(testout, results4)

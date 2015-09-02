@@ -9,7 +9,7 @@
                                   cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(hessian!(output, result)::Matrix{T})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(hessian!(output, result)::Matrix{T}, result)
     else
         error("invalid argument $A passed to FowardDiff.hessian")
@@ -26,7 +26,7 @@ end
                                  cache::ForwardDiffCache=dummy_cache)
     if A <: Void
         return_stmt = :(hessian(result)::Matrix{T})
-    elseif A <: AllInfo
+    elseif A <: AllResults
         return_stmt = :(hessian(result)::Matrix{T}, result)
     else
         error("invalid argument $A passed to FowardDiff.hessian")
