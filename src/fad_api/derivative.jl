@@ -4,15 +4,43 @@
 
 # Exposed API methods #
 #---------------------#
-derivative!(output, f, x::Number) = get_derivative!(output, f(GradientNumber(x, one(x))))
-derivative(f, x::Number) = get_derivative(f(GradientNumber(x, one(x))))
-
-function derivative(f; mutates=false)
-    if mutates
-        derivf!(output, x::Number) = ForwardDiff.derivative!(output, f, x)
-        return derivf!
+@generated function derivative!{A}(output, f, x::Number, ::Type{A}=Void)
+    if A <: Void
+        return_stmt = :(derivative!(output, result))
+    elseif A <: AllInfo
+        return_stmt = :(derivative!(output, result), result)
     else
-        derivf(x::Number) = ForwardDiff.derivative(f, x)
-        return derivf
+        error("invalid argument $A passed to FowardDiff.hessian")
+    end
+
+    return quote
+        result = ForwardDiffResult(f(GradientNumber(x, one(x))))
+        $return_stmt
+    end
+end
+
+@generated function derivative{A}(f, x::Number, ::Type{A}=Void)
+
+    if A <: Void
+        return_stmt = :(derivative(result))
+    elseif A <: AllInfo
+        return_stmt = :(derivative(result), result)
+    else
+        error("invalid argument $A passed to FowardDiff.hessian")
+    end
+
+    return quote
+        result = ForwardDiffResult(f(GradientNumber(x, one(x))))
+        $return_stmt
+    end
+end
+
+function derivative{A}(f, ::Type{A}=Void; mutates=false)
+    if mutates
+        d!(output, x::Number) = ForwardDiff.derivative!(output, f, x, A)
+        return d!
+    else
+        d(x::Number) = ForwardDiff.derivative(f, x, A)
+        return d
     end
 end
