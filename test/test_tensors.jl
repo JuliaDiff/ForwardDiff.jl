@@ -12,7 +12,7 @@ using ForwardDiff:
         npartials,
         isconstant,
         hessnum,
-        t_inds_2_h_ind
+        hess_inds
 
 floatrange = .01:.01:.99
 intrange = 1:10
@@ -243,29 +243,64 @@ function tens_test_x(fsym, N)
 end
 
 for fsym in ForwardDiff.univar_tens_funcs
-    try 
-        testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
 
-        @eval function testf(x::Vector) 
-            a,b,c,d = x
-            return $testexpr
-        end
+    @eval function testf(x::Vector)
+        a,b,c,d = x
+        return $testexpr
+    end
 
+    try
         testx = tens_test_x(fsym, N)
-        testresult = tens_test_result(testexpr, testx)
+        val_result = testf(testx)
+        grad_result = ForwardDiff.gradient(testf, testx)
+        hess_result = ForwardDiff.hessian(testf, testx)
+        tens_result = tens_test_result(testexpr, testx)
+
+        # Non-AllResults
+        test_tens = (testout) -> @test_approx_eq testout tens_result
 
         ForwardDiff.tensor!(testout, testf, testx)
-        @test_approx_eq testout testresult
+        test_tens(testout)
 
-        @test_approx_eq ForwardDiff.tensor(testf, testx) testresult
+        test_tens(ForwardDiff.tensor(testf, testx))
 
-        tensf! = ForwardDiff.tensor(testf, mutates=true)
+        tensf! = ForwardDiff.tensor(testf; mutates=true)
+        testout = similar(testout)
         tensf!(testout, testx)
-        @test_approx_eq testout testresult
+        test_tens(testout)
 
-        tensf = ForwardDiff.tensor(testf, mutates=false)
-        @test_approx_eq tensf(testx) testresult
+        tensf = ForwardDiff.tensor(testf; mutates=false)
+        test_tens(tensf(testx))
+
+        # AllResults
+        test_all_results = (testout, results) -> begin
+            @test_approx_eq ForwardDiff.value(results) val_result
+            @test_approx_eq ForwardDiff.gradient(results) grad_result
+            @test_approx_eq ForwardDiff.hessian(results) hess_result
+            test_tens(ForwardDiff.tensor(results))
+            test_tens(testout)
+        end
+
+        testout = similar(testout)
+        results = ForwardDiff.tensor!(testout, testf, testx, AllResults)
+        test_all_results(testout, results[2])
+
+        testout = similar(testout)
+        testout, results2 = ForwardDiff.tensor(testf, testx, AllResults)
+        test_all_results(testout, results2)
+
+        tensf! = ForwardDiff.tensor(testf, AllResults; mutates=true)
+        testout = similar(testout)
+        results3 = tensf!(testout, testx)
+        test_all_results(testout, results3[2])
+
+        tensf = ForwardDiff.tensor(testf, AllResults; mutates=false)
+        testout = similar(testout)
+        testout, results4 = tensf(testx)
+        test_all_results(testout, results4)
     catch err
-        error("Failure when testing Tensors involving $fsym: $err")
+        warn("Failure when testing Tensors involving $fsym:")
+        throw(err)
     end
 end

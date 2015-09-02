@@ -123,14 +123,14 @@ end
 #   t₁ = grad(t, i) # coeff of ϵ₁
 #   t₂ = grad(t, j) # coeff of ϵ₂
 #   t₃ = grad(t, k) # coeff of ϵ₃
-#   t₄ = hess(t, a) = hess(t, t_inds_2_h_ind(i, j)) # coeff of ϵ₁ϵ₂
-#   t₅ = hess(t, b) = hess(t, t_inds_2_h_ind(i, k)) # coeff of ϵ₁ϵ₃
-#   t₆ = hess(t, c) = hess(t, t_inds_2_h_ind(j, k)) # coeff of ϵ₂ϵ₃
+#   t₄ = hess(t, a) = hess(t, hess_inds(i, j)) # coeff of ϵ₁ϵ₂
+#   t₅ = hess(t, b) = hess(t, hess_inds(i, k)) # coeff of ϵ₁ϵ₃
+#   t₆ = hess(t, c) = hess(t, hess_inds(j, k)) # coeff of ϵ₂ϵ₃
 #   t₇ = tens(t, q) # coeff of ϵ₁ϵ₂ϵ₃
 #
 # see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
-function t_inds_2_h_ind(i, j)
+function hess_inds(i, j)
     if i < j
         return div(j*(j-1), 2) + i
     else
@@ -143,7 +143,7 @@ function loadtens_deriv!{N}(t::TensorNumber{N}, deriv1, deriv2, deriv3, output)
     for i in 1:N
         for j in i:N
             for k in i:j
-                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(i,k), t_inds_2_h_ind(j,k)
+                a, b, c = hess_inds(i,j), hess_inds(i,k), hess_inds(j,k)
                 g_i, g_j, g_k = grad(t,i), grad(t,j), grad(t,k)
                 output[q] = deriv1*tens(t,q) + deriv2*(g_k*hess(t,a) + g_j*hess(t,b) + g_i*hess(t,c)) + deriv3*g_i*g_j*g_k
                 q += 1
@@ -162,7 +162,7 @@ function loadtens_mul!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
     for i in 1:N
         for j in i:N
             for k in i:j
-                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(i,k), t_inds_2_h_ind(j,k)
+                a, b, c = hess_inds(i,j), hess_inds(i,k), hess_inds(j,k)
                 output[q] = (tens(t1,q)*t2val +
                              hess(t1,c)*grad(t2,i) +
                              hess(t1,b)*grad(t2,j) +
@@ -193,7 +193,7 @@ function loadtens_div!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
     for i in 1:N
         for j in i:N
             for k in i:j
-                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(i,k), t_inds_2_h_ind(j,k)
+                a, b, c = hess_inds(i,j), hess_inds(i,k), hess_inds(j,k)
                 t1_gi, t1_gj, t1_gk = grad(t1,i), grad(t1,j), grad(t1,k)
                 t2_gi, t2_gj, t2_gk = grad(t2,i), grad(t2,j), grad(t2,k)
                 t1_ha, t1_hb, t1_hc = hess(t1,a), hess(t1,b), hess(t1,c)
@@ -239,7 +239,7 @@ function loadtens_exp!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
     for i in 1:N
         for j in i:N
             for k in i:j
-                a, b, c = t_inds_2_h_ind(i,j), t_inds_2_h_ind(i,k), t_inds_2_h_ind(j,k)
+                a, b, c = hess_inds(i,j), hess_inds(i,k), hess_inds(j,k)
                 
                 t1_gi, t1_gj, t1_gk = grad(t1,i), grad(t1,j), grad(t1,k)
                 t2_gi, t2_gj, t2_gk = grad(t2,i), grad(t2,j), grad(t2,k)

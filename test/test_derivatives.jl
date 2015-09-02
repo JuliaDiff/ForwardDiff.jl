@@ -22,7 +22,7 @@ function deriv_test_x(fsym)
     return rand(randrange)
 end
 
-function test_approx_deriv(a, b)
+function test_approx_deriv(a::Array, b::Array)
     @assert length(a) == length(b)
     for i in eachindex(a)
         @test_approx_eq a[i] b[i]
@@ -36,17 +36,56 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
         @eval begin 
             x = deriv_test_x($fsym)
             testdf = x -> $func_expr
-            result = $deriv
-            
-            @test_approx_eq result ForwardDiff.derivative(testdf, x)
-            @test_approx_eq result ForwardDiff.derivative(testdf)(x)
+            val_result = testdf(x)
+            deriv_result = $deriv
+
+            test_all_results = (testout, results) -> begin
+                @test_approx_eq ForwardDiff.value(results) val_result
+                @test_approx_eq ForwardDiff.derivative(results) deriv_result
+                @test_approx_eq testout deriv_result
+            end
+
+            @test_approx_eq deriv_result ForwardDiff.derivative(testdf, x)
+            testout, result = ForwardDiff.derivative(testdf, x, AllResults)
+            test_all_results(testout, result)
+
+            @test_approx_eq deriv_result ForwardDiff.derivative(testdf)(x)
+            testout2, result2 = ForwardDiff.derivative(testdf, AllResults)(x)
+            test_all_results(testout2, result2)
 
             testdf_arr = t -> [testdf(t) for i in 1:N, j in 1:M, k in 1:L]
-            result_arr = [result for i in 1:N, j in 1:M, k in 1:L]
+            val_result_arr = [val_result for i in 1:N, j in 1:M, k in 1:L]
+            deriv_result_arr = [deriv_result for i in 1:N, j in 1:M, k in 1:L]
 
-            test_approx_deriv(result_arr, ForwardDiff.derivative(testdf_arr, x))
-            test_approx_deriv(result_arr, ForwardDiff.derivative(testdf_arr)(x))
-            test_approx_deriv(result_arr, ForwardDiff.derivative!(testout, testdf_arr, x))
+            test_all_results = (testout, results) -> begin
+                test_approx_deriv(ForwardDiff.value(results), val_result_arr)
+                test_approx_deriv(ForwardDiff.derivative(results), deriv_result_arr)
+                test_approx_deriv(testout, deriv_result_arr)
+            end
+
+            test_approx_deriv(deriv_result_arr, ForwardDiff.derivative(testdf_arr, x))
+            testout, result = ForwardDiff.derivative(testdf_arr, x, AllResults)
+            test_all_results(testout, result)
+
+            test_approx_deriv(deriv_result_arr, ForwardDiff.derivative(testdf_arr)(x))
+            testout2, result2 = ForwardDiff.derivative(testdf_arr, AllResults)(x)
+            test_all_results(testout2, result2)
+
+            testout = similar(testout)
+            ForwardDiff.derivative!(testout, testdf_arr, x)
+            test_approx_deriv(deriv_result_arr, testout)
+
+            testout = similar(testout)
+            results = ForwardDiff.derivative!(testout, testdf_arr, x, AllResults)
+            test_all_results(testout, results[2])
+
+            testout = similar(testout)
+            ForwardDiff.derivative(testdf_arr; mutates=true)(testout, x)
+            test_approx_deriv(deriv_result_arr, testout)
+
+            testout = similar(testout)
+            results2 = ForwardDiff.derivative(testdf_arr, AllResults; mutates=true)(testout, x)
+            test_all_results(testout, results[2])
         end
     catch err
         error("Failure when testing derivative of $fsym: $err")

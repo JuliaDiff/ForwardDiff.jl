@@ -48,18 +48,49 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
     for chunk in chunk_sizes
         try
             testx = jacob_test_x(fsym, N)
-            testresult = jacob_test_result(testexprs, testx)
-            ForwardDiff.jacobian!(testout, testf, testx, chunk_size=chunk)
-            @test_approx_eq testout testresult
+            val_result = testf(testx)
+            jacob_result = jacob_test_result(testexprs, testx)
+            
+            # Non-AllResults
+            test_jacob = (testout) -> @test_approx_eq testout jacob_result
 
-            @test_approx_eq ForwardDiff.jacobian(testf, testx, chunk_size=chunk) testresult
+            ForwardDiff.jacobian!(testout, testf, testx; chunk_size=chunk)
+            test_jacob(testout)
 
-            jacf! = ForwardDiff.jacobian(testf, mutates=true)
-            jacf!(testout, testx, chunk_size=chunk)
-            @test_approx_eq testout testresult
+            test_jacob(ForwardDiff.jacobian(testf, testx; chunk_size=chunk))
+            
+            jacf! = ForwardDiff.jacobian(testf; mutates=true, chunk_size=chunk)
+            testout = similar(testout)
+            jacf!(testout, testx)
+            test_jacob(testout)
 
-            jacf = ForwardDiff.jacobian(testf, mutates=false)
-            @test_approx_eq jacf(testx, chunk_size=chunk) testresult
+            jacf = ForwardDiff.jacobian(testf; mutates=false, chunk_size=chunk)
+            test_jacob(jacf(testx))
+
+            # AllResults
+            test_all_results = (testout, results) -> begin
+                @test_approx_eq ForwardDiff.value(results) val_result
+                test_jacob(ForwardDiff.jacobian(results))
+                test_jacob(testout)
+            end
+
+            testout = similar(testout)
+            results = ForwardDiff.jacobian!(testout, testf, testx, AllResults; chunk_size=chunk)
+            test_all_results(testout, results[2])
+
+            testout = similar(testout)
+            testout, results2 = ForwardDiff.jacobian(testf, testx, AllResults; chunk_size=chunk)
+            test_all_results(testout, results2)
+
+            jacf! = ForwardDiff.jacobian(testf, AllResults; mutates=true, chunk_size=chunk)
+            testout = similar(testout)
+            results3 = jacf!(testout, testx)
+            test_all_results(testout, results3[2])
+
+            jacf = ForwardDiff.jacobian(testf, AllResults; mutates=false, chunk_size=chunk)
+            testout = similar(testout)
+            testout, results4 = jacf(testx)
+            test_all_results(testout, results4)
         catch err
             warn("Failure when testing Jacobians involving $fsym with chunk_size=$chunk:")
             throw(err)

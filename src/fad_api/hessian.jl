@@ -4,80 +4,110 @@
 
 # Exposed API methods #
 #---------------------#
-function hessian!{T}(output::Matrix{T},
-                     f,
-                     x::Vector;
-                     chunk_size::Int=default_chunk_size,
-                     cache::ForwardDiffCache=dummy_cache)
-    xlen = length(x)
-    @assert (xlen, xlen) == size(output) "The output matrix must have size (length(input), length(input))"
-    return _calc_hessian!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Matrix{T}
-end
-
-function hessian{T}(f,
-                    x::Vector{T};
-                    chunk_size::Int=default_chunk_size,
-                    cache::ForwardDiffCache=dummy_cache)
-    xlen = length(x)
-    output = similar(x, xlen, xlen)
-    return _calc_hessian!(output, f, x, Val{xlen}, Val{chunk_size}, cache)::Matrix{T}
-end
-
-function hessian(f; mutates=false)
-    cache = ForwardDiffCache()
-    if mutates
-        function hessf!{T}(output::Matrix{T}, x::Vector; chunk_size::Int=default_chunk_size)
-            return ForwardDiff.hessian!(output, f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
-        end
-        return hessf!
+@generated function hessian!{T,A}(output::Matrix{T}, f, x::Vector, ::Type{A}=Void;
+                                  chunk_size::Int=default_chunk_size,
+                                  cache::ForwardDiffCache=dummy_cache)
+    if A <: Void
+        return_stmt = :(hessian!(output, result)::Matrix{T})
+    elseif A <: AllResults
+        return_stmt = :(hessian!(output, result)::Matrix{T}, result)
     else
-        function hessf{T}(x::Vector{T}; chunk_size::Int=default_chunk_size)
-            return ForwardDiff.hessian(f, x, chunk_size=chunk_size, cache=cache)::Matrix{T}
+        error("invalid argument $A passed to FowardDiff.hessian")
+    end
+
+    return quote
+        result = _calc_hessian(f, x, T, chunk_size, cache)
+        return $return_stmt
+    end
+end
+
+@generated function hessian{T,A}(f, x::Vector{T}, ::Type{A}=Void;
+                                 chunk_size::Int=default_chunk_size,
+                                 cache::ForwardDiffCache=dummy_cache)
+    if A <: Void
+        return_stmt = :(hessian(result)::Matrix{T})
+    elseif A <: AllResults
+        return_stmt = :(hessian(result)::Matrix{T}, result)
+    else
+        error("invalid argument $A passed to FowardDiff.hessian")
+    end
+
+    return quote
+        result = _calc_hessian(f, x, T, chunk_size, cache)
+        return $return_stmt
+    end
+end
+
+function hessian{A}(f, ::Type{A}=Void;
+                    mutates::Bool=false,
+                    chunk_size::Int=default_chunk_size,
+                    cache::ForwardDiffCache=ForwardDiffCache())
+    if mutates
+        function h!(output::Matrix, x::Vector)
+            return ForwardDiff.hessian!(output, f, x, A;
+                                        chunk_size=chunk_size,
+                                        cache=cache)
         end
-        return hessf
+        return h!
+    else
+        function h(x::Vector)
+            return ForwardDiff.hessian(f, x, A;
+                                       chunk_size=chunk_size,
+                                       cache=cache)
+        end
+        return h
     end
 end
 
 # Calculate Hessian of a given function #
 #---------------------------------------#
+function _calc_hessian{S}(f, x::Vector, ::Type{S},
+                          chunk_size::Int,
+                          cache::ForwardDiffCache)
+    X = Val{length(x)}
+    C = Val{chunk_size}
+    return _calc_hessian(f, x, S, X, C, cache)
+end
+
 gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
 
-@generated function _calc_hessian!{S,T,xlen,chunk_size}(output::Matrix{S}, f, x::Vector{T}, 
-                                                        X::Type{Val{xlen}}, C::Type{Val{chunk_size}},
-                                                        cache::ForwardDiffCache)
+@generated function _calc_hessian{T,S,xlen,chunk_size}(f, x::Vector{T}, ::Type{S},
+                                                       X::Type{Val{xlen}},
+                                                       C::Type{Val{chunk_size}},
+                                                       cache::ForwardDiffCache)
     check_chunk_size(xlen, chunk_size)
-    full_bool = chunk_size_matches_full(xlen, chunk_size)
-    
-    # chunk_size is incremented by one when users 
-    # input a non-xlen chunk_size (this allows 
-    # simplification of loop alignment for the 
+
+    # chunk_size is incremented by one when users
+    # input a non-xlen chunk_size (this allows
+    # simplification of loop alignment for the
     # chunk-based calculation code)
-    C2 = Val{full_bool ? chunk_size : chunk_size+1}
+    vec_mode_bool = chunk_size_matches_vec_mode(xlen, chunk_size)
+    C2 = Val{vec_mode_bool ? chunk_size : chunk_size+1}
     H = workvec_eltype(HessianNumber, T, Val{xlen}, C2)
+    N = npartials(H)
     G = gradnum_type(H)
 
-    if full_bool
+    if vec_mode_bool
+        # Vector-Mode
+        ResultHess = switch_eltype(H, S)
         body = quote
             @simd for i in eachindex(x)
                 @inbounds hessvec[i] = HessianNumber(G(x[i], partials[i]), hesszeros)
             end
 
-            result::ResultType = f(hessvec)
-
-            q = 1
-            for i in 1:N
-                for j in 1:i
-                    val = hess(result, q)
-                    @inbounds output[i, j] = val
-                    @inbounds output[j, i] = val
-                    q += 1
-                end
-            end
+            result::$ResultHess = f(hessvec)
         end
     else
+        # Chunk-Mode
+        ChunkType = switch_eltype(H, S)
+        ResultGrad = GradientNumber{xlen,S,Vector{S}}
+        ResultHess = HessianNumber{xlen,S,Vector{S}}
         body = quote
+            N = $N
             M = N-1
             gradzeros = get_zeros!(cache, G)
+            output_grad = Vector{S}(xlen)
+            output_hess = Vector{S}(halfhesslen(xlen))
 
             @simd for i in eachindex(x)
                 @inbounds hessvec[i] = HessianNumber(G(x[i], gradzeros), hesszeros) 
@@ -106,27 +136,30 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
             # -------------------------
             # |   |   |   |   | 3 | 3 |
             # -------------------------
+
+            local chunk_result::$ChunkType
+
             for i in 1:M:xlen
+                offset = i-1
+
                 @simd for j in 1:M
-                    q = i+j-1
+                    q = j+offset
                     @inbounds hessvec[q] = HessianNumber(G(x[q], partials[j]), hesszeros)
                 end
 
-                chunk_result::ResultType = f(hessvec)
+                chunk_result = f(hessvec)
                 
                 q = 1
-                for j in i:(i+M-1)
+                for j in i:(M+offset)
                     for k in i:j
-                        val = hess(chunk_result, q)
-                        @inbounds output[j, k] = val
-                        @inbounds output[k, j] = val
+                        @inbounds output_hess[hess_inds(j, k)] = hess(chunk_result, q)
                         q += 1
                     end
                 end
 
-                offset = i-1
                 @simd for j in 1:M
                     q = j+offset
+                    @inbounds output_grad[q] = grad(chunk_result, j)
                     @inbounds hessvec[q] = HessianNumber(G(x[q], gradzeros), hesszeros)
                 end
             end
@@ -150,6 +183,7 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
             # -------------------------
             # | 2 | 4 | 5 | 6 | x | x |
             # -------------------------
+
             for offset in M:M:(xlen-M)
                 col_offset = offset - M
                 for j in 1:M
@@ -161,35 +195,31 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
                             @inbounds hessvec[row] = HessianNumber(G(x[row], partials[i+1]), hesszeros)
                         end
 
-                        chunk_result::ResultType = f(hessvec)
+                        chunk_result = f(hessvec)
 
                         for i in 1:M
                             row = row_offset + i
                             q = halfhesslen(i) + 1
-                            val = hess(chunk_result, q)
-                            @inbounds output[row, col] = val
-                            @inbounds output[col, row] = val
+                            @inbounds output_hess[hess_inds(row, col)] = hess(chunk_result, q)
                             @inbounds hessvec[row] = HessianNumber(G(x[row], gradzeros), hesszeros)
                         end
                     end
                     @inbounds hessvec[col] = HessianNumber(G(x[col], gradzeros), hesszeros)
                 end
             end
+
+            result::$ResultHess = ($ResultHess)(($ResultGrad)(value(chunk_result), output_grad), output_hess)
         end
     end
 
-    return quote 
-        H = $H
-        G = $G
-        N = npartials(H)
-        ResultType = switch_eltype(H, S)
-
+    return quote
+        H, G = $H, $G
         hessvec = get_workvec!(cache, HessianNumber, T, X, $C2)
         partials = get_partials!(cache, H)
         hesszeros = get_zeros!(cache, H)
         
         $body
 
-        return output::Matrix{S}
+        return ForwardDiffResult(result)
     end
 end

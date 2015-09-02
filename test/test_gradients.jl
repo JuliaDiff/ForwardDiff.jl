@@ -256,18 +256,49 @@ for fsym in map(first, Calculus.symbolic_derivatives_1arg())
     for chunk in chunk_sizes
         try
             testx = grad_test_x(fsym, N)
-            testresult = grad_test_result(testexpr, testx)
+            val_result = testf(testx)
+            grad_result = grad_test_result(testexpr, testx)
+
+            # Non-AllResults
+            test_grad = (testout) -> @test_approx_eq testout grad_result
 
             ForwardDiff.gradient!(testout, testf, testx; chunk_size=chunk)
-            @test_approx_eq testout testresult
-            @test_approx_eq ForwardDiff.gradient(testf, testx, chunk_size=chunk) testresult
+            test_grad(testout)
 
-            gradf! = ForwardDiff.gradient(testf, mutates=true)
-            gradf!(testout, testx, chunk_size=chunk)
-            @test_approx_eq testout testresult
+            test_grad(ForwardDiff.gradient(testf, testx; chunk_size=chunk))
 
-            gradf = ForwardDiff.gradient(testf, mutates=false)
-            @test_approx_eq gradf(testx, chunk_size=chunk) testresult
+            gradf! = ForwardDiff.gradient(testf; mutates=true, chunk_size=chunk)
+            testout = similar(testout)
+            gradf!(testout, testx)
+            test_grad(testout)
+
+            gradf = ForwardDiff.gradient(testf; mutates=false, chunk_size=chunk)
+            test_grad(gradf(testx))
+
+            # AllResults
+            test_all_results = (testout, results) -> begin
+                @test_approx_eq ForwardDiff.value(results) val_result
+                test_grad(ForwardDiff.gradient(results))
+                test_grad(testout)
+            end
+
+            testout = similar(testout)
+            results = ForwardDiff.gradient!(testout, testf, testx, AllResults; chunk_size=chunk)
+            test_all_results(testout, results[2])
+
+            testout = similar(testout)
+            testout, results2 = ForwardDiff.gradient(testf, testx, AllResults; chunk_size=chunk)
+            test_all_results(testout, results2)
+
+            gradf! = ForwardDiff.gradient(testf, AllResults; mutates=true, chunk_size=chunk)
+            testout = similar(testout)
+            results3 = gradf!(testout, testx)
+            test_all_results(testout, results3[2])
+
+            gradf = ForwardDiff.gradient(testf, AllResults; mutates=false, chunk_size=chunk)
+            testout = similar(testout)
+            testout, results4 = gradf(testx)
+            test_all_results(testout, results4)
         catch err
             warn("Failure when testing gradients involving $fsym with chunk_size=$chunk:")
             throw(err)
