@@ -12,17 +12,19 @@ For now, ForwardDiff.jl only supports differentiation of functions involving ``T
 .. toctree::
    :maxdepth: 2
    :caption: User Documentation
-   
+
+   install.rst
    perf_diff.rst
    chunk_vec_modes.rst
    lower_order_results.rst
    caching.rst
    perf_tips.rst
 
-
 .. toctree::
    :maxdepth: 2
    :caption: Developer Documentation
+
+TODO
 
 .. _`wikipedia page`: https://en.wikipedia.org/wiki/Automatic_differentiation
 .. _`finite differencing`: https://en.wikipedia.org/wiki/Numerical_differentiation
