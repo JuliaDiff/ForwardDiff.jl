@@ -49,3 +49,7 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
  0.994057  3.25245  1.65416   0.251396  0.964566
  1.03257   3.37871  1.71818   0.964566  0.140689
  ```
+
+ ## News
+
+- 9/3/2015: We're releasing ForwardDiff.jl v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
