@@ -1,3 +1,5 @@
+`Go to ForwardDiff.jl on GitHub`_
+
 ForwardDiff.jl
 ==============
 
@@ -26,5 +28,6 @@ For now, ForwardDiff.jl only supports differentiation of functions involving ``T
 
 TODO
 
+.. _`Go to ForwardDiff.jl on GitHub`: https://github.com/JuliaDiff/ForwardDiff.jl
 .. _`wikipedia page`: https://en.wikipedia.org/wiki/Automatic_differentiation
 .. _`finite differencing`: https://en.wikipedia.org/wiki/Numerical_differentiation
