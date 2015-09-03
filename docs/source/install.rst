@@ -7,4 +7,4 @@ To install ForwardDiff.jl, simply use Julia's package manager:
 
     julia> Pkg.add("ForwardDiff")
 
-The current version of ForwardDiff.jl only supports Julia v0.4 and higher.
+The current version of ForwardDiff.jl only supports Julia v0.4.
