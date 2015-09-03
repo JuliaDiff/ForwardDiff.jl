@@ -6,7 +6,7 @@ ForwardDiff.jl implements methods to take **derivatives**, **gradients**, **Jaco
 
 While performance can vary depending on the functions you evaluate, the algorithms implemented by ForwardDiff.jl **generally outperform non-AD algorithms in both speed and accuracy.**
 
-Documentation can be found [here](http://www.juliadiff.org/ForwardDiff.jl/). Otherwise, here's a simple example showing the pacakge in action:
+Documentation can be found [here](http://www.juliadiff.org/ForwardDiff.jl/). Otherwise, check out this simple example showing the pacakge in action:
 
 ```julia
 julia> using ForwardDiff
