@@ -49,8 +49,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ForwardDiff.jl'
-copyright = u'2015, Jarrett Revels, Miles Lubin, Theodore Papamarkou'
-author = u'Jarrett Revels, Miles Lubin, Theodore Papamarkou'
+copyright = u'2015, Jarrett Revels, Theodore Papamarkou, Miles Lubin, and other contributors'
+author = u'Jarrett Revels, Theodore Papamarkou, Miles Lubin, and other contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
