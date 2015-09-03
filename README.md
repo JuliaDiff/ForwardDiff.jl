@@ -5,7 +5,7 @@
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.3.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.3)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.4.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.4)
 
-Note: ForwardDiff.jl currently only supports Julia v0.4; if you're a Julia v0.3 user, you'll have to use the old version of ForwardDiff.jl (v0.0.2).
+Note: ForwardDiff.jl currently only supports Julia v0.4. If you're a Julia v0.3 user, installing ForwardDiff.jl via the package manager will give you an old version ([v0.0.2](https://github.com/JuliaDiff/ForwardDiff.jl/tree/6da5f5204fd717a1417a8a4a6b9e2253799879c9)).
 
 # ForwardDiff.jl
 
