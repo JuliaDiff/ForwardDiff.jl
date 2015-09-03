@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=master)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
 
+Note: ForwardDiff.jl currently only supports Julia v0.4; if you're a Julia v0.3 user, you'll have to use the old version of ForwardDiff.jl (v0.0.1).
+
 # ForwardDiff.jl
 
 ForwardDiff.jl implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
