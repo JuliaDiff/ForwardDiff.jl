@@ -45,6 +45,15 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
         return [$(testexprs...)]
     end
 
+    @eval function testf!(output::Vector, x::Vector)
+        a,b,c,d = x
+        output[1] = $(testexprs[1])
+        output[2] = $(testexprs[2])
+        output[3] = $(testexprs[3])
+        output[4] = $(testexprs[4])
+        output[5] = $(testexprs[5])
+    end
+
     for chunk in chunk_sizes
         try
             testx = jacob_test_x(fsym, N)
@@ -65,6 +74,14 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             test_jacob(testout)
 
             jacf = ForwardDiff.jacobian(testf; mutates=false, chunk_size=chunk)
+            test_jacob(jacf(testx))
+
+            jacf! = ForwardDiff.jacobian(testf!; mutates=true, chunk_size=chunk, output_length=M)
+            testout = similar(testout)
+            jacf!(testout, testx)
+            test_jacob(testout)
+
+            jacf = ForwardDiff.jacobian(testf!; mutates=false, chunk_size=chunk, output_length=M)
             test_jacob(jacf(testx))
 
             # AllResults
@@ -91,6 +108,16 @@ for fsym in ForwardDiff.fad_supported_univar_funcs
             testout = similar(testout)
             testout, results4 = jacf(testx)
             test_all_results(testout, results4)
+
+            jacf! = ForwardDiff.jacobian(testf!, AllResults; mutates=true, chunk_size=chunk, output_length=M)
+            testout = similar(testout)
+            results5 = jacf!(testout, testx)
+            test_all_results(testout, results5[2])
+
+            jacf = ForwardDiff.jacobian(testf!, AllResults; mutates=false, chunk_size=chunk, output_length=M)
+            testout = similar(testout)
+            testout, results6 = jacf(testx)
+            test_all_results(testout, results6)
         catch err
             warn("Failure when testing Jacobians involving $fsym with chunk_size=$chunk:")
             throw(err)
