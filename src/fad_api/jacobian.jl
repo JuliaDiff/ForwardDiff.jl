@@ -41,17 +41,38 @@ end
 function jacobian{A}(f, ::Type{A}=Void;
                      mutates::Bool=false,
                      chunk_size::Int=default_chunk_size,
-                     cache::ForwardDiffCache=ForwardDiffCache())
+                     cache::ForwardDiffCache=ForwardDiffCache(),
+                     output_length::Int=0)
+    # if output_length > 0, assume that f is of 
+    # the form f!(output, x), and generate the 
+    # appropriate closure
+    if output_length > 0
+        newf = @eval begin
+            output_cache = ForwardDiffCache()
+            @inline function newf{N,T,C}(x::Vector{GradientNumber{N,T,C}})
+                output = get_workvec!(output_cache, 
+                                      GradientNumber, T,
+                                      Val{$output_length}, 
+                                      Val{N})
+                $f(output, x)
+                return output
+            end
+            return newf
+        end
+    else
+        newf = f
+    end
+
     if mutates
         function j!(output::Matrix, x::Vector)
-            return ForwardDiff.jacobian!(output, f, x, A;
+            return ForwardDiff.jacobian!(output, newf, x, A;
                                          chunk_size=chunk_size,
                                          cache=cache)
         end
         return j!
     else
         function j(x::Vector)
-            return ForwardDiff.jacobian(f, x, A;
+            return ForwardDiff.jacobian(newf, x, A;
                                         chunk_size=chunk_size,
                                         cache=cache)
         end

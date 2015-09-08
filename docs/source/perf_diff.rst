@@ -1,6 +1,23 @@
 Performing Differentiation
 ==========================
 
+Restrictions on the target function
+-----------------------------------
+
+ForwardDiff.jl can only differentiate functions that adhere to the following rules:
+
+- **The function must be unary (i.e., only accept a single argument).** The ``jacobian`` function is the exception to this restriction; see below for details.
+
+- **The function's argument type must be a subtype of** ``Vector`` **or** ``Real``.
+
+- **The function's argument type cannot be too restrictively annotated.** In this case, "too restrictive" means more restrictive than ``x::Vector`` or ``x::Number``.
+
+- **All number types involved in the function must be subtypes of** ``Real``. We believe extension to subtypes of ``Complex`` is possible, but it hasn't yet been worked on.
+
+- **The function must be** `type-stable`_ **.** This is not a strict limitation in every case, but in some cases, lack of type-stability can cause errors. At the very least, type-instablity can severely hinder performance.
+
+.. _`type-stable`: http://julia.readthedocs.org/en/latest/manual/performance-tips/#write-type-stable-functions
+
 Derivatives
 -----------
 
@@ -52,9 +69,11 @@ ForwardDiff.jl can take Jacobians of functions/callable objects of the form ``f(
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, where ``S`` is the element type of both the input and output.
 
-.. function:: jacobian(f; mutates=false)
+.. function:: jacobian(f; mutates=false, output_length=0)
 
     Return the function :math:`\mathbf{J}(f)`. If ``mutates=false``, then the returned function has the form ``j(x)``. If ``mutates=true``, then the returned function has the form ``j!(output, x)``.
+
+    This method is special in that it supports target functions of the form ``f!{T}(output::Vector{T}, x::Vector{T})``, where ``output`` stores the result. To utilize this functionality, pass the target function in as usual, and set ``output_length`` to the expected length of ``output``.
 
 Hessians
 --------
