@@ -203,6 +203,8 @@ for fsym in fad_supported_univar_funcs
     end
 end
 
+# Special Cases #
+#---------------#
 @inline function exp(g::GradientNumber)
     df = exp(value(g))
     return promote_typeof(g, df)(df, df*partials(g))
@@ -210,3 +212,20 @@ end
 
 @inline abs(g::GradientNumber) = (value(g) >= 0) ? g : -g
 @inline abs2(g::GradientNumber) = g*g
+
+@inline calc_atan2(y::GradientNumber, x::GradientNumber) = atan2(value(y), value(x))
+@inline calc_atan2(y::Real, x::GradientNumber) = atan2(y, value(x))
+@inline calc_atan2(y::GradientNumber, x::Real) = atan2(value(y), x)
+
+for Y in (:Real, :GradientNumber), X in (:Real, :GradientNumber)
+    if !(Y == :Real && X == :Real)
+        @eval begin
+            @inline function atan2(y::$Y, x::$X)
+                z = y/x
+                val = value(z)
+                df = inv(one(val) + val^2)
+                return promote_typeof(z, val, df)(calc_atan2(y, x), df*partials(z))
+            end
+        end
+    end
+end

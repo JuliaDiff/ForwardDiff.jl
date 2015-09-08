@@ -230,10 +230,9 @@ function loadhess_exp!{N}(x::Real, h::HessianNumber{N}, output)
     return loadhess_deriv!(h, deriv1, deriv2, output)
 end
 
-
-for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
-                         (:/, symbol("loadhess_div!")), 
-                         (:^, symbol("loadhess_exp!"))]
+for (fsym, loadfsym) in [(:*, symbol(loadhess_mul!)),
+                         (:/, symbol(loadhess_div!)), 
+                         (:^, symbol(loadhess_exp!))]
     @eval function $(fsym){N,A,B}(a::HessianNumber{N,A}, b::HessianNumber{N,B})
         new_hess = Array(promote_type(A, B), halfhesslen(N))
         return HessianNumber($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
@@ -307,4 +306,30 @@ for fsym in univar_hess_funcs
     """)
 
     @eval $expr
+end
+
+# Special Cases #
+#---------------#
+@inline calc_atan2(y::HessianNumber, x::HessianNumber) = calc_atan2(gradnum(y), gradnum(x))
+@inline calc_atan2(y::Real, x::HessianNumber) = calc_atan2(y, gradnum(x))
+@inline calc_atan2(y::HessianNumber, x::Real) = calc_atan2(gradnum(y), x)
+
+for Y in (:Real, :HessianNumber), X in (:Real, :HessianNumber)
+    if !(Y == :Real && X == :Real)
+        @eval begin
+            @inline function atan2(y::$Y, x::$X)
+                z = y/x
+                val, g_z = value(z), gradnum(z)
+                N, T = npartials(z), eltype(z)
+                
+                deriv1 = inv(one(val) + val^2)
+                deriv2 = 2 * val * -abs2(deriv1)
+                
+                new_g = typeof(g_z)(calc_atan2(y, x), deriv1*partials(g_z))
+                
+                hessvec = Array(T, halfhesslen(N))
+                return HessianNumber(new_g, loadhess_deriv!(z, deriv1, deriv2, hessvec))
+            end
+        end
+    end
 end

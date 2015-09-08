@@ -22,6 +22,7 @@ one{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(one(HessianNumber{N,T,C})
 rand{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(rand(HessianNumber{N,T,C}), rand(T, halftenslen(N)))
 
 @inline hessnum(t::TensorNumber) = t.hessnum
+@inline gradnum(t::TensorNumber) = gradnum(hessnum(t))
 
 @inline value(t::TensorNumber) = value(hessnum(t))
 @inline grad(t::TensorNumber) = grad(hessnum(t))
@@ -367,4 +368,35 @@ for fsym in univar_tens_funcs
     """)
 
     @eval $expr
+end
+
+# Special Cases #
+#---------------#
+@inline calc_atan2(y::TensorNumber, x::TensorNumber) = calc_atan2(hessnum(y), hessnum(x))
+@inline calc_atan2(y::Real, x::TensorNumber) = calc_atan2(y, hessnum(x))
+@inline calc_atan2(y::TensorNumber, x::Real) = calc_atan2(hessnum(y), x)
+
+for Y in (:Real, :TensorNumber), X in (:Real, :TensorNumber)
+    if !(Y == :Real && X == :Real)
+        @eval begin
+            function atan2(y::$Y, x::$X)
+                z = y/x
+                val, g_z, h_z = value(z), gradnum(z), hessnum(z)
+                N, T = npartials(z), eltype(z)
+                
+                deriv1 = inv(one(val) + val^2)
+                abs2_deriv1 = -2 * abs2(deriv1)
+                deriv2 = val * abs2_deriv1
+                deriv3 = abs2_deriv1 - (4 * val * deriv1 * deriv2)
+                
+                new_g = typeof(g_z)(calc_atan2(y, x), deriv1*partials(g_z))
+                
+                hessvec = Array(T, halfhesslen(N))
+                new_h = HessianNumber(new_g, loadhess_deriv!(h_z, deriv1, deriv2, hessvec))
+                
+                tensvec = Array(T, halftenslen(N))
+                return TensorNumber(new_h, loadtens_deriv!(z, deriv1, deriv2, deriv3, tensvec))
+            end
+        end
+    end
 end

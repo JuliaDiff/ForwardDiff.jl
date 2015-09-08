@@ -12,7 +12,7 @@ module ForwardDiff
                  read, write, isless, isreal, isnan, 
                  isfinite, eps, conj, transpose, 
                  ctranspose, eltype, abs, abs2, start, 
-                 next, done
+                 next, done, atan2
 
     const fad_supported_univar_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 
