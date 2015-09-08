@@ -104,7 +104,7 @@ end
 #   ϵ₁ != ϵ₂ != 0
 #   ϵ₁² = ϵ₂² = (ϵ₁ϵ₂)² = 0
 #
-# Taylor series expansion of a univariate function `f` on a 
+# Taylor series expansion of a unary function `f` on a 
 # HessianNumber `h`:
 #
 #   f(h) = f(h₀ + h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂) 
@@ -134,8 +134,8 @@ function loadhess_deriv!{N}(h::HessianNumber{N}, deriv1, deriv2, output)
     return output
 end
 
-# Bivariate functions on HessianNumbers #
-#---------------------------------------#
+# Binary functions on HessianNumbers #
+#------------------------------------#
 function loadhess_mul!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
     aval = value(a)
     bval = value(b)
@@ -272,8 +272,8 @@ end
 
 /(h::HessianNumber, x::Real) = HessianNumber(gradnum(h) / x, hess(h) / x)
 
-# Univariate functions on HessianNumbers #
-#----------------------------------------#
+# Unary functions on HessianNumbers #
+#-----------------------------------#
 -(h::HessianNumber) = HessianNumber(-gradnum(h), -hess(h))
 
 # the second derivatives of functions in unsupported_univar_hess_funcs involves differentiating 
@@ -282,30 +282,25 @@ const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :tr
 const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), fad_supported_univar_funcs)
 
 for fsym in univar_hess_funcs
-
-    loadfsym = symbol(string("loadhess_", fsym, "!"))
-
     hval = :hval
-    call_expr = :($(fsym)($hval))
-    deriv1 = Calculus.differentiate(call_expr, hval)
+    new_val = :($(fsym)($hval))
+    deriv1 = Calculus.differentiate(new_val, hval)
     deriv2 = Calculus.differentiate(deriv1, hval)
 
-    @eval function $(loadfsym){N}(h::HessianNumber{N}, output)
-        hval = value(h)
-        return loadhess_deriv!(h, $deriv1, $deriv2, output)
+    @eval function $(fsym){N}(h::HessianNumber{N})
+        hval, hg = value(h), gradnum(h)
+
+        new_val = $new_val
+        deriv1 = $deriv1
+        deriv2 = $deriv2
+
+        G = promote_typeof(hg, deriv1, deriv2)
+        new_g = G(new_val, deriv1*partials(hg))
+
+        new_hessvec = Array(eltype(new_g), halfhesslen(N))
+        loadhess_deriv!(h, deriv1, deriv2, new_hessvec)
+        return HessianNumber(new_g, new_hessvec)
     end
-
-    expr = parse(""" 
-        @generated function $(fsym){N,T}(h::HessianNumber{N,T})
-            ResultType = typeof($(fsym)(one(T)))
-            return quote 
-                new_hess = Array(\$ResultType, halfhesslen(N))
-                return HessianNumber($(fsym)(gradnum(h)), $(loadfsym)(h, new_hess))
-            end
-        end
-    """)
-
-    @eval $expr
 end
 
 # Special Cases #
@@ -319,16 +314,18 @@ for Y in (:Real, :HessianNumber), X in (:Real, :HessianNumber)
         @eval begin
             @inline function atan2(y::$Y, x::$X)
                 z = y/x
-                val, g_z = value(z), gradnum(z)
+                zval, zg = value(z), gradnum(z)
                 N, T = npartials(z), eltype(z)
-                
-                deriv1 = inv(one(val) + val^2)
-                deriv2 = 2 * val * -abs2(deriv1)
-                
-                new_g = typeof(g_z)(calc_atan2(y, x), deriv1*partials(g_z))
-                
-                hessvec = Array(T, halfhesslen(N))
-                return HessianNumber(new_g, loadhess_deriv!(z, deriv1, deriv2, hessvec))
+
+                deriv1 = inv(one(zval) + zval^2)
+                deriv2 = 2 * zval * -abs2(deriv1)
+
+                new_g = typeof(zg)(calc_atan2(y, x), deriv1*partials(zg))
+
+                new_hessvec = Array(T, halfhesslen(N))
+                loadhess_deriv!(z, deriv1, deriv2, new_hessvec)
+
+                return HessianNumber(new_g, new_hessvec)
             end
         end
     end
