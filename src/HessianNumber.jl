@@ -230,9 +230,9 @@ function loadhess_exp!{N}(x::Real, h::HessianNumber{N}, output)
     return loadhess_deriv!(h, deriv1, deriv2, output)
 end
 
-for (fsym, loadfsym) in [(:*, symbol(loadhess_mul!)),
-                         (:/, symbol(loadhess_div!)), 
-                         (:^, symbol(loadhess_exp!))]
+for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
+                         (:/, symbol("loadhess_div!")), 
+                         (:^, symbol("loadhess_exp!"))]
     @eval function $(fsym){N,A,B}(a::HessianNumber{N,A}, b::HessianNumber{N,B})
         new_hess = Array(promote_type(A, B), halfhesslen(N))
         return HessianNumber($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
