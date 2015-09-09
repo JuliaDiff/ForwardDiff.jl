@@ -27,8 +27,12 @@ abstract ForwardDiffNumber{N,T<:Number,C} <: Number
 ##############################
 # Utility/Accessor Functions #
 ##############################
-halfhesslen(n) = div(n*(n+1),2) # correct length(hess(::ForwardDiffNumber))
-halftenslen(n) = div(n*(n+1)*(n+2),6) # correct length(tens(::ForwardDiffNumber))
+@inline promote_typeof(a, b) = promote_type(typeof(a), typeof(b))
+@inline promote_typeof(a, b, c) = promote_type(promote_typeof(a, b), typeof(c))
+@inline promote_typeof(a, b, c, d) = promote_type(promote_typeof(a, b, c), typeof(d))
+
+@inline halfhesslen(n) = div(n*(n+1),2) # correct length(hess(::ForwardDiffNumber))
+@inline halftenslen(n) = div(n*(n+1)*(n+2),6) # correct length(tens(::ForwardDiffNumber))
 
 @inline switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
 @inline switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
