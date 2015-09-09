@@ -170,14 +170,6 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     # Univariate functions #
     #----------------------#
-    @test abs(test_grad) == test_grad
-    @test abs(-test_grad) == test_grad
-    @test abs2(test_grad) == test_grad*test_grad
-
-    @test conj(test_grad) == test_grad
-    @test transpose(test_grad) == test_grad
-    @test ctranspose(test_grad) == test_grad
-
     for (fsym, expr) in Calculus.symbolic_derivatives_1arg()
         @eval begin
             func = $fsym
@@ -211,6 +203,21 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
             end
         end
     end
+
+    # Special Cases #
+    #---------------#
+    @test abs(test_grad) == test_grad
+    @test abs(-test_grad) == test_grad
+    @test abs2(test_grad) == test_grad*test_grad
+
+    @test conj(test_grad) == test_grad
+    @test transpose(test_grad) == test_grad
+    @test ctranspose(test_grad) == test_grad
+
+    atan2_grad = atan2(test_grad, rand_grad)
+
+    @test value(atan2_grad) == atan2(test_val, rand_val)
+    @test grad(atan2_grad) == grad(atan(test_grad/rand_grad))
 end
 
 #####################
