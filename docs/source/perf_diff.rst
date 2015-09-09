@@ -8,9 +8,7 @@ ForwardDiff.jl can only differentiate functions that adhere to the following rul
 
 - **The function must be unary (i.e., only accept a single argument).** The ``jacobian`` function is the exception to this restriction; see below for details.
 
-- **The function's argument type must be a subtype of** ``Vector`` **or** ``Real``.
-
-- **The function's argument type cannot be too restrictively annotated.** In this case, "too restrictive" means more restrictive than ``x::Vector`` or ``x::Number``.
+- **The function must accept an argument whose type is a subtype of** ``Vector`` **or** ``Real``. The argument type **does not need to be annotated** in the function definition. In fact, **the function's argument type cannot be too restrictively annotated.** In this case, "too restrictive" means more restrictive than ``x::Vector`` or ``x::Number``.
 
 - **All number types involved in the function must be subtypes of** ``Real``. We believe extension to subtypes of ``Complex`` is possible, but it hasn't yet been worked on.
 

@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=master)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
+[![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.3.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.3)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.4.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.4)
 
 Note: ForwardDiff.jl currently only supports Julia v0.4. If you're a Julia v0.3 user, installing ForwardDiff.jl via the package manager will give you an old version ([v0.0.2](https://github.com/JuliaDiff/ForwardDiff.jl/tree/6da5f5204fd717a1417a8a4a6b9e2253799879c9)).

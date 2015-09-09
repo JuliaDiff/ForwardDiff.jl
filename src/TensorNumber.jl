@@ -22,6 +22,7 @@ one{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(one(HessianNumber{N,T,C})
 rand{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(rand(HessianNumber{N,T,C}), rand(T, halftenslen(N)))
 
 @inline hessnum(t::TensorNumber) = t.hessnum
+@inline gradnum(t::TensorNumber) = gradnum(hessnum(t))
 
 @inline value(t::TensorNumber) = value(hessnum(t))
 @inline grad(t::TensorNumber) = grad(hessnum(t))
@@ -104,7 +105,7 @@ end
 #   ϵ₁ != ϵ₂ != ϵ₃ != 0
 #   ϵ₁² = ϵ₂² = ϵ₃² = (ϵ₁ϵ₂)² = (ϵ₁ϵ₃)² = (ϵ₂ϵ₃)² = (ϵ₁ϵ₂ϵ₃)² = 0
 #
-# Taylor series expansion of a univariate function `f` on a
+# Taylor series expansion of a unary function `f` on a
 # TensorNumber `t`:
 #
 #   f(t) = f(t₀ + t₁ϵ₁ + t₂ϵ₂ + t₃ϵ₃ + t₄ϵ₁ϵ₂ + t₅ϵ₁ϵ₃ + t₆ϵ₂ϵ₃ + t₇ϵ₁ϵ₂ϵ₃)
@@ -153,8 +154,8 @@ function loadtens_deriv!{N}(t::TensorNumber{N}, deriv1, deriv2, deriv3, output)
     return output
 end
 
-# Bivariate functions on TensorNumbers #
-#--------------------------------------#
+# Binary functions on TensorNumbers #
+#-----------------------------------#
 function loadtens_mul!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
     t1val = value(t1)
     t2val = value(t2)
@@ -330,8 +331,8 @@ end
 
 /(t::TensorNumber, x::Real) = TensorNumber(hessnum(t) / x, tens(t) / x)
 
-# Univariate functions on TensorNumbers #
-#---------------------------------------#
+# Unary functions on TensorNumbers #
+#----------------------------------#
 -(t::TensorNumber) = TensorNumber(-hessnum(t), -tens(t))
 
 # the third derivatives of functions in unsupported_univar_tens_funcs involves differentiating 
@@ -340,31 +341,63 @@ const unsupported_univar_tens_funcs = [:digamma]
 const univar_tens_funcs = filter!(sym -> !in(sym, unsupported_univar_tens_funcs), ForwardDiff.univar_hess_funcs)
 
 for fsym in univar_tens_funcs
-    loadfsym = symbol(string("loadtens_", fsym, "!"))
-
     tval = :tval
-    call_expr = :($(fsym)($tval))
-    deriv1 = Calculus.differentiate(call_expr, tval)
+    new_val = :($(fsym)($tval))
+    deriv1 = Calculus.differentiate(new_val, tval)
     deriv2 = Calculus.differentiate(deriv1, tval)
     deriv3 = Calculus.differentiate(deriv2, tval)
 
-    @eval function $(loadfsym){N}(t::TensorNumber{N}, output)
-        tval = value(t)
+    @eval function $(fsym){N}(t::TensorNumber{N})
+        tval, tg, th = value(t), gradnum(t), hessnum(t)
+
+        new_val = $new_val
         deriv1 = $deriv1
         deriv2 = $deriv2
         deriv3 = $deriv3
-        return loadtens_deriv!(t, deriv1, deriv2, deriv3, output)
-    end
 
-    expr = parse(""" 
-        @generated function $(fsym){N,T}(t::TensorNumber{N,T})
-            ResultType = typeof($(fsym)(one(T)))
-            return quote 
-                new_tens = Array(\$ResultType, halftenslen(N))
-                return TensorNumber($(fsym)(hessnum(t)), $(loadfsym)(t, new_tens))
+        G = promote_typeof(tg, deriv1, deriv2, deriv3)
+        T = eltype(G)
+        new_g = G(new_val, deriv1*partials(tg))
+
+        new_hessvec = Array(T, halfhesslen(N))
+        loadhess_deriv!(th, deriv1, deriv2, new_hessvec)
+        new_h = HessianNumber(new_g, new_hessvec)
+
+        new_tensvec = Array(T, halftenslen(N))
+        loadtens_deriv!(t, deriv1, deriv2, deriv3, new_tensvec)
+        return TensorNumber(new_h, new_tensvec)
+    end
+end
+
+# Special Cases #
+#---------------#
+@inline calc_atan2(y::TensorNumber, x::TensorNumber) = calc_atan2(hessnum(y), hessnum(x))
+@inline calc_atan2(y::Real, x::TensorNumber) = calc_atan2(y, hessnum(x))
+@inline calc_atan2(y::TensorNumber, x::Real) = calc_atan2(hessnum(y), x)
+
+for Y in (:Real, :TensorNumber), X in (:Real, :TensorNumber)
+    if !(Y == :Real && X == :Real)
+        @eval begin
+            function atan2(y::$Y, x::$X)
+                z = y/x
+                zval, zg, zh = value(z), gradnum(z), hessnum(z)
+                N, T = npartials(z), eltype(z)
+                
+                deriv1 = inv(one(zval) + zval^2)
+                abs2_deriv1 = -2 * abs2(deriv1)
+                deriv2 = zval * abs2_deriv1
+                deriv3 = abs2_deriv1 - (4 * zval * deriv1 * deriv2)
+                
+                new_g = typeof(zg)(calc_atan2(y, x), deriv1*partials(zg))
+                
+                new_hessvec = Array(T, halfhesslen(N))
+                loadhess_deriv!(zh, deriv1, deriv2, new_hessvec)
+                new_h = HessianNumber(new_g, new_hessvec)
+                
+                new_tensvec = Array(T, halftenslen(N))
+                loadtens_deriv!(z, deriv1, deriv2, deriv3, new_tensvec)
+                return TensorNumber(new_h, new_tensvec)
             end
         end
-    """)
-
-    @eval $expr
+    end
 end

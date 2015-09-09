@@ -74,9 +74,6 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 # Math with GradientNumber #
 ############################
 
-promote_typeof(a, b, c) = promote_type(typeof(a), typeof(b), typeof(c))
-promote_typeof(a, b) = promote_type(typeof(a), typeof(b))
-
 # Addition/Subtraction #
 #----------------------#
 @inline +{N}(a::GradientNumber{N}, b::GradientNumber{N}) = promote_typeof(a, b)(value(a)+value(b), partials(a)+partials(b))
@@ -154,9 +151,10 @@ for f in (:^, :(NaNMath.pow))
     end
 end
 
-# from Calculus.jl #
-#------------------#
-# helper function to force use of NaNMath 
+# Unary functions on GradientNumbers #
+#------------------------------------#
+
+# helper function to allow use of NaNMath
 # functions in derivative calculations
 function to_nanmath(x::Expr)
     if x.head == :call
@@ -170,16 +168,15 @@ end
 to_nanmath(x) = x
 
 for fsym in fad_supported_univar_funcs
-    fsym == :exp && continue
-    
-    valexpr = :($(fsym)(gval))
-    dfexpr = Calculus.differentiate(valexpr, :gval)
+    gval = :gval
+    new_val = :($(fsym)($gval))
+    deriv = Calculus.differentiate(new_val, gval)
 
     @eval begin
         @inline function $(fsym)(g::GradientNumber)
             gval = value(g)
-            df = $dfexpr
-            return promote_typeof(g, df)($valexpr, df*partials(g))
+            deriv = $deriv
+            return promote_typeof(g, deriv)($new_val, deriv*partials(g))
         end
     end
 
@@ -190,23 +187,42 @@ for fsym in fad_supported_univar_funcs
                 :log10, :lgamma, :log1p)
 
         nan_fsym = Expr(:.,:NaNMath,Base.Meta.quot(fsym))
-        nan_valexpr = :($(nan_fsym)(gval))
-        nan_dfexpr = to_nanmath(dfexpr)
+        nan_new_val = :($(nan_fsym)($gval))
+        nan_deriv = to_nanmath(deriv)
 
         @eval begin
             @inline function $(nan_fsym)(g::GradientNumber)
                 gval = value(g)
-                df = $nan_dfexpr
-                return promote_typeof(g, df)($nan_valexpr, df*partials(g))
+                deriv = $deriv
+                return promote_typeof(g, deriv)($nan_new_val, deriv*partials(g))
             end
         end
     end
 end
 
+# Special Cases #
+#---------------#
 @inline function exp(g::GradientNumber)
-    df = exp(value(g))
-    return promote_typeof(g, df)(df, df*partials(g))
+    deriv = exp(value(g))
+    return promote_typeof(g, deriv)(deriv, deriv*partials(g))
 end
 
 @inline abs(g::GradientNumber) = (value(g) >= 0) ? g : -g
 @inline abs2(g::GradientNumber) = g*g
+
+@inline calc_atan2(y::GradientNumber, x::GradientNumber) = atan2(value(y), value(x))
+@inline calc_atan2(y::Real, x::GradientNumber) = atan2(y, value(x))
+@inline calc_atan2(y::GradientNumber, x::Real) = atan2(value(y), x)
+
+for Y in (:Real, :GradientNumber), X in (:Real, :GradientNumber)
+    if !(Y == :Real && X == :Real)
+        @eval begin
+            @inline function atan2(y::$Y, x::$X)
+                z = y/x
+                val = value(z)
+                deriv = inv(one(val) + val^2)
+                return promote_typeof(z, val, deriv)(calc_atan2(y, x), deriv*partials(z))
+            end
+        end
+    end
+end
