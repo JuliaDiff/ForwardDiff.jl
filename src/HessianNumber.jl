@@ -92,37 +92,6 @@ end
 ##########################
 # Math on HessianNumbers #
 ##########################
-# Math on HessianNumbers is developed by examining hyperdual numbers
-# with 2 different infinitesmal parts (ϵ₁, ϵ₂). These numbers
-# can be formulated like the following:
-#
-#   h = h₀ + h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂
-# 
-# where the h-components are real numbers, and the infinitesmal 
-# ϵ-components are defined as:
-#
-#   ϵ₁ != ϵ₂ != 0
-#   ϵ₁² = ϵ₂² = (ϵ₁ϵ₂)² = 0
-#
-# Taylor series expansion of a unary function `f` on a 
-# HessianNumber `h`:
-#
-#   f(h) = f(h₀ + h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂) 
-#        = f(h₀) + f'(h₀)*(h₁ϵ₁ + h₂ϵ₂ + h₃ϵ₁ϵ₂) + f''(h₀)*h₁h₂ϵ₂ϵ₁
-#
-# The coefficients of ϵ₁ϵ₂ are what's stored by HessianNumber's `hess` field:
-#
-#   f(h)_ϵ₁ϵ₂ = (f'(h₀)*h₃ + f''(h₀)*h₁h₂)
-#
-# where, in loop code:
-#
-#   h₀ = value(h)
-#   h₁ = grad(h, i)
-#   h₂ = grad(h, j)
-#   h₃ = hess(h, q)
-#
-# see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
-
 function loadhess_deriv!{N}(h::HessianNumber{N}, deriv1, deriv2, output)
     q = 1
     for i in 1:N

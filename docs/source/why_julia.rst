@@ -1,11 +1,11 @@
 Why Julia?
 ==========
 
-If you're a newcomer to Julia, you may ask "What makes Julia so ideal for forward mode AD methods?" There are several good answers!
+If you're a newcomer to Julia, you may ask "What makes Julia so ideal for forward mode AD methods?" There are several good answers, but the main reason that Julia is desirable is it's **multiple dispatch** feature.
 
 Unlike many other languages, **Julia's type-based operator overloading is fast and natural**, and one of the central design tenets of the langauge. This is because Julia is a dynamic, JIT-compiled language - the compiled bytecode of a Julia function is tied directly to the types with which the function is called, so **the compiler can optimize every Julia method for the specific input type at runtime**.
 
-Here's an example that illustrates the flexibility of this approach, referred to in Julia nomenclature as **multiple dispatch**:
+Here's a (somewhat contrived) example that illustrates the flexibility of multiple dispatch:
 
 .. code-block:: julia
 
@@ -27,4 +27,4 @@ Here's an example that illustrates the flexibility of this approach, referred to
     julia> f(2) # call the version of f(::Int64) we already compiled
     1.4142135623730951
 
-Multiple dispatch allows us to efficiently overload core Julia methods (e.g. ``sin``, ``lgamma``, ``log``, etc.) on ``ForwardDiffNumber`` s to accumulate derivative information.
+So finally, to answer the original question: **Multiple dispatch allows us to efficiently overload core Julia methods (e.g.** ``sin``, ``lgamma``, ``log``, **etc.) on** ``ForwardDiffNumber`` ** types to accumulate derivative information.**
