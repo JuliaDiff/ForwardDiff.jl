@@ -132,11 +132,8 @@ end
 # see http://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf for details.
 
 function hess_inds(i, j)
-    if i < j
-        return div(j*(j-1), 2) + i
-    else
-        return div(i*(i-1), 2) + j
-    end
+    x, y = ifelse(i < j, (j, i), (i, j))
+    return div(x*(x-1), 2) + y
 end
 
 function loadtens_deriv!{N}(t::TensorNumber{N}, deriv1, deriv2, deriv3, output)
