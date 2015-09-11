@@ -5,8 +5,8 @@ As previously stated, ForwardDiff.jl is an implementation of `forward mode autom
 
 .. _`forward mode automatic differentiation`: https://en.wikipedia.org/wiki/Automatic_differentiation
 
-``ForwardDiffNumber``
----------------------
+New Number Types
+----------------
 
 ForwardDiff.jl provides several new number types, which are all subtypes of the abstract type ``ForwardDiffNumber{N,T,C} <: Number``. These number types store both normal values, and the values of partial derivatives.
 
