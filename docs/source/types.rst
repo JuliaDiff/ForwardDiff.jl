@@ -154,7 +154,7 @@ To illustrate, here's the definition for the :math:`4^{\text{th}}` hyper-dual nu
                   + (f'(a) c_4 + f''(a) b_2 b_3) \epsilon_1 \epsilon_2
 
 
-In general, :math:`M = \frac{N(N+1)}{2}` individual hyper-dual numbers are stored by a ``HessianNumber{N}``. "Why :math:`M`?", you might ask. The answer is that ``h.hess`` (the :math:`c` value storage layer) is where :math:`2^{\text{nd}}`-order derivative information is accumulated, and we only need to take :math:`M` :math:`2^{\text{nd}}`-order derivatives to fully evaluate a symmetric :math:`N \times N` Hessian. 
+In general, :math:`M = \frac{N(N+1)}{2}` individual hyper-dual numbers are stored by a ``HessianNumber{N}``. This because that we only need to take :math:`M` :math:`2^{\text{nd}}`-order derivatives to fully evaluate a symmetric :math:`N \times N` Hessian.
 
 ``TensorNumber{N,T,C}``
 -----------------------
@@ -178,9 +178,7 @@ In general, :math:`M = \frac{N(N+1)}{2}` individual hyper-dual numbers are store
 
 
 
-The ``TensorNumber`` type is essentially the same as the ``HessianNumber`` type, but with a third :math:`\epsilon` component that allows for :math:`3^{\text{rd}}`-order derivative accumulation. 
-
-The paper by Fike and Alonso describing hyper-dual numbers mentions a :math:`3^{\text{rd}}`-order variation, but doesn't go into too much detail; if you work it out yourself, you find that a :math:`3^{\text{rd}}`-order hyper-dual number essentially looks like this:
+The ``TensorNumber`` type is essentially the same as the ``HessianNumber`` type, but with a third :math:`\epsilon` component that allows for :math:`3^{\text{rd}}`-order derivative accumulation. The paper by Fike and Alonso describing hyper-dual numbers mentions this :math:`3^{\text{rd}}`-order variation, but doesn't go into too much detail. If you work it out yourself, you find that a :math:`3^{\text{rd}}`-order hyper-dual number essentially looks like this:
 
 .. math::
     
@@ -206,7 +204,7 @@ The following results from a Taylor series expansion of a unary function `f` on 
            & f''(t_0) \cdot (t_1 t_2 ϵ_2 ϵ_1 + t_1 t_3 ϵ_3 ϵ₁ + t_3 t_4 ϵ_2 ϵ_3 ϵ_1 + t_2 t_5 ϵ_2 ϵ_3 ϵ_1 + t_1 t_6 ϵ_2 ϵ_3 ϵ_1 + t_2 t_3 ϵ_2 ϵ_3) + \\
            & f'''(t_0) \cdot (t_1 t_2 t_3 ϵ_2 ϵ_3 ϵ_1)
 
-As was said, the ``TensorNumber`` type is basically a :math:`3^{\text{rd}}`-order extension of the previous types - it's an ensemble of numbers, and is implemented to reuse the lower-order layers to construct the higher-order layers. One could draw a tree representation for a ``TensorNumber`` instance, just as we did for ``HessianNumber`` and ``GradientNumber`` (though even for :math:`N=4`, it's too large for us to show here).
+As was said, the ``TensorNumber`` type is basically a :math:`3^{\text{rd}}`-order extension of the previous types - it's an ensemble of hyper-dual numbers, and is implemented such that the lower-order partial values are reused where possible. Thus, one could draw the same kind of tree representation for a ``TensorNumber`` instance that is drawn above for the ``HessianNumber`` and ``GradientNumber`` types (though even for :math:`N=4`, it's too large for us to show here).
 
 Relating the mathematics to the implementation, here's what the indexing structure looks like for an individual number in the ``TensorNumber`` ensemble (where the :math:`a`, :math:`b`, and :math:`c` values are stored in ``t.hessnum``, while the :math:`d` values are stored in ``t.tens``):
 
