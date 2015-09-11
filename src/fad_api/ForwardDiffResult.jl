@@ -135,12 +135,12 @@ tensor!(output, result::ForwardDiffResult) = get_tensor!(output, data(result))
 tensor(result::ForwardDiffResult) = get_tensor(data(result))
 
 function _load_tensor!{N}(output, n::ForwardDiffNumber{N})
-    q = 1
+    p = 1
     for i in 1:N
         for j in i:N
             for k in i:j
-                @inbounds output[j, k, i] = tens(n, q)
-                q += 1
+                @inbounds output[j, k, i] = tens(n, p)
+                p += 1
             end
         end
         for j in 1:(i-1)
