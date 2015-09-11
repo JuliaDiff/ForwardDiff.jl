@@ -123,7 +123,7 @@ A ``HessianNumber`` can be intepreted as an ensemble of hyper-dual numbers. The 
       |       |       |        /        |        \       |       |      |       |
     c₁ϵ₁ϵ₂  c₂ϵ₁ϵ₂  c₃ϵ₁ϵ₂  c₄ϵ₁ϵ₂    c₅ϵ₁ϵ₂   c₆ϵ₁ϵ₂  c₇ϵ₁ϵ₂  c₈ϵ₁ϵ₂  c₉ϵ₁ϵ₂  c₉ϵ₁ϵ₂
 
-Each root-to-leaf path represents an individual hyper-dual number. Labeling the indices of :math:`b` values on the second level with :math:`i`, and those on the third level with :math:`j`, the definition for an individual hyper-dual number :math:`h_{ij}` (where :math:`i \geq j`) in the above tree is:
+Each root-to-leaf path represents an individual hyper-dual number. Labeling the indices of :math:`b` values on the :math:`\epsilon_1` level with :math:`i`, and those on the :math:`\epsilon_2` level with :math:`j`, the definition for an individual hyper-dual number :math:`h_{ij}` (where :math:`i \geq j`) in the above tree is:
 
 .. math::
     
@@ -135,7 +135,7 @@ where the :math:`c` indices are defined as:
 
     q_{ij} = \frac{i(i - 1)}{2} + j
 
-The following defines a function evaluation on an individual hyper-dual number:
+The following defines a univariate function evaluation on an individual hyper-dual number:
 
 .. math::
 
@@ -175,28 +175,15 @@ In general, :math:`M = \frac{N(N+1)}{2}` individual hyper-dual numbers are store
         tens::Vector{T}
     end
 
-
-
-
 The ``TensorNumber`` type is essentially the same as the ``HessianNumber`` type, but with a third :math:`\epsilon` component that allows for :math:`3^{\text{rd}}`-order derivative accumulation. The paper by Fike and Alonso describing hyper-dual numbers mentions this :math:`3^{\text{rd}}`-order variation, but doesn't go into too much detail. If you work it out yourself, you find that a :math:`3^{\text{rd}}`-order hyper-dual number essentially looks like this:
 
 .. math::
     
     t = t_0 + t_1 \epsilon_1 + t_2 \epsilon_2 + t_3 \epsilon_3 + t_4 \epsilon_1 \epsilon_2 + t_5 \epsilon_1 \epsilon_3 + t_6 \epsilon_2 \epsilon_3 + t_7 \epsilon_1 \epsilon_2 \epsilon_3
 
-where 
+The ``TensorNumber`` type stores an ensemble of such numbers. The  type's ``tens`` field is used to store the coefficients of the :math:`\epsilon_1 \epsilon_2 \epsilon_3` terms (:math:`t_7` above). All the other components are contained in the ``hessnum`` field.
 
-.. math::
-    
-    \epsilon_1 \neq \epsilon_2 \neq \epsilon_3 \neq 0
-
-and
-
-.. math::
-
-    \epsilon_1^2 = \epsilon_2^2 = \epsilon_3^2 = (\epsilon_1 \epsilon_2)^2 = (\epsilon_1 \epsilon_3)^2 = (\epsilon_2 \epsilon_3)^2 = (\epsilon_1 \epsilon_2 \epsilon_3)^2 = 0
-
-The following results from a Taylor series expansion of a unary function `f` on a :math:`3^{\text{rd}}`-order hyper-dual number:
+The action of a univariate function :math:`f` on an individual :math:`3^{\text{rd}}`-order hyper-dual number is defined as:
 
 .. math::
     
@@ -204,27 +191,37 @@ The following results from a Taylor series expansion of a unary function `f` on 
            & f''(t_0) \cdot (t_1 t_2 ϵ_2 ϵ_1 + t_1 t_3 ϵ_3 ϵ₁ + t_3 t_4 ϵ_2 ϵ_3 ϵ_1 + t_2 t_5 ϵ_2 ϵ_3 ϵ_1 + t_1 t_6 ϵ_2 ϵ_3 ϵ_1 + t_2 t_3 ϵ_2 ϵ_3) + \\
            & f'''(t_0) \cdot (t_1 t_2 t_3 ϵ_2 ϵ_3 ϵ_1)
 
+We can rearrange this to get the new coefficient of the :math:`\epsilon_1 \epsilon_2 \epsilon_3` term:
+
+
+.. math::
+
+    f(t)_{\epsilon_1 \epsilon_2 \epsilon_3} = f'(t_0) \cdot t_7 + f''(t_0) \cdot (t_3 t_4 + t_2 t_5 + t_1 t_6) + f'''(t_0) \cdot t_1 t_2 t_3
+
+
 As was said, the ``TensorNumber`` type is basically a :math:`3^{\text{rd}}`-order extension of the previous types - it's an ensemble of hyper-dual numbers, and is implemented such that the lower-order partial values are reused where possible. Thus, one could draw the same kind of tree representation for a ``TensorNumber`` instance that is drawn above for the ``HessianNumber`` and ``GradientNumber`` types (though even for :math:`N=4`, it's too large for us to show here).
 
 Relating the mathematics to the implementation, here's what the indexing structure looks like for an individual number in the ``TensorNumber`` ensemble (where the :math:`a`, :math:`b`, and :math:`c` values are stored in ``t.hessnum``, while the :math:`d` values are stored in ``t.tens``):
 
 .. math::
     
-    t_{N_{ijk}} = a + b_i \epsilon_1 + b_j \epsilon_2 + b_k \epsilon_3 + c_{q_{ij}} \epsilon_1 \epsilon_2 + c_{q_{ik}} \epsilon_1 \epsilon_3 + c_{q_{jk}} \epsilon_2 \epsilon_3 + d_{p_{N_{ijk}}} \epsilon_1 \epsilon_2 \epsilon_3
+    t_{N_{ijk}} = a + b_i \epsilon_1 + b_j \epsilon_2 + b_k \epsilon_3 + c_{q_{ij}} \epsilon_1 \epsilon_2 + c_{q_{ik}} \epsilon_1 \epsilon_3 + c_{q_{jk}} \epsilon_2 \epsilon_3 + d_{p_{ijkN}} \epsilon_1 \epsilon_2 \epsilon_3
 
 where
 
 .. math::
     
+    1 \leq i \leq N
+
     i \leq j \leq N
 
     i \leq k \leq j
 
     M = \frac{N(N+1)(N+2)}{6}
 
-    d_p \in \{d_1, d_2, d_3...d_M-1, d_M\}
+    d_p \in \{d_1, d_2, d_3...d_{M-1}, d_M\}
 
-    p_{N_{ijk}} &= k + \left[\sum_{\alpha=i}^{j}\alpha-i+1\right] + \left[\sum_{\alpha=1}^{i-1} \sum_{\beta=\alpha}^{N}\beta-\alpha+1\right] \\
+    p_{ijkN} &= k + \left[\sum_{\alpha=i}^{j}\alpha-i+1\right] + \left[\sum_{\alpha=1}^{i-1} \sum_{\beta=\alpha}^{N}\beta-\alpha+1\right] \\
 
 This rather complex indexing structure is derived from the loop code written to taken advantage of the tensor's tri-fold symmetry. A given tensor :math:`\mathbf{T}(f)` is generally symmetric under index order permutation:
 
