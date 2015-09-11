@@ -105,35 +105,35 @@ end
 
 # Binary functions on HessianNumbers #
 #------------------------------------#
-function loadhess_mul!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
-    aval = value(a)
-    bval = value(b)
+function loadhess_mul!{N}(h1::HessianNumber{N}, h2::HessianNumber{N}, output)
+    h1_a = value(h1)
+    h2_a = value(h2)
     q = 1
     for i in 1:N
         for j in 1:i
-            output[q] = (hess(a,q)*bval
-                         + grad(a,i)*grad(b,j)
-                         + grad(a,j)*grad(b,i)
-                         + aval*hess(b,q))
+            output[q] = (hess(h1,q)*h2_a
+                         + grad(h1,i)*grad(h2,j)
+                         + grad(h1,j)*grad(h2,i)
+                         + h1_a*hess(h2,q))
             q += 1
         end
     end
     return output
 end
 
-function loadhess_div!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
-    aval = value(a)
-    two_aval = aval + aval
-    bval = value(b)
-    bval_sq = bval * bval
-    inv_bval_cb = inv(bval_sq * bval)
+function loadhess_div!{N}(h1::HessianNumber{N}, h2::HessianNumber{N}, output)
+    h1_a = value(h1)
+    two_h1_a = h1_a + h1_a
+    h2_a = value(h2)
+    h2_a_sq = h2_a * h2_a
+    inv_h2_a_cb = inv(h2_a_sq * h2_a)
     q = 1
     for i in 1:N
         for j in 1:i
-            g_bi, g_bj = grad(b, i), grad(b, j)
-            term1 = two_aval*g_bj*g_bi + bval_sq*hess(a,q)
-            term2 = grad(a,i)*g_bj + grad(a,j)*g_bi + aval*hess(b,q)
-            output[q] = (term1 - bval*term2) * inv_bval_cb
+            h2_bi, h2_bj = grad(h2,i), grad(h2,j)
+            term1 = two_h1_a*h2_bj*h2_bi + h2_a_sq*hess(h1,q)
+            term2 = grad(h1,i)*h2_bj + grad(h1,j)*h2_bi + h1_a*hess(h2,q)
+            output[q] = (term1 - h2_a*term2) * inv_h2_a_cb
             q += 1
         end
     end
@@ -141,43 +141,43 @@ function loadhess_div!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
 end
 
 function loadhess_div!{N}(x::Real, h::HessianNumber{N}, output)
-    hval = value(h)
-    hval_sq = hval * hval
-    inv_hval_sq = inv(hval_sq) * x
-    inv_hval_cb = inv(hval_sq * hval)
-    two_inv_hval_cb = (inv_hval_cb + inv_hval_cb) * x
-    return loadhess_deriv!(h, -inv_hval_sq, two_inv_hval_cb, output)
+    h_a = value(h)
+    h_a_sq = h_a * h_a
+    inv_h_a_sq = inv(h_a_sq) * x
+    inv_h_a_cb = inv(h_a_sq * h_a)
+    two_inv_h_a_cb = (inv_h_a_cb + inv_h_a_cb) * x
+    return loadhess_deriv!(h, -inv_h_a_sq, two_inv_h_a_cb, output)
 end
 
-function loadhess_exp!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
-    aval = value(a)
-    bval = value(b)
-    aval_exp_bval = aval^(bval-2)
-    bval_sq = bval * bval
-    log_aval = log(aval)
-    log_bval = log(bval)
-    aval_x_logaval = aval * log_aval
-    aval_x_logaval_x_logaval = aval_x_logaval * log_aval
+function loadhess_exp!{N}(h1::HessianNumber{N}, h2::HessianNumber{N}, output)
+    h1_a = value(h1)
+    h2_a = value(h2)
+    h1_a_exp_h2_a = h1_a^(h2_a-2)
+    h2_a_sq = h2_a * h2_a
+    log_h1_a = log(h1_a)
+    log_h2_a = log(h2_a)
+    h1_a_x_logh1_a = h1_a * log_h1_a
+    h1_a_x_logh1_a_x_logh1_a = h1_a_x_logh1_a * log_h1_a
     q = 1
     for i in 1:N
         for j in 1:i
-            g_ai, g_aj = grad(a, i), grad(a, j)
-            g_bi, g_bj = grad(b, i), grad(b, j)
-            output[q] = (aval_exp_bval*(
-                              bval_sq*g_ai*g_aj
-                            + bval*(
-                                  g_aj*(
-                                      aval_x_logaval*g_bi
-                                    - g_ai)
-                                + aval*(
-                                      log_aval*g_ai*g_bj
-                                    + hess(a,q)))
-                            + aval*(
-                                  g_aj*g_bi
-                                + aval_x_logaval*hess(b,q)
-                                + g_bj*(
-                                      g_ai
-                                    + aval_x_logaval_x_logaval*g_bi))))
+            h1_bi, h1_bj = grad(h1, i), grad(h1, j)
+            h2_bi, h2_bj = grad(h2, i), grad(h2, j)
+            output[q] = (h1_a_exp_h2_a*(
+                              h2_a_sq*h1_bi*h1_bj
+                            + h2_a*(
+                                  h1_bj*(
+                                      h1_a_x_logh1_a*h2_bi
+                                    - h1_bi)
+                                + h1_a*(
+                                      log_h1_a*h1_bi*h2_bj
+                                    + hess(h1,q)))
+                            + h1_a*(
+                                  h1_bj*h2_bi
+                                + h1_a_x_logh1_a*hess(h2,q)
+                                + h2_bj*(
+                                      h1_bi
+                                    + h1_a_x_logh1_a_x_logh1_a*h2_bi))))
             q += 1
         end
     end
@@ -185,10 +185,10 @@ function loadhess_exp!{N}(a::HessianNumber{N}, b::HessianNumber{N}, output)
 end
 
 function loadhess_exp!{N}(h::HessianNumber{N}, x::Real, output)
-    hval = value(h)
+    h_a = value(h)
     x_min_one = x - 1
-    deriv1 = x * hval^x_min_one
-    deriv2 = x * x_min_one * hval^(x - 2)
+    deriv1 = x * h_a^x_min_one
+    deriv2 = x * x_min_one * h_a^(x - 2)
     return loadhess_deriv!(h, deriv1, deriv2, output)
 end
 
@@ -202,9 +202,9 @@ end
 for (fsym, loadfsym) in [(:*, symbol("loadhess_mul!")),
                          (:/, symbol("loadhess_div!")), 
                          (:^, symbol("loadhess_exp!"))]
-    @eval function $(fsym){N,A,B}(a::HessianNumber{N,A}, b::HessianNumber{N,B})
+    @eval function $(fsym){N,A,B}(h1::HessianNumber{N,A}, h2::HessianNumber{N,B})
         new_hess = Array(promote_type(A, B), halfhesslen(N))
-        return HessianNumber($(fsym)(gradnum(a), gradnum(b)), $(loadfsym)(a, b, new_hess))
+        return HessianNumber($(fsym)(gradnum(h1), gradnum(h2)), $(loadfsym)(h1, h2, new_hess))
     end
 end
 
@@ -229,8 +229,8 @@ for T in (:Rational, :Integer, :Real)
     end
 end
 
-+{N}(a::HessianNumber{N}, b::HessianNumber{N}) = HessianNumber(gradnum(a) + gradnum(b), hess(a) + hess(b))
--{N}(a::HessianNumber{N}, b::HessianNumber{N}) = HessianNumber(gradnum(a) - gradnum(b), hess(a) - hess(b))
++{N}(h1::HessianNumber{N}, h2::HessianNumber{N}) = HessianNumber(gradnum(h1) + gradnum(h2), hess(h1) + hess(h2))
+-{N}(h1::HessianNumber{N}, h2::HessianNumber{N}) = HessianNumber(gradnum(h1) - gradnum(h2), hess(h1) - hess(h2))
 
 for T in (:Bool, :Real)
     @eval begin
@@ -251,20 +251,20 @@ const unsupported_univar_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :tr
 const univar_hess_funcs = filter!(sym -> !in(sym, unsupported_univar_hess_funcs), fad_supported_univar_funcs)
 
 for fsym in univar_hess_funcs
-    hval = :hval
-    new_val = :($(fsym)($hval))
-    deriv1 = Calculus.differentiate(new_val, hval)
-    deriv2 = Calculus.differentiate(deriv1, hval)
+    h_a = :h_a
+    new_a = :($(fsym)($h_a))
+    deriv1 = Calculus.differentiate(new_a, h_a)
+    deriv2 = Calculus.differentiate(deriv1, h_a)
 
     @eval function $(fsym){N}(h::HessianNumber{N})
-        hval, hg = value(h), gradnum(h)
+        h_a, hg = value(h), gradnum(h)
 
-        new_val = $new_val
+        new_a = $new_a
         deriv1 = $deriv1
         deriv2 = $deriv2
 
         G = promote_typeof(hg, deriv1, deriv2)
-        new_g = G(new_val, deriv1*partials(hg))
+        new_g = G(new_a, deriv1*partials(hg))
 
         new_hessvec = Array(eltype(new_g), halfhesslen(N))
         loadhess_deriv!(h, deriv1, deriv2, new_hessvec)
@@ -283,13 +283,13 @@ for Y in (:Real, :HessianNumber), X in (:Real, :HessianNumber)
         @eval begin
             @inline function atan2(y::$Y, x::$X)
                 z = y/x
-                zval, zg = value(z), gradnum(z)
+                z_a, z_g = value(z), gradnum(z)
                 N, T = npartials(z), eltype(z)
 
-                deriv1 = inv(one(zval) + zval^2)
-                deriv2 = 2 * zval * -abs2(deriv1)
+                deriv1 = inv(one(z_a) + z_a^2)
+                deriv2 = 2 * z_a * -abs2(deriv1)
 
-                new_g = typeof(zg)(calc_atan2(y, x), deriv1*partials(zg))
+                new_g = typeof(z_g)(calc_atan2(y, x), deriv1*partials(z_g))
 
                 new_hessvec = Array(T, halfhesslen(N))
                 loadhess_deriv!(z, deriv1, deriv2, new_hessvec)
