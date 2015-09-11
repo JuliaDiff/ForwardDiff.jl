@@ -27,4 +27,4 @@ Here's a (somewhat contrived) example that illustrates the flexibility of multip
     julia> f(2) # call the version of f(::Int64) we already compiled
     1.4142135623730951
 
-So finally, to answer the original question: **Multiple dispatch allows us to efficiently overload core Julia methods (e.g.** ``sin``, ``lgamma``, ``log``, **etc.) on** ``ForwardDiffNumber`` ** types to accumulate derivative information.**
+So finally, to answer the original question: **Julia's multiple dispatch allows us to efficiently overload core Julia methods (e.g.** ``sin``, ``lgamma``, ``log``, **etc.) on** ``ForwardDiffNumber`` **types to accumulate derivative information.**
