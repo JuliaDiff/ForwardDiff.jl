@@ -23,7 +23,6 @@ When the number of partial derivatives being stored is small (~10), ForwardDiff 
 
 When the number of partial derivatives being stored is large enough (greater than ~10), ForwardDiff elects to store them in a heap-allocated ``Vector``. While operations on vectors can be slower (depending on access patterns), large vectors will not "clog" or overflow the stack, as large tuples would.
 
-
 ``GradientNumber{N,T,C}``
 -------------------------
 
@@ -88,11 +87,12 @@ The tree below visualizes this interpretation. The first level of the tree is gi
 .. code-block:: none
 
     g =
-                    a
-                    |
-    +-------+-------+--------------+
-    |       |       |              |   
-   b₁ϵ     b₂ϵ     b₃ϵ     ...   b_N⋅ϵ
+                      
+       /------------- a      
+      /             / | \ 
+     +       +-----/  +  \-----------+
+     |       |        |              |   
+    b₁ϵ     b₂ϵ      b₃ϵ     ...   b_N⋅ϵ
 
 ``HessianNumber{N,T,C}``
 ------------------------
@@ -109,19 +109,19 @@ A ``HessianNumber`` can be intepreted as an ensemble of hyper-dual numbers. The 
 .. code-block:: none
 
     h =
-                                         a
-                                         |                 
-       +-----------+---------------------+----------------------------+  
-       |           |                     |                            |  
-      b₁ϵ₁        b₂ϵ₁                  b₃ϵ₁                         b₄ϵ₁
-       |           |                     |                            |
-       +         +---+               +---+---+                +---+-------+---+
-       |        /     \             /    |    \              /    |       |    \
-      b₁ϵ₂    b₁ϵ₂    b₂ϵ₂        b₁ϵ₂  b₂ϵ₂  b₃ϵ₂         b₁ϵ₂  b₂ϵ₂    b₃ϵ₂  b₄ϵ₂
-       |       |       |          /      |      \          /      |       |      \
-       +       +       +         +       +       +        +       +       +       +
-       |       |       |        /        |        \       |       |       |       |
-     c₁ϵ₁ϵ₂  c₂ϵ₁ϵ₂  c₃ϵ₁ϵ₂  c₄ϵ₁ϵ₂    c₅ϵ₁ϵ₂   c₆ϵ₁ϵ₂  c₇ϵ₁ϵ₂  c₈ϵ₁ϵ₂  c₉ϵ₁ϵ₂  c₉ϵ₁ϵ₂
+        /------------------------------ a
+       /                              / | \                
+      +           +------------------/  +  \------------------------+  
+      |           |                     |                           |  
+     b₁ϵ₁        b₂ϵ₁                  b₃ϵ₁                    --- b₄ϵ₁----
+      |          / \                 /  |  \                  /   /    \   \
+      +         +   +               +   +   +                +   +      +   +
+      |        /     \             /    |    \              /    |      |    \
+     b₁ϵ₂    b₁ϵ₂    b₂ϵ₂        b₁ϵ₂  b₂ϵ₂  b₃ϵ₂         b₁ϵ₂  b₂ϵ₂   b₃ϵ₂  b₄ϵ₂
+      |       |       |          /      |      \          /      |      |      \
+      +       +       +         +       +       +        +       +      +       +
+      |       |       |        /        |        \       |       |      |       |
+    c₁ϵ₁ϵ₂  c₂ϵ₁ϵ₂  c₃ϵ₁ϵ₂  c₄ϵ₁ϵ₂    c₅ϵ₁ϵ₂   c₆ϵ₁ϵ₂  c₇ϵ₁ϵ₂  c₈ϵ₁ϵ₂  c₉ϵ₁ϵ₂  c₉ϵ₁ϵ₂
 
 Each root-to-leaf path represents an individual hyper-dual number. Labeling the indices of :math:`b` values on the second level with :math:`i`, and those on the third level with :math:`j`, the definition for an individual hyper-dual number :math:`h_{ij}` (where :math:`i \geq j`) in the above tree is:
 
@@ -135,7 +135,7 @@ where the :math:`c` indices are defined as:
 
     q_{ij} = \frac{i(i - 1)}{2} + j
 
-The algebra of hyper-dual numbers produces the following result for a function evaluation on an individual hyper-dual number:
+The following defines a function evaluation on an individual hyper-dual number:
 
 .. math::
 
@@ -159,9 +159,78 @@ In general, :math:`M = \frac{N(N+1)}{2}` individual hyper-dual numbers are store
 ``TensorNumber{N,T,C}``
 -----------------------
 
+.. note::
+
+    AD folks tend to abuse the word "tensor"; in this context, it refers to a :math:`3^{\text{rd}}` order generalization of the Hessian. Given a function :math:`f:\mathbb{R}^N \to \mathbb{R}`, the tensor operator :math:`\mathbf{T}` is defined as
+
+    .. math::
+    
+        \mathbf{T}(f) = \sum_{i,j,k=1}^{N} \frac{\delta^3 f}{\delta x_i \delta x_j \delta x_k}
+
+
 .. code-block:: julia
 
     immutable TensorNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
         hessnum::HessianNumber{N,T,C}
         tens::Vector{T}
     end
+
+
+
+
+The ``TensorNumber`` type is essentially the same as the ``HessianNumber`` type, but with a third :math:`\epsilon` component that allows for :math:`3^{\text{rd}}`-order derivative accumulation. 
+
+The paper by Fike and Alonso describing hyper-dual numbers mentions a :math:`3^{\text{rd}}`-order variation, but doesn't go into too much detail; if you work it out yourself, you find that a :math:`3^{\text{rd}}`-order hyper-dual number essentially looks like this:
+
+.. math::
+    
+    t = t_0 + t_1 \epsilon_1 + t_2 \epsilon_2 + t_3 \epsilon_3 + t_4 \epsilon_1 \epsilon_2 + t_5 \epsilon_1 \epsilon_3 + t_6 \epsilon_2 \epsilon_3 + t_7 \epsilon_1 \epsilon_2 \epsilon_3
+
+where 
+
+.. math::
+    
+    \epsilon_1 \neq \epsilon_2 \neq \epsilon_3 \neq 0
+
+and
+
+.. math::
+
+    \epsilon_1^2 = \epsilon_2^2 = \epsilon_3^2 = (\epsilon_1 \epsilon_2)^2 = (\epsilon_1 \epsilon_3)^2 = (\epsilon_2 \epsilon_3)^2 = (\epsilon_1 \epsilon_2 \epsilon_3)^2 = 0
+
+The following results from a Taylor series expansion of a unary function `f` on a :math:`3^{\text{rd}}`-order hyper-dual number:
+
+.. math::
+    
+    f(t) = & f(t_0) + f'(t_0) \cdot (t_1 ϵ_1 + t_2 ϵ_2 + t_3 ϵ_3 + t_4 ϵ_1 ϵ_2 + t_5 ϵ_1 ϵ_3 + t_6 ϵ_2 ϵ_3 + t_7 ϵ_1 ϵ_2 ϵ_3) + \\ 
+           & f''(t_0) \cdot (t_1 t_2 ϵ_2 ϵ_1 + t_1 t_3 ϵ_3 ϵ₁ + t_3 t_4 ϵ_2 ϵ_3 ϵ_1 + t_2 t_5 ϵ_2 ϵ_3 ϵ_1 + t_1 t_6 ϵ_2 ϵ_3 ϵ_1 + t_2 t_3 ϵ_2 ϵ_3) + \\
+           & f'''(t_0) \cdot (t_1 t_2 t_3 ϵ_2 ϵ_3 ϵ_1)
+
+As was said, the ``TensorNumber`` type is basically a :math:`3^{\text{rd}}`-order extension of the previous types - it's an ensemble of numbers, and is implemented to reuse the lower-order layers to construct the higher-order layers. One could draw a tree representation for a ``TensorNumber`` instance, just as we did for ``HessianNumber`` and ``GradientNumber`` (though even for :math:`N=4`, it's too large for us to show here).
+
+Relating the mathematics to the implementation, here's what the indexing structure looks like for an individual number in the ``TensorNumber`` ensemble (where the :math:`a`, :math:`b`, and :math:`c` values are stored in ``t.hessnum``, while the :math:`d` values are stored in ``t.tens``):
+
+.. math::
+    
+    t_{N_{ijk}} = a + b_i \epsilon_1 + b_j \epsilon_2 + b_k \epsilon_3 + c_{q_{ij}} \epsilon_1 \epsilon_2 + c_{q_{ik}} \epsilon_1 \epsilon_3 + c_{q_{jk}} \epsilon_2 \epsilon_3 + d_{p_{N_{ijk}}} \epsilon_1 \epsilon_2 \epsilon_3
+
+where
+
+.. math::
+    
+    i \leq j \leq N
+
+    i \leq k \leq j
+
+    M = \frac{N(N+1)(N+2)}{6}
+
+    d_p \in \{d_1, d_2, d_3...d_M-1, d_M\}
+
+    p_{N_{ijk}} &= k + \left[\sum_{\alpha=i}^{j}\alpha-i+1\right] + \left[\sum_{\alpha=1}^{i-1} \sum_{\beta=\alpha}^{N}\beta-\alpha+1\right] \\
+
+This rather complex indexing structure is derived from the loop code written to taken advantage of the tensor's tri-fold symmetry. A given tensor :math:`\mathbf{T}(f)` is generally symmetric under index order permutation:
+
+.. math::
+  
+    \mathbf{T}(f)_{ijk} = \mathbf{T}(f)_{ikj} = \mathbf{T}(f)_{jki} = \mathbf{T}(f)_{jik} = \mathbf{T}(f)_{kij} = \mathbf{T}(f)_{kji}
+
