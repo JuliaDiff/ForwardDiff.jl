@@ -221,7 +221,7 @@ where
 
     d_p \in \{d_1, d_2, d_3...d_{M-1}, d_M\}
 
-    p_{ijkN} &= k + \left[\sum_{\alpha=i}^{j}\alpha-i+1\right] + \left[\sum_{\alpha=1}^{i-1} \sum_{\beta=\alpha}^{N}\beta-\alpha+1\right] \\
+    p_{ijkN} &= \left[\sum_{\alpha=1}^{i-1} \sum_{\beta=\alpha}^{N} \sum_{\gamma=\alpha}^{\beta} 1 \right] + \left[\sum_{\alpha=i}^{j-1} \sum_{\beta=i}^{\alpha} 1 \right] + (k - i + 1) \\
 
 This rather complex indexing structure is derived from the loop code written to taken advantage of the tensor's tri-fold symmetry. A given tensor :math:`\mathbf{T}(f)` is generally symmetric under index order permutation:
 
