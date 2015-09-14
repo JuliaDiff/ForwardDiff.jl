@@ -25,6 +25,7 @@ This `wikipedia page`_ on automatic differentiation is a useful resource for lea
 
    how_it_works.rst
    types.rst
+   contributing.rst
    why_julia.rst
 
 .. _`Go to ForwardDiff.jl on GitHub`: https://github.com/JuliaDiff/ForwardDiff.jl
