@@ -23,7 +23,9 @@ This `wikipedia page`_ on automatic differentiation is a useful resource for lea
    :maxdepth: 2
    :caption: Developer Documentation
 
-TODO
+   how_it_works.rst
+   types.rst
+   why_julia.rst
 
 .. _`Go to ForwardDiff.jl on GitHub`: https://github.com/JuliaDiff/ForwardDiff.jl
 .. _`wikipedia page`: https://en.wikipedia.org/wiki/Automatic_differentiation

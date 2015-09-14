@@ -93,9 +93,9 @@ ForwardDiff.jl can take Hessians of functions/callable objects of the form ``f(x
 Tensors
 -------
 
-ForwardDiff.jl can take Tensors of functions/callable objects of the form ``f(x::Vector)`` → ``Number``.
+ForwardDiff.jl can take tensors of functions/callable objects of the form ``f(x::Vector)`` → ``Number``.
 
-"Tensor", in this context, refers to a :math:`3^{\text{rd}}` order generalization of the Hessian. Given a function :math:`f:\mathbb{R}^n \to \mathbb{R}`, the Tensor operator :math:`\mathbf{T}` is defined as
+The word "tensor", in this context, refers to a :math:`3^{\text{rd}}` order generalization of the Hessian. Given a function :math:`f:\mathbb{R}^n \to \mathbb{R}`, the tensor operator :math:`\mathbf{T}` is defined as
 
 .. math::
     

@@ -76,12 +76,12 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 
 # Addition/Subtraction #
 #----------------------#
-@inline +{N}(a::GradientNumber{N}, b::GradientNumber{N}) = promote_typeof(a, b)(value(a)+value(b), partials(a)+partials(b))
+@inline +{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)+value(g2), partials(g1)+partials(g2))
 @inline +(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)+x, partials(g))
 @inline +(x::Real, g::GradientNumber) = g+x
 
 @inline -(g::GradientNumber) = typeof(g)(-value(g), -partials(g))
-@inline -{N}(a::GradientNumber{N}, b::GradientNumber{N}) = promote_typeof(a, b)(value(a)-value(b), partials(a)-partials(b))
+@inline -{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)-value(g2), partials(g1)-partials(g2))
 @inline -(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)-x, partials(g))
 @inline -(x::Real, g::GradientNumber) = promote_typeof(g, x)(x-value(g), -partials(g))
 
@@ -90,9 +90,9 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 @inline *(g::GradientNumber, x::Bool) = x ? g : (signbit(value(g))==0 ? zero(g) : -zero(g))
 @inline *(x::Bool, g::GradientNumber) = g*x
 
-@inline function *{N}(a::GradientNumber{N}, b::GradientNumber{N})
-    aval, bval = value(a), value(b)
-    return promote_typeof(a, b)(aval*bval, _mul_partials(partials(a), partials(b), bval, aval))
+@inline function *{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
+    g1_a, g2_a = value(g1), value(g2)
+    return promote_typeof(g1, g2)(g1_a*g2_a, _mul_partials(partials(g1), partials(g2), g2_a, g1_a))
 end
 
 @inline *(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)*x, partials(g)*x)
@@ -100,34 +100,34 @@ end
 
 # Division #
 #----------#
-@inline function /{N}(a::GradientNumber{N}, b::GradientNumber{N})
-    aval, bval = value(a), value(b)
-    result_val = aval/bval
-    return promote_typeof(a, b, result_val)(result_val, _div_partials(partials(a), partials(b), aval, bval))
+@inline function /{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
+    g1_a, g2_a = value(g1), value(g2)
+    new_a = g1_a/g2_a
+    return promote_typeof(g1, g2, new_a)(new_a, _div_partials(partials(g1), partials(g2), g1_a, g2_a))
 end
 
 @inline function /(x::Real, g::GradientNumber)
-    gval = value(g)
-    result_val = x/gval
-    return promote_typeof(g, result_val)(result_val, _div_partials(x, partials(g), gval))
+    a = value(g)
+    new_a = x/a
+    return promote_typeof(g, new_a)(new_a, _div_partials(x, partials(g), a))
 end
 
 @inline function /(g::GradientNumber, x::Real)
-    result_val = value(g)/x
-    return promote_typeof(g, result_val)(result_val, partials(g)/x)
+    new_a = value(g)/x
+    return promote_typeof(g, new_a)(new_a, partials(g)/x)
 end
 
 # Exponentiation #
 #----------------#
 for f in (:^, :(NaNMath.pow))
     @eval begin
-        @inline function ($f){N}(a::GradientNumber{N}, b::GradientNumber{N})
-            aval, bval = value(a), value(b)    
-            result_val = ($f)(aval, bval)
-            powval = bval * ($f)(aval, bval-1)
-            logval = result_val * log(aval)
-            result_partials = _mul_partials(partials(a), partials(b), powval, logval)
-            return promote_typeof(a, b, result_val)(result_val, result_partials)
+        @inline function ($f){N}(g1::GradientNumber{N}, g2::GradientNumber{N})
+            g1_a, g2_a = value(g1), value(g2)    
+            new_a = ($f)(g1_a, g2_a)
+            powval = g2_a * ($f)(g1_a, g2_a-1)
+            logval = new_a * log(g1_a)
+            new_bs = _mul_partials(partials(g1), partials(g2), powval, logval)
+            return promote_typeof(g1, g2, new_a)(new_a, new_bs)
         end
 
         @inline ($f)(::Base.MathConst{:e}, g::GradientNumber) = exp(g)
@@ -136,16 +136,16 @@ for f in (:^, :(NaNMath.pow))
     for R in (:Integer, :Rational, :Real)
         @eval begin
             @inline function ($f)(g::GradientNumber, x::$R)
-                gval = value(g)
-                powval = x*($f)(gval, x-1)
-                return promote_typeof(g, powval)(($f)(gval, x), powval*partials(g))
+                a = value(g)
+                powval = x*($f)(a, x-1)
+                return promote_typeof(g, powval)(($f)(a, x), powval*partials(g))
             end
 
             @inline function ($f)(x::$R, g::GradientNumber)
-                gval = value(g)
-                result_val = ($f)(x, gval)
-                logval = result_val*log(x)
-                return promote_typeof(logval, g)(result_val, logval*partials(g))
+                a = value(g)
+                new_a = ($f)(x, a)
+                logval = new_a*log(x)
+                return promote_typeof(logval, g)(new_a, logval*partials(g))
             end
         end
     end
@@ -168,15 +168,15 @@ end
 to_nanmath(x) = x
 
 for fsym in fad_supported_univar_funcs
-    gval = :gval
-    new_val = :($(fsym)($gval))
-    deriv = Calculus.differentiate(new_val, gval)
+    a = :a
+    new_a = :($(fsym)($a))
+    deriv = Calculus.differentiate(new_a, a)
 
     @eval begin
         @inline function $(fsym)(g::GradientNumber)
-            gval = value(g)
+            a = value(g)
             deriv = $deriv
-            return promote_typeof(g, deriv)($new_val, deriv*partials(g))
+            return promote_typeof(g, deriv)($new_a, deriv*partials(g))
         end
     end
 
@@ -187,14 +187,14 @@ for fsym in fad_supported_univar_funcs
                 :log10, :lgamma, :log1p)
 
         nan_fsym = Expr(:.,:NaNMath,Base.Meta.quot(fsym))
-        nan_new_val = :($(nan_fsym)($gval))
+        nan_new_a = :($(nan_fsym)($a))
         nan_deriv = to_nanmath(deriv)
 
         @eval begin
             @inline function $(nan_fsym)(g::GradientNumber)
-                gval = value(g)
-                deriv = $deriv
-                return promote_typeof(g, deriv)($nan_new_val, deriv*partials(g))
+                a = value(g)
+                deriv = $nan_deriv
+                return promote_typeof(g, deriv)($nan_new_a, deriv*partials(g))
             end
         end
     end
@@ -219,9 +219,9 @@ for Y in (:Real, :GradientNumber), X in (:Real, :GradientNumber)
         @eval begin
             @inline function atan2(y::$Y, x::$X)
                 z = y/x
-                val = value(z)
-                deriv = inv(one(val) + val^2)
-                return promote_typeof(z, val, deriv)(calc_atan2(y, x), deriv*partials(z))
+                a = value(z)
+                deriv = inv(one(a) + a*a)
+                return promote_typeof(z, a, deriv)(calc_atan2(y, x), deriv*partials(z))
             end
         end
     end
