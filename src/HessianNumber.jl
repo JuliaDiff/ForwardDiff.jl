@@ -243,7 +243,7 @@ end
 # the second derivatives of functions in unsupported_unary_hess_funcs involves differentiating 
 # elementary functions that are unsupported by Calculus.jl
 const unsupported_unary_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
-const unary_hess_funcs = filter!(sym -> !in(sym, unsupported_unary_hess_funcs), fad_supported_unary_funcs)
+const unary_hess_funcs = filter!(sym -> !in(sym, unsupported_unary_hess_funcs), supported_unary_funcs)
 
 for fsym in unary_hess_funcs
     a = :a
