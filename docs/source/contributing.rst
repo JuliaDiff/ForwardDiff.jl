@@ -1,9 +1,9 @@
 How to Contribute
 =================
 
-There are a few fairly easy ways for newcomers to substantially improve ForwardDiff.jl. They all revolve around **writing functions for the** ``ForwardDiffNumber`` **types**. This section provides brief tutorials on how to make these contributions. 
+There are a few fairly easy ways for newcomers to substantially improve ForwardDiff.jl, and they all revolve around **writing functions for the** ``ForwardDiffNumber`` **types**. This section provides brief tutorials on how to make these contributions.
 
-If you're not used to using GitHub, here's the workflow you should use:
+If you're new GitHub, here's an outline of the workflow you should use:
 
 1. Fork ForwardDiff.jl
 2. Make a new branch on your fork, named after whatever changes you'll be making
