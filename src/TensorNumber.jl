@@ -113,41 +113,83 @@ function loadtens_deriv!{N}(t::TensorNumber{N}, deriv1, deriv2, deriv3, output)
     return output
 end
 
-# Binary functions on TensorNumbers #
-#-----------------------------------#
-function loadtens_mul!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
-    t1_a = value(t1)
-    t2_a = value(t2)
+@inline function tensnum_from_deriv{N}(t::TensorNumber{N}, new_a, deriv1, deriv2, deriv3)
+    new_h = hessnum_from_deriv(hessnum(t), new_a, deriv1, deriv2)
+    new_tensvec = Array(eltype(new_h), halftenslen(N))
+    loadtens_deriv!(t, deriv1, deriv2, deriv3, new_tensvec)
+    return TensorNumber(new_h, new_tensvec)
+end
+
+# Addition/Subtraction #
+#----------------------#
++{N}(t1::TensorNumber{N}, t2::TensorNumber{N}) = TensorNumber(hessnum(t1) + hessnum(t2), tens(t1) + tens(t2))
+-{N}(t1::TensorNumber{N}, t2::TensorNumber{N}) = TensorNumber(hessnum(t1) - hessnum(t2), tens(t1) - tens(t2))
+-(t::TensorNumber) = TensorNumber(-hessnum(t), -tens(t))
+
+# Multiplication #
+#----------------#
+for T in (:Bool, :Real)
+    @eval begin
+        *(t::TensorNumber, x::$(T)) = TensorNumber(hessnum(t) * x, tens(t) * x)
+        *(x::$(T), t::TensorNumber) = TensorNumber(x * hessnum(t), x * tens(t))
+    end
+end
+
+function *{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
+    mul_h = hessnum(t1)*hessnum(t2)
+    tensvec = Array(eltype(mul_h), halftenslen(N))
+
+    a1, a2 = value(t1), value(t2)
     p = 1
     for i in 1:N
         for j in i:N
             for k in i:j
                 qij, qik, qjk = hess_inds(i,j), hess_inds(i,k), hess_inds(j,k)
-                output[p] = (tens(t1,p)*t2_a +
-                             hess(t1,qjk)*grad(t2,i) +
-                             hess(t1,qik)*grad(t2,j) +
-                             hess(t1,qij)*grad(t2,k) +
-                             grad(t1,k)*hess(t2,qij) +
-                             grad(t1,j)*hess(t2,qik) +
-                             grad(t1,i)*hess(t2,qjk) +
-                             t1_a*tens(t2,p))
+                tensvec[p] = (tens(t1,p)*a2 +
+                              hess(t1,qjk)*grad(t2,i) +
+                              hess(t1,qik)*grad(t2,j) +
+                              hess(t1,qij)*grad(t2,k) +
+                              grad(t1,k)*hess(t2,qij) +
+                              grad(t1,j)*hess(t2,qik) +
+                              grad(t1,i)*hess(t2,qjk) +
+                              a1*tens(t2,p))
                 p += 1
             end
         end
     end
-    return output
+
+    return TensorNumber(mul_h, tensvec)
 end
 
-function loadtens_div!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
-    t1_a = value(t1)
-    t2_a = value(t2)
-    inv_t2_a = inv(t2_a)
-    abs2_inv_t2_a = abs2(inv_t2_a)
+# Division #
+#----------#
+/(t::TensorNumber, x::Real) = TensorNumber(hessnum(t) / x, tens(t) / x)
 
-    coeff0 = inv_t2_a
-    coeff1 = -abs2_inv_t2_a
-    coeff2 = 2*abs2_inv_t2_a*inv_t2_a
-    coeff3 = -2*abs2_inv_t2_a*(2*inv_t2_a*inv_t2_a + abs2_inv_t2_a)
+function /(x::Real, t::TensorNumber)
+    a = value(t)
+    div_a = x / a
+    div_a_sq = div_a / a
+    div_a_cb = div_a_sq / a
+
+    deriv1 = -div_a_sq
+    deriv2 = div_a_cb + div_a_cb
+    deriv3 = -(deriv2 + deriv2 + deriv2)/a
+
+    return tensnum_from_deriv(t, div_a, deriv1, deriv2, deriv3)
+end
+
+function /{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
+    div_h = hessnum(t1)/hessnum(t2)
+    tensvec = Array(eltype(div_h), halftenslen(N))
+
+    a1, a2 = value(t1), value(t2)
+    inv_a2 = inv(a2)
+    abs2_inv_a2 = abs2(inv_a2)
+
+    coeff0 = inv_a2
+    coeff1 = -abs2_inv_a2
+    coeff2 = 2*abs2_inv_a2*inv_a2
+    coeff3 = -2*abs2_inv_a2*(2*inv_a2*inv_a2 + abs2_inv_a2)
 
     p = 1
     for i in 1:N
@@ -158,42 +200,65 @@ function loadtens_div!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
                 t2_bi, t2_bj, t2_bk = grad(t2,i), grad(t2,j), grad(t2,k)
                 t1_cqij, t1_cqik, t1_cqjk = hess(t1,qij), hess(t1,qik), hess(t1,qjk)
                 t2_cqij, t2_cqik, t2_cqjk = hess(t2,qij), hess(t2,qik), hess(t2,qjk)
-                loop_coeff1 = (tens(t2,p)*t1_a + t2_cqjk*t1_bi + t2_cqik*t1_bj + t2_cqij*t1_bk + t2_bk*t1_cqij + t2_bj*t1_cqik + t2_bi*t1_cqjk)
-                loop_coeff2 = (t2_bk*t2_cqij*t1_a + t2_bj*t2_cqik*t1_a + t2_bi*t2_cqjk*t1_a + t2_bj*t2_bk*t1_bi + t2_bi*t2_bk*t1_bj + t2_bi*t2_bj*t1_bk)
-                loop_coeff3 = (t2_bi*t2_bj*t2_bk*t1_a)
-                output[p] = coeff0*tens(t1,p) + coeff1*loop_coeff1 + coeff2*loop_coeff2 + coeff3*loop_coeff3
+                loop_coeff1 = (tens(t2,p)*a1 + t2_cqjk*t1_bi + t2_cqik*t1_bj + t2_cqij*t1_bk 
+                               + t2_bk*t1_cqij + t2_bj*t1_cqik + t2_bi*t1_cqjk)
+                loop_coeff2 = (t2_bk*t2_cqij*a1 + t2_bj*t2_cqik*a1 + t2_bi*t2_cqjk*a1 
+                               + t2_bj*t2_bk*t1_bi + t2_bi*t2_bk*t1_bj + t2_bi*t2_bj*t1_bk)
+                loop_coeff3 = (t2_bi*t2_bj*t2_bk*a1)
+                tensvec[p] = coeff0*tens(t1,p) + coeff1*loop_coeff1 + coeff2*loop_coeff2 + coeff3*loop_coeff3
                 p += 1
             end
         end
     end
-    return output
+
+    return TensorNumber(div_h, tensvec)
 end
 
-function loadtens_div!{N}(x::Real, t::TensorNumber{N}, output)
-    t_a = value(t)
-    inv_t_a = inv(t_a)
-    abs2_inv_t_a = abs2(inv_t_a)
+# Exponentiation #
+#----------------#
+^(::Base.Irrational{:e}, t::TensorNumber) = exp(t)
 
-    inv_deriv1 = -x*abs2_inv_t_a
-    inv_deriv2 = 2*x*abs2_inv_t_a*inv_t_a
-    inv_deriv3 = -2*x*abs2_inv_t_a*(2*inv_t_a*inv_t_a + abs2_inv_t_a)
+for T in (:Rational, :Integer, :Real)
+    @eval begin
+        function ^(t::TensorNumber, x::$(T))
+            a = value(t)
+            x_min_one = x - 1
+            
+            exp_a = a^x
+            deriv1 = x * exp_a/a
+            deriv2 = x_min_one * deriv1/a
+            deriv3 = (x_min_one - 1) * deriv2/a
+            
+            return tensnum_from_deriv(t, exp_a, deriv1, deriv2, deriv3)
+        end
 
-    return loadtens_deriv!(t, inv_deriv1, inv_deriv2, inv_deriv3, output)
+        function ^(x::$(T), t::TensorNumber)
+            log_x = log(x)
+            
+            exp_a = x^value(t)
+            deriv1 = exp_a * log_x
+            deriv2 = deriv1 * log_x
+            deriv3 = deriv2 * log_x
+
+            return tensnum_from_deriv(t, exp_a, deriv1, deriv2, deriv3)
+        end
+    end
 end
 
-function loadtens_exp!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
-    t1_a = value(t1)
-    t2_a = value(t2)
-    
-    inv_t1_a = inv(t1_a)
-    abs2_inv_t1_a = abs2(inv_t1_a)
+function ^{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
+    exp_h = hessnum(t1)^hessnum(t2)
+    tensvec = Array(eltype(exp_h), halftenslen(N))
 
-    f_0 = log(t1_a)
-    f_1 = inv_t1_a
-    f_2 = -abs2_inv_t1_a
-    f_3 = 2*abs2_inv_t1_a*inv_t1_a
+    a1, a2 = value(t1), value(t2)
+    inv_a1 = inv(a1)
+    abs2_inv_a1 = abs2(inv_a1)
 
-    deriv = t1_a^t2_a
+    f_0 = log(a1)
+    f_1 = inv_a1
+    f_2 = -abs2_inv_a1
+    f_3 = 2*abs2_inv_a1*inv_a1
+
+    deriv = a1^a2
 
     p = 1
     for i in 1:N
@@ -212,124 +277,74 @@ function loadtens_exp!{N}(t1::TensorNumber{N}, t2::TensorNumber{N}, output)
                 d_4 = t1_cqij*f_1 + t1_bi*t1_bj*f_2
                 d_5 = t1_cqik*f_1 + t1_bi*t1_bk*f_2
                 d_6 = t1_cqjk*f_1 + t1_bj*t1_bk*f_2
-                d_7 = tens(t1,p)*f_1 + (t1_bk*t1_cqij + t1_bj*t1_cqik + t1_bi*t1_cqjk)*f_2 + t1_bi*t1_bj*t1_bk*f_3
+                d_7 = (tens(t1,p)*f_1 + (t1_bk*t1_cqij + t1_bj*t1_cqik 
+                       + t1_bi*t1_cqjk)*f_2 + t1_bi*t1_bj*t1_bk*f_3)
 
-                e_1 = t2_bi*f_0 + t2_a*d_1
-                e_2 = t2_bj*f_0 + t2_a*d_2
-                e_3 = t2_bk*f_0 + t2_a*d_3
-                e_4 = t2_cqij*f_0 + t2_bj*d_1 + t2_bi*d_2 + t2_a*d_4
-                e_5 = t2_cqik*f_0 + t2_bk*d_1 + t2_bi*d_3 + t2_a*d_5
-                e_6 = t2_cqjk*f_0 + t2_bk*d_2 + t2_bj*d_3 + t2_a*d_6
-                e_7 = tens(t2,p)*f_0 + t2_cqjk*d_1 + t2_cqik*d_2 + t2_cqij*d_3 + t2_bk*d_4 + t2_bj*d_5 + t2_bi*d_6 + t2_a*d_7
+                e_1 = t2_bi*f_0 + a2*d_1
+                e_2 = t2_bj*f_0 + a2*d_2
+                e_3 = t2_bk*f_0 + a2*d_3
+                e_4 = t2_cqij*f_0 + t2_bj*d_1 + t2_bi*d_2 + a2*d_4
+                e_5 = t2_cqik*f_0 + t2_bk*d_1 + t2_bi*d_3 + a2*d_5
+                e_6 = t2_cqjk*f_0 + t2_bk*d_2 + t2_bj*d_3 + a2*d_6
+                e_7 = (tens(t2,p)*f_0 + t2_cqjk*d_1 + t2_cqik*d_2 + t2_cqij*d_3 
+                       + t2_bk*d_4 + t2_bj*d_5 + t2_bi*d_6 + a2*d_7)
 
-                output[p] = deriv*(e_7 + e_3*e_4 + e_2*e_5 + e_1*e_6 + e_1*e_2*e_3)
+                tensvec[p] = deriv*(e_7 + e_3*e_4 + e_2*e_5 + e_1*e_6 + e_1*e_2*e_3)
                 p += 1
             end
         end
     end
-    return output
+
+    return TensorNumber(exp_h, tensvec)
 end
-
-function loadtens_exp!{N}(t::TensorNumber{N}, x::Real, output)
-    t_a = value(t)
-    x_min_one = x - 1
-    x_min_two = x - 2
-    deriv1 = x * t_a^x_min_one
-    deriv2 = x * x_min_one * t_a^x_min_two
-    deriv3 = x * x_min_one * x_min_two * t_a^(x - 3)
-    return loadtens_deriv!(t, deriv1, deriv2, deriv3, output)
-end
-
-function loadtens_exp!{N}(x::Real, t::TensorNumber{N}, output)
-    log_x = log(x)
-    deriv1 = x^value(t) * log_x
-    deriv2 = deriv1 * log_x
-    deriv3 = deriv2 * log_x
-    return loadtens_deriv!(t, deriv1, deriv2, deriv3, output)
-end
-
-for (fsym, loadfsym) in [(:*, symbol("loadtens_mul!")),
-                         (:/, symbol("loadtens_div!")), 
-                         (:^, symbol("loadtens_exp!"))]
-    @eval function $(fsym){N,A,B}(t1::TensorNumber{N,A}, t2::TensorNumber{N,B})
-        new_tens = Array(promote_type(A, B), halftenslen(N))
-        return TensorNumber($(fsym)(hessnum(t1), hessnum(t2)), $(loadfsym)(t1, t2, new_tens))
-    end
-end
-
-^{N}(::Base.Irrational{:e}, t::TensorNumber{N}) = exp(t)
-
-for T in (:Rational, :Integer, :Real)
-    @eval begin
-        function ^{N}(t::TensorNumber{N}, x::$(T))
-            new_tens = Array(promote_type(eltype(t), typeof(x)), halftenslen(N))
-            return TensorNumber(hessnum(t)^x, loadtens_exp!(t, x, new_tens))
-        end
-
-        function ^{N}(x::$(T), t::TensorNumber{N})
-            new_tens = Array(promote_type(eltype(t), typeof(x)), halftenslen(N))
-            return TensorNumber(x^hessnum(t), loadtens_exp!(x, t, new_tens))
-        end
-    end
-end
-
-function /{N,T}(x::Real, t::TensorNumber{N,T})
-    new_tens = Array(promote_type(T, typeof(x)), halftenslen(N))
-    return TensorNumber(x / hessnum(t), loadtens_div!(x, t, new_tens))
-end
-
-+{N}(t1::TensorNumber{N}, t2::TensorNumber{N}) = TensorNumber(hessnum(t1) + hessnum(t2), tens(t1) + tens(t2))
--{N}(t1::TensorNumber{N}, t2::TensorNumber{N}) = TensorNumber(hessnum(t1) - hessnum(t2), tens(t1) - tens(t2))
-
-for T in (:Bool, :Real)
-    @eval begin
-        *(t::TensorNumber, x::$(T)) = TensorNumber(hessnum(t) * x, tens(t) * x)
-        *(x::$(T), t::TensorNumber) = TensorNumber(x * hessnum(t), x * tens(t))
-    end
-end
-
-/(t::TensorNumber, x::Real) = TensorNumber(hessnum(t) / x, tens(t) / x)
 
 # Unary functions on TensorNumbers #
 #----------------------------------#
--(t::TensorNumber) = TensorNumber(-hessnum(t), -tens(t))
 
-# the third derivatives of functions in unsupported_univar_tens_funcs involves differentiating 
+# the third derivatives of functions in unsupported_unary_tens_funcs involves differentiating 
 # elementary functions that are unsupported by Calculus.jl
-const unsupported_univar_tens_funcs = [:digamma]
-const univar_tens_funcs = filter!(sym -> !in(sym, unsupported_univar_tens_funcs), ForwardDiff.univar_hess_funcs)
+const unsupported_unary_tens_funcs = [:digamma]
+const unary_tens_funcs = filter!(sym -> !in(sym, unsupported_unary_tens_funcs), ForwardDiff.unary_hess_funcs)
 
-for fsym in univar_tens_funcs
-    t_a = :t_a
-    new_a = :($(fsym)($t_a))
-    deriv1 = Calculus.differentiate(new_a, t_a)
-    deriv2 = Calculus.differentiate(deriv1, t_a)
-    deriv3 = Calculus.differentiate(deriv2, t_a)
+for fsym in unary_tens_funcs
+    a = :a
+    new_a = :($(fsym)($a))
+    deriv1 = Calculus.differentiate(new_a, a)
+    deriv2 = Calculus.differentiate(deriv1, a)
+    deriv3 = Calculus.differentiate(deriv2, a)
 
     @eval function $(fsym){N}(t::TensorNumber{N})
-        t_a, t_g, t_h = value(t), gradnum(t), hessnum(t)
-
+        a = value(t)
         new_a = $new_a
         deriv1 = $deriv1
         deriv2 = $deriv2
         deriv3 = $deriv3
-
-        G = promote_typeof(t_g, deriv1, deriv2, deriv3)
-        T = eltype(G)
-        new_g = G(new_a, deriv1*partials(t_g))
-
-        new_hessvec = Array(T, halfhesslen(N))
-        loadhess_deriv!(t_h, deriv1, deriv2, new_hessvec)
-        new_h = HessianNumber(new_g, new_hessvec)
-
-        new_tensvec = Array(T, halftenslen(N))
-        loadtens_deriv!(t, deriv1, deriv2, deriv3, new_tensvec)
-        return TensorNumber(new_h, new_tensvec)
+        return tensnum_from_deriv(t, new_a, deriv1, deriv2, deriv3)
     end
 end
 
+#################
 # Special Cases #
-#---------------#
+#################
+
+# Manually Optimized Functions #
+#------------------------------#
+@inline function exp(t::TensorNumber)
+    exp_a = exp(value(t))
+    return tensnum_from_deriv(t, exp_a, exp_a, exp_a, exp_a)
+end
+
+function sqrt(t::TensorNumber)
+    sqrt_a = sqrt(value(t))
+    deriv1 = 0.5 / sqrt_a
+    sqrt_a_cb = a * sqrt_a
+    deriv2 = -inv(4.0 * sqrt_a_cb)
+    deriv3 = 3.0 / (8.0 * a * sqrt_a_cb)
+    return tensnum_from_deriv(t, sqrt_a, deriv1, deriv2, deriv3)
+end
+
+# Other Functions #
+#-----------------#
 @inline calc_atan2(y::TensorNumber, x::TensorNumber) = calc_atan2(hessnum(y), hessnum(x))
 @inline calc_atan2(y::Real, x::TensorNumber) = calc_atan2(y, hessnum(x))
 @inline calc_atan2(y::TensorNumber, x::Real) = calc_atan2(hessnum(y), x)
@@ -339,23 +354,13 @@ for Y in (:Real, :TensorNumber), X in (:Real, :TensorNumber)
         @eval begin
             function atan2(y::$Y, x::$X)
                 z = y/x
-                z_a, z_g, z_h = value(z), gradnum(z), hessnum(z)
-                N, T = npartials(z), eltype(z)
-                
-                deriv1 = inv(one(z_a) + z_a^2)
+                a = value(z)
+                atan2_a = calc_atan2(y, x)
+                deriv1 = inv(one(a) + a*a)
                 abs2_deriv1 = -2 * abs2(deriv1)
-                deriv2 = z_a * abs2_deriv1
-                deriv3 = abs2_deriv1 - (4 * z_a * deriv1 * deriv2)
-                
-                new_g = typeof(z_g)(calc_atan2(y, x), deriv1*partials(z_g))
-                
-                new_hessvec = Array(T, halfhesslen(N))
-                loadhess_deriv!(z_h, deriv1, deriv2, new_hessvec)
-                new_h = HessianNumber(new_g, new_hessvec)
-                
-                new_tensvec = Array(T, halftenslen(N))
-                loadtens_deriv!(z, deriv1, deriv2, deriv3, new_tensvec)
-                return TensorNumber(new_h, new_tensvec)
+                deriv2 = a * abs2_deriv1
+                deriv3 = abs2_deriv1 - (4 * a * deriv1 * deriv2)
+                return tensnum_from_deriv(z, atan2_a, deriv1, deriv2, deriv3)
             end
         end
     end

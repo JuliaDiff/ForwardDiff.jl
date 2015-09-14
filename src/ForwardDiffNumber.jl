@@ -75,3 +75,16 @@ isreal(n::ForwardDiffNumber) = isconstant(n)
 conj(n::ForwardDiffNumber) = n
 transpose(n::ForwardDiffNumber) = n
 ctranspose(n::ForwardDiffNumber) = n
+
+# NaNMath Helper Functions # 
+#--------------------------#
+function to_nanmath(x::Expr)
+    if x.head == :call
+        funsym = Expr(:.,:NaNMath,Base.Meta.quot(x.args[1]))
+        return Expr(:call,funsym,[to_nanmath(z) for z in x.args[2:end]]...)
+    else
+        return Expr(:call,[to_nanmath(z) for z in x.args]...)
+    end
+end
+
+to_nanmath(x) = x

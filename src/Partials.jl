@@ -130,10 +130,6 @@ function /{T}(partials::PartialsVec{T}, x::Number)
     return Partials(data(partials) / x)
 end
 
-@inline function _div_partials(x, partials::Partials, val)
-    return ((-x) / (val*val)) * partials
-end
-
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
     afactor = inv(bval)
     bfactor = -aval/(bval*bval)
