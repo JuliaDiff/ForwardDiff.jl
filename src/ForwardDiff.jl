@@ -14,9 +14,9 @@ module ForwardDiff
                  ctranspose, eltype, abs, abs2, start, 
                  next, done, atan2
 
-    const fad_supported_univar_funcs = map(first, Calculus.symbolic_derivatives_1arg())
+    const fad_supported_unary_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 
-    for fsym in fad_supported_univar_funcs
+    for fsym in fad_supported_unary_funcs
         @eval import Base.$(fsym);
     end
 

@@ -29,7 +29,7 @@ function test_approx_deriv(a::Array, b::Array)
     end
 end
 
-for fsym in ForwardDiff.fad_supported_univar_funcs
+for fsym in ForwardDiff.fad_supported_unary_funcs
     func_expr = :($(fsym)(x) + 4^$(fsym)(x) - x * $(fsym)(x))
     deriv = Calculus.differentiate(func_expr)
     try 
