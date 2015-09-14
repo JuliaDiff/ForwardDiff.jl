@@ -240,8 +240,10 @@ end
 
 # Unary functions on HessianNumbers #
 #-----------------------------------#
-# the second derivatives of functions in unsupported_unary_hess_funcs involves differentiating 
-# elementary functions that are unsupported by Calculus.jl
+# the second derivatives of functions in 
+# unsupported_unary_hess_funcs involves 
+# differentiating elementary functions 
+# that are unsupported by Calculus.jl
 const unsupported_unary_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
 const unary_hess_funcs = filter!(sym -> !in(sym, unsupported_unary_hess_funcs), supported_unary_funcs)
 
@@ -274,7 +276,7 @@ end
 @inline function sqrt(h::HessianNumber)
     sqrt_a = sqrt(value(h))
     deriv1 = 0.5 / sqrt_a
-    deriv2 = -inv(4.0 * a * sqrt_a)
+    deriv2 = -0.25 / (a * sqrt_a)
     return hessnum_from_deriv(h, sqrt_a, deriv1, deriv2)
 end
 

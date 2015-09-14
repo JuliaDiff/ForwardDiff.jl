@@ -338,8 +338,8 @@ function sqrt(t::TensorNumber)
     sqrt_a = sqrt(value(t))
     deriv1 = 0.5 / sqrt_a
     sqrt_a_cb = a * sqrt_a
-    deriv2 = -inv(4.0 * sqrt_a_cb)
-    deriv3 = 3.0 / (8.0 * a * sqrt_a_cb)
+    deriv2 = -0.25 / sqrt_a_cb
+    deriv3 = 0.375 / (a * sqrt_a_cb)
     return tensnum_from_deriv(t, sqrt_a, deriv1, deriv2, deriv3)
 end
 
