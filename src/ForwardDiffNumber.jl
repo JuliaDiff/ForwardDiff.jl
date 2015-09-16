@@ -5,11 +5,11 @@ abstract ForwardDiffNumber{N,T<:Number,C} <: Number
 #    eltype(::Type{F}) --> T from ForwardDiffNumber{N,T,C}
 #    value(n::F) --> the value of n
 #    grad(n::F) --> a container corresponding to all first order partials
-#    hess(n::F) --> a container corresponding to the lower 
-#                   triangular half of the symmetric 
+#    hess(n::F) --> a container corresponding to the lower
+#                   triangular half of the symmetric
 #                   Hessian (including the diagonal)
-#    tens(n::F) --> a container of corresponding to lower 
-#                   tetrahedral half of the symmetric 
+#    tens(n::F) --> a container of corresponding to lower
+#                   tetrahedral half of the symmetric
 #                   Tensor (including the diagonal)
 #    isconstant(n::F) --> returns true if all partials stored by n are zero
 #
@@ -67,6 +67,7 @@ eps{F<:ForwardDiffNumber}(::Type{F}) = eps(eltype(F))
 
 isnan(n::ForwardDiffNumber) = isnan(value(n))
 isfinite(n::ForwardDiffNumber) = isfinite(value(n))
+isinf(n::ForwardDiffNumber) = isinf(value(n))
 isreal(n::ForwardDiffNumber) = isconstant(n)
 
 ##################
@@ -75,8 +76,9 @@ isreal(n::ForwardDiffNumber) = isconstant(n)
 conj(n::ForwardDiffNumber) = n
 transpose(n::ForwardDiffNumber) = n
 ctranspose(n::ForwardDiffNumber) = n
+float(n::ForwardDiffNumber) = n
 
-# NaNMath Helper Functions # 
+# NaNMath Helper Functions #
 #--------------------------#
 function to_nanmath(x::Expr)
     if x.head == :call
