@@ -90,7 +90,8 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test isnan(Grad{3,T}(NaN))
 
     not_const_grad = Grad{N,T}(one(T), map(one, test_partials))
-    @test !(isconstant(not_const_grad) || isreal(not_const_grad))
+    @test !(isconstant(not_const_grad)) 
+    @test !(isreal(not_const_grad))
     @test isconstant(const_grad) && isreal(const_grad)
     @test isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
 

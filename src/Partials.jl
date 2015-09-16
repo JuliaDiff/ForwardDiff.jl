@@ -39,7 +39,7 @@ rand_partials{T}(::Type{Vector{T}}, n::Int) = Partials(rand(T, n))
 #####################
 function iszero{T}(partials::Partials{T})
     p = data(partials)
-    return isempty(p) || (z = zero(T); any(x -> x == z, p))
+    return isempty(p) || (z = zero(T); all(x -> x == z, p))
 end
 
 ==(a::Partials, b::Partials) = data(a) == data(b)

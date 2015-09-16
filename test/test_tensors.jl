@@ -119,7 +119,8 @@ FloatTens = TensorNumber{N,Float64,NTuple{N,Float64}}
 @test isnan(TensorNumber{N,T,C}(NaN))
 
 not_const_tens = TensorNumber(HessianNumber(GradientNumber(one(T), map(one, test_partials))))
-@test !(isconstant(not_const_tens) || isreal(not_const_tens))
+@test !(isconstant(not_const_tens))
+@test !(isreal(not_const_tens))
 @test isconstant(const_tens) && isreal(const_tens)
 @test isconstant(zero(not_const_tens)) && isreal(zero(not_const_tens))
 

@@ -105,7 +105,8 @@ FloatHess = HessianNumber{N,Float64,NTuple{N,Float64}}
 @test isnan(HessianNumber{N,T,C}(NaN))
 
 not_const_hess = HessianNumber(GradientNumber(one(T), map(one, test_partials)))
-@test !(isconstant(not_const_hess) || isreal(not_const_hess))
+@test !(isconstant(not_const_hess))
+@test !(isreal(not_const_hess))
 @test isconstant(const_hess) && isreal(const_hess)
 @test isconstant(zero(not_const_hess)) && isreal(zero(not_const_hess))
 
