@@ -9,13 +9,6 @@ const default_chunk_size = 0
 
 abstract AllResults
 
-for F in (:GradientNumber, :HessianNumber, :TensorNumber)
-    @eval begin
-        switch_eltype{N,T,S}(::Type{$F{N,T,NTuple{N,T}}}, ::Type{S}) = $F{N,S,NTuple{N,S}}
-        switch_eltype{N,T,S}(::Type{$F{N,T,Vector{T}}}, ::Type{S}) = $F{N,S,Vector{S}}
-    end
-end
-
 function check_chunk_size(xlen::Int, chunk_size::Int)        
     if chunk_size != default_chunk_size
         @assert chunk_size > 0 "Invalid chunk_size: $chunk_size. chunk_size cannot be negative."
