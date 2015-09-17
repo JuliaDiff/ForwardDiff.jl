@@ -39,18 +39,13 @@ const data_path = joinpath(folder_path, "benchmark_data")
 data_name(f) = "$(f)_benchmarks"
 data_file(f) = joinpath(data_path, "$(data_name(f)).jld")
 
-function bench_func(f_expr::Expr, x, repeat)
-
-    @eval function test()
-        x = $x
-        return $f_expr
-    end
+function bench_func(f::Function, x, repeat)
 
     min_time = Inf
 
     for i in 1:(repeat+1) # +1 for warm-up
         gc()
-        this_time = @elapsed test()
+        this_time = @elapsed f(x)
         min_time = min(this_time, min_time)
     end
 
@@ -66,15 +61,13 @@ function run_benchmark(f;
                         func=Char[],
                         xlen=Int[],
                         chunk_size=Int[])
-    f_expr = :(($f)(x))
-    g = ForwardDiff.gradient(f)
 
     for xlen in xlens
         x = rand(xlen)
-        push!(benchdf, [bench_func(f_expr, x, repeat), 'f', xlen, -1])
+        push!(benchdf, [bench_func(f, x, repeat), 'f', xlen, -1])
         for c in chunk_sizes
-            g_expr = :(($g)(x, chunk_size=$c))
-            push!(benchdf, [bench_func(g_expr, x, repeat), 'g', xlen, c])
+            g = ForwardDiff.gradient(f, chunk_size=c)
+            push!(benchdf, [bench_func(g, x, repeat), 'g', xlen, c])
         end
     end
 

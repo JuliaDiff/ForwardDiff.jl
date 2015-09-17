@@ -18,16 +18,13 @@ def hessian(f):
 ##################
 # Test functions #
 ##################
-def sqr(i):
-    return i*i
-
 def ackley(x):
     a, b, c = 20.0, -0.2, 2.0*numpy.pi
     len_recip = 1.0/len(x)
     sum_sqrs, sum_cos = 0.0, 0.0
     for i in x:
         sum_cos += algopy.cos(c*i)
-        sum_sqrs += sqr(i)
+        sum_sqrs += i*i
     return (-a * algopy.exp(b*algopy.sqrt(len_recip*sum_sqrs)) -
             algopy.exp(len_recip*sum_cos) + a + numpy.e)
 
