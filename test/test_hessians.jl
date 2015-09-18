@@ -77,6 +77,8 @@ const_hess = HessianNumber{N,T,C}(float_val)
 @test convert(HessianNumber{3,T,NTuple{3,T}}, 1) == HessianNumber{3,T,NTuple{3,T}}(1.0)
 @test convert(T, HessianNumber(GradientNumber(1, tuple(0, 0)))) == 1.0
 
+@test float(int_hess) == float_hess
+
 IntHess = HessianNumber{N,Int,NTuple{N,Int}}
 FloatHess = HessianNumber{N,Float64,NTuple{N,Float64}}
 

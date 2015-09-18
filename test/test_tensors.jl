@@ -91,6 +91,8 @@ const_tens = TensorNumber{N,T,C}(float_val)
 @test convert(TensorNumber{3,T,NTuple{3,T}}, 1) == TensorNumber{3,T,NTuple{3,T}}(1.0)
 @test convert(T, TensorNumber(HessianNumber(GradientNumber(1, tuple(0, 0))))) == 1.0
 
+@test float(int_tens) == float_tens
+
 IntTens = TensorNumber{N,Int,NTuple{N,Int}}
 FloatTens = TensorNumber{N,Float64,NTuple{N,Float64}}
 

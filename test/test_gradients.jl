@@ -65,6 +65,8 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test convert(Grad{3,T}, 1) == Grad{3,T}(1.0)
     @test convert(T, Grad{2,T}(1)) == 1.0
 
+    @test float(int_grad) == float_grad
+
     @test promote_type(Grad{N,Int}, Grad{N,Int}) == Grad{N,Int}
     @test promote_type(Grad{N,Float64}, Grad{N,Int}) == Grad{N,Float64}
     @test promote_type(Grad{N,Int}, Float64) == Grad{N,Float64}
