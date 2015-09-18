@@ -135,7 +135,7 @@ for f in (:^, :(NaNMath.pow))
             return promote_typeof(g1, g2, exp_a)(exp_a, new_bs)
         end
 
-        @inline ($f)(::Base.MathConst{:e}, g::GradientNumber) = exp(g)
+        @inline ($f)(::Base.Irrational{:e}, g::GradientNumber) = exp(g)
     end
 
     # generate redundant definitions to resolve ambiguity warnings
