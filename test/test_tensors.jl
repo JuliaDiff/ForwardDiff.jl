@@ -126,8 +126,12 @@ not_const_tens = TensorNumber(HessianNumber(GradientNumber(one(T), map(one, test
 @test isconstant(const_tens) && isreal(const_tens)
 @test isconstant(zero(not_const_tens)) && isreal(zero(not_const_tens))
 
+inf_tens = TensorNumber{N,T,C}(Inf)
 @test isfinite(test_tens) == isfinite(test_val)
-@test !isfinite(TensorNumber{N,T,C}(Inf))
+@test !isfinite(inf_tens)
+
+@test isinf(inf_tens)
+@test !(isinf(test_tens))
 
 @test isless(test_tens-1, test_tens)
 @test isless(test_val-1, test_tens)

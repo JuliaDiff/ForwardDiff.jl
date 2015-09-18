@@ -97,8 +97,12 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test isconstant(const_grad) && isreal(const_grad)
     @test isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
 
+    inf_grad = Grad{N,T}(Inf)
     @test isfinite(test_grad) && isfinite(test_val)
-    @test !isfinite(Grad{N,T}(Inf))
+    @test !(isfinite(inf_grad))
+
+    @test isinf(inf_grad)
+    @test !(isinf(test_grad))
 
     @test isless(test_grad-1, test_grad)
     @test isless(test_val-1, test_grad)

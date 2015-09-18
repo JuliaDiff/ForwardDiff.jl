@@ -112,8 +112,12 @@ not_const_hess = HessianNumber(GradientNumber(one(T), map(one, test_partials)))
 @test isconstant(const_hess) && isreal(const_hess)
 @test isconstant(zero(not_const_hess)) && isreal(zero(not_const_hess))
 
+inf_hess = HessianNumber{N,T,C}(Inf)
 @test isfinite(test_hess) == isfinite(test_val)
-@test !isfinite(HessianNumber{N,T,C}(Inf))
+@test !isfinite(inf_hess)
+
+@test isinf(inf_hess)
+@test !(isinf(test_hess))
 
 @test isless(test_hess-1, test_hess)
 @test isless(test_val-1, test_hess)
