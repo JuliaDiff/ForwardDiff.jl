@@ -16,13 +16,13 @@ Manually Optimizing Unary Functions
 1. Pick a function to optimize
 ++++++++++++++++++++++++++++++
 
-To see a list of functions to pick from, look at ``ForwardDiff.supported_unary_funcs``:
+To see a list of functions to pick from, look at ``ForwardDiff.auto_defined_unary_funcs``:
 
 .. code-block:: julia
 
     julia> using ForwardDiff
 
-    julia> ForwardDiff.supported_unary_funcs
+    julia> ForwardDiff.auto_defined_unary_funcs
     57-element Array{Symbol,1}:
      :sqrt
      :cbrt
@@ -133,7 +133,7 @@ In ``src/TensorNumber.jl``, under the ``Special Cases``/``Manually Optimized`` s
 4. Run Tests
 ++++++++++++
 
-The functions in ``ForwardDiff.supported_unary_funcs`` are automatically tested as part of ForwardDiff.jl's test suite, so you don't need to write tests yourself. Go ahead and test your changes by running ``Pkg.test("ForwardDiff")``.
+The functions in ``ForwardDiff.auto_defined_unary_funcs`` are automatically tested as part of ForwardDiff.jl's test suite, so you don't need to write tests yourself. Go ahead and test your changes by running ``Pkg.test("ForwardDiff")``.
 
 If everything passes, you can submit a PR to the ForwardDiff.jl repository to share your work!
 

@@ -160,7 +160,7 @@ end
 
 # Unary functions on GradientNumbers #
 #------------------------------------#
-for fsym in supported_unary_funcs
+for fsym in auto_defined_unary_funcs
     a = :a
     new_a = :($(fsym)($a))
     deriv = Calculus.differentiate(new_a, a)

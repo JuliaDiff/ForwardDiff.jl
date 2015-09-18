@@ -300,13 +300,13 @@ end
 
 # Unary functions on TensorNumbers #
 #----------------------------------#
-
-# the third derivatives of functions in unsupported_unary_tens_funcs involves differentiating 
-# elementary functions that are unsupported by Calculus.jl
+# the third derivatives of functions in unsupported_unary_tens_funcs 
+# involve differentiating elementary functions that are unsupported 
+# by Calculus.jl
 const unsupported_unary_tens_funcs = [:digamma]
-const unary_tens_funcs = filter!(sym -> !in(sym, unsupported_unary_tens_funcs), ForwardDiff.unary_hess_funcs)
+const auto_defined_unary_tens_funcs = filter!(sym -> !in(sym, unsupported_unary_tens_funcs), ForwardDiff.auto_defined_unary_hess_funcs)
 
-for fsym in unary_tens_funcs
+for fsym in auto_defined_unary_tens_funcs
     a = :a
     new_a = :($(fsym)($a))
     deriv1 = Calculus.differentiate(new_a, a)
