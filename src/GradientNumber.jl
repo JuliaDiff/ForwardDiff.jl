@@ -210,9 +210,6 @@ end
 
 # Other Functions #
 #-----------------#
-@inline abs(g::GradientNumber) = (value(g) >= 0) ? g : -g
-@inline abs2(g::GradientNumber) = g*g
-
 @inline calc_atan2(y::GradientNumber, x::GradientNumber) = atan2(value(y), value(x))
 @inline calc_atan2(y::Real, x::GradientNumber) = atan2(y, value(x))
 @inline calc_atan2(y::GradientNumber, x::Real) = atan2(value(y), x)

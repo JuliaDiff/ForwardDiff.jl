@@ -221,6 +221,10 @@ tens_approx_eq(rand_val^test_tens, exp(test_tens * log(rand_val)))
 
 # Special Cases #
 #---------------#
+@test abs(test_tens) == test_tens
+@test abs(-test_tens) == test_tens
+tens_approx_eq(abs2(test_tens), test_tens*test_tens)
+
 atan2_tens = atan2(test_tens, rand_tens)
 atanyx_tens = atan(test_tens/rand_tens)
 
@@ -229,8 +233,8 @@ atanyx_tens = atan(test_tens/rand_tens)
 @test_approx_eq hess(atan2_tens) hess(atanyx_tens)
 @test_approx_eq tens(atan2_tens) tens(atanyx_tens)
 
-# Univariate functions/API usage testing #
-#----------------------------------------#
+# Unary functions/API usage testing #
+#-----------------------------------#
 testout = Array(Float64, N, N, N)
 
 function tens_deriv_ijk(f_expr, x::Vector, i, j, k)

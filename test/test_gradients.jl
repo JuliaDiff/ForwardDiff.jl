@@ -175,8 +175,8 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     grad_approx_eq(test_grad^rand_val, exp(rand_val * log(test_grad)))
     grad_approx_eq(rand_val^test_grad, exp(test_grad * log(rand_val)))
 
-    # Univariate functions #
-    #----------------------#
+    # Unary functions #
+    #-----------------#
     for (fsym, expr) in Calculus.symbolic_derivatives_1arg()
         @eval begin
             func = $fsym

@@ -203,6 +203,10 @@ hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 
 # Special Cases #
 #---------------#
+@test abs(test_hess) == test_hess
+@test abs(-test_hess) == test_hess
+hess_approx_eq(abs2(test_hess), test_hess*test_hess)
+
 atan2_hess = atan2(test_hess, rand_hess)
 atanyx_hess = atan(test_hess/rand_hess)
 
@@ -210,8 +214,8 @@ atanyx_hess = atan(test_hess/rand_hess)
 @test_approx_eq collect(grad(atan2_hess)) collect(grad(atanyx_hess))
 @test_approx_eq hess(atan2_hess) hess(atanyx_hess)
 
-# Univariate functions/API usage testing #
-#----------------------------------------#
+# Unary functions/API usage testing #
+#-----------------------------------#
 N = 6
 testout = Array(Float64, N, N)
 

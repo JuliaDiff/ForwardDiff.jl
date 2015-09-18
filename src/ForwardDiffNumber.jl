@@ -78,6 +78,9 @@ conj(n::ForwardDiffNumber) = n
 transpose(n::ForwardDiffNumber) = n
 ctranspose(n::ForwardDiffNumber) = n
 
+@inline abs(n::ForwardDiffNumber) = signbit(value(n)) ? -n : n
+@inline abs2(n::ForwardDiffNumber) = n*n
+
 # NaNMath Helper Functions # 
 #--------------------------#
 function to_nanmath(x::Expr)
