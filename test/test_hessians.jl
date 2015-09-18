@@ -77,6 +77,8 @@ const_hess = HessianNumber{N,T,C}(float_val)
 @test convert(HessianNumber{3,T,NTuple{3,T}}, 1) == HessianNumber{3,T,NTuple{3,T}}(1.0)
 @test convert(T, HessianNumber(GradientNumber(1, tuple(0, 0)))) == 1.0
 
+@test float(int_hess) == float_hess
+
 IntHess = HessianNumber{N,Int,NTuple{N,Int}}
 FloatHess = HessianNumber{N,Float64,NTuple{N,Float64}}
 
@@ -110,8 +112,12 @@ not_const_hess = HessianNumber(GradientNumber(one(T), map(one, test_partials)))
 @test isconstant(const_hess) && isreal(const_hess)
 @test isconstant(zero(not_const_hess)) && isreal(zero(not_const_hess))
 
+inf_hess = HessianNumber{N,T,C}(Inf)
 @test isfinite(test_hess) == isfinite(test_val)
-@test !isfinite(HessianNumber{N,T,C}(Inf))
+@test !isfinite(inf_hess)
+
+@test isinf(inf_hess)
+@test !(isinf(test_hess))
 
 @test isless(test_hess-1, test_hess)
 @test isless(test_val-1, test_hess)
@@ -197,6 +203,10 @@ hess_approx_eq(rand_val^test_hess, exp(test_hess * log(rand_val)))
 
 # Special Cases #
 #---------------#
+@test abs(test_hess) == test_hess
+@test abs(-test_hess) == test_hess
+hess_approx_eq(abs2(test_hess), test_hess*test_hess)
+
 atan2_hess = atan2(test_hess, rand_hess)
 atanyx_hess = atan(test_hess/rand_hess)
 
@@ -204,8 +214,8 @@ atanyx_hess = atan(test_hess/rand_hess)
 @test_approx_eq collect(grad(atan2_hess)) collect(grad(atanyx_hess))
 @test_approx_eq hess(atan2_hess) hess(atanyx_hess)
 
-# Univariate functions/API usage testing #
-#----------------------------------------#
+# Unary functions/API usage testing #
+#-----------------------------------#
 N = 6
 testout = Array(Float64, N, N)
 
