@@ -263,7 +263,7 @@ function tens_test_x(fsym, N)
     return rand(randrange, N)
 end
 
-for fsym in ForwardDiff.unary_tens_funcs
+for fsym in ForwardDiff.auto_defined_unary_tens_funcs
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
 
     @eval function testf(x::Vector)

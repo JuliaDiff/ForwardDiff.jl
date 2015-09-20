@@ -300,13 +300,13 @@ end
 
 # Unary functions on TensorNumbers #
 #----------------------------------#
-
-# the third derivatives of functions in unsupported_unary_tens_funcs involves differentiating 
-# elementary functions that are unsupported by Calculus.jl
+# the third derivatives of functions in unsupported_unary_tens_funcs 
+# involve differentiating elementary functions that are unsupported 
+# by Calculus.jl
 const unsupported_unary_tens_funcs = [:digamma]
-const unary_tens_funcs = filter!(sym -> !in(sym, unsupported_unary_tens_funcs), ForwardDiff.unary_hess_funcs)
+const auto_defined_unary_tens_funcs = filter!(sym -> !in(sym, unsupported_unary_tens_funcs), ForwardDiff.auto_defined_unary_hess_funcs)
 
-for fsym in unary_tens_funcs
+for fsym in auto_defined_unary_tens_funcs
     a = :a
     new_a = :($(fsym)($a))
     deriv1 = Calculus.differentiate(new_a, a)
@@ -338,8 +338,8 @@ function sqrt(t::TensorNumber)
     sqrt_a = sqrt(value(t))
     deriv1 = 0.5 / sqrt_a
     sqrt_a_cb = a * sqrt_a
-    deriv2 = -inv(4.0 * sqrt_a_cb)
-    deriv3 = 3.0 / (8.0 * a * sqrt_a_cb)
+    deriv2 = -0.25 / sqrt_a_cb
+    deriv3 = 0.375 / (a * sqrt_a_cb)
     return tensnum_from_deriv(t, sqrt_a, deriv1, deriv2, deriv3)
 end
 

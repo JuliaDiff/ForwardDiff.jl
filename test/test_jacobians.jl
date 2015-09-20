@@ -33,7 +33,7 @@ end
 
 chunk_sizes = (ForwardDiff.default_chunk_size, 1, Int(N/2), N)
 
-for fsym in ForwardDiff.supported_unary_funcs
+for fsym in ForwardDiff.auto_defined_unary_funcs
     testexprs = [:($(fsym)(a) + $(fsym)(b)),
                 :(- $(fsym)(c)),
                 :(4 * $(fsym)(d)),

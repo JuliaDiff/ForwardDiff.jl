@@ -17,9 +17,9 @@ module ForwardDiff
                  ctranspose, eltype, abs, abs2, start, 
                  next, done, atan2
 
-    const supported_unary_funcs = map(first, Calculus.symbolic_derivatives_1arg())
+    const auto_defined_unary_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 
-    for fsym in supported_unary_funcs
+    for fsym in auto_defined_unary_funcs
         @eval import Base.$(fsym);
     end
 
