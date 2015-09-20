@@ -45,7 +45,7 @@ Some of these functions may have already been manually optimized. To see what fu
 2. Write out the function's first, second, and third derivatives
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Let's say that you wanted to manually optimize the ``sqrt`` function (this function's already been done, but is a good example). 
+Let's say that you wanted to manually optimize the ``sqrt`` function (this function's already been done, but is a good example).
 
 Pretty naively, we can write out the function and its derivatives evaluated at some value :math:`a`:
 
@@ -54,9 +54,9 @@ Pretty naively, we can write out the function and its derivatives evaluated at s
     y_0 &= \sqrt a \\
     y_1 &= \frac{\delta}{\delta a} \sqrt a = \frac{1}{2 \sqrt a} \\
     y_2 &= \frac{\delta^2}{\delta a^2} \sqrt a = - \frac{1}{4 a^{3/2}} \\
-    y_3 &= \frac{\delta^3}{\delta a^3} \sqrt a = - \frac{3}{8 a^{5/2}} 
+    y_3 &= \frac{\delta^3}{\delta a^3} \sqrt a = - \frac{3}{8 a^{5/2}}
 
-3. Write and optimize a test function to compute the derivatives 
+3. Write and optimize a test function to compute the derivatives
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 Let's write the function and derivatives from the previous section in Julia code:
@@ -89,7 +89,7 @@ Note the variable reuse and precomputation of literal values.
 3. Implement the function on the ``ForwardDiffNumber`` types
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Next, we want to implement the optimized operations from ``sqrt_test`` on all the ``ForwardDiffNumber`` types (it's actually pretty easy). 
+Next, we want to implement the optimized operations from ``sqrt_test`` on all the ``ForwardDiffNumber`` types (it's actually pretty easy).
 
 Let's start with ``GradientNumber``. Go to ``src/GradientNumber.jl``, scroll down to the ``Special Cases`` section, and look at the functions under ``Manually Optimized``. We're going to add this definition for the ``sqrt`` function (keep in mind that :math:`a \to` ``value(g)``):
 
@@ -101,7 +101,7 @@ Let's start with ``GradientNumber``. Go to ``src/GradientNumber.jl``, scroll dow
         return gradnum_from_deriv(g, sqrt_a, deriv)
     end
 
-The body of the function is mostly just the value and first derivative calculations we've already figured out from writing ``sqrt_test``. The interesting line is the ``return`` statement; ``gradnum_from_deriv`` takes in the original ``GradientNumber`` (``g``), as its first argument, the new ``a`` value (``qrt_a``) as it's second, and the first derivative as its third. The resulting ``GradientNumber`` is then constructed from this information. 
+The body of the function is mostly just the value and first derivative calculations we've already figured out from writing ``sqrt_test``. The interesting line is the ``return`` statement; ``gradnum_from_deriv`` takes in the original ``GradientNumber`` (``g``), as its first argument, the new ``a`` value (``qrt_a``) as it's second, and the first derivative as its third. The resulting ``GradientNumber`` is then constructed from this information.
 
 
 To define the optimized version of ``sqrt`` on ``HessianNumber`` and ``TensorNumber``, we basically do the same as the above, adding extra derivatives as necessary.
@@ -147,14 +147,14 @@ The easiest way to add support for a new function is actually to define a deriva
 
 1. Open an issue in ForwardDiff.jl with the title "Supporting f(x)" (obviously replacing "f(x)"" with the function you wish to support).
 2. Open a PR to Calculus.jl that adds the relevant differentiation rule(s) and tests. In the PR's description, be sure to mention the relevant ForwardDiff.jl issue such that GitHub links the two.
-3. Once the PR to Calculus.jl is accepted, we can check to make sure that the function works appropriately in ForwardDiff.jl. If this is the case, then the issue in ForwardDiff
+3. Once the PR to Calculus.jl is accepted, we can check to make sure that the function works appropriately in ForwardDiff.jl. If it does, then you're done, and the issue in ForwardDiff can be considered resolved!
 
-.. _`symbolic differentiation code`:  
+.. _`symbolic differentiation code`:
 
 Manually Adding Functions to ForwardDiff.jl
 +++++++++++++++++++++++++++++++++++++++++++
 
-The process for manually adding functions to ForwardDiff.jl without going through Calculus.jl is essentially the same as the process for manually optimizing existing functions (documented above). The only additional step is that you'll have to manually write tests for the function. 
+The process for manually adding functions to ForwardDiff.jl without going through Calculus.jl is essentially the same as the process for manually optimizing existing functions (documented above). The only additional step is that you'll have to manually write tests for the function.
 
 ForwardDiff.jl's `existing test suite`_ is full of examples demonstrating how to write tests for the package. You'll have to add tests for all subtypes of ``ForwardDiffNumber``. These tests should go under the corresponding files' "Special Cases" section.
 
