@@ -2,15 +2,13 @@
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.3.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.3)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.4.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.4)
 
-Note: ForwardDiff.jl currently only supports Julia v0.4. If you're a Julia v0.3 user, installing ForwardDiff.jl via the package manager will give you an old version ([v0.0.2](https://github.com/JuliaDiff/ForwardDiff.jl/tree/6da5f5204fd717a1417a8a4a6b9e2253799879c9)).
-
 # ForwardDiff.jl
 
 ForwardDiff.jl implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
 
 While performance can vary depending on the functions you evaluate, the algorithms implemented by ForwardDiff.jl **generally outperform non-AD algorithms in both speed and accuracy.**
 
-Documentation can be found [here](http://www.juliadiff.org/ForwardDiff.jl/). Otherwise, check out this simple example showing the pacakge in action:
+Documentation can be found [here](http://www.juliadiff.org/ForwardDiff.jl/). Otherwise, check out this simple example showing the package in action:
 
 ```julia
 julia> using ForwardDiff
@@ -45,7 +43,7 @@ julia> j(x)
  0.994057  3.25245  1.65416   0.251396  0.964566
  1.03257   3.37871  1.71818   0.964566  0.140689
 
-julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected 
+julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 5x5 Array{Float64,2}:
  0.585111  3.48083  1.7706    0.994057  1.03257
  3.48083   1.06079  5.79299   3.25245   3.37871
