@@ -149,7 +149,7 @@ The easiest way to add support for a new function is actually to define a deriva
 2. Open a PR to Calculus.jl that adds the relevant differentiation rule(s) and tests. In the PR's description, be sure to mention the relevant ForwardDiff.jl issue such that GitHub links the two.
 3. Once the PR to Calculus.jl is accepted, we can check to make sure that the function works appropriately in ForwardDiff.jl. If it does, then you're done, and the issue in ForwardDiff can be considered resolved!
 
-.. _`symbolic differentiation code`:
+.. _`symbolic differentiation code`: https://github.com/johnmyleswhite/Calculus.jl/blob/master/src/differentiate.jl#L115
 
 Manually Adding Functions to ForwardDiff.jl
 +++++++++++++++++++++++++++++++++++++++++++
@@ -158,4 +158,4 @@ The process for manually adding functions to ForwardDiff.jl without going throug
 
 ForwardDiff.jl's `existing test suite`_ is full of examples demonstrating how to write tests for the package. You'll have to add tests for all subtypes of ``ForwardDiffNumber``. These tests should go under the corresponding files' "Special Cases" section.
 
-.. _`existing test suite`:
+.. _`existing test suite`: https://github.com/JuliaDiff/ForwardDiff.jl/tree/master/test
