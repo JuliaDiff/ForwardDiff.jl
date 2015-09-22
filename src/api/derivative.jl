@@ -10,7 +10,7 @@
     elseif A <: AllResults
         return_stmt = :(derivative!(output, result), result)
     else
-        error("invalid argument $A passed to FowardDiff.hessian")
+        error("invalid argument $A passed to FowardDiff.derivative")
     end
 
     return quote
@@ -26,7 +26,7 @@ end
     elseif A <: AllResults
         return_stmt = :(derivative(result), result)
     else
-        error("invalid argument $A passed to FowardDiff.hessian")
+        error("invalid argument $A passed to FowardDiff.derivative")
     end
 
     return quote
