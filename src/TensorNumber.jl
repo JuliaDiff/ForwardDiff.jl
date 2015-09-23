@@ -200,9 +200,9 @@ function /{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
                 t2_bi, t2_bj, t2_bk = grad(t2,i), grad(t2,j), grad(t2,k)
                 t1_cqij, t1_cqik, t1_cqjk = hess(t1,qij), hess(t1,qik), hess(t1,qjk)
                 t2_cqij, t2_cqik, t2_cqjk = hess(t2,qij), hess(t2,qik), hess(t2,qjk)
-                loop_coeff1 = (tens(t2,p)*a1 + t2_cqjk*t1_bi + t2_cqik*t1_bj + t2_cqij*t1_bk 
+                loop_coeff1 = (tens(t2,p)*a1 + t2_cqjk*t1_bi + t2_cqik*t1_bj + t2_cqij*t1_bk
                                + t2_bk*t1_cqij + t2_bj*t1_cqik + t2_bi*t1_cqjk)
-                loop_coeff2 = (t2_bk*t2_cqij*a1 + t2_bj*t2_cqik*a1 + t2_bi*t2_cqjk*a1 
+                loop_coeff2 = (t2_bk*t2_cqij*a1 + t2_bj*t2_cqik*a1 + t2_bi*t2_cqjk*a1
                                + t2_bj*t2_bk*t1_bi + t2_bi*t2_bk*t1_bj + t2_bi*t2_bj*t1_bk)
                 loop_coeff3 = (t2_bi*t2_bj*t2_bk*a1)
                 tensvec[p] = coeff0*tens(t1,p) + coeff1*loop_coeff1 + coeff2*loop_coeff2 + coeff3*loop_coeff3
@@ -223,24 +223,26 @@ for T in (:Rational, :Integer, :Real)
         function ^(t::TensorNumber, x::$(T))
             a = value(t)
             x_min_one = x - 1
-            
+            x_min_two = x - 2
+            x_x_min_one = x * x_min_one
+
             exp_a = a^x
-            deriv1 = x * exp_a/a
-            deriv2 = x_min_one * deriv1/a
-            deriv3 = (x_min_one - 1) * deriv2/a
-            
+            deriv1 = x * a^x_min_one
+            deriv2 = x_x_min_one * a^x_min_two
+            deriv3 = x_x_min_one * x_min_two * a^(x - 3)
+
             return tensnum_from_deriv(t, exp_a, deriv1, deriv2, deriv3)
         end
 
         function ^(x::$(T), t::TensorNumber)
             log_x = log(x)
-            
-            exp_a = x^value(t)
-            deriv1 = exp_a * log_x
+
+            exp_x = x^value(t)
+            deriv1 = exp_x * log_x
             deriv2 = deriv1 * log_x
             deriv3 = deriv2 * log_x
 
-            return tensnum_from_deriv(t, exp_a, deriv1, deriv2, deriv3)
+            return tensnum_from_deriv(t, exp_x, deriv1, deriv2, deriv3)
         end
     end
 end
@@ -265,7 +267,7 @@ function ^{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
         for j in i:N
             for k in i:j
                 qij, qik, qjk = hess_inds(i,j), hess_inds(i,k), hess_inds(j,k)
-                
+
                 t1_bi, t1_bj, t1_bk = grad(t1,i), grad(t1,j), grad(t1,k)
                 t2_bi, t2_bj, t2_bk = grad(t2,i), grad(t2,j), grad(t2,k)
                 t1_cqij, t1_cqik, t1_cqjk = hess(t1,qij), hess(t1,qik), hess(t1,qjk)
@@ -277,7 +279,7 @@ function ^{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
                 d_4 = t1_cqij*f_1 + t1_bi*t1_bj*f_2
                 d_5 = t1_cqik*f_1 + t1_bi*t1_bk*f_2
                 d_6 = t1_cqjk*f_1 + t1_bj*t1_bk*f_2
-                d_7 = (tens(t1,p)*f_1 + (t1_bk*t1_cqij + t1_bj*t1_cqik 
+                d_7 = (tens(t1,p)*f_1 + (t1_bk*t1_cqij + t1_bj*t1_cqik
                        + t1_bi*t1_cqjk)*f_2 + t1_bi*t1_bj*t1_bk*f_3)
 
                 e_1 = t2_bi*f_0 + a2*d_1
@@ -286,7 +288,7 @@ function ^{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
                 e_4 = t2_cqij*f_0 + t2_bj*d_1 + t2_bi*d_2 + a2*d_4
                 e_5 = t2_cqik*f_0 + t2_bk*d_1 + t2_bi*d_3 + a2*d_5
                 e_6 = t2_cqjk*f_0 + t2_bk*d_2 + t2_bj*d_3 + a2*d_6
-                e_7 = (tens(t2,p)*f_0 + t2_cqjk*d_1 + t2_cqik*d_2 + t2_cqij*d_3 
+                e_7 = (tens(t2,p)*f_0 + t2_cqjk*d_1 + t2_cqik*d_2 + t2_cqij*d_3
                        + t2_bk*d_4 + t2_bj*d_5 + t2_bi*d_6 + a2*d_7)
 
                 tensvec[p] = deriv*(e_7 + e_3*e_4 + e_2*e_5 + e_1*e_6 + e_1*e_2*e_3)
@@ -300,8 +302,8 @@ end
 
 # Unary functions on TensorNumbers #
 #----------------------------------#
-# the third derivatives of functions in unsupported_unary_tens_funcs 
-# involve differentiating elementary functions that are unsupported 
+# the third derivatives of functions in unsupported_unary_tens_funcs
+# involve differentiating elementary functions that are unsupported
 # by Calculus.jl
 const unsupported_unary_tens_funcs = [:digamma]
 const auto_defined_unary_tens_funcs = filter!(sym -> !in(sym, unsupported_unary_tens_funcs), ForwardDiff.auto_defined_unary_hess_funcs)

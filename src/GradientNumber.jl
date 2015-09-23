@@ -127,9 +127,9 @@ end
 for f in (:^, :(NaNMath.pow))
     @eval begin
         @inline function ($f){N}(g1::GradientNumber{N}, g2::GradientNumber{N})
-            a1, a2 = value(g1), value(g2)    
+            a1, a2 = value(g1), value(g2)
             exp_a = ($f)(a1, a2)
-            powval = a2 * exp_a/a1
+            powval = a2 * ($f)(a1, a2 - 1)
             logval = exp_a * log(a1)
             new_bs = _mul_partials(partials(g1), partials(g2), powval, logval)
             return promote_typeof(g1, g2, exp_a)(exp_a, new_bs)
@@ -144,7 +144,7 @@ for f in (:^, :(NaNMath.pow))
             @inline function ($f)(g::GradientNumber, x::$R)
                 a = value(g)
                 exp_a = ($f)(a, x)
-                deriv = x*(exp_a/a)
+                deriv = x*($f)(a, x - 1)
                 return gradnum_from_deriv(g, exp_a, deriv)
             end
 

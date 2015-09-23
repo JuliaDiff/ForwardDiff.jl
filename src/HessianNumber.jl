@@ -1,5 +1,5 @@
 immutable HessianNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
-    gradnum::GradientNumber{N,T,C} 
+    gradnum::GradientNumber{N,T,C}
     hess::Vector{T}
     function HessianNumber(gradnum, hess)
         @assert length(hess) == halfhesslen(N)
@@ -141,7 +141,7 @@ function *{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
             q += 1
         end
     end
-    
+
     return HessianNumber(mul_g, hessvec)
 end
 
@@ -192,18 +192,19 @@ for T in (:Rational, :Integer, :Real)
     @eval begin
         function ^(h::HessianNumber, x::$(T))
             a = value(h)
+            x_min_one = x - 1
             exp_a = a^x
-            deriv1 = x * exp_a/a
-            deriv2 = (x - 1) * deriv1/a
+            deriv1 = x * a^x_min_one
+            deriv2 = x * x_min_one * a^(x - 2)
             return hessnum_from_deriv(h, exp_a, deriv1, deriv2)
         end
 
         function ^(x::$(T), h::HessianNumber)
             log_x = log(x)
-            exp_a = x^value(h)
-            deriv1 = exp_a * log_x
+            exp_x = x^value(h)
+            deriv1 = exp_x * log_x
             deriv2 = deriv1 * log_x
-            return hessnum_from_deriv(h, exp_a, deriv1, deriv2)
+            return hessnum_from_deriv(h, exp_x, deriv1, deriv2)
         end
     end
 end
@@ -213,7 +214,7 @@ function ^{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     hessvec = Array(eltype(exp_g), halfhesslen(N))
 
     a1, a2 = value(h1), value(h2)
-    a1_exp_a2 = value(exp_g)/(a1 * a1)
+    a1_exp_a2 = a1^(a2 - 2)
     a2_sq = a2 * a2
     log_a1, log_a2  = log(a1), log(a2)
     a1_x_loga1 = a1 * log_a1
@@ -224,9 +225,9 @@ function ^{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
             h1_bi, h1_bj = grad(h1, i), grad(h1, j)
             h2_bi, h2_bj = grad(h2, i), grad(h2, j)
             h1_q, h2_q = hess(h1, q), hess(h2, q)
-            term1 = (h1_bj*(a1_x_loga1*h2_bi - h1_bi) 
+            term1 = (h1_bj*(a1_x_loga1*h2_bi - h1_bi)
                      + a1*(log_a1*h1_bi*h2_bj + h1_q))
-            term2 = (h1_bj*h2_bi 
+            term2 = (h1_bj*h2_bi
                      + a1_x_loga1*h2_q
                      + h2_bj*(h1_bi + a1_x_loga1_x_loga1*h2_bi))
             term3 = a2_sq*h1_bi*h1_bj + a2*term1 + a1*term2
@@ -240,9 +241,9 @@ end
 
 # Unary functions on HessianNumbers #
 #-----------------------------------#
-# the second derivatives of functions in 
-# unsupported_unary_hess_funcs involve 
-# differentiating elementary functions 
+# the second derivatives of functions in
+# unsupported_unary_hess_funcs involve
+# differentiating elementary functions
 # that are unsupported by Calculus.jl
 const unsupported_unary_hess_funcs = [:asec, :acsc, :asecd, :acscd, :acsch, :trigamma]
 const auto_defined_unary_hess_funcs = filter!(sym -> !in(sym, unsupported_unary_hess_funcs), auto_defined_unary_funcs)
