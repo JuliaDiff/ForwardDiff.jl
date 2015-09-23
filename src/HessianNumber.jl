@@ -44,7 +44,7 @@ end
 isequal{N}(a::HessianNumber{N}, b::HessianNumber{N}) = isequal(gradnum(a), gradnum(b)) && isequal(hess(a),hess(b))
 
 hash(h::HessianNumber) = isconstant(h) ? hash(value(h)) : hash(gradnum(h), hash(hess(h)))
-hash(h::HessianNumber, hsh::Uint64) = hash(hash(h), hsh)
+hash(h::HessianNumber, hsh::UInt64) = hash(hash(h), hsh)
 
 function read{N,T,C}(io::IO, ::Type{HessianNumber{N,T,C}})
     gradnum = read(io, GradientNumber{N,T,C})

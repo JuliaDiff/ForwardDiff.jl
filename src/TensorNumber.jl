@@ -45,7 +45,7 @@ end
 isequal{N}(a::TensorNumber{N}, b::TensorNumber{N}) = isequal(hessnum(a), hessnum(b)) && isequal(tens(a), tens(b))
 
 hash(t::TensorNumber) = isconstant(t) ? hash(value(t)) : hash(hessnum(t), hash(tens(t)))
-hash(t::TensorNumber, hsh::Uint64) = hash(hash(t), hsh)
+hash(t::TensorNumber, hsh::UInt64) = hash(hash(t), hsh)
 
 function read{N,T,C}(io::IO, ::Type{TensorNumber{N,T,C}})
     hessnum = read(io, HessianNumber{N,T,C})

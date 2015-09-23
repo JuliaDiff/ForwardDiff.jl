@@ -35,7 +35,7 @@ isconstant(g::GradientNumber) = iszero(partials(g))
 isequal(a::GradientNumber, b::GradientNumber) = isequal(value(a), value(b)) && isequal(partials(a), partials(b))
 
 hash(g::GradientNumber) = isconstant(g) ? hash(value(g)) : hash(value(g), hash(partials(g)))
-hash(g::GradientNumber, hsh::Uint64) = hash(hash(g), hsh)
+hash(g::GradientNumber, hsh::UInt64) = hash(hash(g), hsh)
 
 function read{N,T,C}(io::IO, ::Type{GradientNumber{N,T,C}})
     value = read(io, T)

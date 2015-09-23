@@ -46,7 +46,7 @@ end
 isequal(a::Partials, b::Partials) = isequal(data(a), data(b))
 
 hash(partials::Partials) = hash(data(partials))
-hash(partials::Partials, hsh::Uint64) = hash(hash(partials), hsh)
+hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 
 @inline copy(partials::Partials) = partials
 
@@ -160,7 +160,7 @@ end
     end
 end
 
-@generated function rand_tuple{N,T}(::Type{NTuple{N,T}}) 
+@generated function rand_tuple{N,T}(::Type{NTuple{N,T}})
     return tupexpr(i -> :(rand($T)), N)
 end
 
