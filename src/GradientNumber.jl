@@ -74,20 +74,20 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 # Math with GradientNumber #
 ############################
 @inline function gradnum_from_deriv(g::GradientNumber, new_a, deriv)
-    G = promote_typeof(g, new_a, deriv)
+    G = promote_eltypeof(g, new_a, deriv)
     return G(new_a, deriv*partials(g))
 end
 
 # Addition/Subtraction #
 #----------------------#
 @inline +{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)+value(g2), partials(g1)+partials(g2))
-@inline +(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)+x, partials(g))
+@inline +(g::GradientNumber, x::Real) = promote_eltypeof(g, x)(value(g)+x, partials(g))
 @inline +(x::Real, g::GradientNumber) = g+x
 
 @inline -(g::GradientNumber) = typeof(g)(-value(g), -partials(g))
 @inline -{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)-value(g2), partials(g1)-partials(g2))
-@inline -(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)-x, partials(g))
-@inline -(x::Real, g::GradientNumber) = promote_typeof(g, x)(x-value(g), -partials(g))
+@inline -(g::GradientNumber, x::Real) = promote_eltypeof(g, x)(value(g)-x, partials(g))
+@inline -(x::Real, g::GradientNumber) = promote_eltypeof(g, x)(x-value(g), -partials(g))
 
 # Multiplication #
 #----------------#
@@ -99,7 +99,7 @@ end
     return promote_typeof(g1, g2)(a1*a2, _mul_partials(partials(g1), partials(g2), a2, a1))
 end
 
-@inline *(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)*x, partials(g)*x)
+@inline *(g::GradientNumber, x::Real) = promote_eltypeof(g, x)(value(g)*x, partials(g)*x)
 @inline *(x::Real, g::GradientNumber) = g*x
 
 # Division #
@@ -107,7 +107,7 @@ end
 @inline function /{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
     a1, a2 = value(g1), value(g2)
     div_a = a1/a2
-    return promote_typeof(g1, g2, div_a)(div_a, _div_partials(partials(g1), partials(g2), a1, a2))
+    return promote_eltypesof(g1, g2, div_a)(div_a, _div_partials(partials(g1), partials(g2), a1, a2))
 end
 
 @inline function /(x::Real, g::GradientNumber)
@@ -119,7 +119,7 @@ end
 
 @inline function /(g::GradientNumber, x::Real)
     div_a = value(g)/x
-    return promote_typeof(g, div_a)(div_a, partials(g)/x)
+    return promote_eltypeof(g, div_a)(div_a, partials(g)/x)
 end
 
 # Exponentiation #
@@ -132,7 +132,7 @@ for f in (:^, :(NaNMath.pow))
             powval = a2 * ($f)(a1, a2 - 1)
             logval = exp_a * log(a1)
             new_bs = _mul_partials(partials(g1), partials(g2), powval, logval)
-            return promote_typeof(g1, g2, exp_a)(exp_a, new_bs)
+            return promote_eltypesof(g1, g2, exp_a)(exp_a, new_bs)
         end
 
         @inline ($f)(::Base.Irrational{:e}, g::GradientNumber) = exp(g)
