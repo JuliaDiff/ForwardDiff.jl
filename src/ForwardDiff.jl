@@ -46,16 +46,16 @@ module ForwardDiff
         end
     end
 
-    function promote_eltype{F<:ForwardDiffNumber}(::Type{F}, types::DataType...)
+    @inline function promote_eltype{F<:ForwardDiffNumber}(::Type{F}, types::DataType...)
         return switch_eltype(F, promote_type(eltype(F), types...))
     end
 
-    promote_typeof(n1::ForwardDiffNumber, n2::ForwardDiffNumber) = promote_type(typeof(n1), typeof(n2))
+    @inline promote_typeof(n1::ForwardDiffNumber, n2::ForwardDiffNumber) = promote_type(typeof(n1), typeof(n2))
 
-    promote_eltypesof(n1::ForwardDiffNumber, n2::ForwardDiffNumber, a) = promote_eltype(promote_typeof(n1, n2), typeof(a))
+    @inline promote_eltypesof(n1::ForwardDiffNumber, n2::ForwardDiffNumber, a) = promote_eltype(promote_typeof(n1, n2), typeof(a))
 
-    promote_eltypeof(n::ForwardDiffNumber, a) = promote_eltype(typeof(n), typeof(a))
-    promote_eltypeof(n::ForwardDiffNumber, a, b) = promote_eltype(typeof(n), typeof(a), typeof(b))
+    @inline promote_eltypeof(n::ForwardDiffNumber, a) = promote_eltype(typeof(n), typeof(a))
+    @inline promote_eltypeof(n::ForwardDiffNumber, a, b) = promote_eltype(typeof(n), typeof(a), typeof(b))
 
     ###########
     # exports #
