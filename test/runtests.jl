@@ -29,3 +29,8 @@ println("Testing deprecation wrapper (deprecation warnings are expected)...")
 tic()
 include("test_deprecated.jl")
 println("Done (took $(toq()) seconds).")
+
+println("Testing behavioral examples...")
+tic()
+include("test_behaviors.jl")
+println("Done (took $(toq()) seconds).")
