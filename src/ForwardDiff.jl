@@ -33,16 +33,28 @@ module ForwardDiff
     include("TensorNumber.jl")
     include("api/api.jl")
 
-    ###########################
-    # Misc. Utility Functions #
-    ###########################
+    #######################
+    # Promotion Utilities #
+    #######################
     @inline switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
     @inline switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
 
-    for F in (:GradientNumber, :HessianNumber, :TensorNumber)
+    for F in (:TensorNumber, :GradientNumber, :HessianNumber)
         @eval begin
             @inline switch_eltype{N,T,S}(::Type{$F{N,T,NTuple{N,T}}}, ::Type{S}) = $F{N,S,NTuple{N,S}}
             @inline switch_eltype{N,T,S}(::Type{$F{N,T,Vector{T}}}, ::Type{S}) = $F{N,S,Vector{S}}
+
+            function promote_rule{N,T1,C1,T2,C2}(::Type{($F){N,T1,C1}},
+                                                 ::Type{($F){N,T2,C2}})
+                P = promote_type(Partials{T1,C1}, Partials{T2,C2})
+                T, C = eltype(P), containtype(P)
+                return ($F){N,T,C}
+            end
+
+            function promote_rule{N,T,C,S<:Real}(::Type{($F){N,T,C}}, ::Type{S})
+                R = promote_type(T, S)
+                return ($F){N,R,switch_eltype(C, R)}
+            end
         end
     end
 

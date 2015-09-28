@@ -1,13 +1,7 @@
 immutable GradientNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
     value::T
     partials::Partials{T,C}
-    GradientNumber(value, partials::Partials) = new(value, partials)
-    GradientNumber(value, partials::Tuple) = new(value, Partials(partials))
-    GradientNumber(value, partials::Vector) = new(value, Partials(partials))
 end
-
-typealias GradNumTup{N,T} GradientNumber{N,T,NTuple{N,T}}
-typealias GradNumVec{N,T} GradientNumber{N,T,Vector{T}}
 
 GradientNumber{N,T}(value::T, grad::NTuple{N,T}) = GradientNumber{N,T,NTuple{N,T}}(value, Partials(grad))
 GradientNumber{T}(value::T, grad::T...) = GradientNumber(value, grad)
@@ -24,6 +18,7 @@ GradientNumber{T}(value::T, grad::T...) = GradientNumber(value, grad)
 
 @inline eltype{N,T,C}(::Type{GradientNumber{N,T,C}}) = T
 @inline npartials{N,T,C}(::Type{GradientNumber{N,T,C}}) = N
+@inline containtype{N,T,C}(::Type{GradientNumber{N,T,C}}) = C
 
 #####################
 # Generic Functions #
@@ -48,25 +43,18 @@ function write(io::IO, g::GradientNumber)
     write(io, partials(g))
 end
 
-########################
-# Conversion/Promotion #
-########################
+##############
+# Conversion #
+##############
 @inline zero{N,T,C}(G::Type{GradientNumber{N,T,C}}) = G(zero(T), zero_partials(C, N))
 @inline one{N,T,C}(G::Type{GradientNumber{N,T,C}}) = G(one(T), zero_partials(C, N))
 @inline rand{N,T,C}(G::Type{GradientNumber{N,T,C}}) = G(rand(T), rand_partials(C, N))
 
-for G in (:GradNumVec, :GradNumTup)
-    @eval begin
-        convert{N,A,B}(::Type{($G){N,A}}, g::($G){N,B}) = ($G){N,A}(value(g), partials(g))
-        convert{N,T}(::Type{($G){N,T}}, g::($G){N,T}) = g
-
-        promote_rule{N,A,B}(::Type{($G){N,A}}, ::Type{($G){N,B}}) = ($G){N,promote_type(A,B)}
-        promote_rule{N,A,B<:Number}(::Type{($G){N,A}}, ::Type{B}) = ($G){N,promote_type(A,B)}
-    end
-end
-
-convert{T<:Real}(::Type{T}, g::GradientNumber) = isconstant(g) ? convert(T, value(g)) : throw(InexactError())
+convert{N,T,C}(::Type{GradientNumber{N,T,C}}, g::GradientNumber) = GradientNumber{N,T,C}(value(g), partials(g))
+convert{N,T,C}(::Type{GradientNumber{N,T,C}}, g::GradientNumber{N,T,C}) = g
 convert(::Type{GradientNumber}, g::GradientNumber) = g
+
+convert{T<:Real}(::Type{T}, g::GradientNumber) = isconstant(g) ? T(value(g)) : throw(InexactError())
 convert{N,T,C}(::Type{GradientNumber{N,T,C}}, x::Real) = GradientNumber{N,T,C}(x, zero_partials(C, N))
 convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 
