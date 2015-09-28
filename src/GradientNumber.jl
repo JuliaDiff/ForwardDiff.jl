@@ -80,44 +80,44 @@ end
 
 # Addition/Subtraction #
 #----------------------#
-@inline +{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)+value(g2), partials(g1)+partials(g2))
-@inline +(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)+x, partials(g))
-@inline +(x::Real, g::GradientNumber) = g+x
++{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)+value(g2), partials(g1)+partials(g2))
++(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)+x, partials(g))
++(x::Real, g::GradientNumber) = g+x
 
-@inline -(g::GradientNumber) = typeof(g)(-value(g), -partials(g))
-@inline -{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)-value(g2), partials(g1)-partials(g2))
-@inline -(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)-x, partials(g))
-@inline -(x::Real, g::GradientNumber) = promote_typeof(g, x)(x-value(g), -partials(g))
+-(g::GradientNumber) = typeof(g)(-value(g), -partials(g))
+-{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)-value(g2), partials(g1)-partials(g2))
+-(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)-x, partials(g))
+-(x::Real, g::GradientNumber) = promote_typeof(g, x)(x-value(g), -partials(g))
 
 # Multiplication #
 #----------------#
-@inline *(g::GradientNumber, x::Bool) = x ? g : (signbit(value(g))==0 ? zero(g) : -zero(g))
-@inline *(x::Bool, g::GradientNumber) = g*x
+*(g::GradientNumber, x::Bool) = x ? g : (signbit(value(g))==0 ? zero(g) : -zero(g))
+*(x::Bool, g::GradientNumber) = g*x
 
-@inline function *{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
+function *{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
     a1, a2 = value(g1), value(g2)
     return promote_typeof(g1, g2)(a1*a2, _mul_partials(partials(g1), partials(g2), a2, a1))
 end
 
-@inline *(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)*x, partials(g)*x)
-@inline *(x::Real, g::GradientNumber) = g*x
+*(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)*x, partials(g)*x)
+*(x::Real, g::GradientNumber) = g*x
 
 # Division #
 #----------#
-@inline function /{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
+function /{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
     a1, a2 = value(g1), value(g2)
     div_a = a1/a2
     return promote_typeof(g1, g2, div_a)(div_a, _div_partials(partials(g1), partials(g2), a1, a2))
 end
 
-@inline function /(x::Real, g::GradientNumber)
+function /(x::Real, g::GradientNumber)
     a = value(g)
     div_a = x/a
     deriv = -(div_a/a)
     return gradnum_from_deriv(g, div_a, deriv)
 end
 
-@inline function /(g::GradientNumber, x::Real)
+function /(g::GradientNumber, x::Real)
     div_a = value(g)/x
     return promote_typeof(g, div_a)(div_a, partials(g)/x)
 end
