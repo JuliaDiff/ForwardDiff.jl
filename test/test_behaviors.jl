@@ -26,3 +26,13 @@ f2 = x -> df(x[1]) * f(x[2])
 testf2 = x -> testdf(x[1]) * f(x[2])
 
 @test_approx_eq ForwardDiff.gradient(f2, x) ForwardDiff.gradient(testf2, x)
+
+# Mixing chunk mode and vector mode #
+#-----------------------------------#
+x = rand(2*ForwardDiff.tuple_usage_threshold) # big enough to trigger vector mode
+
+f = x -> sum(sin, x) + prod(tan, x) * sum(sqrt, x)
+g = ForwardDiff.gradient(f) # gradient in vector mode
+j = x -> ForwardDiff.jacobian(g, x, chunk_size=2)/2 # jacobian in chunk_mode
+
+@test_approx_eq ForwardDiff.hessian(f, x) 2*j(x)
