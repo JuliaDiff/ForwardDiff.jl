@@ -1,3 +1,5 @@
+isdefined(Base, :__precompile__) && __precompile__()
+
 module ForwardDiff
 
     if VERSION < v"0.4-"
