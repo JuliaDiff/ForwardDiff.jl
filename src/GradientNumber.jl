@@ -1,13 +1,7 @@
 immutable GradientNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
     value::T
     partials::Partials{T,C}
-    GradientNumber(value, partials::Partials) = new(value, partials)
-    GradientNumber(value, partials::Tuple) = new(value, Partials(partials))
-    GradientNumber(value, partials::Vector) = new(value, Partials(partials))
 end
-
-typealias GradNumTup{N,T} GradientNumber{N,T,NTuple{N,T}}
-typealias GradNumVec{N,T} GradientNumber{N,T,Vector{T}}
 
 GradientNumber{N,T}(value::T, grad::NTuple{N,T}) = GradientNumber{N,T,NTuple{N,T}}(value, Partials(grad))
 GradientNumber{T}(value::T, grad::T...) = GradientNumber(value, grad)
@@ -24,6 +18,7 @@ GradientNumber{T}(value::T, grad::T...) = GradientNumber(value, grad)
 
 @inline eltype{N,T,C}(::Type{GradientNumber{N,T,C}}) = T
 @inline npartials{N,T,C}(::Type{GradientNumber{N,T,C}}) = N
+@inline containtype{N,T,C}(::Type{GradientNumber{N,T,C}}) = C
 
 #####################
 # Generic Functions #
@@ -48,25 +43,18 @@ function write(io::IO, g::GradientNumber)
     write(io, partials(g))
 end
 
-########################
-# Conversion/Promotion #
-########################
+##############
+# Conversion #
+##############
 @inline zero{N,T,C}(G::Type{GradientNumber{N,T,C}}) = G(zero(T), zero_partials(C, N))
 @inline one{N,T,C}(G::Type{GradientNumber{N,T,C}}) = G(one(T), zero_partials(C, N))
 @inline rand{N,T,C}(G::Type{GradientNumber{N,T,C}}) = G(rand(T), rand_partials(C, N))
 
-for G in (:GradNumVec, :GradNumTup)
-    @eval begin
-        convert{N,A,B}(::Type{($G){N,A}}, g::($G){N,B}) = ($G){N,A}(value(g), partials(g))
-        convert{N,T}(::Type{($G){N,T}}, g::($G){N,T}) = g
-
-        promote_rule{N,A,B}(::Type{($G){N,A}}, ::Type{($G){N,B}}) = ($G){N,promote_type(A,B)}
-        promote_rule{N,A,B<:Number}(::Type{($G){N,A}}, ::Type{B}) = ($G){N,promote_type(A,B)}
-    end
-end
-
-convert{T<:Real}(::Type{T}, g::GradientNumber) = isconstant(g) ? convert(T, value(g)) : throw(InexactError())
+convert{N,T,C}(::Type{GradientNumber{N,T,C}}, g::GradientNumber) = GradientNumber{N,T,C}(value(g), partials(g))
+convert{N,T,C}(::Type{GradientNumber{N,T,C}}, g::GradientNumber{N,T,C}) = g
 convert(::Type{GradientNumber}, g::GradientNumber) = g
+
+convert{T<:Real}(::Type{T}, g::GradientNumber) = isconstant(g) ? T(value(g)) : throw(InexactError())
 convert{N,T,C}(::Type{GradientNumber{N,T,C}}, x::Real) = GradientNumber{N,T,C}(x, zero_partials(C, N))
 convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 
@@ -74,20 +62,20 @@ convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
 # Math with GradientNumber #
 ############################
 @inline function gradnum_from_deriv(g::GradientNumber, new_a, deriv)
-    G = promote_typeof(g, new_a, deriv)
+    G = promote_eltypeof(g, new_a, deriv)
     return G(new_a, deriv*partials(g))
 end
 
 # Addition/Subtraction #
 #----------------------#
 @inline +{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)+value(g2), partials(g1)+partials(g2))
-@inline +(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)+x, partials(g))
+@inline +(g::GradientNumber, x::Real) = promote_eltypeof(g, x)(value(g)+x, partials(g))
 @inline +(x::Real, g::GradientNumber) = g+x
 
 @inline -(g::GradientNumber) = typeof(g)(-value(g), -partials(g))
 @inline -{N}(g1::GradientNumber{N}, g2::GradientNumber{N}) = promote_typeof(g1, g2)(value(g1)-value(g2), partials(g1)-partials(g2))
-@inline -(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)-x, partials(g))
-@inline -(x::Real, g::GradientNumber) = promote_typeof(g, x)(x-value(g), -partials(g))
+@inline -(g::GradientNumber, x::Real) = promote_eltypeof(g, x)(value(g)-x, partials(g))
+@inline -(x::Real, g::GradientNumber) = promote_eltypeof(g, x)(x-value(g), -partials(g))
 
 # Multiplication #
 #----------------#
@@ -99,7 +87,7 @@ end
     return promote_typeof(g1, g2)(a1*a2, _mul_partials(partials(g1), partials(g2), a2, a1))
 end
 
-@inline *(g::GradientNumber, x::Real) = promote_typeof(g, x)(value(g)*x, partials(g)*x)
+@inline *(g::GradientNumber, x::Real) = promote_eltypeof(g, x)(value(g)*x, partials(g)*x)
 @inline *(x::Real, g::GradientNumber) = g*x
 
 # Division #
@@ -107,7 +95,7 @@ end
 @inline function /{N}(g1::GradientNumber{N}, g2::GradientNumber{N})
     a1, a2 = value(g1), value(g2)
     div_a = a1/a2
-    return promote_typeof(g1, g2, div_a)(div_a, _div_partials(partials(g1), partials(g2), a1, a2))
+    return promote_eltypesof(g1, g2, div_a)(div_a, _div_partials(partials(g1), partials(g2), a1, a2))
 end
 
 @inline function /(x::Real, g::GradientNumber)
@@ -119,7 +107,7 @@ end
 
 @inline function /(g::GradientNumber, x::Real)
     div_a = value(g)/x
-    return promote_typeof(g, div_a)(div_a, partials(g)/x)
+    return promote_eltypeof(g, div_a)(div_a, partials(g)/x)
 end
 
 # Exponentiation #
@@ -132,7 +120,7 @@ for f in (:^, :(NaNMath.pow))
             powval = a2 * ($f)(a1, a2 - 1)
             logval = exp_a * log(a1)
             new_bs = _mul_partials(partials(g1), partials(g2), powval, logval)
-            return promote_typeof(g1, g2, exp_a)(exp_a, new_bs)
+            return promote_eltypesof(g1, g2, exp_a)(exp_a, new_bs)
         end
 
         @inline ($f)(::Base.Irrational{:e}, g::GradientNumber) = exp(g)

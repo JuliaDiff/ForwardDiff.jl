@@ -31,6 +31,7 @@ rand{N,T,C}(::Type{TensorNumber{N,T,C}}) = TensorNumber(rand(HessianNumber{N,T,C
 
 @inline npartials{N,T,C}(::Type{TensorNumber{N,T,C}}) = N
 @inline eltype{N,T,C}(::Type{TensorNumber{N,T,C}}) = T
+@inline containtype{N,T,C}(::Type{TensorNumber{N,T,C}}) = C
 
 #####################
 # Generic Functions #
@@ -63,32 +64,12 @@ end
 ########################
 # Conversion/Promotion #
 ########################
-convert{N,T,C}(::Type{TensorNumber{N,T,C}}, t::TensorNumber{N,T,C}) = t
 convert{N,T,C}(::Type{TensorNumber{N,T,C}}, x::Real) = TensorNumber(HessianNumber{N,T,C}(x))
+convert{T<:Real}(::Type{T}, t::TensorNumber) = isconstant(t) ? T(value(t)) : throw(InexactError())
 
-function convert{N,T,C}(::Type{TensorNumber{N,T,C}}, t::TensorNumber{N})
-    return TensorNumber(convert(HessianNumber{N,T,C}, hessnum(t)), tens(t))
-end
-
-function convert{T<:Real}(::Type{T}, t::TensorNumber)
-    if isconstant(t)
-        return convert(T, value(t))
-    else
-        throw(InexactError)
-    end
-end
-
-promote_rule{N,T<:Number,C}(::Type{TensorNumber{N,T,C}}, ::Type{T}) = TensorNumber{N,T,C}
-
-function promote_rule{N,T,C,S<:Number}(::Type{TensorNumber{N,T,C}}, ::Type{S})
-    R = promote_type(T, S)
-    return TensorNumber{N,R,switch_eltype(C, R)}
-end
-
-function promote_rule{N,T1,C1,T2,C2}(::Type{TensorNumber{N,T1,C1}}, ::Type{TensorNumber{N,T2,C2}})
-    R = promote_type(T1, T2)
-    return TensorNumber{N,R,switch_eltype(C1, R)}
-end
+convert{N,T,C}(::Type{TensorNumber{N,T,C}}, t::TensorNumber{N}) = TensorNumber(HessianNumber{N,T,C}(hessnum(t)), tens(t))
+convert{N,T,C}(::Type{TensorNumber{N,T,C}}, t::TensorNumber{N,T,C}) = t
+convert(::Type{TensorNumber}, t::TensorNumber) = t
 
 #########################
 # Math on TensorNumbers #

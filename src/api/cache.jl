@@ -1,8 +1,11 @@
 ############################################
 # Methods for building work vectors/tuples #
 ############################################
-@generated function workvec_eltype{F,T,xlen,chunk_size}(::Type{F}, ::Type{T}, 
-                                                        ::Type{Val{xlen}}, 
+typealias GradNumVec{N,T} GradientNumber{N,T,Vector{T}}
+typealias GradNumTup{N,T} GradientNumber{N,T,NTuple{N,T}}
+
+@generated function workvec_eltype{F,T,xlen,chunk_size}(::Type{F}, ::Type{T},
+                                                        ::Type{Val{xlen}},
                                                         ::Type{Val{chunk_size}})
     if chunk_size == default_chunk_size
         C = xlen > tuple_usage_threshold ? Vector{T} : NTuple{xlen,T}
@@ -12,15 +15,14 @@
     end
 end
 
-@generated function build_workvec{F,T,xlen,chunk_size}(::Type{F}, ::Type{T}, 
-                                                       ::Type{Val{xlen}}, 
+@generated function build_workvec{F,T,xlen,chunk_size}(::Type{F}, ::Type{T},
+                                                       ::Type{Val{xlen}},
                                                        ::Type{Val{chunk_size}})
     G = workvec_eltype(F, T, Val{xlen}, Val{chunk_size})
     return :(Vector{$G}($xlen))
 end
 
-partials_type{N,T}(::Type{GradNumVec{N,T}}) = Partials{T,Vector{T}}
-partials_type{N,T}(::Type{GradNumTup{N,T}}) = Partials{T,NTuple{N,T}}
+partials_type{N,T,C}(::Type{GradientNumber{N,T,C}}) = Partials{T,C}
 partials_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = partials_type(GradientNumber{N,T,C})
 partials_type{N,T,C}(::Type{TensorNumber{N,T,C}}) = partials_type(GradientNumber{N,T,C})
 
@@ -45,8 +47,7 @@ end
 build_partials{N,T,C}(::Type{HessianNumber{N,T,C}}) = build_partials(GradientNumber{N,T,C})
 build_partials{N,T,C}(::Type{TensorNumber{N,T,C}}) = build_partials(GradientNumber{N,T,C})
 
-zeros_type{N,T}(::Type{GradNumVec{N,T}}) = Partials{T,Vector{T}}
-zeros_type{N,T}(::Type{GradNumTup{N,T}}) = Partials{T,NTuple{N,T}}
+zeros_type{N,T,C}(::Type{GradientNumber{N,T,C}}) = Partials{T,C}
 zeros_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = Vector{T}
 zeros_type{N,T,C}(::Type{TensorNumber{N,T,C}}) = Vector{T}
 
@@ -75,7 +76,7 @@ function ForwardDiffCache()
 end
 
 function make_dummy_cache()
-    workvec_cache(args...) = build_workvec(args...) 
+    workvec_cache(args...) = build_workvec(args...)
     partials_cache(args...) = build_partials(args...)
     zeros_cache(args...) = build_zeros(args...)
     return ForwardDiffCache(workvec_cache, partials_cache, zeros_cache)

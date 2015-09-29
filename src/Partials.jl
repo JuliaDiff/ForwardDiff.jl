@@ -17,6 +17,9 @@ Partials(data) = Partials{eltype(data),typeof(data)}(data)
 @inline eltype{T,C}(::Type{Partials{T,C}}) = T
 @inline eltype{T}(::Partials{T}) = T
 
+@inline containtype{T,C}(::Type{Partials{T,C}}) = C
+@inline containtype{T,C}(::Partials{T,C}) = C
+
 @inline getindex(partials::Partials, i) = data(partials)[i]
 
 @inline length(partials::Partials) = length(data(partials))
@@ -64,8 +67,24 @@ function write(io::IO, partials::Partials)
     end
 end
 
-convert{T,C}(::Type{Partials{T,C}}, partials::Partials) = Partials{T,C}(convert(C, data(partials)))
+########################
+# Conversion/Promotion #
+########################
+convert{N,A,B}(::Type{PartialsTup{N,A}}, data::NTuple{N,B}) = PartialsTup{N,A}(NTuple{N,A}(data))
+convert{N,A,B}(::Type{PartialsTup{N,A}}, data::Vector{B}) = PartialsTup{N,A}(NTuple{N,A}(data...))
+convert{N,A,B}(::Type{PartialsVec{A}}, data::NTuple{N,B}) = PartialsVec{A}(Vector{A}(collect(data)))
+convert{A,B}(::Type{PartialsVec{A}}, data::Vector{B}) = PartialsVec{A}(Vector{A}(data))
+convert{T}(::Type{PartialsVec{T}}, data::Vector{T}) = PartialsVec{T}(data)
+convert{N,T}(::Type{PartialsTup{N,T}}, data::NTuple{N,T}) = PartialsTup{N,T}(data)
+
+convert{T,C}(::Type{Partials{T,C}}, partials::Partials) = Partials{T,C}(data(partials))
 convert{T,C}(::Type{Partials{T,C}}, partials::Partials{T,C}) = partials
+convert(::Type{Partials}, partials::Partials) = partials
+
+promote_rule{A,B}(::Type{PartialsVec{A}}, ::Type{PartialsVec{B}}) = PartialsVec{promote_type(A, B)}
+promote_rule{N,A,B}(::Type{PartialsTup{N,A}}, ::Type{PartialsVec{B}}) = PartialsVec{promote_type(A, B)}
+promote_rule{N,A,B}(::Type{PartialsVec{A}}, ::Type{PartialsTup{N,B}}) = PartialsVec{promote_type(A, B)}
+promote_rule{N,A,B}(::Type{PartialsTup{N,A}}, ::Type{PartialsTup{N,B}}) = PartialsTup{N,promote_type(A, B)}
 
 ##################
 # Math Functions #

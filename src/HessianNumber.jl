@@ -30,6 +30,7 @@ rand{N,T,C}(::Type{HessianNumber{N,T,C}}) = HessianNumber(rand(GradientNumber{N,
 
 @inline npartials{N,T,C}(::Type{HessianNumber{N,T,C}}) = N
 @inline eltype{N,T,C}(::Type{HessianNumber{N,T,C}}) = T
+@inline containtype{N,T,C}(::Type{HessianNumber{N,T,C}}) = C
 
 #####################
 # Generic Functions #
@@ -59,35 +60,15 @@ function write(io::IO, h::HessianNumber)
     end
 end
 
-########################
-# Conversion/Promotion #
-########################
-convert{N,T,C}(::Type{HessianNumber{N,T,C}}, h::HessianNumber{N,T,C}) = h
+##############
+# Conversion #
+##############
 convert{N,T,C}(::Type{HessianNumber{N,T,C}}, x::Real) = HessianNumber(GradientNumber{N,T,C}(x))
+convert{T<:Real}(::Type{T}, h::HessianNumber) = isconstant(h) ? T(value(h)) : throw(InexactError())
 
-function convert{N,T,C}(::Type{HessianNumber{N,T,C}}, h::HessianNumber{N})
-    return HessianNumber(convert(GradientNumber{N,T,C}, gradnum(h)), hess(h))
-end
-
-function convert{T<:Real}(::Type{T}, h::HessianNumber)
-    if isconstant(h)
-        return convert(T, value(h))
-    else
-        throw(InexactError)
-    end
-end
-
-promote_rule{N,T<:Number,C}(::Type{HessianNumber{N,T,C}}, ::Type{T}) = HessianNumber{N,T,C}
-
-function promote_rule{N,T,C,S<:Number}(::Type{HessianNumber{N,T,C}}, ::Type{S})
-    R = promote_type(T, S)
-    return HessianNumber{N,R,switch_eltype(C, R)}
-end
-
-function promote_rule{N,T1,C1,T2,C2}(::Type{HessianNumber{N,T1,C1}}, ::Type{HessianNumber{N,T2,C2}})
-    R = promote_type(T1, T2)
-    return HessianNumber{N,R,switch_eltype(C1, R)}
-end
+convert{N,T,C}(::Type{HessianNumber{N,T,C}}, h::HessianNumber{N}) = HessianNumber(GradientNumber{N,T,C}(gradnum(h)), hess(h))
+convert{N,T,C}(::Type{HessianNumber{N,T,C}}, h::HessianNumber{N,T,C}) = h
+convert(::Type{HessianNumber}, h::HessianNumber) = h
 
 ####################################
 # Math Functions on HessianNumbers #
