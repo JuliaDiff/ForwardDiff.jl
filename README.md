@@ -56,4 +56,6 @@ julia> ForwardDiff.hessian(f, x) # H(f)(x) == J(∇f)(x), as expected
 
 ## News
 
+- 9/29/2015: [ForwardDiff.jl v0.1.1 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3580).
+
 - 9/3/2015: We're releasing ForwardDiff.jl v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
