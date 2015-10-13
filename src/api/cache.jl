@@ -4,6 +4,8 @@
 typealias GradNumVec{N,T} GradientNumber{N,T,Vector{T}}
 typealias GradNumTup{N,T} GradientNumber{N,T,NTuple{N,T}}
 
+build_workvec{F}(::Type{F}, xlen) = Vector{F}(xlen)
+
 @generated function workvec_eltype{F,T,xlen,chunk_size}(::Type{F}, ::Type{T},
                                                         ::Type{Val{xlen}},
                                                         ::Type{Val{chunk_size}})
@@ -13,13 +15,6 @@ typealias GradNumTup{N,T} GradientNumber{N,T,NTuple{N,T}}
     else
         return :($F{$chunk_size,$T,NTuple{$chunk_size,$T}})
     end
-end
-
-@generated function build_workvec{F,T,xlen,chunk_size}(::Type{F}, ::Type{T},
-                                                       ::Type{Val{xlen}},
-                                                       ::Type{Val{chunk_size}})
-    G = workvec_eltype(F, T, Val{xlen}, Val{chunk_size})
-    return :(Vector{$G}($xlen))
 end
 
 partials_type{N,T,C}(::Type{GradientNumber{N,T,C}}) = Partials{T,C}
@@ -69,16 +64,16 @@ function ForwardDiffCache()
     const workvec_dict = Dict()
     const partials_dict = Dict()
     const zeros_dict = Dict()
-    workvec_cache(args...) = cache_retrieve!(workvec_dict, build_workvec, args...)
-    partials_cache(args...) = cache_retrieve!(partials_dict, build_partials, args...)
-    zeros_cache(args...) = cache_retrieve!(zeros_dict, build_zeros, args...)
+    workvec_cache{F}(::Type{F}, xlen) = cache_retrieve!(workvec_dict, build_workvec, F, xlen)
+    partials_cache{F}(::Type{F}) = cache_retrieve!(partials_dict, build_partials, F)
+    zeros_cache{F}(::Type{F}) = cache_retrieve!(zeros_dict, build_zeros, F)
     return ForwardDiffCache(workvec_cache, partials_cache, zeros_cache)
 end
 
 function make_dummy_cache()
-    workvec_cache(args...) = build_workvec(args...)
-    partials_cache(args...) = build_partials(args...)
-    zeros_cache(args...) = build_zeros(args...)
+    workvec_cache{F}(::Type{F}, xlen) = build_workvec(F, xlen)
+    partials_cache{F}(::Type{F}) = build_partials(F)
+    zeros_cache{F}(::Type{F}) = build_zeros(F)
     return ForwardDiffCache(workvec_cache, partials_cache, zeros_cache)
 end
 
@@ -94,10 +89,16 @@ end
 
 # Retrieval methods #
 #-------------------#
-function get_workvec!{F,T,xlen,chunk_size}(cache::ForwardDiffCache,
-                                           ::Type{F}, ::Type{T},
-                                           X::Type{Val{xlen}}, C::Type{Val{chunk_size}})
-    return cache.workvec_cache(F, T, X, C)::Vector{workvec_eltype(F, T, X, C)}
+function get_workvec!{F1,T,xlen,chunk_size}(cache::ForwardDiffCache,
+                                           ::Type{F1}, ::Type{T},
+                                           X::Type{Val{xlen}},
+                                           C::Type{Val{chunk_size}})
+    F2 = workvec_eltype(F1, T, X, C)
+    return cache.workvec_cache(F2, xlen)::Vector{F2}
+end
+
+function get_workvec!{F}(cache::ForwardDiffCache, ::Type{F}, xlen::Int)
+    return cache.workvec_cache(F, xlen)::Vector{F}
 end
 
 function get_partials!{F}(cache::ForwardDiffCache, ::Type{F})
