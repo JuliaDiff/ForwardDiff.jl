@@ -43,21 +43,18 @@ function jacobian{A}(f, ::Type{A}=Void;
                      chunk_size::Int=default_chunk_size,
                      cache::ForwardDiffCache=ForwardDiffCache(),
                      output_length::Int=0)
-    # if output_length > 0, assume that f is of 
-    # the form f!(output, x), and generate the 
+    # if output_length > 0, assume that f is of
+    # the form f!(output, x), and generate the
     # appropriate closure
     if output_length > 0
-        newf = @eval begin
-            output_cache = ForwardDiffCache()
-            @inline function newf{N,T,C}(x::Vector{GradientNumber{N,T,C}})
-                output = get_workvec!(output_cache, 
-                                      GradientNumber, T,
-                                      Val{$output_length}, 
-                                      Val{N})
-                $f(output, x)
-                return output
-            end
-            return newf
+        output_cache = ForwardDiffCache()
+        function newf{N,T,C}(x::Vector{GradientNumber{N,T,C}})
+            output = get_workvec!(output_cache,
+                                  GradientNumber, T,
+                                  Val{output_length},
+                                  Val{N})
+            f(output, x)
+            return output
         end
     else
         newf = f
@@ -148,7 +145,7 @@ end
                     m = j+offset
                     @inbounds gradvec[m] = G(x[m], partials[j])
                 end
-                
+
                 chunk_result = f(gradvec)
 
                 for j in 1:N
