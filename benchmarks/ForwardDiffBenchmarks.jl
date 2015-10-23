@@ -17,9 +17,8 @@ immutable BenchmarkInfo
 end
 
 immutable APIBenchmarkResults
-    func::Vector{BenchmarkInfo}
-    grad::Matrix{BenchmarkInfo}
-    hess::Matrix{BenchmarkInfo}
+    func_results::Vector{BenchmarkInfo}
+    api_results::Dict{UTF8String,Matrix{BenchmarkInfo}}
 end
 
 # Steal DataFrames.jl's pretty-printing because I'm lazy
@@ -40,13 +39,13 @@ end
 
 function Base.show(io::IO, br::APIBenchmarkResults)
     println(io, "function times:")
-    frameprintln(io, br.func)
-    println(io)
-    println(io, "gradient times:")
-    frameprintln(io, br.grad)
-    println(io)
-    println(io, "hessian times:")
-    frameprintln(io, br.hess)
+    frameprintln(io, br.func_results)
+
+    for (apifunc, infomat) in br.api_results
+        println(io)
+        println(io, "$apifunc times:")
+        frameprintln(io, infomat)
+    end
 end
 
 ######################
@@ -97,8 +96,9 @@ function run_all_benchmarks(fs...;
                             filepath=default_filepath,
                             repeat=default_repeat,
                             xlens=default_xlens,
-                            chunk_sizes=default_chunk_sizes)
-    results = Dict()
+                            chunk_sizes=default_chunk_sizes,
+                            apifuncs=(ForwardDiff.gradient, ForwardDiff.hessian))
+    results = Dict{UTF8String,APIBenchmarkResults}()
     xs = map(rand, xlens)
     jldopen(filepath, "w") do file
         for f in fs
@@ -106,31 +106,28 @@ function run_all_benchmarks(fs...;
 
             print("\tBenchmarking $f...")
             tic()
-            func = run_func_benchmark(f, xs)
+            func_results = run_func_benchmark(f, xs)
             println("done (took $(toq()) seconds).")
 
-            print("\tBenchmarking ∇($f)...")
-            tic()
-            grad = run_api_benchmark(ForwardDiff.gradient, f, xs;
-                                     repeat=repeat,
-                                     chunk_sizes=chunk_sizes)
-            println("done (took $(toq()) seconds).")
+            api_results = Dict{UTF8String,Matrix{BenchmarkInfo}}()
 
-            print("\tBenchmarking H($f)...")
-            tic()
-            hess = run_api_benchmark(ForwardDiff.hessian, f, xs;
-                                     repeat=repeat,
-                                     chunk_sizes=chunk_sizes)
-            println("done (took $(toq()) seconds).")
+            for apifunc in apifuncs
+                print("\tBenchmarking $apifunc on $f...")
+                tic()
+                api_results[string(apifunc)] = run_api_benchmark(apifunc, f, xs;
+                                                                 repeat=repeat,
+                                                                 chunk_sizes=chunk_sizes)
+                println("done (took $(toq()) seconds).")
+            end
 
-            result = APIBenchmarkResults(func, grad, hess)
+            result = APIBenchmarkResults(func_results, api_results)
 
             print("\tSaving results to $filepath...")
             tic()
             write(file, string(f), result)
             println("done (took $(toq()) seconds).")
 
-            results[f] = result
+            results[string(f)] = result
         end
     end
     return results
