@@ -25,6 +25,17 @@ module ForwardDiff
         @eval import Base.$(fsym);
     end
 
+    macro defambiguous(ex)
+        message = """Sorry! This method should never have been called: $ex
+                     It was defined to resolve ambiguity, and should always
+                     fallback to a more specific method defined elsewhere.
+                     Please report this bug to ForwardDiff.jl's issue tracker.
+                  """
+        return esc(quote
+            $ex = error($message)
+        end)
+    end
+
     ############
     # includes #
     ############

@@ -1,4 +1,4 @@
-abstract ForwardDiffNumber{N,T<:Number,C} <: Number
+abstract ForwardDiffNumber{N,T<:Real,C} <: Real
 
 # Subtypes F<:ForwardDiffNumber should define:
 #    npartials(::Type{F}) --> N from ForwardDiffNumber{N,T,C}
@@ -43,11 +43,18 @@ abstract ForwardDiffNumber{N,T<:Number,C} <: Number
 @inline eltype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = T
 @inline containtype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = C
 
-==(n::ForwardDiffNumber, x::Real) = isconstant(n) && (value(n) == x)
-==(x::Real, n::ForwardDiffNumber) = ==(n, x)
+@defambiguous ==(a::ForwardDiffNumber, b::ForwardDiffNumber)
+@defambiguous isequal(a::ForwardDiffNumber, b::ForwardDiffNumber)
 
-isequal(n::ForwardDiffNumber, x::Real) = isconstant(n) && isequal(value(n), x)
-isequal(x::Real, n::ForwardDiffNumber) = isequal(n, x)
+for T in (Base.Irrational, AbstractFloat, Real)
+    @eval begin
+        ==(n::ForwardDiffNumber, x::$T) = isconstant(n) && (value(n) == x)
+        ==(x::$T, n::ForwardDiffNumber) = ==(n, x)
+
+        isequal(n::ForwardDiffNumber, x::$T) = isconstant(n) && isequal(value(n), x)
+        isequal(x::$T, n::ForwardDiffNumber) = isequal(n, x)
+    end
+end
 
 isless(a::ForwardDiffNumber, b::ForwardDiffNumber) = value(a) < value(b)
 isless(x::Real, n::ForwardDiffNumber) = x < value(n)
