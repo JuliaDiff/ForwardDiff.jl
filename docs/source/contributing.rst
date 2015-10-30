@@ -20,7 +20,7 @@ To see a list of functions to pick from, look at ``ForwardDiff.auto_defined_unar
 
 .. code-block:: julia
 
-    julia> using ForwardDiff
+    julia> import ForwardDiff
 
     julia> ForwardDiff.auto_defined_unary_funcs
     57-element Array{Symbol,1}:

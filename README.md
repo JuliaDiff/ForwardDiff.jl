@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=master)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.3.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.3)
-[![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.4.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.4) 
+[![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.4.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.4)
 
 **[Go To ForwardDiff.jl's Documentation](http://www.juliadiff.org/ForwardDiff.jl/)**
 
@@ -13,7 +13,7 @@ While performance can vary depending on the functions you evaluate, the algorith
 Here's a simple example showing the package in action:
 
 ```julia
-julia> using ForwardDiff
+julia> import ForwardDiff
 
 julia> f(x::Vector) = sum(sin, x) + prod(tan, x) * sum(sqrt, x);
 

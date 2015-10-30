@@ -4,13 +4,13 @@ Accessing Lower-Order Results
 The Wrong Way
 -------------
 
-Let's say you want to calculate the value, gradient, and Hessian of some function ``f`` at an input ``x``. 
+Let's say you want to calculate the value, gradient, and Hessian of some function ``f`` at an input ``x``.
 
 You might simply do the following:
 
 .. code-block:: julia
 
-    julia> using ForwardDiff
+    julia> import ForwardDiff
 
     # a silly example function
     julia> f(x::Vector) = sum(sin, x) + prod(tan, x) * sum(sqrt, x);
@@ -27,14 +27,14 @@ You might simply do the following:
       9.47858
       9.50792
 
-    julia> hess = hessian(f, x)
+    julia> hess = ForwardDiff.hessian(f, x)
     4x4 Array{Float64,2}:
      13.082   21.2597  21.8144  21.9039
      21.2597  18.9436  19.0885  19.1668
      21.8144  19.0885  22.928   19.6656
      21.9039  19.1668  19.6656  23.4095
 
-**The above is actually a horribly redundant way to accomplish this task!** This is because, in the course of calculating higher-order derivatives, **ForwardDiff.jl ends up calculating all the lower-order derivatives anyway.** 
+**The above is actually a horribly redundant way to accomplish this task!** This is because, in the course of calculating higher-order derivatives, **ForwardDiff.jl ends up calculating all the lower-order derivatives anyway.**
 
 The Right Way
 -------------
@@ -45,7 +45,7 @@ Let's use the situation from the previous section as an example. Here's the *rig
 
 .. code-block:: julia
 
-    julia> hess, allresults = hessian(f, x, AllResults);
+    julia> hess, allresults = ForwardDiff.hessian(f, x, ForwardDiff.AllResults);
 
     julia> hess
     4x4 Array{Float64,2}:
@@ -54,7 +54,7 @@ Let's use the situation from the previous section as an example. Here's the *rig
      21.8144  19.0885  22.928   19.6656
      21.9039  19.1668  19.6656  23.4095
 
-    julia> val = value(allresults)
+    julia> val = ForwarDiff.value(allresults)
     6.8401101379076685
 
     julia> grad = ForwardDiff.gradient(allresults)
@@ -88,7 +88,7 @@ What You Can Extract from a ``ForwardDiffResult``
 The below table describes the possible results that can be extracted given the differentiation method used:
 
 +-------------------------------------------------+---------------------------------------------------------------------+
-| You called the method...                        | Available extraction methods for the returned ``ForwardDiffResult`` | 
+| You called the method...                        | Available extraction methods for the returned ``ForwardDiffResult`` |
 +=================================================+=====================================================================+
 | derivative(f, x, AllResults)                    | value(::ForwardDiffResult)                                          |
 |                                                 |                                                                     |

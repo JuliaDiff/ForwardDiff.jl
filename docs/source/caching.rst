@@ -5,20 +5,20 @@ When Does Caching Matter?
 -------------------------
 
 If you're going to be repeatedly evaluating the gradient/Hessian/etc. of a function, it's probably worth it to generate the corresponding method beforehand rather than call ``hessian(f, x)`` a bunch of times. For example, this:
-    
+
 .. code-block:: julia
 
     inputs = [rand(100) for i in 1:100]
     for x in inputs
-        hess = hessian(f, x)
+        hess = ForwardDiff.hessian(f, x)
         ... # do something with hess
     end
 
 ...should really be written like this:
-    
+
 .. code-block:: julia
 
-    h = hessian(f) # generate H(f) first
+    h = ForwardDiff.hessian(f) # generate H(f) first
     inputs = [rand(100) for i in 1:100]
     for x in inputs
         hess = h(x)
@@ -34,11 +34,11 @@ This caching can be handled "manually", if one wishes, by utilizing the provided
 
 .. code-block:: julia
 
-    my_cache = ForwardDiffCache() # make new cache to pass in to our function
+    my_cache = ForwardDiff.ForwardDiffCache() # make new cache to pass in to our function
     inputs = [rand(1000) for i in 1:100]
     for x in inputs
         # just as efficient as pre-generating h, because it can reuse my_cache
-        hess = hessian(f, x, cache=my_cache) 
+        hess = ForwardDiff.hessian(f, x, cache=my_cache)
         ... # do something with hess
     end
 

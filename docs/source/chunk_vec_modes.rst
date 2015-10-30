@@ -17,7 +17,7 @@ To use chunk-mode, simply pass in a ``chunk_size`` keyword argument to any of Fo
 
 .. code-block:: julia
 
-    julia> using ForwardDiff
+    julia> import ForwardDiff
 
     # let's use a Rosenbrock function as our target function
     julia> function rosenbrock(x)
@@ -48,7 +48,7 @@ Note that the provided ``chunk_size`` must always evenly divide the length of th
 
 .. code-block:: julia
 
-    julia> hessian(rosenbrock, rand(100), chunk_size=11)
+    julia> ForwardDiff.hessian(rosenbrock, rand(100), chunk_size=11)
     ERROR: AssertionError: Length of input vector is indivisible by chunk size (length(x) = 100, chunk size = 11)
 
 We're currently working on removing this limitation so that input vectors with prime lengths won't be at a disadvantage.
