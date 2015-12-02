@@ -1,12 +1,6 @@
-immutable TensorNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
-    hessnum::HessianNumber{N,T,C}
-    tens::Vector{T}
-    function TensorNumber(hessnum, tens)
-        @assert length(tens) == halftenslen(N)
-        return new(hessnum, tens)
-    end
-end
-
+################
+# Constructors #
+################
 function TensorNumber{N,T,C}(hessnum::HessianNumber{N,T,C},
                              tens::Vector=zeros(T, halftenslen(N)))
     return TensorNumber{N,T,C}(hessnum, tens)
@@ -64,9 +58,7 @@ end
 ########################
 # Conversion/Promotion #
 ########################
-convert{N,T,C}(::Type{TensorNumber{N,T,C}}, x::Real) = TensorNumber(HessianNumber{N,T,C}(x))
-convert{T<:Real}(::Type{T}, t::TensorNumber) = isconstant(t) ? T(value(t)) : throw(InexactError())
-
+convert{N,T,C}(::Type{TensorNumber{N,T,C}}, x::ExternalReal) = TensorNumber(HessianNumber{N,T,C}(x))
 convert{N,T,C}(::Type{TensorNumber{N,T,C}}, t::TensorNumber{N}) = TensorNumber(HessianNumber{N,T,C}(hessnum(t)), tens(t))
 convert{N,T,C}(::Type{TensorNumber{N,T,C}}, t::TensorNumber{N,T,C}) = t
 convert(::Type{TensorNumber}, t::TensorNumber) = t

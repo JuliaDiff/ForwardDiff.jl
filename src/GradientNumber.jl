@@ -1,8 +1,6 @@
-immutable GradientNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
-    value::T
-    partials::Partials{T,C}
-end
-
+################
+# Constructors #
+################
 GradientNumber{N,T}(value::T, grad::NTuple{N,T}) = GradientNumber{N,T,NTuple{N,T}}(value, Partials(grad))
 GradientNumber{T}(value::T, grad::T...) = GradientNumber(value, grad)
 
@@ -53,10 +51,8 @@ end
 convert{N,T,C}(::Type{GradientNumber{N,T,C}}, g::GradientNumber) = GradientNumber{N,T,C}(value(g), partials(g))
 convert{N,T,C}(::Type{GradientNumber{N,T,C}}, g::GradientNumber{N,T,C}) = g
 convert(::Type{GradientNumber}, g::GradientNumber) = g
-
-convert{T<:Real}(::Type{T}, g::GradientNumber) = isconstant(g) ? T(value(g)) : throw(InexactError())
-convert{N,T,C}(::Type{GradientNumber{N,T,C}}, x::Real) = GradientNumber{N,T,C}(x, zero_partials(C, N))
-convert(::Type{GradientNumber}, x::Real) = GradientNumber(x)
+convert{N,T,C}(::Type{GradientNumber{N,T,C}}, x::ExternalReal) = GradientNumber{N,T,C}(x, zero_partials(C, N))
+convert(::Type{GradientNumber}, x::ExternalReal) = GradientNumber(x)
 
 ############################
 # Math with GradientNumber #

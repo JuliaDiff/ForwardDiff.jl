@@ -1,3 +1,8 @@
+###############################
+# Abstract Types/Type Aliases #
+###############################
+
+@eval typealias ExternalReal Union{$(subtypes(Real)...)}
 abstract ForwardDiffNumber{N,T<:Real,C} <: Real
 
 # Subtypes F<:ForwardDiffNumber should define:
@@ -25,6 +30,55 @@ abstract ForwardDiffNumber{N,T<:Real,C} <: Real
 #    write(io::IO, n::F)
 #    conversion/promotion rules
 
+####################
+# Type Definitions #
+####################
+
+immutable GradientNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
+    value::T
+    partials::Partials{T,C}
+end
+
+immutable HessianNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
+    gradnum::GradientNumber{N,T,C}
+    hess::Vector{T}
+    function HessianNumber(gradnum, hess)
+        @assert length(hess) == halfhesslen(N)
+        return new(gradnum, hess)
+    end
+end
+
+immutable TensorNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
+    hessnum::HessianNumber{N,T,C}
+    tens::Vector{T}
+    function TensorNumber(hessnum, tens)
+        @assert length(tens) == halftenslen(N)
+        return new(hessnum, tens)
+    end
+end
+
+
+##################################
+# Ambiguous Function Definitions #
+##################################
+ambiguous_error{A,B}(f, a::A, b::B) = error("""Sorry! $f(::$A, ::$B) should never have been called...
+                                               It was defined to resolve ambiguity, and should always
+                                               fallback to a more specific method defined elsewhere.
+                                               Please report this bug to ForwardDiff.jl's issue tracker.""")
+
+ambiguous_binary_funcs = [:(==), :isequal, :isless, :+, :-, :*, :/, :^, :atan2, :calc_atan2]
+fdnum_ambiguous_binary_funcs = [:(==), :isequal]
+fdnum_types = [:GradientNumber, :HessianNumber, :TensorNumber]
+
+for f in ambiguous_binary_funcs
+    if f in fdnum_ambiguous_binary_funcs
+        @eval $f(a::ForwardDiffNumber, b::ForwardDiffNumber) = ambiguous_error($f, a, b)
+    end
+    for A in fdnum_types, B in fdnum_types
+        @eval $f(a::$A, b::$B) = ambiguous_error($f, a, b)
+    end
+end
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
@@ -43,8 +97,8 @@ abstract ForwardDiffNumber{N,T<:Real,C} <: Real
 @inline eltype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = T
 @inline containtype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = C
 
-@defambiguous ==(a::ForwardDiffNumber, b::ForwardDiffNumber)
-@defambiguous isequal(a::ForwardDiffNumber, b::ForwardDiffNumber)
+isless(a::ForwardDiffNumber, b::ForwardDiffNumber) = value(a) < value(b)
+==(a::ForwardDiffNumber, b::ForwardDiffNumber) =
 
 for T in (Base.Irrational, AbstractFloat, Real)
     @eval begin
@@ -53,12 +107,11 @@ for T in (Base.Irrational, AbstractFloat, Real)
 
         isequal(n::ForwardDiffNumber, x::$T) = isconstant(n) && isequal(value(n), x)
         isequal(x::$T, n::ForwardDiffNumber) = isequal(n, x)
+
+        isless(x::$T, n::ForwardDiffNumber) = x < value(n)
+        isless(n::ForwardDiffNumber, x::$T) = value(n) < x
     end
 end
-
-isless(a::ForwardDiffNumber, b::ForwardDiffNumber) = value(a) < value(b)
-isless(x::Real, n::ForwardDiffNumber) = x < value(n)
-isless(n::ForwardDiffNumber, x::Real) = value(n) < x
 
 copy(n::ForwardDiffNumber) = n # assumes all types of ForwardDiffNumbers are immutable
 
@@ -80,6 +133,10 @@ function float(n::ForwardDiffNumber)
     T = promote_type(eltype(n), Float16)
     return convert(switch_eltype(typeof(n), T), n)
 end
+
+convert(::Type{Integer}, n::ForwardDiffNumber) = isconstant(n) ? Integer(value(n)) : throw(InexactError())
+convert(::Type{Bool}, n::ForwardDiffNumber) = isconstant(n) ? Bool(value(n)) : throw(InexactError())
+convert{T<:ExternalReal}(::Type{T}, n::ForwardDiffNumber) = isconstant(n) ? T(value(n)) : throw(InexactError())
 
 ##################
 # Math Functions #
