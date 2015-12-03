@@ -1,7 +1,7 @@
 using Base.Test
 using Calculus
 using ForwardDiff
-using ForwardDiff: 
+using ForwardDiff:
         GradientNumber,
         value,
         grad,
@@ -31,7 +31,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     end
 
     @test npartials(test_grad) == npartials(typeof(test_grad)) == N
-    
+
     ##################################
     # Value Representation Functions #
     ##################################
@@ -92,7 +92,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test isnan(Grad{3,T}(NaN))
 
     not_const_grad = Grad{N,T}(one(T), map(one, test_partials))
-    @test !(isconstant(not_const_grad)) 
+    @test !(isconstant(not_const_grad))
     @test !(isreal(not_const_grad))
     @test isconstant(const_grad) && isreal(const_grad)
     @test isconstant(zero(not_const_grad)) && isreal(zero(not_const_grad))
@@ -116,7 +116,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     seekstart(io)
 
     @test read(io, typeof(test_grad)) == test_grad
-    
+
     close(io)
 
     #####################################
@@ -136,7 +136,7 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test rand_val + test_grad == test_grad + rand_val
     @test rand_val - test_grad == Grad{N,T}(rand_val-test_val, map(-, test_partials))
     @test test_grad - rand_val == Grad{N,T}(test_val-rand_val, test_partials)
-    
+
     @test -test_grad == Grad{N,T}(-test_val, map(-, test_partials))
 
     # Multiplication #
@@ -196,12 +196,12 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
             end
 
             x = value(orig_grad)
-            df = $expr 
+            df = $expr
 
             @test_approx_eq value(f_grad) func(x)
 
             for i in 1:N
-                try 
+                try
                     @test_approx_eq grad(f_grad, i) df*grad(orig_grad, i)
                 catch exception
                     info("The exception was thrown while testing function $func at value $orig_grad")
@@ -260,13 +260,13 @@ end
 chunk_sizes = (ForwardDiff.default_chunk_size, 1, Int(N/2), N)
 
 for fsym in map(first, Calculus.symbolic_derivatives_1arg())
-    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d)) 
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
 
-    @eval function testf(x::Vector) 
+    @eval function testf(x::Vector)
         a,b,c,d = x
         return $testexpr
     end
-    
+
     for chunk in chunk_sizes
         try
             testx = grad_test_x(fsym, N)

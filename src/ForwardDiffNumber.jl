@@ -61,13 +61,13 @@ end
 ##################################
 # Ambiguous Function Definitions #
 ##################################
-ambiguous_error{A,B}(f, a::A, b::B) = error("""Sorry! $f(::$A, ::$B) should never have been called...
-                                               It was defined to resolve ambiguity, and should always
-                                               fallback to a more specific method defined elsewhere.
+ambiguous_error{A,B}(f, a::A, b::B) = error("""Oops - $f(::$A, ::$B) should never have been called.
+                                               It was defined to resolve ambiguity, and was supposed to
+                                               fall back to a more specific method defined elsewhere.
                                                Please report this bug to ForwardDiff.jl's issue tracker.""")
 
 ambiguous_binary_funcs = [:(==), :isequal, :isless, :+, :-, :*, :/, :^, :atan2, :calc_atan2]
-fdnum_ambiguous_binary_funcs = [:(==), :isequal]
+fdnum_ambiguous_binary_funcs = [:(==), :isequal, :isless]
 fdnum_types = [:GradientNumber, :HessianNumber, :TensorNumber]
 
 for f in ambiguous_binary_funcs
@@ -97,8 +97,9 @@ end
 @inline eltype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = T
 @inline containtype{N,T,C}(::Type{ForwardDiffNumber{N,T,C}}) = C
 
-isless(a::ForwardDiffNumber, b::ForwardDiffNumber) = value(a) < value(b)
-==(a::ForwardDiffNumber, b::ForwardDiffNumber) =
+for T in fdnum_types
+    @eval isless(a::$T, b::$T) = value(a) < value(b)
+end
 
 for T in (Base.Irrational, AbstractFloat, Real)
     @eval begin
