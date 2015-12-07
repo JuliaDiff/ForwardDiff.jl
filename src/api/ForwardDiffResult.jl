@@ -1,10 +1,10 @@
 # This file contains methods to handle the results
-# of ForwardDiff calculations (generally either 
-# ForwardDiffNumbers or Arrays of ForwardDiffNumbers. 
+# of ForwardDiff calculations (generally either
+# ForwardDiffNumbers or Arrays of ForwardDiffNumbers.
 
 immutable ForwardDiffResult{T}
     data::T
-    ForwardDiffResult(data::ForwardDiffNumber) = new(data)
+    ForwardDiffResult(data::Real) = new(data)
     ForwardDiffResult(data::Array) = new(data)
 end
 
@@ -31,6 +31,7 @@ function get_value!(output::Array, arr::Array)
 end
 
 get_value{F}(arr::Array{F}) = _load_value!(similar(arr, eltype(F)), arr)
+get_value(n::Real) = n
 get_value(n::ForwardDiffNumber) = value(n)
 
 ###############
@@ -52,6 +53,7 @@ function get_derivative!(output::Array, arr::Array)
 end
 
 get_derivative{F}(arr::Array{F}) = _load_derivative!(similar(arr, eltype(F)), arr)
+get_derivative(n::Real) = zero(n)
 get_derivative(n::ForwardDiffNumber{1}) = first(grad(n))
 
 #############
@@ -147,7 +149,7 @@ function _load_tensor!{N}(output, n::ForwardDiffNumber{N})
             for k in 1:j
                 @inbounds output[j, k, i] = output[i, j, k]
             end
-        end    
+        end
         for j in i:N
             for k in 1:(i-1)
                 @inbounds output[j, k, i] = output[i, j, k]

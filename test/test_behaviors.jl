@@ -36,3 +36,15 @@ g = ForwardDiff.gradient(f) # gradient in vector mode
 j = x -> ForwardDiff.jacobian(g, x, chunk_size=2)/2 # jacobian in chunk_mode
 
 @test_approx_eq ForwardDiff.hessian(f, x) 2*j(x)
+
+#####################
+# Conversion Issues #
+#####################
+
+# Target function returns a literal (Issue #71) #
+#-----------------------------------------------#
+
+@test ForwardDiff.derivative(x->zero(x), rand()) == ForwardDiff.derivative(x->1.0, rand())
+@test ForwardDiff.gradient(x->zero(x[1]), [rand()]) == ForwardDiff.gradient(x->1.0, [rand()])
+@test ForwardDiff.hessian(x->zero(x[1]), [rand()]) == ForwardDiff.hessian(x->1.0, [rand()])
+@test ForwardDiff.jacobian(x->[zero(x[1])], [rand()]) == ForwardDiff.jacobian(x->[1.0], [rand()])
