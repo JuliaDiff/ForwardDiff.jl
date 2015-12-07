@@ -1,12 +1,6 @@
-immutable HessianNumber{N,T,C} <: ForwardDiffNumber{N,T,C}
-    gradnum::GradientNumber{N,T,C}
-    hess::Vector{T}
-    function HessianNumber(gradnum, hess)
-        @assert length(hess) == halfhesslen(N)
-        return new(gradnum, hess)
-    end
-end
-
+################
+# Constructors #
+################
 function HessianNumber{N,T,C}(gradnum::GradientNumber{N,T,C},
                               hess::Vector=zeros(T, halfhesslen(N)))
     return HessianNumber{N,T,C}(gradnum, hess)
@@ -63,9 +57,7 @@ end
 ##############
 # Conversion #
 ##############
-convert{N,T,C}(::Type{HessianNumber{N,T,C}}, x::Real) = HessianNumber(GradientNumber{N,T,C}(x))
-convert{T<:Real}(::Type{T}, h::HessianNumber) = isconstant(h) ? T(value(h)) : throw(InexactError())
-
+convert{N,T,C}(::Type{HessianNumber{N,T,C}}, x::ExternalReal) = HessianNumber(GradientNumber{N,T,C}(x))
 convert{N,T,C}(::Type{HessianNumber{N,T,C}}, h::HessianNumber{N}) = HessianNumber(GradientNumber{N,T,C}(gradnum(h)), hess(h))
 convert{N,T,C}(::Type{HessianNumber{N,T,C}}, h::HessianNumber{N,T,C}) = h
 convert(::Type{HessianNumber}, h::HessianNumber) = h

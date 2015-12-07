@@ -31,10 +31,10 @@ done(partials, i) = done(data(partials), i)
 ################
 # Constructors #
 ################
-@inline zero_partials{N,T}(::Type{NTuple{N,T}}, n::Int) = Partials(zero_tuple(NTuple{N,T}))
+@inline zero_partials{C<:Tuple}(::Type{C}, n::Int) = Partials(zero_tuple(C))
 zero_partials{T}(::Type{Vector{T}}, n) = Partials(zeros(T, n))
 
-@inline rand_partials{N,T}(::Type{NTuple{N,T}}, n::Int) = Partials(rand_tuple(NTuple{N,T}))
+@inline rand_partials{C<:Tuple}(::Type{C}, n::Int) = Partials(rand_tuple(C))
 rand_partials{T}(::Type{Vector{T}}, n::Int) = Partials(rand(T, n))
 
 #####################
@@ -171,6 +171,8 @@ function tupexpr(f,N)
     end
 end
 
+@inline zero_tuple(::Type{Tuple{}}) = tuple()
+
 @generated function zero_tuple{N,T}(::Type{NTuple{N,T}})
     result = tupexpr(i -> :z, N)
     return quote
@@ -178,6 +180,8 @@ end
         return $result
     end
 end
+
+@inline rand_tuple(::Type{Tuple{}}) = tuple()
 
 @generated function rand_tuple{N,T}(::Type{NTuple{N,T}})
     return tupexpr(i -> :(rand($T)), N)

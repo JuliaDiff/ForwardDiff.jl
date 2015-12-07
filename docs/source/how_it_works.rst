@@ -8,7 +8,7 @@ As previously stated, ForwardDiff.jl is an implementation of `forward mode autom
 New Number Types
 ----------------
 
-ForwardDiff.jl provides several new number types, which are all subtypes of the abstract type ``ForwardDiffNumber{N,T,C} <: Number``. These number types store both normal values, and the values of partial derivatives.
+ForwardDiff.jl provides several new number types, which are all subtypes of the abstract type ``ForwardDiffNumber{N,T,C} <: Real``. These number types store both normal values, and the values of partial derivatives.
 
 Elementary numerical functions on these types are overloaded to evaluate both the original function, *and* evaluate partials derivatives of the function, storing the results in a ``ForwardDiffNumber``. We can then pass these number types into a general function :math:`f` (which is assumed to be composed of the overloaded elementary functions), and the derivative information is naturally propogated at each step of the calculation by way of the chain rule.
 
