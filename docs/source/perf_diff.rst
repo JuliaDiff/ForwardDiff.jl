@@ -6,6 +6,8 @@ Restrictions on the target function
 
 ForwardDiff.jl can only differentiate functions that adhere to the following rules:
 
+- **The function can only be composed of generic Julia functions.** ForwardDiff cannot propagate derivative information through non-Julia code. Thus, your function may not work if it makes calls to external, non-Julia programs, e.g. uses explicit BLAS calls instead of ``Ax_mul_Bx``-style functions.
+
 - **The function must be unary (i.e., only accept a single argument).** The ``jacobian`` function is the exception to this restriction; see below for details.
 
 - **The function must accept an argument whose type is a subtype of** ``Vector`` **or** ``Real``. The argument type does not need to be annotated in the function definition.
