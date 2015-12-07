@@ -12,7 +12,7 @@ ForwardDiff.jl can only differentiate functions that adhere to the following rul
 
 - **The function's argument type cannot be too restrictively annotated.** In this case, "too restrictive" means more restrictive than ``x::Vector`` or ``x::Real``.
 
-- **All number types involved in the function must be subtypes of** ``Real``. We believe extension to subtypes of ``Complex`` is possible, but it hasn't yet been worked on.
+- **All number types involved in the function must be subtypes of** ``Real``. We believe extension to subtypes of ``Complex`` is possible, but it hasn't yet been worked on. Note that custom (i.e. non-Base) subtypes of `Real` are not supported.
 
 - **The function must be** `type-stable`_ **.** This is not a strict limitation in every case, but in some cases, lack of type-stability can cause errors. At the very least, type-instablity can severely hinder performance.
 
