@@ -12,7 +12,7 @@ module ForwardDiff
     import Calculus
     import NaNMath
     import Base: *, /, +, -, ^, getindex, length,
-                 hash, ==, isequal, copy, zero,
+                 hash, ==, <, isequal, copy, zero,
                  one, float, rand, convert, promote_rule,
                  read, write, isless, isreal, isnan,
                  isfinite, isinf, eps, conj, transpose,

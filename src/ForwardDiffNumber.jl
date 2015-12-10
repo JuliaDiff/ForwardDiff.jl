@@ -66,8 +66,8 @@ ambiguous_error{A,B}(f, a::A, b::B) = error("""Oops - $f(::$A, ::$B) should neve
                                                fall back to a more specific method defined elsewhere.
                                                Please report this bug to ForwardDiff.jl's issue tracker.""")
 
-ambiguous_binary_funcs = [:(==), :isequal, :isless, :+, :-, :*, :/, :^, :atan2, :calc_atan2]
-fdnum_ambiguous_binary_funcs = [:(==), :isequal, :isless]
+ambiguous_binary_funcs = [:(==), :isequal, :isless, :<, :+, :-, :*, :/, :^, :atan2, :calc_atan2]
+fdnum_ambiguous_binary_funcs = [:(==), :isequal, :isless, :<]
 fdnum_types = [:GradientNumber, :HessianNumber, :TensorNumber]
 
 for f in ambiguous_binary_funcs
@@ -99,6 +99,7 @@ end
 
 for T in fdnum_types
     @eval isless(a::$T, b::$T) = value(a) < value(b)
+    @eval <(a::$T, b::$T) = isless(a, b)
 end
 
 for T in (Base.Irrational, AbstractFloat, Real)
@@ -111,6 +112,9 @@ for T in (Base.Irrational, AbstractFloat, Real)
 
         isless(x::$T, n::ForwardDiffNumber) = x < value(n)
         isless(n::ForwardDiffNumber, x::$T) = value(n) < x
+
+        <(x::$T, n::ForwardDiffNumber) = isless(x, n)
+        <(n::ForwardDiffNumber, x::$T) = isless(n, x)
     end
 end
 

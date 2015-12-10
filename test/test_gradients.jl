@@ -105,8 +105,16 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test !(isinf(test_grad))
 
     @test isless(test_grad-1, test_grad)
+    @test test_grad-1 < test_grad
+    @test test_grad > test_grad-1
+
     @test isless(test_val-1, test_grad)
+    @test test_val-1 < test_grad
+    @test test_grad > test_val-1
+
     @test isless(test_grad, test_val+1)
+    @test test_grad < test_val+1
+    @test test_val+1 > test_grad
 
     #######
     # I/O #

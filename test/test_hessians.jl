@@ -1,7 +1,7 @@
 using Base.Test
 using Calculus
 using ForwardDiff
-using ForwardDiff: 
+using ForwardDiff:
         GradientNumber,
         HessianNumber,
         value,
@@ -120,8 +120,16 @@ inf_hess = HessianNumber{N,T,C}(Inf)
 @test !(isinf(test_hess))
 
 @test isless(test_hess-1, test_hess)
+@test test_hess-1 < test_hess
+@test test_hess > test_hess-1
+
 @test isless(test_val-1, test_hess)
+@test test_val-1 < test_hess
+@test test_hess > test_val-1
+
 @test isless(test_hess, test_val+1)
+@test test_hess < test_val+1
+@test test_val+1 > test_hess
 
 #######
 # I/O #
@@ -247,7 +255,7 @@ end
 chunk_sizes = (ForwardDiff.default_chunk_size, 2, Int(N/2), N)
 
 for fsym in ForwardDiff.auto_defined_unary_hess_funcs
-    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(l) - $(fsym)(m) + $(fsym)(r)) 
+    testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(l) - $(fsym)(m) + $(fsym)(r))
 
     @eval function testf(x::Vector)
         a,b,c,l,m,r = x

@@ -1,7 +1,7 @@
 using Base.Test
 using Calculus
 using ForwardDiff
-using ForwardDiff: 
+using ForwardDiff:
         GradientNumber,
         HessianNumber,
         TensorNumber,
@@ -134,8 +134,16 @@ inf_tens = TensorNumber{N,T,C}(Inf)
 @test !(isinf(test_tens))
 
 @test isless(test_tens-1, test_tens)
+@test test_tens-1 < test_tens
+@test test_tens > test_tens-1
+
 @test isless(test_val-1, test_tens)
+@test test_val-1 < test_tens
+@test test_tens > test_val-1
+
 @test isless(test_tens, test_val+1)
+@test test_tens < test_val+1
+@test test_val+1 > test_tens
 
 #######
 # I/O #
