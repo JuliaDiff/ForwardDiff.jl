@@ -124,13 +124,40 @@ for fsym in ForwardDiff.auto_defined_unary_funcs
         end
     end
 
-    # Test jacobian of functions involving `.-`, `.+`, etc. #
+
+    
+    # Test overloading of `promote_array_type`
     #-------------------------------------------------------#
+
+
+    promtyp = Base.promote_array_type(Base.DotAddFun(),
+                                  ForwardDiff.GradientNumber{2, Float64,
+                                  Tuple{Float64, Float64}}, Float64)
+    
+    gradnum = ForwardDiff.GradientNumber{2,Float64,Tuple{Float64,Float64}}
+    
+    @test promtyp <: gradnum
+    
+    # jacobian of functions involving `.-`, `.+`, etc.      # 
+    #-------------------------------------------------------#
+
     a = ones(N)
-    ops = [:-, :+]
-    for op in ops
-        @eval fn(x) = ($op)(a, x)
-        D = reduce(&, @eval (($op)(eye(N)))-ForwardDiff.jacobian(fn, a) .== 0)
-        @test D
-    end
+
+    fn(x) = x - a
+    jac = ForwardDiff.jacobian(fn, a)
+    @test reduce(&, -jac + eye(N) .== 0)
+
+    fn(x) = x + a
+    jac = ForwardDiff.jacobian(fn, a)
+    @test reduce(&, -jac + eye(N) .== 0)
+
+    fn(x) = x./a
+    jac = ForwardDiff.jacobian(fn, a)
+    @test reduce(&, -jac + eye(N) .== 0)
+
+    fn(x) = x.*a
+    jac = ForwardDiff.jacobian(fn, a)
+    @test reduce(&, -jac + eye(N) .== 0)
+
+    
 end
