@@ -123,4 +123,14 @@ for fsym in ForwardDiff.auto_defined_unary_funcs
             throw(err)
         end
     end
+
+    # Test jacobian of functions involving `.-`, `.+`, etc. #
+    #-------------------------------------------------------#
+    a = ones(N)
+    ops = [:-, :+]
+    for op in ops
+        @eval fn(x) = ($op)(a, x)
+        D = reduce(&, @eval (($op)(eye(N)))-ForwardDiff.jacobian(fn, a) .== 0)
+        @test D
+    end
 end
