@@ -211,3 +211,8 @@ for Y in (:Real, :GradientNumber), X in (:Real, :GradientNumber)
         end
     end
 end
+
+# Overloading of `promote_array_type` #
+#-------------------------------------#
+
+Base.promote_array_type{S<:ForwardDiff.GradientNumber, A<:AbstractFloat}(F, ::Type{S}, ::Type{A}) = S
