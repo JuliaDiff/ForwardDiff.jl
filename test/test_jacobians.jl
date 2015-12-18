@@ -123,4 +123,62 @@ for fsym in ForwardDiff.auto_defined_unary_funcs
             throw(err)
         end
     end
+
+
+    
+    # Test overloading of `promote_array_type`
+    #-------------------------------------------------------#
+
+    promtyp = Base.promote_array_type(Base.DotAddFun(),
+                                  ForwardDiff.GradientNumber{2, Float64,
+                                  Tuple{Float64, Float64}}, Float64)    
+    gradnum = ForwardDiff.GradientNumber{2,Float64,Tuple{Float64,Float64}}    
+    @test promtyp <: gradnum
+
+    promtyp = Base.promote_array_type(Base.DotAddFun(),
+                                      ForwardDiff.HessianNumber{2, Float64,
+                                      Tuple{Float64, Float64}}, Float64)    
+    hessnum = ForwardDiff.HessianNumber{2,Float64,Tuple{Float64,Float64}}    
+    @test promtyp <: hessnum
+
+    promtyp = Base.promote_array_type(Base.DotAddFun(),
+                                      ForwardDiff.TensorNumber{2, Float64,
+                                      Tuple{Float64, Float64}}, Float64)    
+    tensnum = ForwardDiff.TensorNumber{2,Float64,Tuple{Float64,Float64}}    
+    @test promtyp <: tensnum
+
+    
+    # functions involving `.-`, `.+`, etc.                  # 
+    #-------------------------------------------------------#
+
+    a    = ones(N)
+
+    ## Test jacobian    
+    jac0 = reshape(vcat([[zeros(N*(i-1)); a; zeros(N^2-N*i)] for i = 1:N]...), N^2, N)
+    
+    for op = [:-, :+, :./, :.*]
+        @eval fn(x) = [($op)(x[1], a); ($op)(x[2], a); ($op)(x[3], a); ($op)(x[4], a)]
+        jac = ForwardDiff.jacobian(fn, a)
+        @test reduce(&, -jac + jac0 .== 0)
+    end
+
+    ## Test hessian
+    for op = [:-, :+, :./, :.*]
+        @eval fn(x) = sum([($op)(x[1], a); ($op)(x[2], a); ($op)(x[3], a); ($op)(x[4], a)])
+        hess = ForwardDiff.hessian(fn, a)
+        @test reduce(&, -hess + zeros(N, N) .== 0)
+    end
+
+    ## Test tensor
+    for op = [:-, :+, :./, :.*]
+        @eval fn(x) = sum([($op)(x[1], a); ($op)(x[2], a); ($op)(x[3], a); ($op)(x[4], a)])
+        tens = ForwardDiff.tensor(fn, a)
+        @test reduce(&, -tens + zeros(N, N, N) .== 0)
+    end
+
 end
+
+
+
+
+fn(x) = sum(x - a)

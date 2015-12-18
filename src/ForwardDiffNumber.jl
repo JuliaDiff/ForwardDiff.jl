@@ -165,3 +165,7 @@ function to_nanmath(x::Expr)
 end
 
 to_nanmath(x) = x
+
+# Overloading of `promote_array_type` #
+#-------------------------------------#
+Base.promote_array_type{S<:ForwardDiff.ForwardDiffNumber, A<:AbstractFloat}(F, ::Type{S}, ::Type{A}) = S
