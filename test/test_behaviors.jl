@@ -60,7 +60,7 @@ promtyp = Base.promote_array_type(Base.DotAddFun(),
                                   ForwardDiff.ForwardDiffNumber{2, Float64,
                                   Tuple{Float64, Float64}}, Float64)
 fdiffnum = ForwardDiff.ForwardDiffNumber{2,Float64,Tuple{Float64,Float64}}    
-@test promtyp <: fordiffnum
+@test promtyp <: fdiffnum
 
 
 promtyp = Base.promote_array_type(Base.DotAddFun(),
