@@ -115,6 +115,9 @@ for T in (Base.Irrational, AbstractFloat, Real)
 
         <(x::$T, n::ForwardDiffNumber) = isless(x, n)
         <(n::ForwardDiffNumber, x::$T) = isless(n, x)
+        <=(x::ForwardDiffNumber, n::ForwardDiffNumber) = <=(value(x), value(n))
+        <=(x::$T, n::ForwardDiffNumber) = <=(x, value(n))
+        <=(n::ForwardDiffNumber, x::$T) = <=(value(n), x)
     end
 end
 
@@ -127,6 +130,9 @@ isnan(n::ForwardDiffNumber) = isnan(value(n))
 isfinite(n::ForwardDiffNumber) = isfinite(value(n))
 isinf(n::ForwardDiffNumber) = isinf(value(n))
 isreal(n::ForwardDiffNumber) = isconstant(n)
+
+floor{T}(::Type{T}, n::ForwardDiffNumber) = floor(T, value(n))
+ceil{T}(::Type{T}, n::ForwardDiffNumber) = ceil(T, value(n))
 
 ########################
 # Conversion/Promotion #

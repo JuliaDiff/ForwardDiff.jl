@@ -12,12 +12,12 @@ module ForwardDiff
     import Calculus
     import NaNMath
     import Base: *, /, +, -, ^, getindex, length,
-                 hash, ==, <, isequal, copy, zero,
+                 hash, ==, <, <=, isequal, copy, zero,
                  one, float, rand, convert, promote_rule,
                  read, write, isless, isreal, isnan,
                  isfinite, isinf, eps, conj, transpose,
                  ctranspose, eltype, abs, abs2, start,
-                 next, done, atan2
+                 next, done, atan2, floor, ceil
 
     const auto_defined_unary_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 

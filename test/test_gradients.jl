@@ -106,7 +106,11 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     @test isless(test_grad-1, test_grad)
     @test test_grad-1 < test_grad
+    @test !(test_grad < test_val)
+    @test test_grad-1 <= test_grad
+    @test test_grad <= test_val
     @test test_grad > test_grad-1
+    @test test_grad >= test_grad-1
 
     @test isless(test_val-1, test_grad)
     @test test_val-1 < test_grad
@@ -115,6 +119,9 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
     @test isless(test_grad, test_val+1)
     @test test_grad < test_val+1
     @test test_val+1 > test_grad
+
+    @test floor(Int, test_grad) == floor(Int, test_val)
+    @test ceil(Int, test_grad) == ceil(Int, test_val)
 
     #######
     # I/O #

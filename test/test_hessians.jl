@@ -127,9 +127,18 @@ inf_hess = HessianNumber{N,T,C}(Inf)
 @test test_val-1 < test_hess
 @test test_hess > test_val-1
 
+@test test_hess-1 <= test_hess
+@test test_hess <= test_val
+
 @test isless(test_hess, test_val+1)
 @test test_hess < test_val+1
 @test test_val+1 > test_hess
+
+@test test_hess+1 >= test_hess
+@test test_hess+1 >= test_val
+
+@test floor(Int, test_hess) == floor(Int, test_val)
+@test ceil(Int, test_hess) == ceil(Int, test_val)
 
 #######
 # I/O #
