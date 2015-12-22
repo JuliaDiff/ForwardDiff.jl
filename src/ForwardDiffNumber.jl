@@ -131,8 +131,10 @@ isfinite(n::ForwardDiffNumber) = isfinite(value(n))
 isinf(n::ForwardDiffNumber) = isinf(value(n))
 isreal(n::ForwardDiffNumber) = isconstant(n)
 
-floor{T}(::Type{T}, n::ForwardDiffNumber) = floor(T, value(n))
-ceil{T}(::Type{T}, n::ForwardDiffNumber) = ceil(T, value(n))
+floor{T<:ExternalReal}(::Type{T}, n::ForwardDiffNumber) = floor(T, value(n))
+ceil{ T<:ExternalReal}(::Type{T}, n::ForwardDiffNumber) = ceil( T, value(n))
+trunc{T<:ExternalReal}(::Type{T}, n::ForwardDiffNumber) = trunc(T, value(n))
+round{T<:ExternalReal}(::Type{T}, n::ForwardDiffNumber) = round(T, value(n))
 
 ########################
 # Conversion/Promotion #

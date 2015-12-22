@@ -139,6 +139,8 @@ inf_hess = HessianNumber{N,T,C}(Inf)
 
 @test floor(Int, test_hess) == floor(Int, test_val)
 @test ceil(Int, test_hess) == ceil(Int, test_val)
+@test trunc(Int, test_hess) == trunc(Int, test_val)
+@test round(Int, test_hess) == round(Int, test_val)
 
 #######
 # I/O #

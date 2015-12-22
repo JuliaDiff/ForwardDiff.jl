@@ -122,6 +122,8 @@ for (test_partials, Grad) in ((test_partialstup, ForwardDiff.GradNumTup), (test_
 
     @test floor(Int, test_grad) == floor(Int, test_val)
     @test ceil(Int, test_grad) == ceil(Int, test_val)
+    @test trunc(Int, test_grad) == trunc(Int, test_val)
+    @test round(Int, test_grad) == round(Int, test_val)
 
     #######
     # I/O #

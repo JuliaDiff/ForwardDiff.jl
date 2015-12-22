@@ -153,6 +153,8 @@ inf_tens = TensorNumber{N,T,C}(Inf)
 
 @test floor(Int, test_tens) == floor(Int, test_val)
 @test ceil(Int, test_tens) == ceil(Int, test_val)
+@test trunc(Int, test_tens) == trunc(Int, test_val)
+@test round(Int, test_tens) == round(Int, test_val)
 
 #######
 # I/O #

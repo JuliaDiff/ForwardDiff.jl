@@ -17,7 +17,7 @@ module ForwardDiff
                  read, write, isless, isreal, isnan,
                  isfinite, isinf, eps, conj, transpose,
                  ctranspose, eltype, abs, abs2, start,
-                 next, done, atan2, floor, ceil
+                 next, done, atan2, floor, ceil, trunc, round
 
     const auto_defined_unary_funcs = map(first, Calculus.symbolic_derivatives_1arg())
 
