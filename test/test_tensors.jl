@@ -141,9 +141,20 @@ inf_tens = TensorNumber{N,T,C}(Inf)
 @test test_val-1 < test_tens
 @test test_tens > test_val-1
 
+@test test_tens-1 <= test_tens
+@test test_tens <= test_val
+
 @test isless(test_tens, test_val+1)
 @test test_tens < test_val+1
 @test test_val+1 > test_tens
+
+@test test_tens+1 >= test_tens
+@test test_tens+1 >= test_val
+
+@test floor(Int, test_tens) == floor(Int, test_val)
+@test ceil(Int, test_tens) == ceil(Int, test_val)
+@test trunc(Int, test_tens) == trunc(Int, test_val)
+@test round(Int, test_tens) == round(Int, test_val)
 
 #######
 # I/O #
