@@ -54,7 +54,7 @@ Let's use the situation from the previous section as an example. Here's the *rig
      21.8144  19.0885  22.928   19.6656
      21.9039  19.1668  19.6656  23.4095
 
-    julia> val = ForwarDiff.value(allresults)
+    julia> val = ForwardDiff.value(allresults)
     6.8401101379076685
 
     julia> grad = ForwardDiff.gradient(allresults)
