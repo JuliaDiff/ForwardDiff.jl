@@ -250,13 +250,14 @@ end
 
 # Manually Optimized Functions #
 #------------------------------#
-@inline function exp(h::HessianNumber)
+@inline function exp{N}(h::HessianNumber{N})
     exp_a = exp(value(h))
     return hessnum_from_deriv(h, exp_a, exp_a, exp_a)
 end
 
-@inline function sqrt(h::HessianNumber)
-    sqrt_a = sqrt(value(h))
+@inline function sqrt{N}(h::HessianNumber{N})
+    a = value(h)
+    sqrt_a = sqrt(a)
     deriv1 = 0.5 / sqrt_a
     deriv2 = -0.25 / (a * sqrt_a)
     return hessnum_from_deriv(h, sqrt_a, deriv1, deriv2)
