@@ -1,36 +1,16 @@
 using ForwardDiff
 
-print("Testing GradientNumbers and ForwardDiff.gradient...")
+print("Testing Partials...")
 tic()
-include("test_gradients.jl")
-println("Done (took $(toq()) seconds).")
+include("PartialsTest.jl")
+println("done (took $(toq()) seconds).")
 
-print("Testing HessianNumbers and ForwardDiff.hessian...")
+print("Testing DiffNumber...")
 tic()
-include("test_hessians.jl")
-println("Done (took $(toq()) seconds).")
+include("DiffNumberTest.jl")
+println("done (took $(toq()) seconds).")
 
-print("Testing TensorNumbers and ForwardDiff.tensor...")
+print("Testing Gradient-related functionality...")
 tic()
-include("test_tensors.jl")
-println("Done (took $(toq()) seconds).")
-
-print("Testing ForwardDiff.derivative...")
-tic()
-include("test_derivatives.jl")
-println("Done (took $(toq()) seconds).")
-
-print("Testing ForwardDiff.jacobian...")
-tic()
-include("test_jacobians.jl")
-println("Done (took $(toq()) seconds).")
-
-println("Testing deprecation wrapper (deprecation warnings are expected)...")
-tic()
-include("test_deprecated.jl")
-println("Done (took $(toq()) seconds).")
-
-println("Testing behavioral examples...")
-tic()
-include("test_behaviors.jl")
-println("Done (took $(toq()) seconds).")
+include("GradientTest.jl")
+println("done (took $(toq()) seconds).")
