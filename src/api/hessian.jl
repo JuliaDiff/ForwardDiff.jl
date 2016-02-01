@@ -91,7 +91,7 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
         # Vector-Mode
         ResultHess = switch_eltype(H, S)
         body = quote
-            @simd for i in eachindex(x)
+            @simd for i in 1:xlen
                 @inbounds hessvec[i] = HessianNumber(G(x[i], partials[i]), hesszeros)
             end
 
@@ -109,17 +109,17 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
             output_grad = Vector{S}(xlen)
             output_hess = Vector{S}(halfhesslen(xlen))
 
-            @simd for i in eachindex(x)
-                @inbounds hessvec[i] = HessianNumber(G(x[i], gradzeros), hesszeros) 
+            @simd for i in 1:xlen
+                @inbounds hessvec[i] = HessianNumber(G(x[i], gradzeros), hesszeros)
             end
 
-            # The below loop fills triangular blocks 
+            # The below loop fills triangular blocks
             # along diagonal. The size of these blocks
             # is determined by the chunk size.
             #
-            # For example, if N = 3 and xlen = 6, the 
+            # For example, if N = 3 and xlen = 6, the
             # numbers inside the slots below indicate the
-            # iteration of the loop (i.e. ith call of f) 
+            # iteration of the loop (i.e. ith call of f)
             # in which they are filled:
             #
             # Hessian matrix:
@@ -148,7 +148,7 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
                 end
 
                 chunk_result = f(hessvec)
-                
+
                 q = 1
                 for j in i:(M+offset)
                     for k in i:j
@@ -164,9 +164,9 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
                 end
             end
 
-            # The below loop fills in the rest. Once 
-            # again, using N = 3 and xlen = 6, with each 
-            # iteration (i.e. ith call of f) filling the 
+            # The below loop fills in the rest. Once
+            # again, using N = 3 and xlen = 6, with each
+            # iteration (i.e. ith call of f) filling the
             # corresponding slots, and where 'x' indicates
             # previously filled slots:
             #
@@ -217,7 +217,7 @@ gradnum_type{N,T,C}(::Type{HessianNumber{N,T,C}}) = GradientNumber{N,T,C}
         hessvec = get_workvec!(cache, HessianNumber, T, X, $C2)
         partials = get_partials!(cache, H)
         hesszeros = get_zeros!(cache, H)
-        
+
         $body
 
         return ForwardDiffResult(result)

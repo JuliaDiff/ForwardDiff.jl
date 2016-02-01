@@ -94,7 +94,7 @@ end
         # Vector-Mode
         ResultType = switch_eltype(G, S)
         body = quote
-            @simd for i in eachindex(x)
+            @simd for i in 1:xlen
                 @inbounds gradvec[i] = G(x[i], partials[i])
             end
 
@@ -105,17 +105,16 @@ end
         ChunkType = switch_eltype(G, S)
         ResultType = GradientNumber{xlen,S,Vector{S}}
         body = quote
-            N = npartials(G)
             gradzeros = get_zeros!(cache, G)
 
-            @simd for i in eachindex(x)
+            @simd for i in 1:xlen
                 @inbounds gradvec[i] = G(x[i], gradzeros)
             end
 
             # Perform the first chunk "manually" to retrieve
             # the info we need to build our output
 
-            @simd for i in 1:N
+            @simd for i in 1:chunk_size
                 @inbounds gradvec[i] = G(x[i], partials[i])
             end
 
@@ -124,7 +123,7 @@ end
             nrows, ncols = length(first_result), xlen
             output = Vector{S}[Vector{S}(ncols) for i in 1:nrows]
 
-            for j in 1:N
+            for j in 1:chunk_size
                 @simd for i in 1:nrows
                     @inbounds output[i][j] = grad(first_result[i], j)
                 end
@@ -135,17 +134,17 @@ end
 
             local chunk_result::Vector{$ChunkType}
 
-            for i in (N+1):N:xlen
+            for i in (chunk_size+1):chunk_size:xlen
                 offset = i-1
 
-                @simd for j in 1:N
+                @simd for j in 1:chunk_size
                     m = j+offset
                     @inbounds gradvec[m] = G(x[m], partials[j])
                 end
 
                 chunk_result = f(gradvec)
 
-                for j in 1:N
+                for j in 1:chunk_size
                     m = j+offset
                     @simd for n in 1:nrows
                         @inbounds output[n][m] = grad(chunk_result[n], j)

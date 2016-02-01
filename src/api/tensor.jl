@@ -85,7 +85,7 @@ hessnum_type{N,T,C}(::Type{TensorNumber{N,T,C}}) = HessianNumber{N,T,C}
         # Vector-Mode
         ResultType = switch_eltype(F, S)
         body = quote
-            @simd for i in eachindex(x)
+            @simd for i in 1:xlen
                 @inbounds tensvec[i] = TensorNumber(H(G(x[i], partials[i]), hesszeros), tenszeros)
             end
 
