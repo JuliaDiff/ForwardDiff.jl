@@ -195,7 +195,7 @@ rand_tens = TensorNumber(rand_hess, rand_tensvec)
 # Multiplication/Division #
 #-------------------------#
 function tens_approx_eq(a::TensorNumber, b::TensorNumber)
-    eps = 1e-9
+    eps = 1e-8
     try
         @test_approx_eq_eps value(a) value(b) eps
         @test_approx_eq_eps collect(grad(a)) collect(grad(b)) eps
@@ -285,7 +285,7 @@ end
 for fsym in ForwardDiff.auto_defined_unary_tens_funcs
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
 
-    @eval function testf(x::Vector)
+    testf = @eval (x::Vector) -> begin
         a,b,c,d = x
         return $testexpr
     end

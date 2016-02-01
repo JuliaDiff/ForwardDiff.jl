@@ -48,8 +48,8 @@ function jacobian{A}(f, ::Type{A}=Void;
     # appropriate closure
     if output_length > 0
         output_cache = ForwardDiffCache()
-        function newf{G<:GradientNumber}(x::Vector{G})
-            output = get_workvec!(output_cache, G, output_length)
+        newf = (x::Vector) -> begin
+            output = get_workvec!(output_cache, eltype(x), output_length)
             f(output, x)
             return output
         end

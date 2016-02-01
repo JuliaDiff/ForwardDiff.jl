@@ -279,7 +279,7 @@ chunk_sizes = (ForwardDiff.default_chunk_size, 1, Int(N/2), N)
 for fsym in map(first, Calculus.symbolic_derivatives_1arg())
     testexpr = :($(fsym)(a) + $(fsym)(b) - $(fsym)(c) * $(fsym)(d))
 
-    @eval function testf(x::Vector)
+    testf = @eval (x::Vector) -> begin
         a,b,c,d = x
         return $testexpr
     end
