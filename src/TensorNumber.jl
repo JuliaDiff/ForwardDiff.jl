@@ -304,13 +304,14 @@ end
 
 # Manually Optimized Functions #
 #------------------------------#
-@inline function exp(t::TensorNumber)
+@inline function exp{N}(t::TensorNumber{N})
     exp_a = exp(value(t))
     return tensnum_from_deriv(t, exp_a, exp_a, exp_a, exp_a)
 end
 
-function sqrt(t::TensorNumber)
-    sqrt_a = sqrt(value(t))
+function sqrt{N}(t::TensorNumber{N})
+    a = value(t)
+    sqrt_a = sqrt(a)
     deriv1 = 0.5 / sqrt_a
     sqrt_a_cb = a * sqrt_a
     deriv2 = -0.25 / sqrt_a_cb
