@@ -1,8 +1,8 @@
 T = Float64
 dummy_fsym = :sin
-testexpr = :(sin(a) + exp(b) - tan(c) * cos(d)) 
+testexpr = :(sin(a) + exp(b) - tan(c) * cos(d))
 
-@eval function testf(x::Vector) 
+testf = @eval (x::Vector) -> begin
     a,b,c,d = x
     return $testexpr
 end
@@ -31,7 +31,7 @@ testout = Array(T, M, N)
 testexpr_jac = [:(sin(a) + cos(b)), :(-tan(c)), :(4 * exp(d)), :(cos(b)^5), :(sin(a))]
 testresult = jacob_test_result(testexpr_jac, testx)
 
-@eval function jactestf(x::Vector) 
+jactestf = @eval (x::Vector) -> begin
     a,b,c,d = x
     return [$(testexpr_jac...)]
 end
@@ -49,10 +49,10 @@ jacf = forwarddiff_jacobian(jactestf, T)
 N = 6
 testx = hess_test_x(dummy_fsym, N)
 testout = Array(T, N, N)
-testexpr_hess = :(sin(a) + exp(b) - tan(c) * cos(l) + sin(m) * exp(r)) 
+testexpr_hess = :(sin(a) + exp(b) - tan(c) * cos(l) + sin(m) * exp(r))
 testresult = hess_test_result(testexpr_hess, testx)
 
-@eval function hess_testf(x::Vector) 
+hess_testf = @eval (x::Vector) -> begin
     a,b,c,l,m,r = x
     return $testexpr_hess
 end

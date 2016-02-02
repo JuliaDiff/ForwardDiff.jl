@@ -40,12 +40,12 @@ for fsym in ForwardDiff.auto_defined_unary_funcs
                 :($(fsym)(b)^5),
                 :($(fsym)(a))]
 
-    @eval function testf(x::Vector) 
+    testf = @eval (x::Vector) -> begin
         a,b,c,d = x
         return [$(testexprs...)]
     end
 
-    @eval function testf!(output::Vector, x::Vector)
+    testf! = @eval (output::Vector, x::Vector) -> begin
         a,b,c,d = x
         output[1] = $(testexprs[1])
         output[2] = $(testexprs[2])
@@ -59,7 +59,7 @@ for fsym in ForwardDiff.auto_defined_unary_funcs
             testx = jacob_test_x(fsym, N)
             val_result = testf(testx)
             jacob_result = jacob_test_result(testexprs, testx)
-            
+
             # Non-AllResults
             test_jacob = (testout) -> @test_approx_eq testout jacob_result
 
@@ -67,7 +67,7 @@ for fsym in ForwardDiff.auto_defined_unary_funcs
             test_jacob(testout)
 
             test_jacob(ForwardDiff.jacobian(testf, testx; chunk_size=chunk))
-            
+
             jacf! = ForwardDiff.jacobian(testf; mutates=true, chunk_size=chunk)
             testout = similar(testout)
             jacf!(testout, testx)

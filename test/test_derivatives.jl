@@ -32,8 +32,8 @@ end
 for fsym in ForwardDiff.auto_defined_unary_funcs
     func_expr = :($(fsym)(x) + 4^$(fsym)(x) - x * $(fsym)(x))
     deriv = Calculus.differentiate(func_expr)
-    try 
-        @eval begin 
+    try
+        @eval begin
             x = deriv_test_x($fsym)
             testdf = x -> $func_expr
             val_result = testdf(x)

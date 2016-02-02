@@ -53,61 +53,57 @@ j = x -> ForwardDiff.jacobian(g, x, chunk_size=2)/2 # jacobian in chunk_mode
 # Promote type Issues #
 #######################
 
-# Test overloading of `promote_array_type`
-#-------------------------------------------------------#
+# Test overloading of `promote_array_type` #
+#------------------------------------------#
 
 promtyp = Base.promote_array_type(Base.DotAddFun(),
                                   ForwardDiff.ForwardDiffNumber{2, Float64,
                                   Tuple{Float64, Float64}}, Float64)
-fdiffnum = ForwardDiff.ForwardDiffNumber{2,Float64,Tuple{Float64,Float64}}    
+fdiffnum = ForwardDiff.ForwardDiffNumber{2,Float64,Tuple{Float64,Float64}}
 @test promtyp <: fdiffnum
 
 
 promtyp = Base.promote_array_type(Base.DotAddFun(),
                                   ForwardDiff.GradientNumber{2, Float64,
-                                  Tuple{Float64, Float64}}, Float64)    
-gradnum = ForwardDiff.GradientNumber{2,Float64,Tuple{Float64,Float64}}    
+                                  Tuple{Float64, Float64}}, Float64)
+gradnum = ForwardDiff.GradientNumber{2,Float64,Tuple{Float64,Float64}}
 @test promtyp <: gradnum
 
 promtyp = Base.promote_array_type(Base.DotAddFun(),
                                   ForwardDiff.HessianNumber{2, Float64,
-                                  Tuple{Float64, Float64}}, Float64)    
-hessnum = ForwardDiff.HessianNumber{2,Float64,Tuple{Float64,Float64}}    
+                                  Tuple{Float64, Float64}}, Float64)
+hessnum = ForwardDiff.HessianNumber{2,Float64,Tuple{Float64,Float64}}
 @test promtyp <: hessnum
 
 promtyp = Base.promote_array_type(Base.DotAddFun(),
                                   ForwardDiff.TensorNumber{2, Float64,
-                                  Tuple{Float64, Float64}}, Float64)    
-tensnum = ForwardDiff.TensorNumber{2,Float64,Tuple{Float64,Float64}}    
+                                  Tuple{Float64, Float64}}, Float64)
+tensnum = ForwardDiff.TensorNumber{2,Float64,Tuple{Float64,Float64}}
 @test promtyp <: tensnum
 
-    
-# functions involving `.-`, `.+`, etc.                  # 
-#-------------------------------------------------------#
 
-a    = ones(4)
+# Arithmetic element-wise functions #
+#-----------------------------------#
 
-## Test jacobian    
+N = 4
+a = ones(N)
 jac0 = reshape(vcat([[zeros(N*(i-1)); a; zeros(N^2-N*i)] for i = 1:N]...), N^2, N)
 
-for op = [:-, :+, :./, :.*]
-    @eval fn(x) = [($op)(x[1], a); ($op)(x[2], a); ($op)(x[3], a); ($op)(x[4], a)]
-    jac = ForwardDiff.jacobian(fn, a)
+for op in (-, +, .-, .+, ./, .*)
+
+    f = x -> [op(x[1], a); op(x[2], a); op(x[3], a); op(x[4], a)]
+
+    # jacobian
+    jac = ForwardDiff.jacobian(f, a)
     @test reduce(&, -jac + jac0 .== 0)
-end
 
-## Test hessian
-for op = [:-, :+, :./, :.*]
-    @eval fn(x) = sum([($op)(x[1], a); ($op)(x[2], a); ($op)(x[3], a); ($op)(x[4], a)])
-    hess = ForwardDiff.hessian(fn, a)
+    f = x -> sum([op(x[1], a); op(x[2], a); op(x[3], a); op(x[4], a)])
+
+    # hessian
+    hess = ForwardDiff.hessian(f, a)
     @test reduce(&, -hess + zeros(N, N) .== 0)
-end
 
-## Test tensor
-for op = [:-, :+, :./, :.*]
-    @eval fn(x) = sum([($op)(x[1], a); ($op)(x[2], a); ($op)(x[3], a); ($op)(x[4], a)])
-    tens = ForwardDiff.tensor(fn, a)
+    # tensor
+    tens = ForwardDiff.tensor(f, a)
     @test reduce(&, -tens + zeros(N, N, N) .== 0)
 end
-
-

@@ -35,9 +35,7 @@ end
     end
 end
 
-# The below code generation enables better type inferencing in the event that
-# `f` is a type (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/54).
-closure_deriv_def = quote
+function derivative{A}(f, ::Type{A}=Void; mutates=false)
     if mutates
         d!(output, x::Number) = ForwardDiff.derivative!(output, f, x, A)
         return d!
@@ -45,9 +43,4 @@ closure_deriv_def = quote
         d(x::Number) = ForwardDiff.derivative(f, x, A)
         return d
     end
-end
-
-@eval begin
-    derivative{A}(f, ::Type{A}=Void; mutates=false) = $closure_deriv_def
-    derivative{A,f}(::Type{f}, ::Type{A}=Void; mutates=false) = $closure_deriv_def
 end
