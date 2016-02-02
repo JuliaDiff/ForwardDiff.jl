@@ -89,10 +89,10 @@ def get_benchmarks(*fs):
 ##################
 default_fs = (ackley, rosenbrock, self_weighted_logit)
 
-def run_default_benchmarks(): 
+def run_default_benchmarks():
     return run_benchmarks(*default_fs)
 
-def get_default_benchmarks(): 
+def get_default_benchmarks():
     return get_benchmarks(*default_fs)
 
 if __name__ == '__main__':

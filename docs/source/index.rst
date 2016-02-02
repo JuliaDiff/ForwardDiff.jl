@@ -7,7 +7,7 @@ ForwardDiff.jl implements methods to take **derivatives**, **gradients**, **Jaco
 
 While performance can vary depending on the functions you evaluate, the algorithms implemented by ForwardDiff.jl **generally outperform non-AD algorithms in both speed and accuracy.**
 
-This `wikipedia page`_ on automatic differentiation is a useful resource for learning about the advantages of AD techniques over other common differentiation methods (such as `finite differencing`_). 
+This `wikipedia page`_ on automatic differentiation is a useful resource for learning about the advantages of AD techniques over other common differentiation methods (such as `finite differencing`_).
 
 .. toctree::
    :maxdepth: 2

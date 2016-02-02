@@ -22,12 +22,12 @@ Base.@deprecate forwarddiff_jacobian!(f::Function, T::DataType; fadtype::Symbol=
 Base.@deprecate forwarddiff_hessian!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(ForwardDiff.hessian, f)
 Base.@deprecate forwarddiff_tensor!(f::Function, T::DataType; fadtype::Symbol=:dual, args...) depr_inplace_fad(ForwardDiff.tensor, f)
 
-export forwarddiff_gradient, 
+export forwarddiff_gradient,
     forwarddiff_gradient!,
-    forwarddiff_jacobian, 
+    forwarddiff_jacobian,
     forwarddiff_jacobian!,
-    forwarddiff_hessian, 
+    forwarddiff_hessian,
     forwarddiff_hessian!,
-    forwarddiff_tensor, 
+    forwarddiff_tensor,
     forwarddiff_tensor!,
     deprecated_inplace_fad
