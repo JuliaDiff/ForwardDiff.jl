@@ -4,14 +4,13 @@
 
 # Gradient Cache #
 #----------------#
-type GradientCache{T, Q, R}
+type GradientCache{T, R}
     workvec::Vector{T}
-    zeros::Partials{R}
-    partials::Vector{Q}
+    zeros::R
+    partials::Vector{R}
 end
 
-function GradientCache{T}(input_size::Int, chunk_size::Int, Tv::Type{T}=Float64)
-    G = GradientNumber{chunk_size, Tv, NTuple{chunk_size, Tv}}
+function GradientCache{T}(input_size::Int, G::Type{T})
     workvec = zeros(G, input_size)
     _zeros = build_zeros(G)
     partials = build_partials(G)
@@ -21,6 +20,8 @@ end
 get_workvec(cache::GradientCache) = cache.workvec
 get_partials(cache::GradientCache) = cache.partials
 get_zeros(cache::GradientCache) = cache.zeros
+
+gradientcache_type(input_size, G) = GradientCache{G, partials_type(G)}
 
 typealias GradForwardDiffCache Union{GradientCache, ForwardDiffCache}
 
@@ -61,32 +62,6 @@ end
     end
 end
 
-function gradient{A, T}(f, input_size::Int, input_type::Type{T},
-                        ::Type{A}=Void;
-                        mutates::Bool=false,
-                        chunk_size::Int=default_chunk_size)
-    if chunk_size == 0
-        gcache = GradientCache(input_size, input_size, input_type)
-    else
-        gcache = GradientCache(input_size, chunk_size, input_type)
-    end
-    if mutates
-        function g!(output::Vector, x::Vector)
-            return ForwardDiff.gradient!(output, f, x, A;
-                                         chunk_size=chunk_size,
-                                         cache=gcache)
-        end
-        return g!
-    else
-        function g(x::Vector)
-            return ForwardDiff.gradient(f, x, A;
-                                        chunk_size=chunk_size,
-                                        cache=gcache)
-        end
-        return g
-    end
-end
-
 function gradient{A}(f, ::Type{A}=Void;
                      mutates::Bool=false,
                      chunk_size::Int=default_chunk_size,
@@ -106,6 +81,46 @@ function gradient{A}(f, ::Type{A}=Void;
         end
         return g
     end
+end
+
+function gradient{A, T}(f, input_size::Int, input_type::Type{T},
+                        res_type::Type{A}=Void;
+                        mutates::Bool=false,
+                        chunk_size::Int=default_chunk_size)
+    _gradient(f, Val{input_size}, Val{chunk_size}, input_type, res_type, mutates)
+end
+
+@generated function _gradient{input_size, input_type, chunk_size, A}(f, ::Type{Val{input_size}},
+                                                                     ::Type{Val{chunk_size}},
+                                                                     T::Type{input_type},
+                                                                     res_type::Type{A},
+                                                                     mutates::Bool)
+
+    G = workvec_eltype(GradientNumber, input_type, Val{input_size}, Val{chunk_size})
+
+    GradientType = gradientcache_type(input_size, G)
+
+    body = quote
+        G = $G
+        gcache = GradientCache(input_size, G)::$GradientType
+        if mutates
+            function g!(output::Vector, x::Vector)
+                return ForwardDiff.gradient!(output, f, x, A;
+                                             chunk_size=chunk_size,
+                                             cache=gcache)
+            end
+            return g!
+        else
+            function g(x::Vector)
+                return ForwardDiff.gradient(f, x, A;
+                                            chunk_size=chunk_size,
+                                            cache=gcache)
+            end
+            return g
+        end
+    end
+
+    return body
 end
 
 # Calculate gradient of a given function #
