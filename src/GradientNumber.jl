@@ -110,7 +110,10 @@ end
 #----------------#
 for f in (:^, :(NaNMath.pow))
     @eval begin
-        @inline function ($f){N}(g1::GradientNumber{N}, g2::GradientNumber{N})
+        @inline function ($f){N,T,C}(g1::GradientNumber{N}, g2::GradientNumber{N,T,C})
+            if partials(g2) == zero_partials(C,N)
+                return $f(g1,value(g2))
+            end
             a1, a2 = value(g1), value(g2)
             exp_a = ($f)(a1, a2)
             powval = a2 * ($f)(a1, a2 - 1)
