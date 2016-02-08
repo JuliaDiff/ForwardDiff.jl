@@ -107,3 +107,9 @@ for op in (-, +, .-, .+, ./, .*)
     tens = ForwardDiff.tensor(f, a)
     @test reduce(&, -tens + zeros(N, N, N) .== 0)
 end
+
+######################
+# DomainError Issues #
+######################
+
+@test ForwardDiff.grad(NaNMath.pow(ForwardDiff.GradientNumber(-2.0,(1.0,)),ForwardDiff.GradientNumber(2.0,(0.0,))),1) == -4.0
