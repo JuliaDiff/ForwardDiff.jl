@@ -122,57 +122,58 @@ end
     return calc_gradient_expr(body)
 end
 
-@generated function multi_calc_gradient!{S,T,N,L}(f, output::Vector{S}, x::Vector{T}, ::Type{Val{N}}, ::Type{Val{L}})
-    if N == L
-        body = VEC_MODE_EXPR
-    else
-        nthreads = Threads.nthreads()
-        remainder = L % N == 0 ? N : L % N
-        fill_length = L - remainder
-        reseed_partials = remainder == N ? :() : :(seed_partials = cachefetch!(tid, Partials{N,T}, Val{$(remainder)}))
-        body = quote
-            workvecs::NTuple{$(nthreads), Vector{DiffNumber{N,T}}} = cachefetch!(DiffNumber{N,T}, Val{L})
-            pzeros = zero(Partials{N,T})
+if VERSION >= THREAD_VERSION
+    @generated function multi_calc_gradient!{S,T,N,L}(f, output::Vector{S}, x::Vector{T}, ::Type{Val{N}}, ::Type{Val{L}})
+        if N == L
+            body = VEC_MODE_EXPR
+        else
+            remainder = L % N == 0 ? N : L % N
+            fill_length = L - remainder
+            reseed_partials = remainder == N ? :() : :(seed_partials = cachefetch!(tid, Partials{N,T}, Val{$(remainder)}))
+            body = quote
+                workvecs::NTuple{NTHREADS, Vector{DiffNumber{N,T}}} = cachefetch!(DiffNumber{N,T}, Val{L})
+                pzeros = zero(Partials{N,T})
 
-            Threads.@threads for t in 1:$(nthreads)
-                # must be local, see https://github.com/JuliaLang/julia/issues/14948
-                local workvec = workvecs[t]
-                @simd for i in 1:L
-                    @inbounds workvec[i] = DiffNumber{N,T}(x[i], pzeros)
+                Base.Threads.@threads for t in 1:NTHREADS
+                    # must be local, see https://github.com/JuliaLang/julia/issues/14948
+                    local workvec = workvecs[t]
+                    @simd for i in 1:L
+                        @inbounds workvec[i] = DiffNumber{N,T}(x[i], pzeros)
+                    end
                 end
-            end
 
-            Threads.@threads for c in 1:$(N):$(fill_length)
-                local workvec = workvecs[Threads.threadid()]
-                @simd for i in 1:N
-                    j = i + c - 1
+                Base.Threads.@threads for c in 1:$(N):$(fill_length)
+                    local workvec = workvecs[Base.Threads.threadid()]
+                    @simd for i in 1:N
+                        j = i + c - 1
+                        @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
+                    end
+                    local result::DiffNumber{N,S} = f(workvec)
+                    @simd for i in 1:N
+                        j = i + c - 1
+                        @inbounds output[j] = partials(result, i)
+                        @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
+                    end
+                end
+
+                # Performing the final chunk manually seems to triggers some additional
+                # optimization heuristics, which results in more efficient memory allocation
+                $(reseed_partials)
+                workvec = workvecs[tid]
+                @simd for i in 1:$(remainder)
+                    j = $(fill_length) + i
                     @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
                 end
-                local result::DiffNumber{N,S} = f(workvec)
-                @simd for i in 1:N
-                    j = i + c - 1
+                result::DiffNumber{N,S} = f(workvec)
+                @simd for i in 1:$(remainder)
+                    j = $(fill_length) + i
                     @inbounds output[j] = partials(result, i)
                     @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
                 end
             end
-
-            # Performing the final chunk manually seems to triggers some additional
-            # optimization heuristics, which results in more efficient memory allocation
-            $(reseed_partials)
-            workvec = workvecs[tid]
-            @simd for i in 1:$(remainder)
-                j = $(fill_length) + i
-                @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
-            end
-            result::DiffNumber{N,S} = f(workvec)
-            @simd for i in 1:$(remainder)
-                j = $(fill_length) + i
-                @inbounds output[j] = partials(result, i)
-                @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
-            end
         end
+        return calc_gradient_expr(body)
     end
-    return calc_gradient_expr(body)
 end
 
 const VEC_MODE_EXPR = quote
@@ -189,7 +190,7 @@ end
 function calc_gradient_expr(body)
     return quote
         @assert L == length(x) == length(output)
-        tid = Threads.threadid()
+        tid = Base.Threads.threadid()
         seed_partials::Vector{Partials{N,T}} = cachefetch!(tid, Partials{N,T})
         $(body)
         return (value(result)::S, output::Vector{S})

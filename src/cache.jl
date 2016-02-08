@@ -1,4 +1,4 @@
-const CACHE = ntuple(n -> Dict{DataType,Any}(), Threads.nthreads())
+const CACHE = ntuple(n -> Dict{DataType,Any}(), NTHREADS)
 
 function clearcache!()
     for d in CACHE
@@ -6,7 +6,7 @@ function clearcache!()
     end
 end
 
-@eval cachefetch!(D::DataType, L::DataType) = $(Expr(:tuple, [:(cachefetch!($i, D, L)) for i in 1:Threads.nthreads()]...))
+@eval cachefetch!(D::DataType, L::DataType) = $(Expr(:tuple, [:(cachefetch!($i, D, L)) for i in 1:NTHREADS]...))
 
 function cachefetch!{N,T,L}(tid::Integer, ::Type{DiffNumber{N,T}}, ::Type{Val{L}})
     K = Tuple{DiffNumber{N,T},L}
