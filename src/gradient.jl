@@ -160,6 +160,7 @@ function gradloadchunk!{C}(out, ndiff, chunk::Val{C}, offset)
         j = i + k
         out[j] = partials(ndiff, i)
     end
+<<<<<<< HEAD
 end
 
 # if IS_MULTITHREADED_JULIA
