@@ -73,3 +73,8 @@ function default_value(defaults, kwsym)
     end
     throw(KeyError(kwsym))
 end
+
+function compute_remainder(input_length, chunk)
+    if chunk == input_length; return 0; end
+    return input_length % chunk == 0 ? chunk : input_length % chunk
+end

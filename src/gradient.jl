@@ -108,9 +108,10 @@ end
     return quote
         @assert input_length == length(x)
         T = eltype(x)
-        tid = compat_threadid()
-        seed_partials = cachefetch!(tid, Partials{input_length,T})
-        workvec = cachefetch!(tid, DiffNumber{input_length,T}, Val{input_length})
+        cache = get_cache(cachefetch!(Val{input_length}, Val{input_length}, T))
+        workvec = cache.workvec
+        seed_partials = cache.partials
+
         @simd for i in 1:input_length
             @inbounds workvec[i] = DiffNumber{input_length,T}(x[i], seed_partials[i])
         end
@@ -133,16 +134,16 @@ end
             output = outarg
         end
     end
-    remainder = input_length % chunk == 0 ? chunk : input_length % chunk
+    remainder = compute_remainder(input_length, chunk)
     fill_length = input_length - remainder
-    reseed_partials = remainder == chunk ? :() : :(seed_partials = cachefetch!(tid, Partials{chunk,T}, Val{$(remainder)}))
     return quote
         @assert input_length == length(x)
         T = eltype(x)
-        tid = compat_threadid()
-        zero_partials = zero(Partials{chunk,T})
-        seed_partials = cachefetch!(tid, Partials{chunk,T})
-        workvec = cachefetch!(tid, DiffNumber{chunk,T}, Val{input_length})
+        cache = get_cache(cachefetch!(Val{input_length}, Val{chunk}, T))
+        workvec = cache.workvec
+        seed_partials = cache.partials
+        seed_partials_remainder = cache.partials_remainder
+        zero_partials  = zero(Partials{chunk,T})
 
         # do first chunk manually so that we can infer the output eltype, if necessary
         @simd for i in 1:input_length
@@ -176,10 +177,9 @@ end
 
         # Performing the final chunk manually seems to triggers some additional
         # optimization heuristics, which results in more efficient memory allocation
-        $(reseed_partials)
         @simd for i in 1:$(remainder)
             j = $(fill_length) + i
-            @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
+            @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials_remainder[i])
         end
         chunk_result = f(workvec)
         @simd for i in 1:$(remainder)
@@ -191,7 +191,6 @@ end
         return GradientResult(value(chunk_result), output)
     end
 end
-
 if IS_MULTITHREADED_JULIA
     @generated function _multi_gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}})
         if outarg <: DummyOutput
@@ -202,20 +201,17 @@ if IS_MULTITHREADED_JULIA
                 output = outarg
             end
         end
-        remainder = input_length % chunk == 0 ? chunk : input_length % chunk
+        remainder = compute_remainder(input_length, chunk)
         fill_length = input_length - remainder
-        reseed_partials = remainder == chunk ? :() : :(seed_partials = cachefetch!(tid, Partials{chunk,T}, Val{$(remainder)}))
         return quote
             @assert input_length == length(x)
-            T = eltype(x)
-            tid = compat_threadid()
+            S, T = eltype(out), eltype(x)
+            caches = cachefetch!(Val{input_length}, Val{chunk}, T)
             zero_partials = zero(Partials{chunk,T})
-            seed_partials = cachefetch!(tid, Partials{chunk,T})
-            workvecs = cachefetch!(DiffNumber{chunk,T}, Val{input_length})
 
             Base.Threads.@threads for t in 1:NTHREADS
                 # see https://github.com/JuliaLang/julia/issues/14948
-                local workvec = workvecs[t]
+                local workvec = get_cache(caches).workvec
                 @simd for i in 1:input_length
                     @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], zero_partials)
                 end
@@ -236,7 +232,8 @@ if IS_MULTITHREADED_JULIA
 
             # do the rest of the chunks
             Base.Threads.@threads for c in $(chunk + 1):$(chunk):$(fill_length)
-                local workvec = workvecs[compat_threadid()]
+                local_cache = get_cache(caches)
+                local workvec = local_cache.workve
                 local offset = c - 1
                 @simd for i in 1:chunk
                     local j = i + offset
@@ -249,22 +246,23 @@ if IS_MULTITHREADED_JULIA
                     @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], zero_partials)
                 end
             end
-
             # Performing the final chunk manually seems to triggers some additional
             # optimization heuristics, which results in more efficient memory allocation
-            $(reseed_partials)
-            workvec = workvecs[tid]
+            cache = get_cache(caches)
+            workvec = cache.workvec
+
             @simd for i in 1:$(remainder)
                 j = $(fill_length) + i
-                @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
+                @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], cache.seed_partials_remainder[i])
             end
+
             chunk_result = f(workvec)
+
             @simd for i in 1:$(remainder)
                 j = $(fill_length) + i
                 @inbounds output[j] = partials(chunk_result, i)
                 @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], zero_partials)
             end
-
             return GradientResult(value(chunk_result), output)
         end
     end
