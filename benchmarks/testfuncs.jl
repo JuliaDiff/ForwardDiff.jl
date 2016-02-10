@@ -37,3 +37,34 @@ self_weighted_logit(x) = inv(1.0 + exp(-dot(x, x)))
 const vec2num_testfuncs = (rosenbrock, ackley, self_weighted_logit)
 
 export rosenbrock, ackley, self_weighted_logit
+
+
+######################################
+# Test Functions f: Number -> Number #
+######################################
+# Below functions must:
+#
+# - Take a single argument `x` and return a Number
+# - ...where `x` can be an arbitrary Number
+# - Be type stable for arbitrary `typeof(x)`
+
+# Fourier series of a sawtooth wave
+function sawtooth(x)
+    N = 50
+    s = zero(x)
+    for n = 1:N
+        s += (-1)^(n+1) * sin(n * x) / n
+    end
+    return 2/π * s
+end
+
+# Taylor series for sin(x)
+function taylor_sin{T}(x::T)
+    N = 50
+    s = zero(x)
+    for n = 0:N
+        s += (-1)^n * x^(2n + 1) / factorial(T(2n + 1))
+    end
+    return s
+end
+

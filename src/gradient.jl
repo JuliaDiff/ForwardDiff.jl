@@ -163,6 +163,7 @@ function gradloadchunk!{C}(out, ndiff, chunk::Val{C}, offset)
 <<<<<<< HEAD
 end
 
+<<<<<<< HEAD
 # if IS_MULTITHREADED_JULIA
 #     @generated function _multi_gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}})
 #         if outarg <: DummyOutput
