@@ -4,7 +4,7 @@
 # Below functions must:
 #
 # - Take a single Vector argument `x` and return a Number
-# - ...where `x` can be an arbitrary length
+# - ...where `x` can be of arbitrary length
 # - Be type stable for arbitrary `eltype(x)`
 # - Be listed in `vec2num_testfuncs` below
 # - Be exported
@@ -68,3 +68,60 @@ function taylor_sin{T}(x::T)
     return s
 end
 
+
+######################################
+# Test Functions f: Vector -> Vector #
+######################################
+# Below functions must:
+#
+# - Take a single Vector argument `x` and return a
+# - ... Vector can be of arbitrary length
+# - Be type stable for arbitrary `eltype(x)`
+
+# Taken from NLsolve.jl
+function chebyquad!(x::Vector, fvec::Vector)
+    n = length(x)
+    tk = 1/n
+    for j = 1:n
+        temp1 = 1.0
+        temp2 = 2x[j]-1
+        temp = 2temp2
+        for i = 1:n
+            fvec[i] += temp2
+            ti = temp*temp2 - temp1
+            temp1 = temp2
+            temp2 = ti
+        end
+    end
+    iev = -1.0
+    for k = 1:n
+        fvec[k] *= tk
+        if iev > 0
+            fvec[k] += 1/(k^2-1)
+        end
+        iev = -iev
+    end
+end
+
+# Taken from NLsolve.jl
+function brown_almost_linear!(x::Vector, fvec::Vector)
+    n = length(x)
+    sum1 = sum(x) - (n+1)
+    for k = 1:(n-1)
+        fvec[k] = x[k] + sum1
+    end
+    fvec[n] = prod(x) - 1
+end
+
+
+# Taken from NLsolve.jl
+function trigonometric!(x::Vector, fvec::Vector)
+    n = length(x)
+    for j = 1:n
+        fvec[j] = cos(x[j])
+    end
+    sum1 = sum(fvec)
+    for k = 1:n
+        fvec[k] = n+k-sin(x[k]) - sum1 - k*fvec[k]
+    end
+end
