@@ -33,15 +33,15 @@ function derivative(f, x::Real, A::DataType)
     return handle_deriv_result(f(DiffNumber(x, one(x))), A)
 end
 
-@generated function derivative{output_mutates}(f, A::DataType, ::Type{Val{output_mutates}})
+@generated function derivative{all_results, output_mutates}(f, ::Type{Val{all_results}}, ::Type{Val{output_mutates}})
     if output_mutates
         return quote
-            d!(output::Array, x::Real) = derivative!(f, output, x, A)
+            d!(output::Array, x::Real) = derivative!(f, output, x, Val{all_results})
             return d!
         end
     else
         return quote
-            d(x::Real) = derivative(f, x, A)
+            d(x::Real) = derivative(f, x, Val{all_results})
             return d
         end
     end
