@@ -200,7 +200,7 @@ end
 function calc_gradient_expr(body)
     return quote
         @assert LEN == length(x) == length(out)
-        tid = Base.Threads.threadid()
+        tid = $(IS_MULTITHREADED_JULIA ? Base.Threads.threadid() : 1)
         seed_partials::Vector{Partials{CHUNK,T}} = cachefetch!(tid, Partials{CHUNK,T})
         $(body)
         return (value(result)::S, out)

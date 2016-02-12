@@ -10,7 +10,7 @@ tic()
 include("DiffNumberTest.jl")
 println("done (took $(toq()) seconds).")
 
-print("Testing Gradient-related functionality...")
+print("Testing gradient-related functionality...")
 tic()
 include("GradientTest.jl")
 println("done (took $(toq()) seconds).")

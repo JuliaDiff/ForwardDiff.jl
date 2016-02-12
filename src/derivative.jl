@@ -25,11 +25,11 @@ end
 # derivative!/derivative #
 ##########################
 
-function derivative!(f, out::Array, x::Real, ::Type{Val{ALL}})
+function derivative!{ALL}(f, out::Array, x::Real, ::Type{Val{ALL}})
     return handle_deriv_result!(out, f(DiffNumber(x, one(x))), Val{ALL})
 end
 
-function derivative(f, x::Real, ::Type{Val{ALL}})
+function derivative{ALL}(f, x::Real, ::Type{Val{ALL}})
     return handle_deriv_result(f(DiffNumber(x, one(x))), Val{ALL})
 end
 
@@ -57,7 +57,7 @@ function handle_deriv_result(result::DiffNumber, ::Type{Val{true}})
     return value(result), partials(result, 1)
 end
 
-function handle_deriv_result{T}(result::Array{T}, ::Type{Val{ALL}})
+function handle_deriv_result{T,ALL}(result::Array{T}, ::Type{Val{ALL}})
     return handle_deriv_result!(similar(result, numtype(T)), result, Val{ALL})
 end
 
