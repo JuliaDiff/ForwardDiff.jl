@@ -49,7 +49,7 @@ function default_value(defaults, kwsym)
     throw(KeyError(kwsym))
 end
 
-const AUTO_CHUNK_THRESHOLD = 11
+const AUTO_CHUNK_THRESHOLD = 10
 
 function pick_chunk(input_length)
     if input_length <= AUTO_CHUNK_THRESHOLD
