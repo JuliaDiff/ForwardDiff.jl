@@ -25,27 +25,33 @@ end
 # gradient!/gradient #
 ######################
 
-@generated function gradient!{S,A,L}(f, output::Vector{S}, x::Vector, ::Type{Val{A}}, N::DataType, ::Type{Val{L}}, M::DataType)
+@generated function gradient!{S,ALL,CHUNK,LEN,MULTITHREAD}(f, out::AbstractVector{S}, x::AbstractVector,
+                                                           ::Type{Val{ALL}}, ::Type{Val{CHUNK}},
+                                                           ::Type{Val{LEN}}, ::Type{Val{MULTITHREAD}})
     return quote
-        val, grad = call_gradient!(f, output, x, N, Val{$(L == nothing ? :(length(x)) : L)}, M)
-        return $(A ? :(val::S, output::Vector{S}) : :(output::Vector{S}))
+        val, grad = call_gradient!(f, out, x, Val{CHUNK}, Val{$(LEN == nothing ? :(length(x)) : LEN)}, Val{MULTITHREAD})
+        return $(ALL ? :(val::S, out::$(out)) : :(out::$(out)))
     end
 end
 
-function gradient(f, x::Vector, A::DataType, N::DataType, L::DataType, M::DataType)
-    return gradient!(f, similar(x), x, A, N, L, M)
+function gradient{ALL,CHUNK,LEN,MULTITHREAD}(f, x::AbstractVector, ::Type{Val{ALL}}, ::Type{Val{CHUNK}},
+                                             ::Type{Val{LEN}}, ::Type{Val{MULTITHREAD}})
+    return gradient!(f, similar(x), x, Val{ALL}, Val{CHUNK}, Val{LEN}, Val{MULTITHREAD})
 end
 
-@generated function gradient{A,output_mutates}(f, ::Type{Val{A}}, N::DataType, L::DataType, M::DataType, ::Type{Val{output_mutates}})
-    R = A ? :(Tuple{S,Vector{S}}) : :(Vector{S})
-    if output_mutates
+@generated function gradient{ALL,CHUNK,LEN,MULTITHREAD,MUTATES}(f, ::Type{Val{ALL}}, ::Type{Val{CHUNK}},
+                                                                ::Type{Val{LEN}}, ::Type{Val{MULTITHREAD}},
+                                                                ::Type{Val{MUTATES}})
+    if MUTATES
+        R = ALL ? :(Tuple{S,typeof(out)}) : :(typeof(out))
         return quote
-            g!{S}(output::Vector{S}, x::Vector) = gradient!(f, output, x, Val{A}, N, L, M)::$(R)
+            g!{S}(out::AbstractVector{S}, x::AbstractVector) = gradient!(f, out, x, Val{ALL}, Val{CHUNK}, Val{LEN}, Val{MULTITHREAD})::$(R)
             return g!
         end
     else
+        R = ALL ? :(Tuple{S,typeof(x)}) : :(typeof(x))
         return quote
-            g{S}(x::Vector{S}) = gradient(f, x, Val{A}, N, L, M)::$(R)
+            g{S}(x::AbstractVector{S}) = gradient(f, x, Val{ALL}, Val{CHUNK}, Val{LEN}, Val{MULTITHREAD})::$(R)
             return g
         end
     end
@@ -71,36 +77,39 @@ end
 # `calc_gradient_expr` takes in a vector-mode expression body or chunk-mode expression body
 # and returns a completed function body with the input body injected in the correct place.
 
-@generated function call_gradient!{S,N,L,M}(f, output::Vector{S}, x::Vector, ::Type{Val{N}}, ::Type{Val{L}}, ::Type{Val{M}})
-    gradf! = M ? :multi_calc_gradient! : :calc_gradient!
-    return :($(gradf!)(f, output, x, Val{$(N == nothing ? pick_chunk(L) : N)}, Val{L})::Tuple{S, Vector{S}})
+@generated function call_gradient!{S,CHUNK,LEN,MULTITHREAD}(f, out::AbstractVector{S}, x::AbstractVector,
+                                                            ::Type{Val{CHUNK}}, ::Type{Val{LEN}},
+                                                            ::Type{Val{MULTITHREAD}})
+    gradf! = MULTITHREAD && IS_MULTITHREADED_JULIA ? :multi_calc_gradient! : :calc_gradient!
+    return :($(gradf!)(f, out, x, Val{$(CHUNK == nothing ? pick_chunk(LEN) : CHUNK)}, Val{LEN})::Tuple{S, $(out)})
 end
 
-@generated function calc_gradient!{S,T,N,L}(f, output::Vector{S}, x::Vector{T}, ::Type{Val{N}}, ::Type{Val{L}})
-    if N == L
+@generated function calc_gradient!{S,T,CHUNK,LEN}(f, out::AbstractVector{S}, x::AbstractVector{T},
+                                                  ::Type{Val{CHUNK}}, ::Type{Val{LEN}})
+    if CHUNK == LEN
         body = VEC_MODE_EXPR
     else
-        remainder = L % N == 0 ? N : L % N
-        fill_length = L - remainder
-        reseed_partials = remainder == N ? :() : :(seed_partials = cachefetch!(tid, Partials{N,T}, Val{$(remainder)}))
+        remainder = LEN % CHUNK == 0 ? CHUNK : LEN % CHUNK
+        fill_length = LEN - remainder
+        reseed_partials = remainder == CHUNK ? :() : :(seed_partials = cachefetch!(tid, Partials{CHUNK,T}, Val{$(remainder)}))
         body = quote
-            workvec::Vector{DiffNumber{N,T}} = cachefetch!(tid, DiffNumber{N,T}, Val{L})
-            pzeros = zero(Partials{N,T})
+            workvec::Vector{DiffNumber{CHUNK,T}} = cachefetch!(tid, DiffNumber{CHUNK,T}, Val{LEN})
+            pzeros = zero(Partials{CHUNK,T})
 
-            @simd for i in 1:L
-                @inbounds workvec[i] = DiffNumber{N,T}(x[i], pzeros)
+            @simd for i in 1:LEN
+                @inbounds workvec[i] = DiffNumber{CHUNK,T}(x[i], pzeros)
             end
 
-            for c in 1:$(N):$(fill_length)
-                @simd for i in 1:N
+            for c in 1:$(CHUNK):$(fill_length)
+                @simd for i in 1:CHUNK
                     j = i + c - 1
-                    @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
+                    @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], seed_partials[i])
                 end
-                local result::DiffNumber{N,S} = f(workvec)
-                @simd for i in 1:N
+                local result::DiffNumber{CHUNK,S} = f(workvec)
+                @simd for i in 1:CHUNK
                     j = i + c - 1
-                    @inbounds output[j] = partials(result, i)
-                    @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
+                    @inbounds out[j] = partials(result, i)
+                    @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], pzeros)
                 end
             end
 
@@ -109,50 +118,51 @@ end
             $(reseed_partials)
             @simd for i in 1:$(remainder)
                 j = $(fill_length) + i
-                @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
+                @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], seed_partials[i])
             end
-            result::DiffNumber{N,S} = f(workvec)
+            result::DiffNumber{CHUNK,S} = f(workvec)
             @simd for i in 1:$(remainder)
                 j = $(fill_length) + i
-                @inbounds output[j] = partials(result, i)
-                @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
+                @inbounds out[j] = partials(result, i)
+                @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], pzeros)
             end
         end
     end
     return calc_gradient_expr(body)
 end
 
-if VERSION >= THREAD_VERSION
-    @generated function multi_calc_gradient!{S,T,N,L}(f, output::Vector{S}, x::Vector{T}, ::Type{Val{N}}, ::Type{Val{L}})
-        if N == L
+if IS_MULTITHREADED_JULIA
+    @generated function multi_calc_gradient!{S,T,CHUNK,LEN}(f, out::AbstractVector{S}, x::AbstractVector{T},
+                                                            ::Type{Val{CHUNK}}, ::Type{Val{LEN}})
+        if CHUNK == LEN
             body = VEC_MODE_EXPR
         else
-            remainder = L % N == 0 ? N : L % N
-            fill_length = L - remainder
-            reseed_partials = remainder == N ? :() : :(seed_partials = cachefetch!(tid, Partials{N,T}, Val{$(remainder)}))
+            remainder = LEN % CHUNK == 0 ? CHUNK : LEN % CHUNK
+            fill_length = LEN - remainder
+            reseed_partials = remainder == CHUNK ? :() : :(seed_partials = cachefetch!(tid, Partials{CHUNK,T}, Val{$(remainder)}))
             body = quote
-                workvecs::NTuple{NTHREADS, Vector{DiffNumber{N,T}}} = cachefetch!(DiffNumber{N,T}, Val{L})
-                pzeros = zero(Partials{N,T})
+                workvecs::NTuple{NTHREADS, Vector{DiffNumber{CHUNK,T}}} = cachefetch!(DiffNumber{CHUNK,T}, Val{LEN})
+                pzeros = zero(Partials{CHUNK,T})
 
                 Base.Threads.@threads for t in 1:NTHREADS
                     # must be local, see https://github.com/JuliaLang/julia/issues/14948
                     local workvec = workvecs[t]
-                    @simd for i in 1:L
-                        @inbounds workvec[i] = DiffNumber{N,T}(x[i], pzeros)
+                    @simd for i in 1:LEN
+                        @inbounds workvec[i] = DiffNumber{CHUNK,T}(x[i], pzeros)
                     end
                 end
 
-                Base.Threads.@threads for c in 1:$(N):$(fill_length)
+                Base.Threads.@threads for c in 1:$(CHUNK):$(fill_length)
                     local workvec = workvecs[Base.Threads.threadid()]
-                    @simd for i in 1:N
+                    @simd for i in 1:CHUNK
                         j = i + c - 1
-                        @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
+                        @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], seed_partials[i])
                     end
-                    local result::DiffNumber{N,S} = f(workvec)
-                    @simd for i in 1:N
+                    local result::DiffNumber{CHUNK,S} = f(workvec)
+                    @simd for i in 1:CHUNK
                         j = i + c - 1
-                        @inbounds output[j] = partials(result, i)
-                        @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
+                        @inbounds out[j] = partials(result, i)
+                        @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], pzeros)
                     end
                 end
 
@@ -162,13 +172,13 @@ if VERSION >= THREAD_VERSION
                 workvec = workvecs[tid]
                 @simd for i in 1:$(remainder)
                     j = $(fill_length) + i
-                    @inbounds workvec[j] = DiffNumber{N,T}(x[j], seed_partials[i])
+                    @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], seed_partials[i])
                 end
-                result::DiffNumber{N,S} = f(workvec)
+                result::DiffNumber{CHUNK,S} = f(workvec)
                 @simd for i in 1:$(remainder)
                     j = $(fill_length) + i
-                    @inbounds output[j] = partials(result, i)
-                    @inbounds workvec[j] = DiffNumber{N,T}(x[j], pzeros)
+                    @inbounds out[j] = partials(result, i)
+                    @inbounds workvec[j] = DiffNumber{CHUNK,T}(x[j], pzeros)
                 end
             end
         end
@@ -177,22 +187,22 @@ if VERSION >= THREAD_VERSION
 end
 
 const VEC_MODE_EXPR = quote
-    workvec::Vector{DiffNumber{N,T}} = cachefetch!(tid, DiffNumber{N,T}, Val{L})
-    @simd for i in 1:L
-        @inbounds workvec[i] = DiffNumber{N,T}(x[i], seed_partials[i])
+    workvec::Vector{DiffNumber{CHUNK,T}} = cachefetch!(tid, DiffNumber{CHUNK,T}, Val{LEN})
+    @simd for i in 1:LEN
+        @inbounds workvec[i] = DiffNumber{CHUNK,T}(x[i], seed_partials[i])
     end
-    result::DiffNumber{N,S} = f(workvec)
-    @simd for i in 1:L
-        @inbounds output[i] = partials(result, i)
+    result::DiffNumber{CHUNK,S} = f(workvec)
+    @simd for i in 1:LEN
+        @inbounds out[i] = partials(result, i)
     end
 end
 
 function calc_gradient_expr(body)
     return quote
-        @assert L == length(x) == length(output)
+        @assert LEN == length(x) == length(out)
         tid = Base.Threads.threadid()
-        seed_partials::Vector{Partials{N,T}} = cachefetch!(tid, Partials{N,T})
+        seed_partials::Vector{Partials{CHUNK,T}} = cachefetch!(tid, Partials{CHUNK,T})
         $(body)
-        return (value(result)::S, output::Vector{S})
+        return (value(result)::S, out)
     end
 end

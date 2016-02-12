@@ -25,23 +25,23 @@ end
 # derivative!/derivative #
 ##########################
 
-function derivative!(f, output::Array, x::Real, A::DataType)
-    return handle_deriv_result!(output, f(DiffNumber(x, one(x))), A)
+function derivative!(f, out::Array, x::Real, ::Type{Val{ALL}})
+    return handle_deriv_result!(out, f(DiffNumber(x, one(x))), Val{ALL})
 end
 
-function derivative(f, x::Real, A::DataType)
-    return handle_deriv_result(f(DiffNumber(x, one(x))), A)
+function derivative(f, x::Real, ::Type{Val{ALL}})
+    return handle_deriv_result(f(DiffNumber(x, one(x))), Val{ALL})
 end
 
-@generated function derivative{output_mutates}(f, A::DataType, ::Type{Val{output_mutates}})
-    if output_mutates
+@generated function derivative{ALL, MUTATES}(f, ::Type{Val{ALL}}, ::Type{Val{MUTATES}})
+    if MUTATES
         return quote
-            d!(output::Array, x::Real) = derivative!(f, output, x, A)
+            d!(out::Array, x::Real) = derivative!(f, out, x, Val{ALL})
             return d!
         end
     else
         return quote
-            d(x::Real) = derivative(f, x, A)
+            d(x::Real) = derivative(f, x, Val{ALL})
             return d
         end
     end
@@ -57,8 +57,8 @@ function handle_deriv_result(result::DiffNumber, ::Type{Val{true}})
     return value(result), partials(result, 1)
 end
 
-function handle_deriv_result{T}(result::Array{T}, A::DataType)
-    return handle_deriv_result!(similar(result, numtype(T)), result, A)
+function handle_deriv_result{T}(result::Array{T}, ::Type{Val{ALL}})
+    return handle_deriv_result!(similar(result, numtype(T)), result, Val{ALL})
 end
 
 function handle_deriv_result!(output::Array, result::Array, ::Type{Val{true}})
