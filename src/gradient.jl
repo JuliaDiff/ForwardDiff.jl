@@ -2,8 +2,8 @@
 # @gradient!/@gradient #
 ########################
 
-const GRADIENT_KWARG_ORDER = (:allresults, :chunk, :input_length, :multithread)
-const GRADIENT_F_KWARG_ORDER = (:allresults, :chunk, :input_length, :multithread, :mutates)
+const GRADIENT_KWARG_ORDER = (:allresults, :chunk, :input_length, :multithread, :cache)
+const GRADIENT_F_KWARG_ORDER = (:allresults, :chunk, :input_length, :multithread, :mutates, :cache)
 
 macro gradient!(args...)
     args, kwargs = separate_kwargs(args)
@@ -40,33 +40,33 @@ value(result::GradientResult) = copy(result.value)
 ######################
 
 @generated function _gradient!(f, output, x, allresults::DataType, chunk::DataType,
-                              input_length::DataType, multithread::DataType)
+                              input_length::DataType, multithread::DataType, caches)
     input_length_value = value(input_length) == nothing ? :(length(x)) : value(input_length)
     return_statement = value(allresults) ? :(result) : :(output)
     return quote
-        result = _call_gradient!(f, output, x, chunk, Val{$(input_length_value)}, multithread)
+        result = _call_gradient!(f, output, x, chunk, Val{$(input_length_value)}, multithread, caches)
         return $(return_statement)
     end
 end
 
-@generated function _gradient(f, x, allresults::DataType, chunk::DataType, input_length::DataType, multithread::DataType)
+@generated function _gradient(f, x, allresults::DataType, chunk::DataType, input_length::DataType, multithread::DataType, caches)
     return_statement = value(allresults) ? :(result) : :(result.gradient)
     return quote
-        result = _gradient!(f, DummyOutput(), x, Val{true}, chunk, input_length, multithread)
+        result = _gradient!(f, DummyOutput(), x, Val{true}, chunk, input_length, multithread, caches)
         return $(return_statement)
     end
 end
 
 @generated function _gradient(f, allresults::DataType, chunk::DataType, input_length::DataType,
-                              multithread::DataType, mutates::DataType)
+                              multithread::DataType, mutates::DataType, caches)
     if value(mutates)
         return quote
-            g!(output, x) = _gradient!(f, output, x, allresults, chunk, input_length, multithread)
+            g!(output, x) = _gradient!(f, output, x, allresults, chunk, input_length, multithread, caches)
             return g!
         end
     else
         return quote
-            g(x) = _gradient(f, x, allresults, chunk, input_length, multithread)
+            g(x) = _gradient(f, x, allresults, chunk, input_length, multithread, caches)
             return g
         end
     end
@@ -79,7 +79,7 @@ end
 # `_call_gradient!` is the entry point that is called by the API functions. It decides which
 # workhorse function to call based on the provided parameters. Note that if a chunk size
 # isn't given by an upstream caller, `_call_gradient!` picks one based on the input length.
-@generated function _call_gradient!(f, output, x, chunk, input_length, multithread)
+@generated function _call_gradient!(f, output, x, chunk, input_length, multithread, caches)
     input_length_value = value(input_length)
     chunk_value = value(chunk) == nothing ? pick_chunk(input_length_value) : value(chunk)
     @assert chunk_value <= input_length_value
@@ -90,13 +90,13 @@ end
         else
             gradfunc! = :_gradient_chunk_mode!
         end
-        return :($(gradfunc!)(f, output, x, Val{$(chunk_value)}, Val{$(input_length_value)}))
+        return :($(gradfunc!)(f, output, x, Val{$(chunk_value)}, Val{$(input_length_value)}, caches))
     else
-        return :(_gradient_vector_mode!(f, output, x, Val{$(input_length_value)}))
+        return :(_gradient_vector_mode!(f, output, x, Val{$(input_length_value)}, caches))
     end
 end
 
-@generated function _gradient_vector_mode!{input_length}(f, outarg, x, ::Type{Val{input_length}})
+@generated function _gradient_vector_mode!{input_length}(f, outarg, x, ::Type{Val{input_length}}, caches)
     if outarg <: DummyOutput
         outputdef = :(output = Vector{S}(input_length))
     else
@@ -108,7 +108,8 @@ end
     return quote
         @assert input_length == length(x)
         T = eltype(x)
-        cache = get_cache(cachefetch!(Val{input_length}, Val{input_length}, T))
+        $(generate_cache_body(caches, input_length, input_length))
+        cache = get_cache(_caches)
         workvec = cache.workvec
         seed_partials = cache.partials
 
@@ -125,7 +126,7 @@ end
     end
 end
 
-@generated function _gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}})
+@generated function _gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}}, caches)
     if outarg <: DummyOutput
         outputdef = :(output = Vector{S}(input_length))
     else
@@ -139,7 +140,8 @@ end
     return quote
         @assert input_length == length(x)
         T = eltype(x)
-        cache = get_cache(cachefetch!(Val{input_length}, Val{chunk}, T))
+        $(generate_cache_body(caches, input_length, chunk))
+        cache = get_cache(_caches)
         workvec = cache.workvec
         seed_partials = cache.partials
         seed_partials_remainder = cache.partials_remainder
@@ -192,7 +194,7 @@ end
     end
 end
 if IS_MULTITHREADED_JULIA
-    @generated function _multi_gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}})
+    @generated function _multi_gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}}, caches)
         if outarg <: DummyOutput
             outputdef = :(output = Vector{S}(input_length))
         else
@@ -205,20 +207,23 @@ if IS_MULTITHREADED_JULIA
         fill_length = input_length - remainder
         return quote
             @assert input_length == length(x)
-            S, T = eltype(out), eltype(x)
-            caches = cachefetch!(Val{input_length}, Val{chunk}, T)
+            T = eltype(x)
+            $(generate_cache_body(caches, input_length, chunk))
+            cache = get_cache(_caches)
+            workvec = cache.workvec
+            seed_partials = cache.partials
+            seed_partials_remainder = cache.partials_remainder
             zero_partials = zero(Partials{chunk,T})
 
             Base.Threads.@threads for t in 1:NTHREADS
                 # see https://github.com/JuliaLang/julia/issues/14948
-                local workvec = get_cache(caches).workvec
+                local workvec = get_cache(_caches).workvec
                 @simd for i in 1:input_length
                     @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], zero_partials)
                 end
             end
 
             # do first chunk manually so that we can infer the output eltype, if necessary
-            workvec = workvecs[tid]
             @simd for i in 1:chunk
                 @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], seed_partials[i])
             end
@@ -232,7 +237,7 @@ if IS_MULTITHREADED_JULIA
 
             # do the rest of the chunks
             Base.Threads.@threads for c in $(chunk + 1):$(chunk):$(fill_length)
-                local_cache = get_cache(caches)
+                local_cache = get_cache(_caches)
                 local workvec = local_cache.workve
                 local offset = c - 1
                 @simd for i in 1:chunk
@@ -246,18 +251,16 @@ if IS_MULTITHREADED_JULIA
                     @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], zero_partials)
                 end
             end
+
             # Performing the final chunk manually seems to triggers some additional
             # optimization heuristics, which results in more efficient memory allocation
-            cache = get_cache(caches)
+            cache = get_cache(_caches)
             workvec = cache.workvec
-
             @simd for i in 1:$(remainder)
                 j = $(fill_length) + i
-                @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], cache.seed_partials_remainder[i])
+                @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], cache.partials_remainder[i])
             end
-
             chunk_result = f(workvec)
-
             @simd for i in 1:$(remainder)
                 j = $(fill_length) + i
                 @inbounds output[j] = partials(chunk_result, i)

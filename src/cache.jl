@@ -49,10 +49,13 @@ immutable ForwardDiffCache{chunk, T}
     caches::Vector{GradientCache{chunk,T}}
 end
 
-function Base.show{chunk, T}(io::IO, ::ForwardDiffCache{chunk, T})
-    print(io, "ForwardDiffCache: chunk: $(chunk), T: $(T)")
+function Base.show{chunk, T}(io::IO, fdc::ForwardDiffCache{chunk, T})
+    print(io, "ForwardDiffCache: length: $(get_input_length(fdc)), chunk: $(chunk), T: $(T)")
 end
 
+get_chunk_size{CHUNK, T}(fdc::ForwardDiffCache{CHUNK, T}) = CHUNK
+get_type{CHUNK, T}(fdc::ForwardDiffCache{CHUNK, T}) = T
+get_input_length(fdc::ForwardDiffCache) = length(fdc.caches[1].workvec)
 get_cache(fdc::ForwardDiffCache) = fdc.caches[compat_threadid()]
 totalsizeof(fdc::ForwardDiffCache) = sum(map(totalsizeof, fdc.caches))
 
@@ -63,16 +66,31 @@ totalsizeof(fdc::ForwardDiffCache) = sum(map(totalsizeof, fdc.caches))
     end
 end
 
+
 @generated function ForwardDiffCache{input_length, chunk, T}(::Type{Val{input_length}}, ::Type{T}, ::Type{Val{chunk}})
+    chunk_value = chunk == nothing ? pick_chunk(input_length) : chunk
     body = quote
-        remainder = compute_remainder(input_length, $chunk)
-        cache_vec = Vector{GradientCache{$chunk, T}}(NTHREADS)
+        remainder = compute_remainder(input_length, $chunk_value)
+        cache_vec = Vector{GradientCache{$chunk_value, T}}(NTHREADS)
         for i in 1:NTHREADS
-            cache_vec[i] = GradientCache(remainder, input_length, Val{$chunk}, T)
+            cache_vec[i] = GradientCache(remainder, input_length, Val{$chunk_value}, T)
         end
-        return ForwardDiffCache(cache_vec)::ForwardDiffCache{$chunk, T}
+        return ForwardDiffCache(cache_vec)::ForwardDiffCache{$chunk_value, T}
     end
     return body
+end
+
+function generate_cache_body(caches, input_length, chunk)
+    if caches <: Type{Void}
+        cache_body = quote
+            _caches = cachefetch!(Val{$input_length}, Val{$chunk}, T)
+        end
+    else
+        cache_body = quote
+            _caches = caches
+        end
+    end
+    return cache_body
 end
 
 
@@ -80,7 +98,7 @@ end
 # CACHE #
 #########
 
-const CACHE = Dict{Tuple{Int, Int, DataType}, ForwardDiffCache}()
+const _CACHE = Dict{Tuple{Int, Int, DataType}, ForwardDiffCache}()
 
 function clearcache!()
     empty!(CACHE)
@@ -88,15 +106,15 @@ function clearcache!()
 end
 
 # Computes the total size in bytes of the cache
-totalsizeofcache() = sum(map(totalsizeof, values(CACHE)))
+totalsizeofcache() = sum(map(totalsizeof, values(_CACHE)))
 
 function cachefetch!{input_length, chunk, T}(::Type{Val{input_length}}, ::Type{Val{chunk}}, ::Type{T})
     K = (input_length, chunk, T)
-    if haskey(CACHE, K)
-        caches = CACHE[K]
+    if haskey(_CACHE, K)
+        caches = _CACHE[K]
     else
         caches = ForwardDiffCache(Val{input_length}, T, Val{chunk})
-        CACHE[K] = caches
+        _CACHE[K] = caches
     end
     return caches::ForwardDiffCache{chunk, T}
 end
