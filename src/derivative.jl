@@ -25,23 +25,23 @@ end
 # derivative!/derivative #
 ##########################
 
-function derivative!{ALL}(f, out::Array, x::Real, ::Type{Val{ALL}})
+function derivative!{ALL}(f, out, x, ::Type{Val{ALL}})
     return handle_deriv_result!(out, f(DiffNumber(x, one(x))), Val{ALL})
 end
 
-function derivative{ALL}(f, x::Real, ::Type{Val{ALL}})
+function derivative{ALL}(f, x, ::Type{Val{ALL}})
     return handle_deriv_result(f(DiffNumber(x, one(x))), Val{ALL})
 end
 
 @generated function derivative{ALL, MUTATES}(f, ::Type{Val{ALL}}, ::Type{Val{MUTATES}})
     if MUTATES
         return quote
-            d!(out::Array, x::Real) = derivative!(f, out, x, Val{ALL})
+            d!(out, x) = derivative!(f, out, x, Val{ALL})
             return d!
         end
     else
         return quote
-            d(x::Real) = derivative(f, x, Val{ALL})
+            d(x) = derivative(f, x, Val{ALL})
             return d
         end
     end
@@ -52,16 +52,14 @@ end
 ###############################
 
 handle_deriv_result(result::DiffNumber, ::Type{Val{false}}) = partials(result, 1)
+handle_deriv_result(result::DiffNumber, ::Type{Val{true}}) = value(result), partials(result, 1)
 
-function handle_deriv_result(result::DiffNumber, ::Type{Val{true}})
-    return value(result), partials(result, 1)
+function handle_deriv_result{ALL}(result, ::Type{Val{ALL}})
+    output = similar(result, numtype(eltype(result)))
+    return handle_deriv_result!(output, result, Val{ALL})
 end
 
-function handle_deriv_result{T,ALL}(result::Array{T}, ::Type{Val{ALL}})
-    return handle_deriv_result!(similar(result, numtype(T)), result, Val{ALL})
-end
-
-function handle_deriv_result!(output::Array, result::Array, ::Type{Val{true}})
+function handle_deriv_result!(output, result, ::Type{Val{true}})
     valoutput = similar(output)
     for i in eachindex(result)
         valoutput[i] = value(result[i])
@@ -70,7 +68,7 @@ function handle_deriv_result!(output::Array, result::Array, ::Type{Val{true}})
     return valoutput, output
 end
 
-function handle_deriv_result!(output::Array, result::Array, ::Type{Val{false}})
+function handle_deriv_result!(output, result, ::Type{Val{false}})
     for i in eachindex(result)
         output[i] = partials(result[i], 1)
     end
