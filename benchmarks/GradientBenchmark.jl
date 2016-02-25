@@ -12,15 +12,17 @@ const FUNCTIONS_GRADIENT = (rosenbrock, ackley, self_weighted_logit)
 @track TRACKER "gradients" begin
     @setup begin
         vecs = [samerand(T, S) for T in INPUT_TYPES_GRADIENT, S in INPUT_SIZES_GRADIENT]
+        outputs = [samerand(T, S) for T in INPUT_TYPES_GRADIENT, S in INPUT_SIZES_GRADIENT]
         gs = [ForwardDiff.@gradient(F, chunk=CS) for F in FUNCTIONS_GRADIENT, CS in CHUNK_SIZES_GRADIENT]
-        names = Dict{Function, AbstractString}()
-        for F in FUNCTIONS_GRADIENT
-            names[F] = string(F)
-        end
+        gs! = [ForwardDiff.@gradient(F, chunk=CS, output_mutates = true) for F in FUNCTIONS_GRADIENT, CS in CHUNK_SIZES_GRADIENT]
+        f_strings = [string(FUNCTIONS_GRADIENT[i]) for i in 1:length(FUNCTIONS_GRADIENT), CS in CHUNK_SIZES_GRADIENT]
     end
 
     @benchmarks begin
-        [(:grad_unmod, names[g.f], string(typeof(vec)), size(vec)) => g(vec) for g in gs, vec in vecs]
+        [(:grad_, f_strings[i], string(typeof(vec)), size(vec)) => g(vec) for (i, g) in enumerate(gs), vec in vecs]
+        [(:grad!, f_strings[i], string(typeof(vec)), size(vec)) => g!(output, vec) for (i, g!) in enumerate(gs!),
+                                                                     (output, vec) in zip(outputs, vecs)]
     end
-    @tags "gradients" "differentiation"
+    @constraints time_limit=>1
+    @tags "differentiation"
 end
