@@ -1,10 +1,35 @@
-#################
-# API Utilities #
-#################
+#########
+# types #
+#########
 
-const KWARG_DEFAULTS = (:all => false, :chunk => nothing, :multithread => false,
-                        :input_length => nothing, :input_mutates => false,
-                        :output_length => nothing, :output_mutates => false)
+immutable DummyOutput end
+
+abstract ForwardDiffResult
+
+#######################
+# picking chunk sizes #
+#######################
+
+const AUTO_CHUNK_THRESHOLD = 10
+
+function pick_chunk(input_length)
+    if input_length <= AUTO_CHUNK_THRESHOLD
+        return input_length
+    else
+        # Constrained to chunk <= AUTO_CHUNK_THRESHOLD, minimize (in order of priority):
+        #   1. the number of chunks that need to be computed
+        #   2. the number of "left over" perturbations in the final chunk
+        nchunks = round(Int, input_length / AUTO_CHUNK_THRESHOLD, RoundUp)
+        return round(Int, input_length / nchunks, RoundUp)
+    end
+end
+
+###################
+# macro utilities #
+###################
+
+const KWARG_DEFAULTS = (:allresults => false, :chunk => nothing, :multithread => false,
+                        :input_length => nothing, :output_length => nothing, :mutates => false)
 
 iskwarg(ex) = isa(ex, Expr) && (ex.head == :kw || ex.head == :(=))
 
@@ -47,18 +72,4 @@ function default_value(defaults, kwsym)
         end
     end
     throw(KeyError(kwsym))
-end
-
-const AUTO_CHUNK_THRESHOLD = 10
-
-function pick_chunk(input_length)
-    if input_length <= AUTO_CHUNK_THRESHOLD
-        return input_length
-    else
-        # Constrained to chunk <= AUTO_CHUNK_THRESHOLD, minimize (in order of priority):
-        #   1. the number of chunks that need to be computed
-        #   2. the number of "left over" perturbations in the final chunk
-        nchunks = round(Int, input_length / AUTO_CHUNK_THRESHOLD, RoundUp)
-        return round(Int, input_length / nchunks, RoundUp)
-    end
 end

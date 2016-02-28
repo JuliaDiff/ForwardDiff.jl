@@ -2,13 +2,13 @@
 # @jacobian!/@jacobian #
 ########################
 
-const JACOBIAN_KWARG_ORDER = (:all, :chunk, :input_length, :output_length)
-const JACOBIAN_F_KWARG_ORDER = (:all, :chunk, :input_length, :input_mutates, :output_length, :output_mutates)
+const JACOBIAN_KWARG_ORDER = (:allresults, :chunk, :input_length, :multithread)
+const JACOBIAN_F_KWARG_ORDER = (:allresults, :chunk, :input_length, :output_length, :multithread, :mutates)
 
 macro jacobian!(args...)
     args, kwargs = separate_kwargs(args)
     arranged_kwargs = arrange_kwargs(kwargs, KWARG_DEFAULTS, JACOBIAN_KWARG_ORDER)
-    return esc(:(ForwardDiff.jacobian!($(args...), $(arranged_kwargs...))))
+    return esc(:(ForwardDiff._jacobian!($(args...), $(arranged_kwargs...))))
 end
 
 macro jacobian(args...)
@@ -18,27 +18,187 @@ macro jacobian(args...)
     else
         arranged_kwargs = arrange_kwargs(kwargs, KWARG_DEFAULTS, JACOBIAN_KWARG_ORDER)
     end
-
-    return esc(:(ForwardDiff.jacobian($(args...), $(arranged_kwargs...))))
+    return esc(:(ForwardDiff._jacobian($(args...), $(arranged_kwargs...))))
 end
 
-######################
-# jacobian!/jacobian #
-######################
+##################
+# JacobianResult #
+##################
 
-@generated function jacobian!(f, output::Matrix, x::Vector, A::DataType,
-                              N::DataType, IL::DataType, OL::DataType)
-    # TODO
+immutable JacobianResult{V, J} <: ForwardDiffResult
+    value::V
+    jacobian::J
 end
 
-@generated function jacobian(f, x::Vector, A::DataType, N::DataType)
-    # TODO
+jacobian(result::JacobianResult) = copy(result.jacobian)
+jacobian!(arr, result::JacobianResult) = copy!(arr, result.jacobian)
+
+value(result::JacobianResult) = map(value, result.value)
+value!(arr, result::JacobianResult) = map!(value, arr, result.value)
+
+########################
+# _jacobian!/_jacobian #
+########################
+
+@generated function _jacobian!(f, output, x, allresults::DataType, chunk::DataType,
+                              input_length::DataType, multithread::DataType)
+    input_length_value = value(input_length) == nothing ? :(length(x)) : value(input_length)
+    return_statement = value(allresults) ? :(result) : :(output)
+    return quote
+        result = _call_jacobian!(f, output, x, chunk, Val{$(input_length_value)}, multithread)
+        return $(return_statement)
+    end
 end
 
-@generated function jacobian{allresults, chunk, input_mutates, output_mutates}(f,
-                                                                               ::Type{Val{allresults}},
-                                                                               ::Type{Val{chunk}},
-                                                                               ::Type{Val{input_mutates}},
-                                                                               ::Type{Val{output_mutates}})
-    # TODO
+@generated function _jacobian(f, x, allresults::DataType, chunk::DataType, input_length::DataType, multithread::DataType)
+    return_statement = value(allresults) ? :(result) : :(result.jacobian)
+    return quote
+        result = _jacobian!(f, DummyOutput(), x, Val{true}, chunk, input_length, multithread)
+        return $(return_statement)
+    end
+end
+
+@generated function _jacobian(f, allresults::DataType, chunk::DataType, input_length::DataType,
+                              output_length::DataType, multithread::DataType, mutates::DataType)
+    if value(output_length) != nothing
+        targetdef = quote
+            targetf = x -> begin
+                output = cachefetch!(compat_threadid(), eltype(x), Val{$(value(output_length))})
+                f(output, x)
+                return output
+            end
+        end
+    else
+        targetdef = :(targetf = f)
+    end
+    if value(mutates)
+        return quote
+            $(targetdef)
+            j!(output, x) = _jacobian!(targetf, output, x, allresults, chunk, input_length, multithread)
+            return j!
+        end
+    else
+        return quote
+            $(targetdef)
+            j(x) = _jacobian(targetf, x, allresults, chunk, input_length, multithread)
+            return j
+        end
+    end
+end
+
+#######################
+# workhorse functions #
+#######################
+
+@generated function _call_jacobian!(f, output, x, chunk, input_length, multithread)
+    input_length_value = value(input_length)
+    chunk_value = value(chunk) == nothing ? pick_chunk(input_length_value) : value(chunk)
+    @assert chunk_value <= input_length_value
+    use_chunk_mode = chunk_value != input_length_value
+    if use_chunk_mode
+        return :(_jacobian_chunk_mode!(f, output, x, Val{$(chunk_value)}, Val{$(input_length_value)}))
+    else
+        return :(_jacobian_vector_mode!(f, output, x, Val{$(input_length_value)}))
+    end
+end
+
+@generated function _jacobian_vector_mode!{input_length}(f, outarg, x, ::Type{Val{input_length}})
+    if outarg <: DummyOutput
+        outputdef = :(output = Matrix{S}(output_length, input_length))
+    else
+        outputdef = quote
+            @assert size(outarg) == (output_length, input_length)
+            output = outarg
+        end
+    end
+    return quote
+        @assert input_length == length(x)
+        T = eltype(x)
+        tid = compat_threadid()
+        seed_partials = cachefetch!(tid, Partials{input_length,T})
+        workvec = cachefetch!(tid, DiffNumber{input_length,T}, Val{input_length})
+        @simd for i in 1:input_length
+            @inbounds workvec[i] = DiffNumber{input_length,T}(x[i], seed_partials[i])
+        end
+        result = f(workvec)
+        S, output_length = numtype(eltype(result)), length(result)
+        $(outdef)
+        for j in 1:input_length, i in 1:output_length
+            @inbounds output[i, j] = partials(result[i], j)
+        end
+        return JacobianResult(result, output)
+    end
+end
+
+@generated function _jacobian_chunk_mode!{chunk, input_length}(f, outarg, x, ::Type{chunk}, ::Type{Val{input_length}})
+    if outarg <: DummyOutput
+        outputdef = :(output = Matrix{S}(output_length, input_length))
+    else
+        outputdef = quote
+            @assert size(outarg) == (output_length, input_length)
+            output = outarg
+        end
+    end
+    remainder = input_length % chunk == 0 ? chunk : input_length % chunk
+    fill_length = input_length - remainder
+    reseed_partials = remainder == chunk ? :() : :(seed_partials = cachefetch!(tid, Partials{chunk,T}, Val{$(remainder)}))
+    return quote
+        @assert input_length == length(x)
+        T = eltype(x)
+        tid = compat_threadid()
+        zero_partials = zero(Partials{chunk,T})
+        seed_partials = cachefetch!(tid, Partials{chunk,T})
+        workvec = cachefetch!(tid, DiffNumber{chunk,T}, Val{input_length})
+
+        # do the first chunk manually, so that we can infer the dimensions
+        # of the output matrix if necessary
+        @simd for i in 1:input_length
+            @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], zero_partials)
+        end
+        @simd for i in 1:chunk
+            @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], seed_partials[i])
+        end
+        chunk_result = f(workvec)
+        S, output_length = numtype(eltype(chunk_result)), length(result)
+        $(outputdef)
+        for i in 1:chunk
+            @simd for r in 1:nrows
+                @inbounds output[r, i] = partials(chunk_result[r], i)
+            end
+            @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], zero_partials)
+        end
+
+        # now do the rest of the chunks until we hit the fill_length
+        for c in $(chunk + 1):$(chunk):$(fill_length)
+            offset = c - 1
+            @simd for i in 1:chunk
+                j = i + offset
+                @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
+            end
+            chunk_result = f(workvec)
+            for i in 1:chunk
+                j = i + offset
+                @simd for r in 1:nrows
+                    @inbounds output[r, j] = partials(chunk_result[r], i)
+                end
+                @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], zero_partials)
+            end
+        end
+
+        # do the final remaining chunk manually
+        $(reseed_partials)
+        @simd for i in 1:$(remainder)
+            j = $(fill_length) + i
+            @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
+        end
+        chunk_result = f(workvec)
+        @simd for i in 1:$(remainder)
+            j = $(fill_length) + i
+            @simd for r in 1:nrows
+                @inbounds output[r, j] = partials(chunk_result[r], i)
+            end
+        end
+
+        return JacobianResult(result, output)
+    end
 end
