@@ -24,8 +24,7 @@ const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
 
 include("Partials.jl")
 include("DiffNumber.jl")
-include("cache.jl")
-include("api.jl")
+include("utils.jl")
 include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
