@@ -29,7 +29,7 @@ end
 ###################
 
 const KWARG_DEFAULTS = (:allresults => false, :chunk => nothing, :multithread => false,
-                        :input_length => nothing, :output_length => nothing, :mutates => false)
+                        :input_length => nothing, :output_length => nothing, :mutates => false, :cache => Void)
 
 iskwarg(ex) = isa(ex, Expr) && (ex.head == :kw || ex.head == :(=))
 
@@ -53,7 +53,15 @@ end
 function arrange_kwargs(kwargs, defaults, order)
     badargs = setdiff(map(kw -> kw.args[1], kwargs), order)
     @assert isempty(badargs) "unrecognized keyword arguments: $(badargs)"
-    return [:(Val{$(getkw(kwargs, kwsym, defaults))}) for kwsym in order]
+    kwarg_list = []
+    for kwsym in order
+        if kwsym == :cache
+            push!(kwarg_list, :($(getkw(kwargs, kwsym, defaults))))
+        else
+            push!(kwarg_list, :(Val{$(getkw(kwargs, kwsym, defaults))}))
+        end
+    end
+    return kwarg_list
 end
 
 function getkw(kwargs, kwsym, defaults)
@@ -72,4 +80,9 @@ function default_value(defaults, kwsym)
         end
     end
     throw(KeyError(kwsym))
+end
+
+function compute_remainder(input_length, chunk)
+    if chunk == input_length; return 0; end
+    return input_length % chunk == 0 ? chunk : input_length % chunk
 end

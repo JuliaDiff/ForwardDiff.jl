@@ -114,9 +114,9 @@ end
     return quote
         @assert input_length == length(x)
         T = eltype(x)
-        tid = compat_threadid()
-        seed_partials = cachefetch!(tid, Partials{input_length,T})
-        workvec = cachefetch!(tid, DiffNumber{input_length,T}, Val{input_length})
+        cache = get_cache(cachefetch!(Val{input_length}, Val{input_length}, T))
+        workvec = cache.workvec
+        seed_partials = cache.partials
         @simd for i in 1:input_length
             @inbounds workvec[i] = DiffNumber{input_length,T}(x[i], seed_partials[i])
         end
@@ -139,16 +139,16 @@ end
             output = outarg
         end
     end
-    remainder = input_length % chunk == 0 ? chunk : input_length % chunk
+    remainder = compute_remainder(input_length, chunk)
     fill_length = input_length - remainder
-    reseed_partials = remainder == chunk ? :() : :(seed_partials = cachefetch!(tid, Partials{chunk,T}, Val{$(remainder)}))
     return quote
         @assert input_length == length(x)
         T = eltype(x)
-        tid = compat_threadid()
-        zero_partials = zero(Partials{chunk,T})
-        seed_partials = cachefetch!(tid, Partials{chunk,T})
-        workvec = cachefetch!(tid, DiffNumber{chunk,T}, Val{input_length})
+        cache = get_cache(cachefetch!(Val{input_length}, Val{chunk}, T))
+        workvec = cache.workvec
+        seed_partials = cache.partials
+        seed_partials_remainder = cache.partials_remainder
+        zero_partials  = zero(Partials{chunk,T})
 
         # do the first chunk manually, so that we can infer the dimensions
         # of the output matrix if necessary
@@ -186,10 +186,9 @@ end
         end
 
         # do the final remaining chunk manually
-        $(reseed_partials)
         @simd for i in 1:$(remainder)
             j = $(fill_length) + i
-            @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
+            @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials_remainder[i])
         end
         chunk_result = f(workvec)
         @simd for i in 1:$(remainder)
