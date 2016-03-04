@@ -15,9 +15,9 @@ abstract ForwardDiffResult
 
 const AUTO_CHUNK_THRESHOLD = 10
 
-@generated function pickchunk{L}(xlength::Val{L})
+@generated function pickchunk{L}(len::Val{L})
     if L <= AUTO_CHUNK_THRESHOLD
-        return :xlength
+        return :len
     else
         # Constrained to chunk <= AUTO_CHUNK_THRESHOLD, minimize (in order of priority):
         #   1. the number of chunks that need to be computed
@@ -30,14 +30,14 @@ end
 
 @noinline pickchunk(chunk::Val{nothing}, ::Val{nothing}, x) = pickchunk(chunk, Val{length(x)}(), x)
 @noinline pickchunk{C}(chunk::Val{C}, ::Val{nothing}, x) = pickchunk(chunk, Val{length(x)}(), x)
-@noinline pickchunk{L}(chunk::Val{nothing}, xlength::Val{L}, x) = pickchunk(pickchunk(xlength), xlength, x)
-@noinline pickchunk{C,L}(chunk::Val{C}, xlength::Val{L}, x) = (chunk, xlength)
+@noinline pickchunk{L}(chunk::Val{nothing}, len::Val{L}, x) = pickchunk(pickchunk(len), len, x)
+@noinline pickchunk{C,L}(chunk::Val{C}, len::Val{L}, x) = (chunk, len)
 
 ###################
 # macro utilities #
 ###################
 
-const KWARG_DEFAULTS = (:allresults => false, :chunk => nothing, :multithread => false, :xlength => nothing)
+const KWARG_DEFAULTS = (:chunk => nothing, :len => nothing, :allresults => false, :multithread => false)
 
 iskwarg(ex) = isa(ex, Expr) && (ex.head == :kw || ex.head == :(=))
 
@@ -58,28 +58,29 @@ function separate_kwargs(args)
     return args, kwargs
 end
 
-function arrange_kwargs(kwargs, defaults, order)
-    badargs = setdiff(map(kw -> kw.args[1], kwargs), order)
+function arrange_kwargs(kwargs, defaults)
+    keys = map(first, defaults)
+    badargs = setdiff(map(kw -> kw.args[1], kwargs), keys)
     @assert isempty(badargs) "unrecognized keyword arguments: $(badargs)"
-    return [:(Val{$(getkw(kwargs, kwsym, defaults))}()) for kwsym in order]
+    return [:(Val{$(getkw(kwargs, key, defaults))}()) for key in keys]
 end
 
-function getkw(kwargs, kwsym, defaults)
+function getkw(kwargs, key, defaults)
     for kwexpr in kwargs
-        if kwexpr.args[1] == kwsym
+        if kwexpr.args[1] == key
             return kwexpr.args[2]
         end
     end
-    return default_value(defaults, kwsym)
+    return default_value(defaults, key)
 end
 
-function default_value(defaults, kwsym)
+function default_value(defaults, key)
     for kwpair in defaults
-        if kwpair.first == kwsym
+        if kwpair.first == key
             return kwpair.second
         end
     end
-    throw(KeyError(kwsym))
+    throw(KeyError(key))
 end
 
 #######################
@@ -130,8 +131,8 @@ function cachefetch!{N,T}(tid::Integer, ::Type{Partials{N,T}})
     return cachefetch!(tid, Partials{N,T}, Val{N}())
 end
 
-function fetchxdiff{N,L}(x, chunk::Val{N}, xlength::Val{L})
-    return cachefetch!(compat_threadid(), DiffNumber{N,eltype(x)}, xlength)
+function fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})
+    return cachefetch!(compat_threadid(), DiffNumber{N,eltype(x)}, len)
 end
 
 function fetchseeds{N,T}(::Vector{DiffNumber{N,T}}, args...)
@@ -142,7 +143,7 @@ end
 # seeding work arrays #
 #######################
 
-function seedall!{N,T,L}(xdiff::Vector{DiffNumber{N,T}}, x, xlength::Val{L}, seed::Partials{N,T})
+function seedall!{N,T,L}(xdiff::Vector{DiffNumber{N,T}}, x, len::Val{L}, seed::Partials{N,T})
     @simd for i in 1:L
         @inbounds xdiff[i] = DiffNumber{N,T}(x[i], seed)
     end
