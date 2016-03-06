@@ -1,5 +1,30 @@
 module TestFuncs
 
+######################################
+# f: Number -> Number #
+######################################
+
+# Fourier series of a sawtooth wave
+function sawtooth(x)
+    N = 50
+    s = zero(x)
+    for n = 1:N
+        s += (-1)^(n+1) * sin(n * x) / n
+    end
+    return 2/π * s
+end
+
+# Taylor series for sin(x)
+function taylor_sin{T}(x::T)
+    N = 50
+    s = zero(x)
+    for n = 0:N
+        s += (-1)^n * x^(2n + 1) / factorial(T(2n + 1))
+    end
+    return s
+end
+
+const NUMBER_TO_NUMBER_FUNCS = (sawtooth, taylor_sin)
 
 #######################
 # f: Vector -> Number #
@@ -67,29 +92,32 @@ end
 chebyquad(x) = (out = similar(x); chebyquad!(out, x); return out)
 
  # Taken from NLsolve.jl
- function brown_almost_linear!(x::Vector, fvec::Vector)
-     n = length(x)
-     sum1 = sum(x) - (n+1)
-     for k = 1:(n-1)
-         fvec[k] = x[k] + sum1
-     end
-     fvec[n] = prod(x) - 1
- end
+function brown_almost_linear!(x::Vector, fvec::Vector)
+    n = length(x)
+    sum1 = sum(x) - (n+1)
+    for k = 1:(n-1)
+        fvec[k] = x[k] + sum1
+    end
+    fvec[n] = prod(x) - 1
+end
 
+brown_almost_linear(x) = (out = similar(x); brown_almost_linear!(x, out); return out)
 
- # Taken from NLsolve.jl
- function trigonometric!(x::Vector, fvec::Vector)
-     n = length(x)
-     for j = 1:n
-         fvec[j] = cos(x[j])
-     end
-     sum1 = sum(fvec)
-     for k = 1:n
-         fvec[k] = n+k-sin(x[k]) - sum1 - k*fvec[k]
-     end
- end
+# Taken from NLsolve.jl
+function trigonometric!(x::Vector, fvec::Vector)
+  n = length(x)
+    for j = 1:n
+        fvec[j] = cos(x[j])
+    end
+    sum1 = sum(fvec)
+    for k = 1:n
+        fvec[k] = n+k-sin(x[k]) - sum1 - k*fvec[k]
+    end
+end
 
-const VECTOR_TO_VECTOR_INPLACE_FUNCS = (chebyquad!, brown_almost_linear!, and trigonometric!)
-const VECTOR_TO_VECTOR_FUNCS = (chebyquad, brown_almost_linear, and trigonometric)
+trigonometric(x) = (out = similar(x); trigonometric!(x, out); return out)
+
+const VECTOR_TO_VECTOR_INPLACE_FUNCS = (chebyquad!, brown_almost_linear!, trigonometric!)
+const VECTOR_TO_VECTOR_FUNCS = (chebyquad, brown_almost_linear, trigonometric)
 
 end # module

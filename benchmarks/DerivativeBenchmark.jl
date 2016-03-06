@@ -4,13 +4,11 @@
 
 
 const INPUT_TYPES_DERIVATIVE = (Float32, Float64)
-const FUNCTIONS_DERIVATIVE = (sawtooth, taylor_sin)
-
 
 @track TRACKER "derivatives" begin
     @setup begin
         xs = [samerand(T) for T in INPUT_TYPES_DERIVATIVE]
-        gs = Any[ForwardDiff.@derivative(F) for F in FUNCTIONS_DERIVATIVE]
+        gs = Any[ForwardDiff.@derivative(F) for F in TestFuncs.NUMBER_TO_NUMBER_FUNCS]
         f_strings = [string(FUNCTIONS_GRADIENT[i]) for i in 1:length(FUNCTIONS_DERIVATIVE), CS in CHUNK_SIZES_GRADIENT]
     end
 

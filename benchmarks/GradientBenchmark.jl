@@ -6,14 +6,12 @@ const INPUT_SIZES_GRADIENT = (2, ForwardDiff.AUTO_CHUNK_THRESHOLD, ForwardDiff.A
                               50)
 const INPUT_TYPES_GRADIENT = (Float32, Float64)
 const CHUNK_SIZES_GRADIENT = (1, 5, ForwardDiff.AUTO_CHUNK_THRESHOLD)
-const FUNCTIONS_GRADIENT = (rosenbrock, ackley, self_weighted_logit)
-
 
 @track TRACKER "gradients" begin
     @setup begin
         vecs = [samerand(T, S) for T in INPUT_TYPES_GRADIENT, S in INPUT_SIZES_GRADIENT]
         outputs = [samerand(T, S) for T in INPUT_TYPES_GRADIENT, S in INPUT_SIZES_GRADIENT]
-        gs = [ForwardDiff.@gradient(F, chunk=CS) for F in FUNCTIONS_GRADIENT, CS in CHUNK_SIZES_GRADIENT]
+        gs = [ForwardDiff.@gradient(F, chunk=CS) for F in TestFuncs.VECTOR_TO_NUMBER_FUNCS, CS in CHUNK_SIZES_GRADIENT]
         gs! = [ForwardDiff.@gradient(F, chunk=CS, output_mutates = true) for F in FUNCTIONS_GRADIENT, CS in CHUNK_SIZES_GRADIENT]
         f_strings = [string(FUNCTIONS_GRADIENT[i]) for i in 1:length(FUNCTIONS_GRADIENT), CS in CHUNK_SIZES_GRADIENT]
     end

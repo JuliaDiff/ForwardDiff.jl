@@ -5,8 +5,9 @@ using BenchmarkTrackers
 
 samerand(args...) = rand(MersenneTwister(1), args...)
 
-include("testfuncs.jl")
+include("../test/TestFuncs.jl")
 include("DerivativeBenchmark.jl")
 include("GradientBenchmark.jl")
+include("JacobianBenchmark.jl")
 
 results = run(TRACKER)
