@@ -24,9 +24,9 @@ Partials(data) = Partials{eltype(data),typeof(data)}(data)
 
 @inline length(partials::Partials) = length(data(partials))
 
-start(partials) = start(data(partials))
-next(partials, i) = next(data(partials), i)
-done(partials, i) = done(data(partials), i)
+start(partials::Partials) = start(data(partials))
+next(partials::Partials, i) = next(data(partials), i)
+done(partials::Partials, i) = done(data(partials), i)
 
 ################
 # Constructors #
