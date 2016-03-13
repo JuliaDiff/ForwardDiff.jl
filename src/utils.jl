@@ -95,7 +95,7 @@ function clearcache!()
     end
 end
 
-@eval cachefetch!{D,L}(::Type{D}, ::Type{L}) = $(Expr(:tuple, [:(cachefetch!($i, D, L)) for i in 1:NTHREADS]...))
+@eval cachefetch!{D,L}(::Type{D}, len::Val{L}) = $(Expr(:tuple, [:(cachefetch!($i, D, len)) for i in 1:NTHREADS]...))
 
 function cachefetch!{T,L}(tid::Integer, ::Type{T}, ::Val{L})
     K = Tuple{T,L}
@@ -129,6 +129,10 @@ end
 
 function cachefetch!{N,T}(tid::Integer, ::Type{Partials{N,T}})
     return cachefetch!(tid, Partials{N,T}, Val{N}())
+end
+
+function threaded_fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})
+    return cachefetch!(DiffNumber{N,eltype(x)}, len)
 end
 
 function fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})

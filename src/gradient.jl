@@ -162,80 +162,61 @@ function gradloadchunk!{C}(out, ndiff, chunk::Val{C}, offset)
     end
 end
 
-# if IS_MULTITHREADED_JULIA
-#     @generated function _multi_gradient_chunk_mode!{chunk,input_length}(f, outarg, x, ::Type{Val{chunk}}, ::Type{Val{input_length}})
-#         if outarg <: DummyOutput
-#             outputdef = :(output = Vector{S}(input_length))
-#         else
-#             outputdef = quote
-#                 @assert length(outarg) == input_length
-#                 output = outarg
-#             end
-#         end
-#         remainder = input_length % chunk == 0 ? chunk : input_length % chunk
-#         fill_length = input_length - remainder
-#         reseed_partials = remainder == chunk ? :() : :(seed_partials = cachefetch!(tid, Partials{chunk,T}, Val{$(remainder)}))
-#         return quote
-#             @assert input_length == length(x)
-#             T = eltype(x)
-#             tid = compat_threadid()
-#             zero_partials = zero(Partials{chunk,T})
-#             seed_partials = cachefetch!(tid, Partials{chunk,T})
-#             workvecs = cachefetch!(DiffNumber{chunk,T}, Val{input_length})
-#
-#             Base.Threads.@threads for t in 1:NTHREADS
-#                 # see https://github.com/JuliaLang/julia/issues/14948
-#                 local workvec = workvecs[t]
-#                 @simd for i in 1:input_length
-#                     @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], zero_partials)
-#                 end
-#             end
-#
-#             # do first chunk manually so that we can infer the output eltype, if necessary
-#             workvec = workvecs[tid]
-#             @simd for i in 1:chunk
-#                 @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], seed_partials[i])
-#             end
-#             chunk_result = f(workvec)
-#             S = numtype(chunk_result)
-#             $(outputdef)
-#             @simd for i in 1:chunk
-#                 @inbounds output[i] = partials(chunk_result, i)
-#                 @inbounds workvec[i] = DiffNumber{chunk,T}(x[i], zero_partials)
-#             end
-#
-#             # do the rest of the chunks
-#             Base.Threads.@threads for c in $(chunk + 1):$(chunk):$(fill_length)
-#                 local workvec = workvecs[compat_threadid()]
-#                 local offset = c - 1
-#                 @simd for i in 1:chunk
-#                     local j = i + offset
-#                     @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
-#                 end
-#                 local chunk_result = f(workvec)
-#                 @simd for i in 1:chunk
-#                     local j = i + offset
-#                     @inbounds output[j] = partials(chunk_result, i)
-#                     @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], zero_partials)
-#                 end
-#             end
-#
-#             # Performing the final chunk manually seems to triggers some additional
-#             # optimization heuristics, which results in more efficient memory allocation
-#             $(reseed_partials)
-#             workvec = workvecs[tid]
-#             @simd for i in 1:$(remainder)
-#                 j = $(fill_length) + i
-#                 @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], seed_partials[i])
-#             end
-#             chunk_result = f(workvec)
-#             @simd for i in 1:$(remainder)
-#                 j = $(fill_length) + i
-#                 @inbounds output[j] = partials(chunk_result, i)
-#                 @inbounds workvec[j] = DiffNumber{chunk,T}(x[j], zero_partials)
-#             end
-#
-#             return GradientResult(value(chunk_result), output)
-#         end
-#     end
-# end
+if IS_MULTITHREADED_JULIA
+    @generated function chunk_mode_gradient!{C,L}(multithread::Val{true}, chunk::Val{C}, len::Val{L}, outvar, f, x)
+        if outvar <: DummyVar
+            outdef = :(out = Vector{numtype(eltype(ndiff))}(L))
+        else
+            outdef = quote
+                @assert length(outvar) == L
+                out = outvar
+            end
+        end
+        R = L % C == 0 ? C : L % C
+        fullchunks = div(L - R, C)
+        lastoffset = L - R + 1
+        reseedexpr = R == C ? :() : :(seeds = fetchseeds(xdiff, $(Val{R}())))
+        return quote
+            @assert length(x) == L
+            tid = compat_threadid()
+            xdiffs = threaded_fetchxdiff(x, chunk, len)
+            xdiff = xdiffs[tid] # this thread's xdiff
+            seeds = fetchseeds(xdiff)
+            zeroseed = zero(Partials{C,eltype(x)})
+
+            Base.Threads.@threads for t in 1:NTHREADS
+                seedall!(xdiffs[t], x, len, zeroseed)
+            end
+
+            # do first chunk manually
+            seed!(xdiff, x, seeds, 1)
+            ndiff = f(xdiff)
+            seed!(xdiff, x, zeroseed, 1)
+            $(outdef)
+            gradloadchunk!(out, ndiff, chunk, 1)
+
+            # do middle chunks
+            Base.Threads.@threads for c in 2:$(fullchunks)
+                # see https://github.com/JuliaLang/julia/issues/14948
+                local chunk_xdiff = xdiffs[compat_threadid()]
+                local chunk_offset = ((c - 1) * C + 1)
+                seed!(chunk_xdiff, x, seeds, chunk_offset)
+                local chunk_ndiff = f(chunk_xdiff)
+                seed!(chunk_xdiff, x, zeroseed, chunk_offset)
+                gradloadchunk!(out, chunk_ndiff, chunk, chunk_offset)
+            end
+
+            # do final chunk manually
+            $(reseedexpr)
+            seed!(xdiff, x, seeds, $(lastoffset))
+            ndiff = f(xdiff)
+            gradloadchunk!(out, ndiff, $(Val{R}()), $(lastoffset))
+
+            return GradientChunkResult(L, ndiff, out)
+        end
+    end
+else
+    function chunk_mode_gradient!{C,L}(multithread::Val{true}, chunk::Val{C}, len::Val{L}, outvar, f, x)
+        error("Multithreading is not enabled for this Julia installation.")
+    end
+end
