@@ -4,7 +4,7 @@
 # Below functions must:
 #
 # - Take a single Vector argument `x` and return a Number
-# - ...where `x` can be an arbitrary length
+# - ...where `x` can be of arbitrary length
 # - Be type stable for arbitrary `eltype(x)`
 # - Be listed in `vec2num_testfuncs` below
 # - Be exported
