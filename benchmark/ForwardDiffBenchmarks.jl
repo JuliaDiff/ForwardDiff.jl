@@ -9,7 +9,7 @@ name(f) = last(split(string(f), '.'))
 
 const GROUPS = BenchmarkTools.GroupCollection()
 
-xs = map(n -> rand(MersenneTwister(1), n), (12, 120, 1200))
+xs = map(n -> rand(MersenneTwister(1), n), (12, 120, 1200, 12000))
 chunks = 1:10
 
 val = addgroup!(GROUPS, "value")
