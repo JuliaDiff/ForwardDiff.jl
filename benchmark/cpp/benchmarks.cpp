@@ -1,7 +1,5 @@
 #include "benchmarks.h"
 
-// g++ -std=c++11 -O2 -o benchmarks benchmarks.cpp /path/to/julia/usr/lib/libopenlibm.a
-
 double clock_now()
 {
     struct timeval now;
@@ -58,27 +56,27 @@ int main() {
     std::cout << "  took " << end-start << " seconds for value" << std::endl;
 
     start = clock_now();
-    gradient(ackley<Dual1>, result, dualvec1, input);
+    gradient<ackley<Dual1>>(result, dualvec1, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual1" << std::endl;
 
     start = clock_now();
-    gradient(ackley<Dual2>, result, dualvec2, input);
+    gradient<ackley<Dual2>>(result, dualvec2, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual2" << std::endl;
 
     start = clock_now();
-    gradient(ackley<Dual3>, result, dualvec3, input);
+    gradient<ackley<Dual3>>(result, dualvec3, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual3" << std::endl;
 
     start = clock_now();
-    gradient(ackley<Dual4>, result, dualvec4, input);
+    gradient<ackley<Dual4>>(result, dualvec4, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual4" << std::endl;
 
     start = clock_now();
-    gradient(ackley<Dual5>, result, dualvec5, input);
+    gradient<ackley<Dual5>>(result, dualvec5, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual5" << std::endl;
 
@@ -91,27 +89,27 @@ int main() {
     std::cout << "  took " << end-start << " seconds for value" << std::endl;
 
     start = clock_now();
-    gradient(rosenbrock<Dual1>, result, dualvec1, input);
+    gradient<rosenbrock<Dual1>>(result, dualvec1, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual1" << std::endl;
 
     start = clock_now();
-    gradient(rosenbrock<Dual2>, result, dualvec2, input);
+    gradient<rosenbrock<Dual2>>(result, dualvec2, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual2" << std::endl;
 
     start = clock_now();
-    gradient(rosenbrock<Dual3>, result, dualvec3, input);
+    gradient<rosenbrock<Dual3>>(result, dualvec3, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual3" << std::endl;
 
     start = clock_now();
-    gradient(rosenbrock<Dual4>, result, dualvec4, input);
+    gradient<rosenbrock<Dual4>>(result, dualvec4, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual4" << std::endl;
 
     start = clock_now();
-    gradient(rosenbrock<Dual5>, result, dualvec5, input);
+    gradient<rosenbrock<Dual5>>(result, dualvec5, input);
     end = clock_now();
     std::cout << "  took " << end-start << " seconds for gradient using Dual5" << std::endl;
 
