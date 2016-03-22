@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <sys/time.h>
+#include <assert.h>
 
 class Dual1 {
 public:
