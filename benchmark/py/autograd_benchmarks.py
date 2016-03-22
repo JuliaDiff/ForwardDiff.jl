@@ -1,5 +1,5 @@
 import timeit
-import autograd.numpy as np   # Thinly-wrapped version of Numpy
+import autograd.numpy as np
 from autograd import grad
 
 def devec_ackley(x):
