@@ -26,11 +26,11 @@ end
 ##########################
 
 function derivative!{ALL}(f, out, x, ::Type{Val{ALL}})
-    return handle_deriv_result!(out, f(DiffNumber(x, one(x))), Val{ALL})
+    return handle_deriv_result!(out, f(Dual(x, one(x))), Val{ALL})
 end
 
 function derivative{ALL}(f, x, ::Type{Val{ALL}})
-    return handle_deriv_result(f(DiffNumber(x, one(x))), Val{ALL})
+    return handle_deriv_result(f(Dual(x, one(x))), Val{ALL})
 end
 
 @generated function derivative{ALL, MUTATES}(f, ::Type{Val{ALL}}, ::Type{Val{MUTATES}})
@@ -51,8 +51,8 @@ end
 # handling derivative results #
 ###############################
 
-handle_deriv_result(result::DiffNumber, ::Type{Val{false}}) = partials(result, 1)
-handle_deriv_result(result::DiffNumber, ::Type{Val{true}}) = value(result), partials(result, 1)
+handle_deriv_result(result::Dual, ::Type{Val{false}}) = partials(result, 1)
+handle_deriv_result(result::Dual, ::Type{Val{true}}) = value(result), partials(result, 1)
 
 function handle_deriv_result{ALL}(result, ::Type{Val{ALL}})
     output = similar(result, numtype(eltype(result)))

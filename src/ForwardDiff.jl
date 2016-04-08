@@ -22,8 +22,8 @@ const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
 @inline value{x}(::Type{Val{x}}) = x
 @inline value{x}(::Type{Type{Val{x}}}) = x
 
-include("Partials.jl")
-include("DiffNumber.jl")
+include("partials.jl")
+include("dual.jl")
 include("utils.jl")
 include("derivative.jl")
 include("gradient.jl")

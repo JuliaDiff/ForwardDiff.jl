@@ -5,9 +5,9 @@ tic()
 include("PartialsTest.jl")
 println("done (took $(toq()) seconds).")
 
-print("Testing DiffNumber...")
+print("Testing Dual...")
 tic()
-include("DiffNumberTest.jl")
+include("DualTest.jl")
 println("done (took $(toq()) seconds).")
 
 print("Testing gradient-related functionality...")

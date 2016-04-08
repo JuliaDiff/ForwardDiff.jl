@@ -132,14 +132,14 @@ function cachefetch!{N,T}(tid::Integer, ::Type{Partials{N,T}})
 end
 
 function threaded_fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})
-    return cachefetch!(DiffNumber{N,eltype(x)}, len)
+    return cachefetch!(Dual{N,eltype(x)}, len)
 end
 
 function fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})
-    return cachefetch!(compat_threadid(), DiffNumber{N,eltype(x)}, len)
+    return cachefetch!(compat_threadid(), Dual{N,eltype(x)}, len)
 end
 
-function fetchseeds{N,T}(::Vector{DiffNumber{N,T}}, args...)
+function fetchseeds{N,T}(::Vector{Dual{N,T}}, args...)
     return cachefetch!(compat_threadid(), Partials{N,T}, args...)
 end
 
@@ -147,27 +147,27 @@ end
 # seeding work arrays #
 #######################
 
-function seedall!{N,T,L}(xdiff::Vector{DiffNumber{N,T}}, x, len::Val{L}, seed::Partials{N,T})
+function seedall!{N,T,L}(xdiff::Vector{Dual{N,T}}, x, len::Val{L}, seed::Partials{N,T})
     @simd for i in 1:L
-        @inbounds xdiff[i] = DiffNumber{N,T}(x[i], seed)
+        @inbounds xdiff[i] = Dual{N,T}(x[i], seed)
     end
     return xdiff
 end
 
-function seed!{N,T}(xdiff::Vector{DiffNumber{N,T}}, x, seed::Partials{N,T}, offset)
+function seed!{N,T}(xdiff::Vector{Dual{N,T}}, x, seed::Partials{N,T}, offset)
     k = offset - 1
     @simd for i in 1:N
         j = i + k
-        @inbounds xdiff[j] = DiffNumber{N,T}(x[j], seed)
+        @inbounds xdiff[j] = Dual{N,T}(x[j], seed)
     end
     return xdiff
 end
 
-function seed!{N,T}(xdiff::Vector{DiffNumber{N,T}}, x, seeds::Vector{Partials{N,T}}, offset)
+function seed!{N,T}(xdiff::Vector{Dual{N,T}}, x, seeds::Vector{Partials{N,T}}, offset)
     k = offset - 1
     @simd for i in 1:N
         j = i + k
-        @inbounds xdiff[j] = DiffNumber{N,T}(x[j], seeds[i])
+        @inbounds xdiff[j] = Dual{N,T}(x[j], seeds[i])
     end
     return xdiff
 end

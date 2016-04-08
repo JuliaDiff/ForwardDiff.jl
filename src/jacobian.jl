@@ -148,7 +148,7 @@ end
 function vector_mode_jacobian!{L}(len::Val{L}, f!, y, x)
     @assert length(x) == L
     xdiff = fetchxdiff(x, len, len)
-    ydiff = Vector{DiffNumber{L,eltype(y)}}(length(y))
+    ydiff = Vector{Dual{L,eltype(y)}}(length(y))
     seeds = fetchseeds(xdiff)
     seed!(xdiff, x, seeds, 1)
     f!(ydiff, xdiff)
@@ -171,7 +171,7 @@ end
         ydiffdef = :()
         ydiffcompute = :(ydiff = f(xdiff))
     else
-        ydiffdef = :(ydiff = Vector{DiffNumber{L,eltype(yvar)}}(length(yvar)))
+        ydiffdef = :(ydiff = Vector{Dual{L,eltype(yvar)}}(length(yvar)))
         ydiffcompute = :(f(ydiff, xdiff))
     end
     R = L % C == 0 ? C : L % C
