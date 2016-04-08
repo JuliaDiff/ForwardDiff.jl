@@ -38,6 +38,10 @@ DiffNumber(value::Real, partials::Real...) = DiffNumber(value, partials)
 @inline npartials{N}(::DiffNumber{N}) = N
 @inline npartials{N,T}(::Type{DiffNumber{N,T}}) = N
 
+@inline degree{T}(::T) = degree(T)
+@inline degree{T}(::Type{T}) = 0
+degree{N,T}(::Type{DiffNumber{N,T}}) = 1 + degree(T)
+
 @inline numtype{N,T}(::DiffNumber{N,T}) = T
 @inline numtype{N,T}(::Type{DiffNumber{N,T}}) = T
 
@@ -314,3 +318,17 @@ end
 @ambiguous @inline Base.atan2{N}(y::DiffNumber{N}, x::DiffNumber{N}) = calc_atan2(y, x)
 @inline Base.atan2(y::Real, x::DiffNumber) = calc_atan2(y, x)
 @inline Base.atan2(y::DiffNumber, x::Real) = calc_atan2(y, x)
+
+###################
+# Pretty Printing #
+###################
+
+function Base.show{N,T}(io::IO, n::DiffNumber{N,T})
+    d = degree(n)
+    print(io, "(", value(n))
+    for i in 1:N
+        p = partials(n, i)
+        signbit(p) ? print(io, " - $(abs(p))*ϵ[$d,$i]") : print(io, " + $(p)*ϵ[$d,$i]")
+    end
+    print(io, ")")
+end
