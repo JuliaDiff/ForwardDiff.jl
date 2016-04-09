@@ -109,32 +109,32 @@ end
 
 for N in 1:MAX_CHUNK_SIZE
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
-    @eval iszero_tuple{T}(tup::NTuple{$N,T}) = (z = zero(T); @inbounds return $ex)
+    @eval @inline iszero_tuple{T}(tup::NTuple{$N,T}) = (z = zero(T); @inbounds return $ex)
 
     ex = tupexpr(i -> :(z), N)
-    @eval zero_tuple{T}(::Type{NTuple{$N,T}}) = (z = zero(T); $ex)
+    @eval @inline zero_tuple{T}(::Type{NTuple{$N,T}}) = (z = zero(T); $ex)
 
     ex  = tupexpr(i -> :(rand(rng, T)), N)
-    @eval rand_tuple{T}(rng::AbstractRNG, ::Type{NTuple{$N,T}}) = $ex
+    @eval @inline rand_tuple{T}(rng::AbstractRNG, ::Type{NTuple{$N,T}}) = $ex
 
     ex = tupexpr(i -> :(rand(T)), N)
-    @eval rand_tuple{T}(::Type{NTuple{$N,T}}) = $ex
+    @eval @inline rand_tuple{T}(::Type{NTuple{$N,T}}) = $ex
 
     ex = tupexpr(i -> :(tup[$i] * x), N)
-    @eval scale_tuple(tup::NTuple{$N}, x) = $ex
+    @eval @inline scale_tuple(tup::NTuple{$N}, x) = $ex
 
-    ex = tupexpr(i -> :(tup[$i]/x), N)
-    @eval div_tuple_by_scalar(tup::NTuple{$N}, x) = $ex
+    ex = tupexpr(i -> :(tup[$i] / x), N)
+    @eval @inline div_tuple_by_scalar(tup::NTuple{$N}, x) = $ex
 
     ex = tupexpr(i -> :(a[$i]+b[$i]), N)
-    @eval add_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
+    @eval @inline add_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
 
     ex = tupexpr(i -> :(a[$i]-b[$i]), N)
-    @eval sub_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
+    @eval @inline sub_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
 
     ex = tupexpr(i -> :(-tup[$i]), N)
-    @eval minus_tuple(tup::NTuple{$N}) = $ex
+    @eval @inline minus_tuple(tup::NTuple{$N}) = $ex
 
     ex = tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
-    @eval mul_tuples(a::NTuple{$N}, b::NTuple{$N}, afactor, bfactor) = $ex
+    @eval @inline mul_tuples(a::NTuple{$N}, b::NTuple{$N}, afactor, bfactor) = $ex
 end
