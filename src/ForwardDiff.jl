@@ -28,5 +28,6 @@ include("utils.jl")
 include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
+include("hessian.jl")
 
 end # module

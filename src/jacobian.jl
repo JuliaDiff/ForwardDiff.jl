@@ -22,26 +22,26 @@ abstract JacobianResult <: ForwardDiffResult
 
 immutable JacobianVectorResult{Y} <: JacobianResult
     len::Int
-    ydiff::Y
+    ydual::Y
 end
 
 immutable JacobianChunkResult{Y,J} <: JacobianResult
     len::Int
-    ydiff::Y
+    ydual::Y
     jac::J
 end
 
 function jacobian(result::JacobianVectorResult)
-    out = similar(result.ydiff, numtype(eltype(result.ydiff)), length(result.ydiff), result.len)
+    out = similar(result.ydual, numtype(eltype(result.ydual)), length(result.ydual), result.len)
     return jacobian!(out, result)
 end
 
 function jacobian!(out, result::JacobianVectorResult)
-    ylength = length(result.ydiff)
+    ylength = length(result.ydual)
     @assert size(out) == (ylength, result.len)
     for j in 1:result.len
         @simd for i in 1:ylength
-            @inbounds out[i, j] = partials(result.ydiff[i], j)
+            @inbounds out[i, j] = partials(result.ydual[i], j)
         end
     end
     return out
@@ -52,14 +52,14 @@ jacobian(result::JacobianChunkResult) = copy(result.jac)
 jacobian!(out, result::JacobianChunkResult) = copy!(out, result.jac)
 
 function value(result::JacobianResult)
-    out = similar(result.ydiff, numtype(eltype(result.ydiff)))
+    out = similar(result.ydual, numtype(eltype(result.ydual)))
     return jacobian!(out, result)
 end
 
 function value!(out, result::JacobianResult)
-    @assert length(out) == length(result.ydiff)
-    @simd for i in 1:length(result.ydiff)
-        @inbounds out[i] = value(result.ydiff[i])
+    @assert length(out) == length(result.ydual)
+    @simd for i in 1:length(result.ydual)
+        @inbounds out[i] = value(result.ydual[i])
     end
     return out
 end
@@ -139,20 +139,20 @@ end
 
 function vector_mode_jacobian!{L}(len::Val{L}, f, x)
     @assert length(x) == L
-    xdiff = fetchxdiff(x, len, len)
-    seeds = fetchseeds(xdiff)
-    seed!(xdiff, x, seeds, 1)
-    return JacobianVectorResult(L, f(xdiff))
+    xdual = fetchxdual(x, len, len)
+    seeds = fetchseeds(eltype(xdual))
+    seed!(xdual, x, 1, seeds)
+    return JacobianVectorResult(L, f(xdual))
 end
 
 function vector_mode_jacobian!{L}(len::Val{L}, f!, y, x)
     @assert length(x) == L
-    xdiff = fetchxdiff(x, len, len)
-    ydiff = Vector{Dual{L,eltype(y)}}(length(y))
-    seeds = fetchseeds(xdiff)
-    seed!(xdiff, x, seeds, 1)
-    f!(ydiff, xdiff)
-    return JacobianVectorResult(L, ydiff)
+    xdual = fetchxdual(x, len, len)
+    ydual = Vector{Dual{L,eltype(y)}}(length(y))
+    seeds = fetchseeds(eltype(xdual))
+    seed!(xdual, x, 1, seeds)
+    f!(ydual, xdual)
+    return JacobianVectorResult(L, ydual)
 end
 
 # chunk mode #
@@ -160,64 +160,64 @@ end
 
 @generated function chunk_mode_jacobian!{C,L}(multithread::Val{false}, chunk::Val{C}, len::Val{L}, outvar, f, x, yvar)
     if outvar <: DummyVar
-        outdef = :(out = Matrix{numtype(eltype(ydiff))}(length(ydiff), L))
+        outdef = :(out = Matrix{numtype(eltype(ydual))}(length(ydual), L))
     else
         outdef = quote
-            @assert size(outvar) == (length(ydiff), L)
+            @assert size(outvar) == (length(ydual), L)
             out = outvar
         end
     end
     if yvar <: DummyVar
-        ydiffdef = :()
-        ydiffcompute = :(ydiff = f(xdiff))
+        ydualdef = :()
+        ydualcompute = :(ydual = f(xdual))
     else
-        ydiffdef = :(ydiff = Vector{Dual{L,eltype(yvar)}}(length(yvar)))
-        ydiffcompute = :(f(ydiff, xdiff))
+        ydualdef = :(ydual = Vector{Dual{L,eltype(yvar)}}(length(yvar)))
+        ydualcompute = :(f(ydual, xdual))
     end
     R = L % C == 0 ? C : L % C
     fullchunks = div(L - R, C)
     lastoffset = L - R + 1
-    reseedexpr = R == C ? :() : :(seeds = fetchseeds(xdiff, $(Val{R}())))
+    reseedexpr = R == C ? :() : :(seeds = fetchseeds(eltype(xdual), $(Val{R}())))
     return quote
         @assert length(x) == L
-        xdiff = fetchxdiff(x, chunk, len)
-        $(ydiffdef)
-        seeds = fetchseeds(xdiff)
+        xdual = fetchxdual(x, len, chunk)
+        $(ydualdef)
+        seeds = fetchseeds(eltype(xdual))
         zeroseed = zero(Partials{C,eltype(x)})
-        seedall!(xdiff, x, len, zeroseed)
+        seedall!(xdual, x, len, zeroseed)
 
         # do first chunk manually
-        seed!(xdiff, x, seeds, 1)
-        $(ydiffcompute)
-        seed!(xdiff, x, zeroseed, 1)
+        seed!(xdual, x, 1, seeds)
+        $(ydualcompute)
+        seed!(xdual, x, 1, zeroseed)
         $(outdef)
-        jacloadchunk!(out, ydiff, chunk, 1)
+        jacloadchunk!(out, ydual, 1, chunk)
 
         # do middle chunks
         for c in 2:$(fullchunks)
             offset = ((c - 1) * C + 1)
-            seed!(xdiff, x, seeds, offset)
-            $(ydiffcompute)
-            seed!(xdiff, x, zeroseed, offset)
-            jacloadchunk!(out, ydiff, chunk, offset)
+            seed!(xdual, x, offset, seeds)
+            $(ydualcompute)
+            seed!(xdual, x, offset, zeroseed)
+            jacloadchunk!(out, ydual, chunk, offset)
         end
 
         # do final chunk manually
         $(reseedexpr)
-        seed!(xdiff, x, seeds, $(lastoffset))
-        $(ydiffcompute)
-        jacloadchunk!(out, ydiff, $(Val{R}()), $(lastoffset))
+        seed!(xdual, x, $(lastoffset), seeds)
+        $(ydualcompute)
+        jacloadchunk!(out, ydual, $(lastoffset), $(Val{R}()))
 
-        return JacobianChunkResult(L, ydiff, out)
+        return JacobianChunkResult(L, ydual, out)
     end
 end
 
-function jacloadchunk!{C}(out, ydiff, chunk::Val{C}, offset)
+function jacloadchunk!{C}(out, ydual, offset, chunk::Val{C})
     k = offset - 1
     for i in 1:C
         col = i + k
-        @simd for row in 1:length(ydiff)
-            @inbounds out[row, col] = partials(ydiff[row], i)
+        @simd for row in 1:length(ydual)
+            @inbounds out[row, col] = partials(ydual[row], i)
         end
     end
 end

@@ -131,15 +131,19 @@ function cachefetch!{N,T}(tid::Integer, ::Type{Partials{N,T}})
     return cachefetch!(tid, Partials{N,T}, Val{N}())
 end
 
-function threaded_fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})
+function threaded_fetchxdual{L,N}(x, len::Val{L}, chunk::Val{N})
     return cachefetch!(Dual{N,eltype(x)}, len)
 end
 
-function fetchxdiff{N,L}(x, chunk::Val{N}, len::Val{L})
+function fetchxdual{L,N}(x, len::Val{L}, chunk::Val{N})
     return cachefetch!(compat_threadid(), Dual{N,eltype(x)}, len)
 end
 
-function fetchseeds{N,T}(::Vector{Dual{N,T}}, args...)
+function fetchxdual{L,N,M}(x, len::Val{L}, rowchunk::Val{N}, colchunk::Val{M})
+    return cachefetch!(compat_threadid(), Dual{N,Dual{M,eltype(x)}}, len)
+end
+
+function fetchseeds{N,T}(::Type{Dual{N,T}}, args...)
     return cachefetch!(compat_threadid(), Partials{N,T}, args...)
 end
 
@@ -147,27 +151,37 @@ end
 # seeding work arrays #
 #######################
 
-function seedall!{N,T,L}(xdiff::Vector{Dual{N,T}}, x, len::Val{L}, seed::Partials{N,T})
+function seedall!{N,T,L}(xdual::Vector{Dual{N,T}}, x, len::Val{L}, seed::Partials{N,T})
     @simd for i in 1:L
-        @inbounds xdiff[i] = Dual{N,T}(x[i], seed)
+        @inbounds xdual[i] = Dual{N,T}(x[i], seed)
     end
-    return xdiff
+    return xdual
 end
 
-function seed!{N,T}(xdiff::Vector{Dual{N,T}}, x, seed::Partials{N,T}, offset)
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seed::Partials{N,T})
     k = offset - 1
     @simd for i in 1:N
         j = i + k
-        @inbounds xdiff[j] = Dual{N,T}(x[j], seed)
+        @inbounds xdual[j] = Dual{N,T}(x[j], seed)
     end
-    return xdiff
+    return xdual
 end
 
-function seed!{N,T}(xdiff::Vector{Dual{N,T}}, x, seeds::Vector{Partials{N,T}}, offset)
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seeds::Vector{Partials{N,T}})
     k = offset - 1
     @simd for i in 1:N
         j = i + k
-        @inbounds xdiff[j] = Dual{N,T}(x[j], seeds[i])
+        @inbounds xdual[j] = Dual{N,T}(x[j], seeds[i])
     end
-    return xdiff
+    return xdual
+end
+
+function seed!{N,M,T}(xdual::Vector{Dual{N,Dual{M,T}}}, x, offset,
+                      nseeds::Vector{Partials{N,Dual{M,T}}}, mseeds::Vector{Partials{M,T}})
+    k = offset - 1
+    @simd for i in 1:N
+        j = i + k
+        @inbounds xdual[j] = Dual{N,Dual{M,T}}(Dual{M,T}(x[j], mseeds[i]), nseeds[i])
+    end
+    return xdual
 end
