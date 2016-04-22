@@ -75,7 +75,9 @@ for f in ambiguous_binary_funcs
         @eval $f(a::ForwardDiffNumber, b::ForwardDiffNumber) = ambiguous_error($f, a, b)
     end
     for A in fdnum_types, B in fdnum_types
-        @eval $f(a::$A, b::$B) = ambiguous_error($f, a, b)
+        if A != B
+            @eval $f(a::$A, b::$B) = ambiguous_error($f, a, b)
+        end
     end
 end
 
@@ -102,6 +104,7 @@ for T in fdnum_types
     @eval <(a::$T, b::$T) = isless(a, b)
 end
 
+<=(x::ForwardDiffNumber, n::ForwardDiffNumber) = <=(value(x), value(n))
 for T in (Base.Irrational, AbstractFloat, Real)
     @eval begin
         ==(n::ForwardDiffNumber, x::$T) = isconstant(n) && (value(n) == x)
@@ -115,7 +118,6 @@ for T in (Base.Irrational, AbstractFloat, Real)
 
         <(x::$T, n::ForwardDiffNumber) = isless(x, n)
         <(n::ForwardDiffNumber, x::$T) = isless(n, x)
-        <=(x::ForwardDiffNumber, n::ForwardDiffNumber) = <=(value(x), value(n))
         <=(x::$T, n::ForwardDiffNumber) = <=(x, value(n))
         <=(n::ForwardDiffNumber, x::$T) = <=(value(n), x)
     end
