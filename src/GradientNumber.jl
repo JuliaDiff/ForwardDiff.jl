@@ -201,7 +201,7 @@ end
 @inline calc_atan2(y::Real, x::GradientNumber) = atan2(y, value(x))
 @inline calc_atan2(y::GradientNumber, x::Real) = atan2(value(y), x)
 
-for Y in (:Real, :GradientNumber), X in (:Real, :GradientNumber)
+for Y in (:GradientNumber, :Real), X in (:GradientNumber, :Real)
     if !(Y == :Real && X == :Real)
         @eval begin
             @inline function atan2(y::$Y, x::$X)
