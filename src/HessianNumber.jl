@@ -92,12 +92,6 @@ end
 
 # Multiplication #
 #----------------#
-for T in (:Bool, :Real)
-    @eval begin
-        *(h::HessianNumber, x::$(T)) = HessianNumber(gradnum(h) * x, hess(h) * x)
-        *(x::$(T), h::HessianNumber) = HessianNumber(x * gradnum(h), x * hess(h))
-    end
-end
 
 function *{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     mul_g = gradnum(h1)*gradnum(h2)
@@ -118,22 +112,15 @@ function *{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     return HessianNumber(mul_g, hessvec)
 end
 
+for T in (:Bool, :Real)
+    @eval begin
+        *(h::HessianNumber, x::$(T)) = HessianNumber(gradnum(h) * x, hess(h) * x)
+        *(x::$(T), h::HessianNumber) = HessianNumber(x * gradnum(h), x * hess(h))
+    end
+end
+
 # Division #
 #----------#
-/(h::HessianNumber, x::Real) = HessianNumber(gradnum(h) / x, hess(h) / x)
-
-function /(x::Real, h::HessianNumber)
-    a = value(h)
-
-    div_a = x / a
-    div_a_sq = div_a / a
-    div_a_cb = div_a_sq / a
-
-    deriv1 = -div_a_sq
-    deriv2 = div_a_cb + div_a_cb
-
-    return hessnum_from_deriv(h, div_a, deriv1, deriv2)
-end
 
 function /{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     div_g = gradnum(h1)/gradnum(h2)
@@ -157,30 +144,23 @@ function /{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     return HessianNumber(div_g, hessvec)
 end
 
+/(h::HessianNumber, x::Real) = HessianNumber(gradnum(h) / x, hess(h) / x)
+
+function /(x::Real, h::HessianNumber)
+    a = value(h)
+
+    div_a = x / a
+    div_a_sq = div_a / a
+    div_a_cb = div_a_sq / a
+
+    deriv1 = -div_a_sq
+    deriv2 = div_a_cb + div_a_cb
+
+    return hessnum_from_deriv(h, div_a, deriv1, deriv2)
+end
+
 # Exponentiation #
 #----------------#
-^(::Base.Irrational{:e}, h::HessianNumber) = exp(h)
-
-for T in (:Rational, :Integer, :Real)
-    @eval begin
-        function ^(h::HessianNumber, x::$(T))
-            a = value(h)
-            x_min_one = x - 1
-            exp_a = a^x
-            deriv1 = x * a^x_min_one
-            deriv2 = x * x_min_one * a^(x - 2)
-            return hessnum_from_deriv(h, exp_a, deriv1, deriv2)
-        end
-
-        function ^(x::$(T), h::HessianNumber)
-            log_x = log(x)
-            exp_x = x^value(h)
-            deriv1 = exp_x * log_x
-            deriv2 = deriv1 * log_x
-            return hessnum_from_deriv(h, exp_x, deriv1, deriv2)
-        end
-    end
-end
 
 function ^{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     exp_g = gradnum(h1)^gradnum(h2)
@@ -210,6 +190,29 @@ function ^{N}(h1::HessianNumber{N}, h2::HessianNumber{N})
     end
 
     return HessianNumber(exp_g, hessvec)
+end
+
+^(::Base.Irrational{:e}, h::HessianNumber) = exp(h)
+
+for T in (:Rational, :Integer, :Real)
+    @eval begin
+        function ^(h::HessianNumber, x::$(T))
+            a = value(h)
+            x_min_one = x - 1
+            exp_a = a^x
+            deriv1 = x * a^x_min_one
+            deriv2 = x * x_min_one * a^(x - 2)
+            return hessnum_from_deriv(h, exp_a, deriv1, deriv2)
+        end
+
+        function ^(x::$(T), h::HessianNumber)
+            log_x = log(x)
+            exp_x = x^value(h)
+            deriv1 = exp_x * log_x
+            deriv2 = deriv1 * log_x
+            return hessnum_from_deriv(h, exp_x, deriv1, deriv2)
+        end
+    end
 end
 
 # Unary functions on HessianNumbers #
@@ -261,7 +264,7 @@ end
 @inline calc_atan2(y::Real, x::HessianNumber) = calc_atan2(y, gradnum(x))
 @inline calc_atan2(y::HessianNumber, x::Real) = calc_atan2(gradnum(y), x)
 
-for Y in (:Real, :HessianNumber), X in (:Real, :HessianNumber)
+for Y in (:HessianNumber, :Real), X in (:HessianNumber, :Real)
     if !(Y == :Real && X == :Real)
         @eval begin
             function atan2(y::$Y, x::$X)

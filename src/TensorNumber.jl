@@ -101,13 +101,6 @@ end
 
 # Multiplication #
 #----------------#
-for T in (:Bool, :Real)
-    @eval begin
-        *(t::TensorNumber, x::$(T)) = TensorNumber(hessnum(t) * x, tens(t) * x)
-        *(x::$(T), t::TensorNumber) = TensorNumber(x * hessnum(t), x * tens(t))
-    end
-end
-
 function *{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
     mul_h = hessnum(t1)*hessnum(t2)
     tensvec = Array(eltype(mul_h), halftenslen(N))
@@ -134,23 +127,15 @@ function *{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
     return TensorNumber(mul_h, tensvec)
 end
 
-# Division #
-#----------#
-/(t::TensorNumber, x::Real) = TensorNumber(hessnum(t) / x, tens(t) / x)
-
-function /(x::Real, t::TensorNumber)
-    a = value(t)
-    div_a = x / a
-    div_a_sq = div_a / a
-    div_a_cb = div_a_sq / a
-
-    deriv1 = -div_a_sq
-    deriv2 = div_a_cb + div_a_cb
-    deriv3 = -(deriv2 + deriv2 + deriv2)/a
-
-    return tensnum_from_deriv(t, div_a, deriv1, deriv2, deriv3)
+for T in (:Bool, :Real)
+    @eval begin
+        *(t::TensorNumber, x::$(T)) = TensorNumber(hessnum(t) * x, tens(t) * x)
+        *(x::$(T), t::TensorNumber) = TensorNumber(x * hessnum(t), x * tens(t))
+    end
 end
 
+# Division #
+#----------#
 function /{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
     div_h = hessnum(t1)/hessnum(t2)
     tensvec = Array(eltype(div_h), halftenslen(N))
@@ -187,39 +172,23 @@ function /{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
     return TensorNumber(div_h, tensvec)
 end
 
-# Exponentiation #
-#----------------#
-^(::Base.Irrational{:e}, t::TensorNumber) = exp(t)
+/(t::TensorNumber, x::Real) = TensorNumber(hessnum(t) / x, tens(t) / x)
 
-for T in (:Rational, :Integer, :Real)
-    @eval begin
-        function ^(t::TensorNumber, x::$(T))
-            a = value(t)
-            x_min_one = x - 1
-            x_min_two = x - 2
-            x_x_min_one = x * x_min_one
+function /(x::Real, t::TensorNumber)
+    a = value(t)
+    div_a = x / a
+    div_a_sq = div_a / a
+    div_a_cb = div_a_sq / a
 
-            exp_a = a^x
-            deriv1 = x * a^x_min_one
-            deriv2 = x_x_min_one * a^x_min_two
-            deriv3 = x_x_min_one * x_min_two * a^(x - 3)
+    deriv1 = -div_a_sq
+    deriv2 = div_a_cb + div_a_cb
+    deriv3 = -(deriv2 + deriv2 + deriv2)/a
 
-            return tensnum_from_deriv(t, exp_a, deriv1, deriv2, deriv3)
-        end
-
-        function ^(x::$(T), t::TensorNumber)
-            log_x = log(x)
-
-            exp_x = x^value(t)
-            deriv1 = exp_x * log_x
-            deriv2 = deriv1 * log_x
-            deriv3 = deriv2 * log_x
-
-            return tensnum_from_deriv(t, exp_x, deriv1, deriv2, deriv3)
-        end
-    end
+    return tensnum_from_deriv(t, div_a, deriv1, deriv2, deriv3)
 end
 
+# Exponentiation #
+#----------------#
 function ^{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
     exp_h = hessnum(t1)^hessnum(t2)
     tensvec = Array(eltype(exp_h), halftenslen(N))
@@ -271,6 +240,37 @@ function ^{N}(t1::TensorNumber{N}, t2::TensorNumber{N})
     end
 
     return TensorNumber(exp_h, tensvec)
+end
+
+^(::Base.Irrational{:e}, t::TensorNumber) = exp(t)
+
+for T in (:Rational, :Integer, :Real)
+    @eval begin
+        function ^(t::TensorNumber, x::$(T))
+            a = value(t)
+            x_min_one = x - 1
+            x_min_two = x - 2
+            x_x_min_one = x * x_min_one
+
+            exp_a = a^x
+            deriv1 = x * a^x_min_one
+            deriv2 = x_x_min_one * a^x_min_two
+            deriv3 = x_x_min_one * x_min_two * a^(x - 3)
+
+            return tensnum_from_deriv(t, exp_a, deriv1, deriv2, deriv3)
+        end
+
+        function ^(x::$(T), t::TensorNumber)
+            log_x = log(x)
+
+            exp_x = x^value(t)
+            deriv1 = exp_x * log_x
+            deriv2 = deriv1 * log_x
+            deriv3 = deriv2 * log_x
+
+            return tensnum_from_deriv(t, exp_x, deriv1, deriv2, deriv3)
+        end
+    end
 end
 
 # Unary functions on TensorNumbers #
@@ -325,7 +325,7 @@ end
 @inline calc_atan2(y::Real, x::TensorNumber) = calc_atan2(y, hessnum(x))
 @inline calc_atan2(y::TensorNumber, x::Real) = calc_atan2(hessnum(y), x)
 
-for Y in (:Real, :TensorNumber), X in (:Real, :TensorNumber)
+for Y in (:TensorNumber, :Real), X in (:TensorNumber, :Real)
     if !(Y == :Real && X == :Real)
         @eval begin
             function atan2(y::$Y, x::$X)
