@@ -61,7 +61,7 @@ end
 Base.copy(n::Dual) = n
 
 Base.eps(n::Dual) = eps(value(n))
-Base.eps{F<:Dual}(::Type{F}) = eps(numtype(F))
+Base.eps{D<:Dual}(::Type{D}) = eps(numtype(D))
 
 Base.floor{T<:Real}(::Type{T}, n::Dual) = floor(T, value(n))
 Base.ceil{T<:Real}(::Type{T}, n::Dual) = ceil(T, value(n))
@@ -206,8 +206,7 @@ end
 # Exponentiation #
 #----------------#
 
-for f in (:(Base.(:^)), :(NaNMath.pow))
-
+for f in (:(Base.:^), :(NaNMath.pow))
     @eval begin
         @ambiguous @inline function ($f){N}(n1::Dual{N}, n2::Dual{N})
             if iszero(partials(n2))
@@ -323,12 +322,10 @@ end
 # Pretty Printing #
 ###################
 
-function Base.show{N,T}(io::IO, n::Dual{N,T})
-    d = degree(n)
-    print(io, "(", value(n))
+function Base.show{N}(io::IO, n::Dual{N})
+    print(io, "Dual(", value(n))
     for i in 1:N
-        p = partials(n, i)
-        signbit(p) ? print(io, " - $(abs(p))*ϵ[$d,$i]") : print(io, " + $(p)*ϵ[$d,$i]")
+        print(io, ",", partials(n, i))
     end
     print(io, ")")
 end

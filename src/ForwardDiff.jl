@@ -5,6 +5,7 @@ module ForwardDiff
 import Calculus
 import NaNMath
 
+const MAX_CHUNK_SIZE = 20
 const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923" && Base.Threads.nthreads() > 1
 
 if IS_MULTITHREADED_JULIA

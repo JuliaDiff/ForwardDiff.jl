@@ -31,7 +31,11 @@ end
 @noinline pickchunk(chunk::Val{nothing}, ::Val{nothing}, x) = pickchunk(chunk, Val{length(x)}(), x)
 @noinline pickchunk{C}(chunk::Val{C}, ::Val{nothing}, x) = pickchunk(chunk, Val{length(x)}(), x)
 @noinline pickchunk{L}(chunk::Val{nothing}, len::Val{L}, x) = pickchunk(pickchunk(len), len, x)
-@noinline pickchunk{C,L}(chunk::Val{C}, len::Val{L}, x) = (chunk, len)
+
+@noinline function pickchunk{C,L}(chunk::Val{C}, len::Val{L}, x)
+    @assert C <= MAX_CHUNK_SIZE "max chunk size is $(MAX_CHUNK_SIZE)"
+    return (chunk, len)
+end
 
 ###################
 # macro utilities #
@@ -107,7 +111,7 @@ function cachefetch!{T,L}(tid::Integer, ::Type{T}, ::Val{L})
         v = V(L)
         cache[K] = v
     end
-    return v
+    return v::V
 end
 
 function cachefetch!{N,T,Z}(tid::Integer, ::Type{Partials{N,T}}, ::Val{Z})
@@ -139,8 +143,8 @@ function fetchxdual{L,N}(x, len::Val{L}, chunk::Val{N})
     return cachefetch!(compat_threadid(), Dual{N,eltype(x)}, len)
 end
 
-function fetchxdual{L,N,M}(x, len::Val{L}, rowchunk::Val{N}, colchunk::Val{M})
-    return cachefetch!(compat_threadid(), Dual{N,Dual{M,eltype(x)}}, len)
+function fetchxdualhess{L,N}(x, len::Val{L}, chunk::Val{N})
+    return cachefetch!(compat_threadid(), Dual{N,Dual{N,eltype(x)}}, len)
 end
 
 function fetchseeds{N,T}(::Type{Dual{N,T}}, args...)
@@ -151,12 +155,15 @@ end
 # seeding work arrays #
 #######################
 
+# gradient/Jacobian versions
+
 function seedall!{N,T,L}(xdual::Vector{Dual{N,T}}, x, len::Val{L}, seed::Partials{N,T})
     @simd for i in 1:L
         @inbounds xdual[i] = Dual{N,T}(x[i], seed)
     end
     return xdual
 end
+
 
 function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seed::Partials{N,T})
     k = offset - 1
@@ -176,12 +183,42 @@ function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seeds::Vector{Partials{
     return xdual
 end
 
-function seed!{N,M,T}(xdual::Vector{Dual{N,Dual{M,T}}}, x, offset,
-                      nseeds::Vector{Partials{N,Dual{M,T}}}, mseeds::Vector{Partials{M,T}})
-    k = offset - 1
-    @simd for i in 1:N
-        j = i + k
-        @inbounds xdual[j] = Dual{N,Dual{M,T}}(Dual{M,T}(x[j], mseeds[i]), nseeds[i])
+# Hessian versions
+
+function seedall!{N,T,L}(xdual::Vector{Dual{N,Dual{N,T}}}, x, len::Val{L},
+                         inseed::Partials{N,T}, outseed::Partials{N,Dual{N,T}})
+    @simd for i in 1:L
+        @inbounds xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseed), outseed)
     end
+    return xdual
+end
+
+function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, offset,
+                    inseed::Partials{N,T}, outseed::Partials{N,Dual{N,T}},
+                    M = N)
+    k = offset - 1
+    @simd for i in 1:M
+        j = i + k
+        @inbounds xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
+    end
+    return xdual
+end
+
+function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, offset,
+                    inseeds::Vector{Partials{N,T}}, outseeds::Vector{Partials{N,Dual{N,T}}},
+                    M = N)
+    k = offset - 1
+    @simd for i in 1:M
+        j = i + k
+        @inbounds xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseeds[i]), outseeds[i])
+    end
+    return xdual
+end
+
+offseed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, args...) = seed!(xdual, args..., N - 1)
+
+function offseedj!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, j,
+                        inseed::Partials{N,T}, outseed::Partials{N,Dual{N,T}})
+    @inbounds xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
     return xdual
 end

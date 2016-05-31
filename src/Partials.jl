@@ -6,7 +6,6 @@ end
 # Utility/Accessor Functions #
 ##############################
 
-@inline numtype(x) = eltype(x)
 @inline numtype{N,T}(::Partials{N,T}) = T
 @inline numtype{N,T}(::Type{Partials{N,T}}) = T
 
@@ -93,8 +92,6 @@ end
 # faster since they generate inline code
 # that doesn't rely on closures.
 
-const MAX_CHUNK_SIZE = 20
-
 function tupexpr(f, N)
     ex = Expr(:tuple, [f(i) for i=1:N]...)
     return quote
@@ -107,7 +104,7 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
-for N in 1:MAX_CHUNK_SIZE
+for N in 1:(MAX_CHUNK_SIZE + 1)
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     @eval @inline iszero_tuple{T}(tup::NTuple{$N,T}) = (z = zero(T); @inbounds return $ex)
 
@@ -138,3 +135,9 @@ for N in 1:MAX_CHUNK_SIZE
     ex = tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
     @eval @inline mul_tuples(a::NTuple{$N}, b::NTuple{$N}, afactor, bfactor) = $ex
 end
+
+###################
+# Pretty Printing #
+###################
+
+Base.show{N}(io::IO, p::Partials{N}) = print(io, "Partials", p.values)

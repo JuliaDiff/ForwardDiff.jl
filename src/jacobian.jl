@@ -20,15 +20,25 @@ end
 
 abstract JacobianResult <: ForwardDiffResult
 
+function value(result::JacobianResult)
+    out = similar(result.ydual, numtype(eltype(result.ydual)))
+    return jacobian!(out, result)
+end
+
+function value!(out, result::JacobianResult)
+    @assert length(out) == length(result.ydual)
+    @simd for i in 1:length(result.ydual)
+        @inbounds out[i] = value(result.ydual[i])
+    end
+    return out
+end
+
+# vector mode #
+#-------------#
+
 immutable JacobianVectorResult{Y} <: JacobianResult
     len::Int
     ydual::Y
-end
-
-immutable JacobianChunkResult{Y,J} <: JacobianResult
-    len::Int
-    ydual::Y
-    jac::J
 end
 
 function jacobian(result::JacobianVectorResult)
@@ -47,22 +57,17 @@ function jacobian!(out, result::JacobianVectorResult)
     return out
 end
 
-jacobian(result::JacobianChunkResult) = copy(result.jac)
+# chunk mode #
+#------------#
+
+immutable JacobianChunkResult{Y,J} <: JacobianResult
+    ydual::Y
+    jac::J
+end
+
+jacobian(result::JacobianChunkResult) = result.jac
 
 jacobian!(out, result::JacobianChunkResult) = copy!(out, result.jac)
-
-function value(result::JacobianResult)
-    out = similar(result.ydual, numtype(eltype(result.ydual)))
-    return jacobian!(out, result)
-end
-
-function value!(out, result::JacobianResult)
-    @assert length(out) == length(result.ydual)
-    @simd for i in 1:length(result.ydual)
-        @inbounds out[i] = value(result.ydual[i])
-    end
-    return out
-end
 
 ###############
 # API methods #
@@ -122,12 +127,12 @@ end
 @inline function dispatch_jacobian{C,L}(::Tuple{Val{C}, Val{L}}, allresults, multithread, x, f!, y)
     result = chunk_mode_jacobian!(multithread, Val{C}(), Val{L}(), DummyVar(), f!, x, y)
     value!(y, result)
-    return pickresult(allresults, result, result.jac)
+    return pickresult(allresults, result, jacobian(result))
 end
 
 @inline function dispatch_jacobian{C,L}(::Tuple{Val{C}, Val{L}}, allresults, multithread, x, f)
     result = chunk_mode_jacobian!(multithread, Val{C}(), Val{L}(), DummyVar(), f, x, DummyVar())
-    return pickresult(allresults, result, result.jac)
+    return pickresult(allresults, result, jacobian(result))
 end
 
 #######################
@@ -174,10 +179,10 @@ end
         ydualdef = :(ydual = Vector{Dual{L,eltype(yvar)}}(length(yvar)))
         ydualcompute = :(f(ydual, xdual))
     end
-    R = L % C == 0 ? C : L % C
-    fullchunks = div(L - R, C)
-    lastoffset = L - R + 1
-    reseedexpr = R == C ? :() : :(seeds = fetchseeds(eltype(xdual), $(Val{R}())))
+    lastchunksize = L % C == 0 ? C : L % C
+    fullchunks = div(L - lastchunksize, C)
+    lastoffset = L - lastchunksize + 1
+    reseedexpr = lastchunksize == C ? :() : :(seeds = fetchseeds(eltype(xdual), $(Val{lastchunksize}())))
     return quote
         @assert length(x) == L
         xdual = fetchxdual(x, len, chunk)
@@ -186,12 +191,12 @@ end
         zeroseed = zero(Partials{C,eltype(x)})
         seedall!(xdual, x, len, zeroseed)
 
-        # do first chunk manually
+        # do first chunk manually for dynamic output definition
         seed!(xdual, x, 1, seeds)
         $(ydualcompute)
         seed!(xdual, x, 1, zeroseed)
         $(outdef)
-        jacloadchunk!(out, ydual, 1, chunk)
+        loadjacchunk!(out, ydual, 1, chunk)
 
         # do middle chunks
         for c in 2:$(fullchunks)
@@ -199,20 +204,20 @@ end
             seed!(xdual, x, offset, seeds)
             $(ydualcompute)
             seed!(xdual, x, offset, zeroseed)
-            jacloadchunk!(out, ydual, chunk, offset)
+            loadjacchunk!(out, ydual, offset, chunk)
         end
 
         # do final chunk manually
         $(reseedexpr)
         seed!(xdual, x, $(lastoffset), seeds)
         $(ydualcompute)
-        jacloadchunk!(out, ydual, $(lastoffset), $(Val{R}()))
+        loadjacchunk!(out, ydual, $(lastoffset), $(Val{lastchunksize}()))
 
-        return JacobianChunkResult(L, ydual, out)
+        return JacobianChunkResult(ydual, out)
     end
 end
 
-function jacloadchunk!{C}(out, ydual, offset, chunk::Val{C})
+function loadjacchunk!{C}(out, ydual, offset, chunk::Val{C})
     k = offset - 1
     for i in 1:C
         col = i + k
