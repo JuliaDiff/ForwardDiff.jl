@@ -5,7 +5,6 @@ module ForwardDiff
 import Calculus
 import NaNMath
 
-const MAX_CHUNK_SIZE = 20
 const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923" && Base.Threads.nthreads() > 1
 
 if IS_MULTITHREADED_JULIA
@@ -19,6 +18,8 @@ end
 const AUTO_DEFINED_UNARY_FUNCS = map(first, Calculus.symbolic_derivatives_1arg())
 const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
                        :atanh, :log, :log2, :log10, :lgamma, :log1p)
+
+const MAX_CHUNK_SIZE = 20
 
 @inline value{x}(::Type{Val{x}}) = x
 @inline value{x}(::Type{Type{Val{x}}}) = x

@@ -164,7 +164,6 @@ function seedall!{N,T,L}(xdual::Vector{Dual{N,T}}, x, len::Val{L}, seed::Partial
     return xdual
 end
 
-
 function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seed::Partials{N,T})
     k = offset - 1
     @simd for i in 1:N

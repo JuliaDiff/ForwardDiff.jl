@@ -23,8 +23,6 @@ samerng() = MersenneTwister(1)
 
 @test ForwardDiff.numtype(PARTIALS) == T
 @test ForwardDiff.numtype(typeof(PARTIALS)) == T
-@test ForwardDiff.numtype(typeof(VALUES)) == T
-@test ForwardDiff.numtype(VALUES) == T
 
 @test ForwardDiff.npartials(PARTIALS) == N
 @test ForwardDiff.npartials(typeof(PARTIALS)) == N

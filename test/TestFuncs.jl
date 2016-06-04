@@ -30,7 +30,7 @@ end
 self_weighted_logit(x::AbstractVector) = inv(1.0 + exp(-dot(x, x)))
 
 const VECTOR_TO_NUMBER_FUNCS = (rosenbrock, ackley, self_weighted_logit)
-#
+
 # #######################
 # # f: Vector -> Vector #
 # #######################
