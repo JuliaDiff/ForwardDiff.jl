@@ -36,7 +36,7 @@ Base.done(partials::Partials, i) = done(partials.values, i)
 @inline Base.rand{N,T}(rng::AbstractRNG, ::Type{Partials{N,T}}) = Partials(rand_tuple(rng, NTuple{N,T}))
 
 Base.isequal{N}(a::Partials{N}, b::Partials{N}) = isequal(a.values, b.values)
-Base.(:(==)){N}(a::Partials{N}, b::Partials{N}) = a.values == b.values
+Base.:(==){N}(a::Partials{N}, b::Partials{N}) = a.values == b.values
 
 const PARTIALS_HASH = hash(Partials)
 
@@ -66,12 +66,12 @@ Base.convert{N,T}(::Type{Partials{N,T}}, partials::Partials{N,T}) = partials
 # Arithmetic Functions #
 ########################
 
-@inline Base.(:+){N}(a::Partials{N}, b::Partials{N}) = Partials(add_tuples(a.values, b.values))
-@inline Base.(:-){N}(a::Partials{N}, b::Partials{N}) = Partials(sub_tuples(a.values, b.values))
-@inline Base.(:-)(partials::Partials) = Partials(minus_tuple(partials.values))
-@inline Base.(:*)(partials::Partials, x::Real) = Partials(scale_tuple(partials.values, x))
-@inline Base.(:*)(x::Real, partials::Partials) = partials*x
-@inline Base.(:/)(partials::Partials, x::Real) = Partials(div_tuple_by_scalar(partials.values, x))
+@inline Base.:+{N}(a::Partials{N}, b::Partials{N}) = Partials(add_tuples(a.values, b.values))
+@inline Base.:-{N}(a::Partials{N}, b::Partials{N}) = Partials(sub_tuples(a.values, b.values))
+@inline Base.:-(partials::Partials) = Partials(minus_tuple(partials.values))
+@inline Base.:*(partials::Partials, x::Real) = Partials(scale_tuple(partials.values, x))
+@inline Base.:*(x::Real, partials::Partials) = partials*x
+@inline Base.:/(partials::Partials, x::Real) = Partials(div_tuple_by_scalar(partials.values, x))
 
 @inline function _mul_partials{N}(a::Partials{N}, b::Partials{N}, afactor, bfactor)
     return Partials(mul_tuples(a.values, b.values, afactor, bfactor))
