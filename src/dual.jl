@@ -42,6 +42,7 @@ Dual(value::Real, partials::Real...) = Dual(value, partials)
 @inline degree{T}(::Type{T}) = 0
 degree{N,T}(::Type{Dual{N,T}}) = 1 + degree(T)
 
+@inline numtype(T) = Any
 @inline numtype{N,T}(::Dual{N,T}) = T
 @inline numtype{N,T}(::Type{Dual{N,T}}) = T
 

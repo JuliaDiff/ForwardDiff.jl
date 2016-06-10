@@ -1,76 +1,66 @@
-############################
-# @derivative!/@derivative #
-############################
+####################
+# DerivativeResult #
+####################
 
-const DERIVATIVE_KWARG_ORDER = (:all,)
-const DERIVATIVE_F_KWARG_ORDER = (:all, :output_mutates)
-
-macro derivative!(args...)
-    args, kwargs = separate_kwargs(args)
-    arranged_kwargs = arrange_kwargs(kwargs, KWARG_DEFAULTS, DERIVATIVE_KWARG_ORDER)
-    return esc(:(ForwardDiff.derivative!($(args...), $(arranged_kwargs...))))
+type DerivativeResult{V,D} <: ForwardDiffResult
+    value::V
+    derivative::D
 end
 
-macro derivative(args...)
-    args, kwargs = separate_kwargs(args)
-    if length(args) == 1
-        arranged_kwargs = arrange_kwargs(kwargs, KWARG_DEFAULTS, DERIVATIVE_F_KWARG_ORDER)
-    else
-        arranged_kwargs = arrange_kwargs(kwargs, KWARG_DEFAULTS, DERIVATIVE_KWARG_ORDER)
+value(result::DerivativeResult) = result.value
+
+derivative(result::DerivativeResult) = result.derivative
+
+derivative!(out, result::DerivativeResult) = copy!(out, result.derivative)
+
+###############
+# API methods #
+###############
+
+derivative(f, x) = extract_derivative(f(Dual(x, one(x))))
+
+function derivative!(out, f, x)
+    dual = f(Dual(x, one(x)))
+    load_derivative_value!(out, dual)
+    load_derivative!(out, dual)
+    return out
+end
+
+#####################
+# result extraction #
+#####################
+
+@inline extract_derivative(dual::Dual) = partials(dual, 1)
+@inline extract_derivative(arr) = load_derivative!(similar(arr, numtype(eltype(arr))), arr)
+
+function load_derivative!(out, arr)
+    for i in eachindex(out)
+        out[i] = extract_derivative(arr[i])
     end
-    return esc(:(ForwardDiff.derivative($(args...), $(arranged_kwargs...))))
+    return out
 end
 
-##########################
-# derivative!/derivative #
-##########################
-
-function derivative!{ALL}(f, out, x, ::Type{Val{ALL}})
-    return handle_deriv_result!(out, f(Dual(x, one(x))), Val{ALL})
+@inline function load_derivative!(out::DerivativeResult, arr)
+    load_derivative!(out.derivative, arr)
+    return out
 end
 
-function derivative{ALL}(f, x, ::Type{Val{ALL}})
-    return handle_deriv_result(f(Dual(x, one(x))), Val{ALL})
+@inline function load_derivative!(out::DerivativeResult, dual::Dual)
+    out.derivative = extract_derivative(dual)
+    return out
 end
 
-@generated function derivative{ALL, MUTATES}(f, ::Type{Val{ALL}}, ::Type{Val{MUTATES}})
-    if MUTATES
-        return quote
-            d!(out, x) = derivative!(f, out, x, Val{ALL})
-            return d!
-        end
-    else
-        return quote
-            d(x) = derivative(f, x, Val{ALL})
-            return d
-        end
+@inline load_derivative_value!(out, result) = out
+
+function load_derivative_value!(out::DerivativeResult, arr)
+    val = out.value
+    for i in eachindex(val)
+        val[i] = value(arr[i])
     end
+    return out
 end
 
-###############################
-# handling derivative results #
-###############################
-
-handle_deriv_result(result::Dual, ::Type{Val{false}}) = partials(result, 1)
-handle_deriv_result(result::Dual, ::Type{Val{true}}) = value(result), partials(result, 1)
-
-function handle_deriv_result{ALL}(result, ::Type{Val{ALL}})
-    output = similar(result, numtype(eltype(result)))
-    return handle_deriv_result!(output, result, Val{ALL})
-end
-
-function handle_deriv_result!(output, result, ::Type{Val{true}})
-    valoutput = similar(output)
-    for i in eachindex(result)
-        valoutput[i] = value(result[i])
-        output[i] = partials(result[i], 1)
-    end
-    return valoutput, output
-end
-
-function handle_deriv_result!(output, result, ::Type{Val{false}})
-    for i in eachindex(result)
-        output[i] = partials(result[i], 1)
-    end
-    return output
+@inline function load_derivative_value!(out::DerivativeResult, dual::Dual)
+    out.value = value(dual)
+    return out
 end

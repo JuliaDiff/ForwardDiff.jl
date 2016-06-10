@@ -1,97 +1,39 @@
-#########
-# types #
-#########
-
-immutable DummyVar end
-
-abstract ForwardDiffResult
-
-######################
-# parameter handling #
-######################
-
-@inline pickresult(::Val{false}, result::ForwardDiffResult, out) = out
-@inline pickresult(::Val{true}, result::ForwardDiffResult, out) = result
+##################
+# chunk handling #
+##################
 
 const AUTO_CHUNK_THRESHOLD = 10
 
-@generated function pickchunk{L}(len::Val{L})
-    if L <= AUTO_CHUNK_THRESHOLD
-        return :len
+immutable Chunk{N}
+    function Chunk()
+        @assert N <= (MAX_CHUNK_SIZE + 1) "cannot create Chunk{$N}: max chunk size is $(MAX_CHUNK_SIZE)"
+        return new()
+    end
+end
+
+@inline Base.copy(chunk::Chunk) = chunk
+
+pickchunk(x) = Chunk{4}()
+
+# This method picks a more optimal chunk size, but is type unstable.
+function unstable_pickchunk(x)
+    k = length(x)
+    if k <= AUTO_CHUNK_THRESHOLD
+        return Chunk{k}()
     else
         # Constrained to chunk <= AUTO_CHUNK_THRESHOLD, minimize (in order of priority):
         #   1. the number of chunks that need to be computed
         #   2. the number of "left over" perturbations in the final chunk
-        nchunks = round(Int, L / AUTO_CHUNK_THRESHOLD, RoundUp)
-        C = round(Int, L / nchunks, RoundUp)
-        return :(Val{$C}())
+        nchunks = round(Int, k / AUTO_CHUNK_THRESHOLD, RoundUp)
+        return Chunk{round(Int, k / nchunks, RoundUp)}()
     end
-end
-
-@noinline pickchunk(chunk::Val{nothing}, ::Val{nothing}, x) = pickchunk(chunk, Val{length(x)}(), x)
-@noinline pickchunk{C}(chunk::Val{C}, ::Val{nothing}, x) = pickchunk(chunk, Val{length(x)}(), x)
-@noinline pickchunk{L}(chunk::Val{nothing}, len::Val{L}, x) = pickchunk(pickchunk(len), len, x)
-
-@noinline function pickchunk{C,L}(chunk::Val{C}, len::Val{L}, x)
-    @assert C <= MAX_CHUNK_SIZE "max chunk size is $(MAX_CHUNK_SIZE)"
-    return (chunk, len)
-end
-
-###################
-# macro utilities #
-###################
-
-const KWARG_DEFAULTS = (:chunk => nothing, :len => nothing, :allresults => false, :multithread => false)
-
-iskwarg(ex) = isa(ex, Expr) && (ex.head == :kw || ex.head == :(=))
-
-function separate_kwargs(args)
-    # if called as `f(args...; kwargs...)`, i.e. with a semicolon
-    if isa(first(args), Expr) && first(args).head == :parameters
-        kwargs = first(args).args
-        args = args[2:end]
-    else # if called as `f(args..., kwargs...)`, i.e. with a comma
-        i = findfirst(iskwarg, args)
-        if i == 0
-            kwargs = tuple()
-        else
-            kwargs = args[i:end]
-            args = args[1:i-1]
-        end
-    end
-    return args, kwargs
-end
-
-function arrange_kwargs(kwargs, defaults)
-    keys = map(first, defaults)
-    badargs = setdiff(map(kw -> kw.args[1], kwargs), keys)
-    @assert isempty(badargs) "unrecognized keyword arguments: $(badargs)"
-    return [:(Val{$(getkw(kwargs, key, defaults))}()) for key in keys]
-end
-
-function getkw(kwargs, key, defaults)
-    for kwexpr in kwargs
-        if kwexpr.args[1] == key
-            return kwexpr.args[2]
-        end
-    end
-    return default_value(defaults, key)
-end
-
-function default_value(defaults, key)
-    for kwpair in defaults
-        if kwpair.first == key
-            return kwpair.second
-        end
-    end
-    throw(KeyError(key))
 end
 
 #######################
 # caching work arrays #
 #######################
 
-const CACHE = ntuple(n -> Dict{DataType,Any}(), NTHREADS)
+const CACHE = ntuple(n -> Dict(), NTHREADS)
 
 function clearcache!()
     for d in CACHE
@@ -99,23 +41,23 @@ function clearcache!()
     end
 end
 
-@eval cachefetch!{D,L}(::Type{D}, len::Val{L}) = $(Expr(:tuple, [:(cachefetch!($i, D, len)) for i in 1:NTHREADS]...))
+@eval cachefetch!{D}(::Type{D}, n) = $(Expr(:tuple, [:(cachefetch!($i, D, n)) for i in 1:NTHREADS]...))
 
-function cachefetch!{T,L}(tid::Integer, ::Type{T}, ::Val{L})
-    K = Tuple{T,L}
+function cachefetch!{T}(tid::Integer, ::Type{T}, n, alt::Bool = false)
+    K = (T, n, alt)
     V = Vector{T}
     cache = CACHE[tid]
     if haskey(cache, K)
         v = cache[K]::V
     else
-        v = V(L)
+        v = V(n)
         cache[K] = v
     end
     return v::V
 end
 
-function cachefetch!{N,T,Z}(tid::Integer, ::Type{Partials{N,T}}, ::Val{Z})
-    K = Tuple{Partials{N,T},Z}
+function cachefetch!{N,T,Z}(tid::Integer, ::Type{Partials{N,T}}, ::Chunk{Z})
+    K = (Partials{N,T}, Z)
     V = Vector{Partials{N,T}}
     cache = CACHE[tid]
     if haskey(cache, K)
@@ -132,19 +74,19 @@ function cachefetch!{N,T,Z}(tid::Integer, ::Type{Partials{N,T}}, ::Val{Z})
 end
 
 function cachefetch!{N,T}(tid::Integer, ::Type{Partials{N,T}})
-    return cachefetch!(tid, Partials{N,T}, Val{N}())
+    return cachefetch!(tid, Partials{N,T}, Chunk{N}())
 end
 
-function threaded_fetchxdual{L,N}(x, len::Val{L}, chunk::Val{N})
-    return cachefetch!(Dual{N,eltype(x)}, len)
+function threaded_fetchdualvec{N}(x, ::Chunk{N})
+    return cachefetch!(Dual{N,eltype(x)}, length(x))
 end
 
-function fetchxdual{L,N}(x, len::Val{L}, chunk::Val{N})
-    return cachefetch!(compat_threadid(), Dual{N,eltype(x)}, len)
+function fetchdualvec{N}(x, ::Chunk{N}, alt::Bool = false)
+    return cachefetch!(compat_threadid(), Dual{N,eltype(x)}, length(x), alt)
 end
 
-function fetchxdualhess{L,N}(x, len::Val{L}, chunk::Val{N})
-    return cachefetch!(compat_threadid(), Dual{N,Dual{N,eltype(x)}}, len)
+function fetchdualvechess{L,N}(x, ::Chunk{N})
+    return cachefetch!(compat_threadid(), Dual{N,Dual{N,eltype(x)}}, length(x))
 end
 
 function fetchseeds{N,T}(::Type{Dual{N,T}}, args...)
@@ -157,67 +99,66 @@ end
 
 # gradient/Jacobian versions
 
-function seedall!{N,T,L}(xdual::Vector{Dual{N,T}}, x, len::Val{L}, seed::Partials{N,T})
-    @simd for i in 1:L
-        @inbounds xdual[i] = Dual{N,T}(x[i], seed)
+function seedall!{N,T}(xdual::Vector{Dual{N,T}}, x, seed::Partials{N,T})
+    for i in eachindex(xdual)
+        xdual[i] = Dual{N,T}(x[i], seed)
     end
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seed::Partials{N,T})
-    k = offset - 1
-    @simd for i in 1:N
-        j = i + k
-        @inbounds xdual[j] = Dual{N,T}(x[j], seed)
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, seed::Partials{N,T}, index)
+    offset = index - 1
+    for i in 1:N
+        j = i + offset
+        xdual[j] = Dual{N,T}(x[j], seed)
     end
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, offset, seeds::Vector{Partials{N,T}})
-    k = offset - 1
-    @simd for i in 1:N
-        j = i + k
-        @inbounds xdual[j] = Dual{N,T}(x[j], seeds[i])
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, seeds::Vector{Partials{N,T}}, index,
+                    chunksize = N)
+    offset = index - 1
+    for i in 1:chunksize
+        j = i + offset
+        xdual[j] = Dual{N,T}(x[j], seeds[i])
     end
     return xdual
 end
 
 # Hessian versions
 
-function seedall!{N,T,L}(xdual::Vector{Dual{N,Dual{N,T}}}, x, len::Val{L},
-                         inseed::Partials{N,T}, outseed::Partials{N,Dual{N,T}})
-    @simd for i in 1:L
-        @inbounds xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseed), outseed)
+function seedall!{N,T,L}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
+                         outseed::Partials{N,Dual{N,T}})
+    for i in eachindex(xdual)
+        xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseed), outseed)
     end
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, offset,
-                    inseed::Partials{N,T}, outseed::Partials{N,Dual{N,T}},
-                    M = N)
-    k = offset - 1
-    @simd for i in 1:M
-        j = i + k
-        @inbounds xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, inseed::Partials{N,T},
+                    outseed::Partials{N,Dual{N,T}}, index, chunksize = N)
+    offset = index - 1
+    for i in 1:chunksize
+        j = i + offset
+        xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
     end
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, offset,
-                    inseeds::Vector{Partials{N,T}}, outseeds::Vector{Partials{N,Dual{N,T}}},
-                    M = N)
-    k = offset - 1
-    @simd for i in 1:M
-        j = i + k
-        @inbounds xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseeds[i]), outseeds[i])
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, inseeds::Vector{Partials{N,T}},
+                    outseeds::Vector{Partials{N,Dual{N,T}}}, index, chunksize = N)
+    offset = index - 1
+    for i in 1:chunksize
+        j = i + offset
+        xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseeds[i]), outseeds[i])
     end
     return xdual
 end
 
-offseed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, args...) = seed!(xdual, args..., N - 1)
+sideseed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, args...) = seed!(xdual, args..., N - 1)
 
-function offseedj!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, j,
-                        inseed::Partials{N,T}, outseed::Partials{N,Dual{N,T}})
-    @inbounds xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
+function sideseedj!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
+                         outseed::Partials{N,Dual{N,T}}, j)
+    xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
     return xdual
 end
