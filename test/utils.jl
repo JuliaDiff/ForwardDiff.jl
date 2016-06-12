@@ -5,7 +5,7 @@ using Base.Test
 const XLEN = ForwardDiff.MAX_CHUNK_SIZE
 const YLEN = div(ForwardDiff.MAX_CHUNK_SIZE, 2) + 1
 const X, Y = rand(XLEN), rand(YLEN)
-const CHUNK_SIZES = (ForwardDiff.default_value(ForwardDiff.KWARG_DEFAULTS, :chunk), div(XLEN, 2), div(XLEN, 2) + 1, XLEN)
+const CHUNK_SIZES = (1, ForwardDiff.pickchunksize(X), div(XLEN, 2) + 1, XLEN)
 const EPS = 1e-5
 
 # used to test against results calculated via finite difference
@@ -78,7 +78,7 @@ function chebyquad!(y::Vector, x::Vector)
     return y
 end
 
-chebyquad(x) = (y = similar(x, length(Y)); chebyquad!(y, x); return y)
+chebyquad(x) = (y = zeros(eltype(x), length(Y)); chebyquad!(y, x); return y)
 
 function brown_almost_linear!(y::Vector, x::Vector)
     c = sum(x) - (length(x) + 1)
@@ -89,7 +89,7 @@ function brown_almost_linear!(y::Vector, x::Vector)
     return nothing
 end
 
-brown_almost_linear(x) = (y = similar(x, length(Y)); brown_almost_linear!(y, x); return y)
+brown_almost_linear(x) = (y = zeros(eltype(x), length(Y)); brown_almost_linear!(y, x); return y)
 
 function trigonometric!(y::Vector, x::Vector)
     for i in x, j in eachindex(y)
@@ -98,12 +98,12 @@ function trigonometric!(y::Vector, x::Vector)
     c = sum(y)
     n = length(x)
     for i in x, j in eachindex(y)
-        y[j] = n+j-sin(i) - c - j*y[j]
+        y[j] = sin(i) * y[j] + n - c
     end
     return y
 end
 
-trigonometric(x) = (y = similar(x, length(Y)); trigonometric!(y, x); return y)
+trigonometric(x) = (y = zeros(eltype(x), length(Y)); trigonometric!(y, x); return y)
 
 const VECTOR_TO_VECTOR_INPLACE_FUNCS = (chebyquad!, brown_almost_linear!, trigonometric!)
 const VECTOR_TO_VECTOR_FUNCS = (chebyquad, brown_almost_linear, trigonometric)

@@ -50,11 +50,8 @@ function jacobian!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x); multithread = f
     return out
 end
 
-function jacobian!{N}(out::JacobianResult, f!, y, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
-    error("use jacobian!(JacobianResult(out, y), f!, x, ...) instead of jacobian!(out, f!, y, x, ...) ")
-end
-
 function jacobian!{N}(out, f!, y, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+    @assert !(isa(out, JacobianResult)) "use jacobian!(JacobianResult(out, y), f!, x, ...) instead of jacobian!(out, f!, y, x, ...)"
     if N == length(x)
         vector_mode_jacobian!(out, f!, y, x, chunk)
     elseif multithread
@@ -90,10 +87,11 @@ function load_jacobian!(out, ydual)
     for col in 1:size(out, 2), row in 1:size(out, 1)
         out[row, col] = partials(ydual[row], col)
     end
+    return out
 end
 
-@inline function load_jacobian!(out::JacobianResult, dual::Dual)
-    load_jacobian!(out.jacobian, dual)
+@inline function load_jacobian!(out::JacobianResult, ydual)
+    load_jacobian!(out.jacobian, ydual)
     return out
 end
 
@@ -105,10 +103,11 @@ function load_jacobian_chunk!(out, ydual, index, chunksize)
             out[row, col] = partials(ydual[row], i)
         end
     end
+    return out
 end
 
 @inline function load_jacobian_chunk!(out::JacobianResult, ydual, index, chunksize)
-    load_jacobian_chunk!(out.jacobian, dual, index, chunksize)
+    load_jacobian_chunk!(out.jacobian, ydual, index, chunksize)
     return out
 end
 
@@ -131,13 +130,13 @@ function compute_vector_mode_jacobian(f!, y, x, chunk)
     return ydual
 end
 
-function vector_mode_jacobian(f, x, chunk)
+function vector_mode_jacobian{N}(f, x, chunk::Chunk{N})
     ydual = compute_vector_mode_jacobian(f, x, chunk)
     out = similar(ydual, numtype(eltype(ydual)), length(ydual), N)
     return load_jacobian!(out, ydual)
 end
 
-function vector_mode_jacobian(f!, y, x, chunk)
+function vector_mode_jacobian{N}(f!, y, x, chunk::Chunk{N})
     ydual = compute_vector_mode_jacobian(f!, y, x, chunk)
     load_jacobian_y!(y, ydual)
     out = similar(y, length(y), N)
@@ -162,7 +161,7 @@ end
 function jacobian_chunk_mode_expr(out_definition::Expr, ydual_definition::Expr,
                                   ydual_compute::Expr, y_definition::Expr)
     return quote
-        @assert xlen >= N "chunk size cannot be greater than length(x) ($(N) > $(xlen))"
+        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
         # precalculate loop bounds
         xlen = length(x)
@@ -208,30 +207,30 @@ function jacobian_chunk_mode_expr(out_definition::Expr, ydual_definition::Expr,
     end
 end
 
-@eval function chunk_mode_jacobian{N}(f, x, chunk::Chunk{N}
+@eval function chunk_mode_jacobian{N}(f, x, chunk::Chunk{N})
     $(jacobian_chunk_mode_expr(:(out = similar(x, numtype(eltype(ydual)), length(ydual), xlen)),
                                :(),
                                :(ydual = f(xdual)),
-                               :())
+                               :()))
 end
 
-@eval function chunk_mode_jacobian{N}(f!, y, x, chunk::Chunk{N}
+@eval function chunk_mode_jacobian{N}(f!, y, x, chunk::Chunk{N})
     $(jacobian_chunk_mode_expr(:(out = similar(y, numtype(eltype(ydual)), length(ydual), xlen)),
                                :(ydual = fetchdualvec(y, chunk, true)),
                                :(f!(ydual, xdual)),
-                               :(load_jacobian_y!(y, ydual)))
+                               :(load_jacobian_y!(y, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f, x, chunk::Chunk{N}
+@eval function chunk_mode_jacobian!{N}(out, f, x, chunk::Chunk{N})
     $(jacobian_chunk_mode_expr(:(),
                                :(),
                                :(ydual = f(xdual)),
-                               :(load_jacobian_value!(out, ydual)))
+                               :(load_jacobian_value!(out, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f!, y, x, chunk::Chunk{N}
+@eval function chunk_mode_jacobian!{N}(out, f!, y, x, chunk::Chunk{N})
     $(jacobian_chunk_mode_expr(:(),
                                :(ydual = fetchdualvec(y, chunk, true)),
                                :(f!(ydual, xdual)),
-                               :(load_jacobian_y!(y, ydual)))
+                               :(load_jacobian_y!(y, ydual))))
 end

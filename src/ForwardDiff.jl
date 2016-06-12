@@ -5,9 +5,9 @@ module ForwardDiff
 import Calculus
 import NaNMath
 
-#############
-# constants #
-#############
+#############################
+# types/functions/constants #
+#############################
 
 const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923" && Base.Threads.nthreads() > 1
 
@@ -25,14 +25,7 @@ const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
 
 const MAX_CHUNK_SIZE = 20
 
-###################
-# types/functions #
-###################
-
 abstract ForwardDiffResult
-
-@inline value{x}(::Type{Val{x}}) = x
-@inline value{x}(::Type{Type{Val{x}}}) = x
 
 ############
 # includes #
@@ -41,15 +34,15 @@ abstract ForwardDiffResult
 include("partials.jl")
 include("dual.jl")
 include("utils.jl")
-# include("derivative.jl")
+include("derivative.jl")
 include("gradient.jl")
-# include("jacobian.jl")
-# include("hessian.jl")
+include("jacobian.jl")
+include("hessian.jl")
 
 ###########
 # exports #
 ###########
 
-export Chunk, GradientResult
+export Chunk, DerivativeResult, GradientResult, JacobianResult, HessianResult
 
 end # module

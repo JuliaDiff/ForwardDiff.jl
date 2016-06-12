@@ -105,7 +105,7 @@ end
 
 function chunk_mode_gradient_expr(out_definition::Expr)
     return quote
-        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(xlen))"
+        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
         # precalculate loop bounds
         xlen = length(x)
@@ -165,7 +165,7 @@ end
 if IS_MULTITHREADED_JULIA
     function multithread_chunk_mode_expr(out_definition::Expr)
         return quote
-            @assert xlen >= N "chunk size cannot be greater than length(x) ($(N) > $(xlen))"
+            @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
             # precalculate loop bounds
             xlen = length(x)

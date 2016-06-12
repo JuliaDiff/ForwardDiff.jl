@@ -128,7 +128,7 @@ end
 
 function vector_mode_hessian(f, x, chunk)
     dual = compute_vector_mode_hessian(f, x, chunk)
-    out = similar(x, numtype(numtype(dual), length(x), length(x))
+    out = similar(x, numtype(numtype(dual)), length(x), length(x))
     return load_hessian!(out, dual)
 end
 
@@ -145,8 +145,7 @@ end
 
 function chunk_mode_hessian_expr(out_definition::Expr)
     return quote
-        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(xlen))"
-        xlen = length(x)
+        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
         # diagonal chunks #
         #-----------------#
@@ -177,6 +176,7 @@ function chunk_mode_hessian_expr(out_definition::Expr)
         # -----------------------------
 
         # precalculate loop bounds
+        xlen = length(x)
         remainder = xlen % N
         lastchunksize = ifelse(remainder == 0, N, remainder)
         lastchunkindex = xlen - lastchunksize + 1

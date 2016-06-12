@@ -2,8 +2,6 @@
 # chunk handling #
 ##################
 
-const AUTO_CHUNK_THRESHOLD = 10
-
 immutable Chunk{N}
     function Chunk()
         @assert N <= (MAX_CHUNK_SIZE + 1) "cannot create Chunk{$N}: max chunk size is $(MAX_CHUNK_SIZE)"
@@ -13,19 +11,20 @@ end
 
 @inline Base.copy(chunk::Chunk) = chunk
 
-pickchunk(x) = Chunk{4}()
+const AUTO_CHUNK_THRESHOLD = 10
 
-# This method picks a more optimal chunk size, but is type unstable.
-function unstable_pickchunk(x)
+pickchunk(x) = Chunk{pickchunksize(x)}()
+
+function pickchunksize(x)
     k = length(x)
     if k <= AUTO_CHUNK_THRESHOLD
-        return Chunk{k}()
+        return k
     else
         # Constrained to chunk <= AUTO_CHUNK_THRESHOLD, minimize (in order of priority):
         #   1. the number of chunks that need to be computed
         #   2. the number of "left over" perturbations in the final chunk
         nchunks = round(Int, k / AUTO_CHUNK_THRESHOLD, RoundUp)
-        return Chunk{round(Int, k / nchunks, RoundUp)}()
+        return round(Int, k / nchunks, RoundUp)
     end
 end
 
@@ -85,7 +84,7 @@ function fetchdualvec{N}(x, ::Chunk{N}, alt::Bool = false)
     return cachefetch!(compat_threadid(), Dual{N,eltype(x)}, length(x), alt)
 end
 
-function fetchdualvechess{L,N}(x, ::Chunk{N})
+function fetchdualvechess{N}(x, ::Chunk{N})
     return cachefetch!(compat_threadid(), Dual{N,Dual{N,eltype(x)}}, length(x))
 end
 
@@ -127,8 +126,8 @@ end
 
 # Hessian versions
 
-function seedall!{N,T,L}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
-                         outseed::Partials{N,Dual{N,T}})
+function seedall!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
+                       outseed::Partials{N,Dual{N,T}})
     for i in eachindex(xdual)
         xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseed), outseed)
     end
