@@ -18,7 +18,7 @@ end
 
 for f in VECTOR_TO_NUMBER_FUNCS
     gradresult = Calculus.gradient(f, X)
-    fullresult = ForwardDiff.GradientResult(f(X), gradresult)
+    fullresult = GradientResult(f(X), gradresult)
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size $c")
         chunk = Chunk{c}()

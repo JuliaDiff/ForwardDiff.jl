@@ -105,5 +105,6 @@ end
 
 trigonometric(x) = (y = zeros(eltype(x), length(Y)); trigonometric!(y, x); return y)
 
-const VECTOR_TO_VECTOR_INPLACE_FUNCS = (chebyquad!, brown_almost_linear!, trigonometric!)
-const VECTOR_TO_VECTOR_FUNCS = (chebyquad, brown_almost_linear, trigonometric)
+const VECTOR_TO_VECTOR_FUNCS = ((chebyquad!, chebyquad),
+                                (brown_almost_linear!, brown_almost_linear),
+                                (trigonometric!, trigonometric))

@@ -119,10 +119,9 @@ end
 #-------------#
 
 function compute_vector_mode_hessian(f, x, chunk)
-    xdual = fetchdualvechess(x, chunk)
-    inseeds = fetchseeds(numtype(eltype(xdual)))
-    outseeds = fetchseeds(eltype(xdual))
-    seed!(xdual, x, inseeds, outseeds, 1)
+    cache = hessian_cachefetch!(x, chunk)
+    xdual = cache.dualvec
+    seed!(xdual, x, cache.inseeds, cache.outseeds, 1)
     return f(xdual)
 end
 
@@ -180,14 +179,15 @@ function chunk_mode_hessian_expr(out_definition::Expr)
         remainder = xlen % N
         lastchunksize = ifelse(remainder == 0, N, remainder)
         lastchunkindex = xlen - lastchunksize + 1
-        nfullchunks = div(xlen - lastchunksize, N)
+        middlechunks = 2:div(xlen - lastchunksize, N)
 
         # fetch and seed work vectors
-        xdual = fetchdualvechess(x, chunk)
-        inseeds = fetchseeds(Dual{N,T})
-        outseeds = fetchseeds(Dual{N,Dual{N,T}})
-        inzero = zero(Partials{N,T})
-        outzero = zero(Partials{N,Dual{N,T}})
+        cache = hessian_cachefetch!(x, chunk)
+        xdual = cache.dualvec
+        inseeds = cache.inseeds
+        outseeds = cache.outseeds
+        inzero = zero(eltype(inseeds))
+        outzero = zero(eltype(outseeds))
         seedall!(xdual, x, inzero, outzero)
 
         # do first chunk manually for dynamic output definition
@@ -199,7 +199,7 @@ function chunk_mode_hessian_expr(out_definition::Expr)
         seed!(xdual, x, inzero, outzero, 1)
 
         # do middle chunks
-        for c in 2:nfullchunks
+        for c in middlechunks
             i = (c - 1) * N + 1
             seed!(xdual, x, inseeds, outseeds, i)
             dual = f(xdual)
@@ -209,10 +209,7 @@ function chunk_mode_hessian_expr(out_definition::Expr)
         end
 
         # do final chunk
-        if lastchunksize != N
-            seeds = fetchseeds(eltype(xdual), Chunk{lastchunksize}())
-        end
-        seed!(xdual, x, inseeds, outseeds, lastchunkindex, lastchunksize)
+        seed!(xdual, x, cache.remainder_inseeds, cache.remainder_outseeds, lastchunkindex, lastchunksize)
         dual = f(xdual)
         load_hessian_diagonal_chunk!(out, dual, lastchunkindex, lastchunksize)
         load_hessian_gradient_chunk!(out, dual, lastchunkindex, lastchunksize)
@@ -242,18 +239,17 @@ function chunk_mode_hessian_expr(out_definition::Expr)
         # | 5 | 5 | 8 | 8 | 9 | 9 |   |
         # -----------------------------
 
-        sideN = N + 1
-
-        xdual = fetchdualvechess(x, Chunk{sideN}())
-        inseeds = fetchseeds(Dual{sideN,T})
-        outseeds = fetchseeds(Dual{sideN,Dual{sideN,T}})
+        cache = hessian_cachefetch!(x, Chunk{N + 1}())
+        xdual = cache.dualvec
+        inseeds = cache.inseeds
+        outseeds = cache.outseeds
         lastinseed = last(inseeds)
         lastoutseed = last(outseeds)
-        inzero = zero(Partials{sideN,T})
-        outzero = zero(Partials{sideN,Dual{sideN,T}})
+        inzero = zero(eltype(inseeds))
+        outzero = zero(eltype(outseeds))
         seedall!(xdual, x, inzero, outzero)
 
-        for c in 1:(nfullchunks + 1)
+        for c in 1:(last(middlechunks) + 1)
             i = (c - 1) * N + 1
             sideseed!(xdual, x, inseeds, outseeds, i)
             for j in (i + N):(xlen)

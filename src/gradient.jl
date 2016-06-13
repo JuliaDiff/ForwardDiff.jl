@@ -81,9 +81,9 @@ end
 #-------------#
 
 function compute_vector_mode_gradient(f, x, chunk)
-    xdual = fetchdualvec(x, chunk)
-    seeds = fetchseeds(eltype(xdual))
-    seed!(xdual, x, seeds, 1)
+    cache = jacobian_cachefetch!(x, chunk)
+    xdual = cache.dualvec
+    seed!(xdual, x, cache.seeds, 1)
     return f(xdual)
 end
 
@@ -112,12 +112,13 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         remainder = xlen % N
         lastchunksize = ifelse(remainder == 0, N, remainder)
         lastchunkindex = xlen - lastchunksize + 1
-        nfullchunks = div(xlen - lastchunksize, N)
+        middlechunks = 2:div(xlen - lastchunksize, N)
 
         # fetch and seed work vectors
-        xdual = fetchdualvec(x, chunk)
-        seeds = fetchseeds(eltype(xdual))
-        zeroseed = zero(Partials{N,eltype(x)})
+        cache = jacobian_cachefetch!(x, chunk)
+        xdual = cache.dualvec
+        seeds = cache.seeds
+        zeroseed = zero(eltype(seeds))
         seedall!(xdual, x, zeroseed)
 
         # do first chunk manually to calculate output type
@@ -128,7 +129,7 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         load_gradient_chunk!(out, dual, 1, N)
 
         # do middle chunks
-        for c in 2:nfullchunks
+        for c in middlechunks
             i = ((c - 1) * N + 1)
             seed!(xdual, x, seeds, i)
             dual = f(xdual)
@@ -137,10 +138,7 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         end
 
         # do final chunk
-        if lastchunksize != N
-            seeds = fetchseeds(eltype(xdual), Chunk{lastchunksize}())
-        end
-        seed!(xdual, x, seeds, lastchunkindex, lastchunksize)
+        seed!(xdual, x, cache.remainder_seeds, lastchunkindex, lastchunksize)
         dual = f(xdual)
         load_gradient_chunk!(out, dual, lastchunkindex, lastchunksize)
 
@@ -172,30 +170,32 @@ if IS_MULTITHREADED_JULIA
             remainder = xlen % N
             lastchunksize = ifelse(remainder == 0, N, remainder)
             lastchunkindex = xlen - lastchunksize + 1
-            nfullchunks = div(xlen - lastchunksize, N)
+            middlechunks = 2:div(xlen - lastchunksize, N)
 
             # fetch and seed work vectors
-            current_thread = compat_threadid()
-            xduals = threaded_fetchdualvec(x, chunk)
-            current_xdual = xduals[current_thread]
-            seeds = fetchseeds(eltype(current_xdual))
-            zeroseed = zero(Partials{N,eltype(x)})
+            caches = multithread_jacobian_cachefetch!(x, chunk)
+            zeroseed = zero(eltype(seeds))
 
             Base.Threads.@threads for t in 1:NTHREADS
-                seedall!(xduals[t], x, zeroseed)
+                seedall!(caches[t].dualvec, x, zeroseed)
             end
 
             # do first chunk manually to calculate output type
-            seed!(current_xdual, x, seeds, 1)
+            current_cache = caches[compat_threadid()]
+            current_xdual = current_cache.dualvec
+            current_seeds = current_cache.seeds
+            seed!(current_xdual, x, current_seeds, 1)
             current_dual = f(current_xdual)
             seed!(current_xdual, x, zeroseed, 1)
             $(out_definition)
             load_gradient_chunk!(out, current_dual, 1, N)
 
             # do middle chunks
-            Base.Threads.@threads for c in 2:nfullchunks
+            Base.Threads.@threads for c in middlechunks
                 # see https://github.com/JuliaLang/julia/issues/14948
-                local chunk_xdual = xduals[compat_threadid()]
+                local chunk_cache = caches[compat_threadid()]
+                local chunk_xdual = chunk_cache.dualvec
+                local chunk_seeds = chunk_cache.seeds
                 local chunk_index = ((c - 1) * N + 1)
                 seed!(chunk_xdual, x, seeds, chunk_index)
                 local chunk_dual = f(chunk_xdual)
@@ -204,10 +204,7 @@ if IS_MULTITHREADED_JULIA
             end
 
             # do final chunk
-            if lastchunksize != N
-                seeds = fetchseeds(eltype(xdual), Chunk{lastchunksize}())
-            end
-            seed!(current_xdual, x, seeds, lastchunkindex, lastchunksize)
+            seed!(current_xdual, x, current_cache.remainder_seeds, lastchunkindex, lastchunksize)
             current_dual = f(current_xdual)
             load_gradient_chunk!(out, current_dual, lastchunkindex, lastchunksize)
 
