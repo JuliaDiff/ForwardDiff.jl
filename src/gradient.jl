@@ -7,11 +7,10 @@ type GradientResult{V,G} <: ForwardDiffResult
     gradient::G
 end
 
+GradientResult(x) = GradientResult(first(x), similar(x))
+
 value(result::GradientResult) = result.value
-
 gradient(result::GradientResult) = result.gradient
-
-gradient!(out, result::GradientResult) = copy!(out, result.gradient)
 
 ###############
 # API methods #

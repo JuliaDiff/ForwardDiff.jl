@@ -7,13 +7,10 @@ type JacobianResult{V,J} <: ForwardDiffResult
     jacobian::J
 end
 
+JacobianResult(x) = JacobianResult(similar(x), similar(x, length(x), length(x)))
+
 value(result::JacobianResult) = result.value
-
-value!(out, result::JacobianResult) = copy!(out, result.value)
-
 jacobian(result::JacobianResult) = result.jacobian
-
-jacobian!(out, result::JacobianResult) = copy!(out, result.jacobian)
 
 ###############
 # API methods #

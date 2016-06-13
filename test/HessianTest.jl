@@ -31,7 +31,7 @@ for f in VECTOR_TO_NUMBER_FUNCS
         ForwardDiff.hessian!(out, f, X, chunk)
         test_approx_eps(hessresult, out)
 
-        out = HessianResult(first(X), similar(X), similar(X, length(x), length(x)))
+        out = HessianResult(X)
         ForwardDiff.hessian!(out, f, X, chunk)
         test_approx_eps(fullresult, out)
     end

@@ -32,7 +32,7 @@ for f in VECTOR_TO_NUMBER_FUNCS
         ForwardDiff.gradient!(out, f, X, chunk)
         test_approx_eps(gradresult, out)
 
-        out = GradientResult(first(X), similar(X))
+        out = GradientResult(X)
         ForwardDiff.gradient!(out, f, X, chunk)
         test_approx_eps(fullresult, out)
 
@@ -47,7 +47,7 @@ for f in VECTOR_TO_NUMBER_FUNCS
             ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
             test_approx_eps(gradresult, out)
 
-            out = GradientResult(first(X), similar(X))
+            out = GradientResult(X)
             ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
             test_approx_eps(fullresult, out)
         end

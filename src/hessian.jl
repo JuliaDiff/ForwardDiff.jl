@@ -8,15 +8,11 @@ type HessianResult{V,G,H} <: ForwardDiffResult
     hessian::H
 end
 
+HessianResult(x) = HessianResult(first(x), similar(x), similar(x, length(x), length(x)))
+
 value(result::HessianResult) = result.value
-
 gradient(result::HessianResult) = result.gradient
-
-gradient!(out, result::HessianResult) = copy!(out, result.gradient)
-
 hessian(result::HessianResult) = result.hessian
-
-hessian!(out, result::HessianResult) = copy!(out, result.hessian)
 
 ###############
 # API methods #

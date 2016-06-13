@@ -62,7 +62,7 @@ end
 # caching for Hessians #
 ########################
 
-const HESSIAN_CACHE = Dict{Tuple{Int,Int,DataType,Bool},Any}()
+const HESSIAN_CACHE = Dict{Tuple{Int,Int,DataType},Any}()
 
 immutable HessianCache{N,T}
     dualvec::Vector{Dual{N,Dual{N,T}}}
@@ -154,7 +154,7 @@ function seedall!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, inseed::Partials{N,T},
+function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
                     outseed::Partials{N,Dual{N,T}}, index, chunksize = N)
     offset = index - 1
     for i in 1:chunksize
@@ -164,7 +164,7 @@ function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, inseed::Partials{N,T},
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, inseeds::Vector{Partials{N,T}},
+function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseeds::Vector{Partials{N,T}},
                     outseeds::Vector{Partials{N,Dual{N,T}}}, index, chunksize = N)
     offset = index - 1
     for i in 1:chunksize

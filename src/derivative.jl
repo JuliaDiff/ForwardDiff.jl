@@ -7,11 +7,10 @@ type DerivativeResult{V,D} <: ForwardDiffResult
     derivative::D
 end
 
+DerivativeResult(x) = DerivativeResult(x, x)
+
 value(result::DerivativeResult) = result.value
-
 derivative(result::DerivativeResult) = result.derivative
-
-derivative!(out, result::DerivativeResult) = copy!(out, result.derivative)
 
 ###############
 # API methods #
