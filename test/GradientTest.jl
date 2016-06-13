@@ -17,8 +17,9 @@ function test_approx_eps(a::ForwardDiff.GradientResult, b::ForwardDiff.GradientR
 end
 
 for f in VECTOR_TO_NUMBER_FUNCS
-    gradresult = Calculus.gradient(f, X)
-    fullresult = GradientResult(f(X), gradresult)
+    forwarddiff_grad = ForwardDiff.gradient(f, X)
+    calculus_grad = Calculus.gradient(f, X)
+    calculus_result = GradientResult(f(X), calculus_grad)
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size $c")
         chunk = Chunk{c}()
@@ -26,30 +27,36 @@ for f in VECTOR_TO_NUMBER_FUNCS
         # single-threaded #
         ###################
         out = ForwardDiff.gradient(f, X, chunk)
-        test_approx_eps(gradresult, out)
+        test_approx_eps(calculus_grad, out)
+        @test out == forwarddiff_grad
 
         out = similar(X)
         ForwardDiff.gradient!(out, f, X, chunk)
-        test_approx_eps(gradresult, out)
+        test_approx_eps(calculus_grad, out)
+        @test out == forwarddiff_grad
 
         out = GradientResult(X)
         ForwardDiff.gradient!(out, f, X, chunk)
-        test_approx_eps(fullresult, out)
+        test_approx_eps(calculus_result, out)
+        @test ForwardDiff.gradient(out) == forwarddiff_grad
 
         #################
         # multithreaded #
         #################
         if ForwardDiff.IS_MULTITHREADED_JULIA
             out = ForwardDiff.gradient(f, X, chunk; multithread = true)
-            test_approx_eps(gradresult, out)
+            test_approx_eps(calculus_grad, out)
+            @test out == forwarddiff_grad
 
             out = similar(X)
             ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
-            test_approx_eps(gradresult, out)
+            test_approx_eps(calculus_grad, out)
+            @test out == forwarddiff_grad
 
             out = GradientResult(X)
             ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
-            test_approx_eps(fullresult, out)
+            test_approx_eps(calculus_result, out)
+            @test ForwardDiff.gradient(out) == forwarddiff_grad
         end
     end
 end

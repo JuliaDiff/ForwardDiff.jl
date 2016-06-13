@@ -18,22 +18,26 @@ function test_approx_eps(a::ForwardDiff.HessianResult, b::ForwardDiff.HessianRes
 end
 
 for f in VECTOR_TO_NUMBER_FUNCS
-    hessresult = Calculus.hessian(f, X)
-    fullresult = HessianResult(f(X), ForwardDiff.gradient(f, X), hessresult)
+    forwarddiff_hess = ForwardDiff.hessian(f, X)
+    calculus_hess = Calculus.hessian(f, X)
+    calculus_result = HessianResult(f(X), ForwardDiff.gradient(f, X), calculus_hess)
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size $c")
         chunk = Chunk{c}()
 
         out = ForwardDiff.hessian(f, X, chunk)
-        test_approx_eps(hessresult, out)
+        test_approx_eps(calculus_hess, out)
+        @test out == forwarddiff_hess
 
-        out = similar(X, length(x), length(x))
+        out = similar(X, length(X), length(X))
         ForwardDiff.hessian!(out, f, X, chunk)
-        test_approx_eps(hessresult, out)
+        test_approx_eps(calculus_hess, out)
+        @test out == forwarddiff_hess
 
         out = HessianResult(X)
         ForwardDiff.hessian!(out, f, X, chunk)
-        test_approx_eps(fullresult, out)
+        test_approx_eps(calculus_result, out)
+        @test ForwardDiff.hessian(out) == forwarddiff_hess
     end
 end
 

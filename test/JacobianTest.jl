@@ -17,37 +17,43 @@ function test_approx_eps(a::ForwardDiff.JacobianResult, b::ForwardDiff.JacobianR
 end
 
 for (f!, f) in VECTOR_TO_VECTOR_FUNCS
-    valresult = f(X)
-    jacresult = Calculus.jacobian(f, X, :forward)
-    fullresult = JacobianResult(valresult, jacresult)
+    val = f(X)
+    forwarddiff_jac = ForwardDiff.jacobian(f, X)
+    calculus_jac = Calculus.jacobian(f, X, :forward)
+    calculus_result = JacobianResult(val, calculus_jac)
     for c in CHUNK_SIZES
         chunk = Chunk{c}()
 
         # testing f(x)
         println("  ...testing $f with chunk size $c")
         out = ForwardDiff.jacobian(f, X, chunk)
-        test_approx_eps(jacresult, out)
+        test_approx_eps(calculus_jac, out)
+        @test out == forwarddiff_jac
 
         out = similar(Y, length(Y), length(X))
         ForwardDiff.jacobian!(out, f, X, chunk)
-        test_approx_eps(jacresult, out)
+        test_approx_eps(calculus_jac, out)
+        @test out == forwarddiff_jac
 
         # testing f!(y, x)
         println("  ...testing $(f!) with chunk size $c")
         y = zeros(Y)
         out = ForwardDiff.jacobian(f!, y, X, chunk)
-        test_approx_eps(valresult, y)
-        test_approx_eps(jacresult, out)
+        test_approx_eps(val, y)
+        test_approx_eps(calculus_jac, out)
+        @test out == forwarddiff_jac
 
         y = zeros(Y)
         out = similar(Y, length(Y), length(X))
         ForwardDiff.jacobian!(out, f!, y, X, chunk)
-        test_approx_eps(valresult, y)
-        test_approx_eps(jacresult, out)
+        test_approx_eps(val, y)
+        test_approx_eps(calculus_jac, out)
+        @test out == forwarddiff_jac
 
         out = JacobianResult(zeros(Y), similar(Y, length(Y), length(X)))
         ForwardDiff.jacobian!(out, f!, X, chunk)
-        test_approx_eps(fullresult, out)
+        test_approx_eps(calculus_result, out)
+        @test ForwardDiff.jacobian(out) == forwarddiff_jac
     end
 end
 

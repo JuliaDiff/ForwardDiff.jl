@@ -61,45 +61,35 @@ end
 ########################
 # caching for Hessians #
 ########################
-
-const HESSIAN_CACHE = Dict{Tuple{Int,Int,DataType},Any}()
+# only used for vector mode, so we can assume that N == length(x)
+const HESSIAN_CACHE = Dict{Tuple{Int,DataType},Any}()
 
 immutable HessianCache{N,T}
     dualvec::Vector{Dual{N,Dual{N,T}}}
     inseeds::Vector{Partials{N,T}}
     outseeds::Vector{Partials{N,Dual{N,T}}}
-    remainder_inseeds::Vector{Partials{N,Dual{N,T}}}
-    remainder_outseeds::Vector{Partials{N,Dual{N,T}}}
 end
 
-function HessianCache{T,N}(::Type{T}, xlen, chunk::Chunk{N})
-    dualvec = Vector{Dual{N,Dual{N,T}}}(xlen)
+function HessianCache{T,N}(::Type{T}, chunk::Chunk{N})
+    dualvec = Vector{Dual{N,Dual{N,T}}}(N)
     inseeds = construct_seeds(T, chunk)
     outseeds = construct_seeds(Dual{N,T}, chunk)
-    remainder = xlen % N
-    if remainder == 0
-        remainder_inseeds = inseeds
-        remainder_outseeds = outseeds
-    else
-        remainder_inseeds = construct_seeds(T, chunk, remainder)
-        remainder_outseeds = construct_seeds(Dual{N,T}, chunk, remainder)
-    end
-    return HessianCache{N,T}(dualvec, inseeds, outseeds, remainder_inseeds, remainder_outseeds)
+    return HessianCache{N,T}(dualvec, inseeds, outseeds)
 end
 
-function hessian_cachefetch!{T,N}(::Type{T}, xlen, chunk::Chunk{N})
-    key = (xlen, N, T)
+function hessian_cachefetch!{T,N}(::Type{T}, chunk::Chunk{N})
+    key = (N, T)
     if haskey(HESSIAN_CACHE, key)
         return HESSIAN_CACHE[key]::HessianCache{N,T}
     else
-        result = HessianCache(T, xlen, chunk)
+        result = HessianCache(T, chunk)
         HESSIAN_CACHE[key] = result
         return result::HessianCache{N,T}
     end
 end
 
 function hessian_cachefetch!(x, chunk::Chunk)
-    return hessian_cachefetch!(eltype(x), length(x), chunk)
+    return hessian_cachefetch!(eltype(x), chunk)
 end
 
 #################
@@ -115,8 +105,6 @@ function construct_seeds{T,N}(::Type{T}, ::Chunk{N}, len = N)
     end
     return seeds
 end
-
-# gradient/Jacobian versions
 
 function seedall!{N,T}(xdual::Vector{Dual{N,T}}, x, seed::Partials{N,T})
     for i in eachindex(xdual)
@@ -144,40 +132,10 @@ function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, seeds::Vector{Partials{N,T}}, i
     return xdual
 end
 
-# Hessian versions
-
-function seedall!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
-                       outseed::Partials{N,Dual{N,T}})
-    for i in eachindex(xdual)
-        xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseed), outseed)
+function seedhess!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseeds::Vector{Partials{N,T}},
+                        outseeds::Vector{Partials{N,Dual{N,T}}})
+    for i in 1:N
+        xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseeds[i]), outseeds[i])
     end
-    return xdual
-end
-
-function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
-                    outseed::Partials{N,Dual{N,T}}, index, chunksize = N)
-    offset = index - 1
-    for i in 1:chunksize
-        j = i + offset
-        xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
-    end
-    return xdual
-end
-
-function seed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseeds::Vector{Partials{N,T}},
-                    outseeds::Vector{Partials{N,Dual{N,T}}}, index, chunksize = N)
-    offset = index - 1
-    for i in 1:chunksize
-        j = i + offset
-        xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseeds[i]), outseeds[i])
-    end
-    return xdual
-end
-
-sideseed!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, args...) = seed!(xdual, args..., N - 1)
-
-function sideseedj!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseed::Partials{N,T},
-                         outseed::Partials{N,Dual{N,T}}, j)
-    xdual[j] = Dual{N,Dual{N,T}}(Dual{N,T}(x[j], inseed), outseed)
     return xdual
 end

@@ -24,3 +24,8 @@ println("Testing hessian functionality...")
 tic()
 include("HessianTest.jl")
 println("done (took $(toq()) seconds).")
+
+println("Testing misc functionality...")
+tic()
+include("MiscTest.jl")
+println("done (took $(toq()) seconds).")

@@ -36,7 +36,7 @@ const MAX_CHUNK_SIZE = 20
 
 immutable Chunk{N}
     function Chunk()
-        @assert N <= (MAX_CHUNK_SIZE + 1) "cannot create Chunk{$N}: max chunk size is $(MAX_CHUNK_SIZE)"
+        @assert N <= MAX_CHUNK_SIZE "cannot create Chunk{$N}: max chunk size is $(MAX_CHUNK_SIZE)"
         return new()
     end
 end
