@@ -103,26 +103,26 @@ end
 isconstant(n::Dual) = iszero(partials(n))
 
 @ambiguous Base.isequal{N}(a::Dual{N}, b::Dual{N}) = isequal(value(a), value(b))
-@ambiguous Base.:(==){N}(a::Dual{N}, b::Dual{N}) = value(a) == value(b)
+@ambiguous @operator(Base.:(==)){N}(a::Dual{N}, b::Dual{N}) = value(a) == value(b)
 @ambiguous Base.isless{N}(a::Dual{N}, b::Dual{N}) = value(a) < value(b)
-@ambiguous Base.:<{N}(a::Dual{N}, b::Dual{N}) = isless(a, b)
-@ambiguous Base.:(<=){N}(a::Dual{N}, b::Dual{N}) = <=(value(a), value(b))
+@ambiguous @operator(Base.:<){N}(a::Dual{N}, b::Dual{N}) = isless(a, b)
+@ambiguous @operator(Base.:(<=)){N}(a::Dual{N}, b::Dual{N}) = <=(value(a), value(b))
 
 for T in (AbstractFloat, Irrational, Real)
     Base.isequal(n::Dual, x::T) = isequal(value(n), x)
     Base.isequal(x::T, n::Dual) = isequal(n, x)
 
-    Base.:(==)(n::Dual, x::T) = (value(n) == x)
-    Base.:(==)(x::T, n::Dual) = ==(n, x)
+    @operator(Base.:(==))(n::Dual, x::T) = (value(n) == x)
+    @operator(Base.:(==))(x::T, n::Dual) = ==(n, x)
 
     Base.isless(n::Dual, x::T) = value(n) < x
     Base.isless(x::T, n::Dual) = x < value(n)
 
-    Base.:<(n::Dual, x::T) = isless(n, x)
-    Base.:<(x::T, n::Dual) = isless(x, n)
+    @operator(Base.:<)(n::Dual, x::T) = isless(n, x)
+    @operator(Base.:<)(x::T, n::Dual) = isless(x, n)
 
-    Base.:(<=)(n::Dual, x::T) = <=(value(n), x)
-    Base.:(<=)(x::T, n::Dual) = <=(x, value(n))
+    @operator(Base.:(<=))(n::Dual, x::T) = <=(value(n), x)
+    @operator(Base.:(<=))(x::T, n::Dual) = <=(x, value(n))
 end
 
 Base.isnan(n::Dual) = isnan(value(n))
@@ -167,49 +167,49 @@ Base.float{N,T}(n::Dual{N,T}) = Dual{N,promote_type(T, Float16)}(n)
 # Addition/Subtraction #
 #----------------------#
 
-@ambiguous @inline Base.:+{N}(n1::Dual{N}, n2::Dual{N}) = Dual(value(n1) + value(n2), partials(n1) + partials(n2))
-@inline Base.:+(n::Dual, x::Real) = Dual(value(n) + x, partials(n))
-@inline Base.:+(x::Real, n::Dual) = n + x
+@ambiguous @inline @operator(Base.:+){N}(n1::Dual{N}, n2::Dual{N}) = Dual(value(n1) + value(n2), partials(n1) + partials(n2))
+@inline @operator(Base.:+)(n::Dual, x::Real) = Dual(value(n) + x, partials(n))
+@inline @operator(Base.:+)(x::Real, n::Dual) = n + x
 
-@ambiguous @inline Base.:-{N}(n1::Dual{N}, n2::Dual{N}) = Dual(value(n1) - value(n2), partials(n1) - partials(n2))
-@inline Base.:-(n::Dual, x::Real) = Dual(value(n) - x, partials(n))
-@inline Base.:-(x::Real, n::Dual) = Dual(x - value(n), -(partials(n)))
-@inline Base.:-(n::Dual) = Dual(-(value(n)), -(partials(n)))
+@ambiguous @inline @operator(Base.:-){N}(n1::Dual{N}, n2::Dual{N}) = Dual(value(n1) - value(n2), partials(n1) - partials(n2))
+@inline @operator(Base.:-)(n::Dual, x::Real) = Dual(value(n) - x, partials(n))
+@inline @operator(Base.:-)(x::Real, n::Dual) = Dual(x - value(n), -(partials(n)))
+@inline @operator(Base.:-)(n::Dual) = Dual(-(value(n)), -(partials(n)))
 
 # Multiplication #
 #----------------#
 
-@inline Base.:*(n::Dual, x::Bool) = x ? n : (signbit(value(n))==0 ? zero(n) : -zero(n))
-@inline Base.:*(x::Bool, n::Dual) = n * x
+@inline @operator(Base.:*)(n::Dual, x::Bool) = x ? n : (signbit(value(n))==0 ? zero(n) : -zero(n))
+@inline @operator(Base.:*)(x::Bool, n::Dual) = n * x
 
-@ambiguous @inline function Base.:*{N}(n1::Dual{N}, n2::Dual{N})
+@ambiguous @inline function @operator(Base.:*){N}(n1::Dual{N}, n2::Dual{N})
     v1, v2 = value(n1), value(n2)
     return Dual(v1 * v2, _mul_partials(partials(n1), partials(n2), v2, v1))
 end
 
-@inline Base.:*(n::Dual, x::Real) = Dual(value(n) * x, partials(n) * x)
-@inline Base.:*(x::Real, n::Dual) = n * x
+@inline @operator(Base.:*)(n::Dual, x::Real) = Dual(value(n) * x, partials(n) * x)
+@inline @operator(Base.:*)(x::Real, n::Dual) = n * x
 
 # Division #
 #----------#
 
-@ambiguous @inline function Base.:/{N}(n1::Dual{N}, n2::Dual{N})
+@ambiguous @inline function @operator(Base.:/){N}(n1::Dual{N}, n2::Dual{N})
     v1, v2 = value(n1), value(n2)
     return Dual(v1 / v2, _div_partials(partials(n1), partials(n2), v1, v2))
 end
 
-@inline function Base.:/(x::Real, n::Dual)
+@inline function @operator(Base.:/)(x::Real, n::Dual)
     v = value(n)
     divv = x / v
     return Dual(divv, -(divv / v) * partials(n))
 end
 
-@inline Base.:/(n::Dual, x::Real) = Dual(value(n) / x, partials(n) / x)
+@inline @operator(Base.:/)(n::Dual, x::Real) = Dual(value(n) / x, partials(n) / x)
 
 # Exponentiation #
 #----------------#
 
-for f in (:(Base.:^), :(NaNMath.pow))
+for f in (macroexpand(:(@operator(Base.:^))), :(NaNMath.pow))
     @eval begin
         @ambiguous @inline function ($f){N}(n1::Dual{N}, n2::Dual{N})
             if iszero(partials(n2))
