@@ -31,9 +31,10 @@ Dual(value::Real, partials::Real...) = Dual(value, partials)
 
 @inline partials(x::Real) = Partials{0,typeof(x)}(tuple())
 @inline partials(n::Dual) = n.partials
+@inline partials(x::Real, i...) = zero(x)
 @inline partials(n::Dual, i) = n.partials[i]
 @inline partials(n::Dual, i, j) = partials(n, i).partials[j]
-@inline partials(n::Dual, i, j, k) = partials(n, i, j).partials[k]
+@inline partials(n::Dual, i, j, k...) = partials(partials(n, i, j), k...)
 
 @inline npartials{N}(::Dual{N}) = N
 @inline npartials{N,T}(::Type{Dual{N,T}}) = N
@@ -155,6 +156,7 @@ Base.convert{N,T<:Real}(::Type{Dual{N,T}}, x::Real) = Dual(convert(T, x), zero(P
 Base.convert(::Type{Dual}, x::Real) = Dual(x)
 
 Base.promote_array_type{D<:Dual, A<:AbstractFloat}(F, ::Type{D}, ::Type{A}) = D
+Base.promote_array_type{D<:Dual, A<:AbstractFloat, P}(F, ::Type{D}, ::Type{A}, ::Type{P}) = P
 
 Base.float{N,T}(n::Dual{N,T}) = Dual{N,promote_type(T, Float16)}(n)
 

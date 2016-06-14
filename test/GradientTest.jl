@@ -5,58 +5,87 @@ import Calculus
 using Base.Test
 using ForwardDiff
 
-##################
-# Test Functions #
-##################
-
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
-function test_approx_eps(a::ForwardDiff.GradientResult, b::ForwardDiff.GradientResult)
-    ForwardDiff.value(a) == ForwardDiff.value(b)
-    test_approx_eps(ForwardDiff.gradient(a), ForwardDiff.gradient(b))
+#############################
+# rosenbrock hardcoded test #
+#############################
+
+x = [0.1, 0.2, 0.3]
+v = rosenbrock(x)
+g = [-9.4, 15.6, 52.0]
+
+for c in (Chunk{1}(), Chunk{2}(), Chunk{3}())
+
+    # single-threaded #
+    #-----------------#
+    @test_approx_eq g ForwardDiff.gradient(rosenbrock, x, c)
+
+    out = similar(x)
+    ForwardDiff.gradient!(out, rosenbrock, x, c)
+    @test_approx_eq out g
+
+    out = GradientResult(x)
+    ForwardDiff.gradient!(out, rosenbrock, x, c)
+    @test_approx_eq ForwardDiff.value(out) v
+    @test_approx_eq ForwardDiff.gradient(out) g
+
+    # multithreaded #
+    #---------------#
+    if ForwardDiff.IS_MULTITHREADED_JULIA
+        @test_approx_eq g ForwardDiff.gradient(rosenbrock, x, c; multithread = true)
+
+        out = similar(x)
+        ForwardDiff.gradient!(out, rosenbrock, x, c; multithread = true)
+        @test_approx_eq out g
+
+        out = GradientResult(x)
+        ForwardDiff.gradient!(out, rosenbrock, x, c; multithread = true)
+        @test_approx_eq ForwardDiff.value(out) v
+        @test_approx_eq ForwardDiff.gradient(out) g
+    end
 end
 
+########################
+# test vs. Calculus.jl #
+########################
+
 for f in VECTOR_TO_NUMBER_FUNCS
-    forwarddiff_grad = ForwardDiff.gradient(f, X)
-    calculus_grad = Calculus.gradient(f, X)
-    calculus_result = GradientResult(f(X), calculus_grad)
+    v = f(X)
+    g = ForwardDiff.gradient(f, X)
+    @test_approx_eq_eps g Calculus.gradient(f, X) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size $c")
         chunk = Chunk{c}()
-        ###################
+
         # single-threaded #
-        ###################
+        #-----------------#
         out = ForwardDiff.gradient(f, X, chunk)
-        test_approx_eps(calculus_grad, out)
-        @test out == forwarddiff_grad
+        @test_approx_eq out g
 
         out = similar(X)
         ForwardDiff.gradient!(out, f, X, chunk)
-        test_approx_eps(calculus_grad, out)
-        @test out == forwarddiff_grad
+        @test_approx_eq out g
 
         out = GradientResult(X)
         ForwardDiff.gradient!(out, f, X, chunk)
-        test_approx_eps(calculus_result, out)
-        @test ForwardDiff.gradient(out) == forwarddiff_grad
+        @test_approx_eq ForwardDiff.value(out) v
+        @test_approx_eq ForwardDiff.gradient(out) g
 
-        #################
         # multithreaded #
-        #################
+        #---------------#
         if ForwardDiff.IS_MULTITHREADED_JULIA
             out = ForwardDiff.gradient(f, X, chunk; multithread = true)
-            test_approx_eps(calculus_grad, out)
-            @test out == forwarddiff_grad
+            @test_approx_eq out g
 
             out = similar(X)
             ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
-            test_approx_eps(calculus_grad, out)
-            @test out == forwarddiff_grad
+            @test_approx_eq out g
 
             out = GradientResult(X)
             ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
-            test_approx_eps(calculus_result, out)
-            @test ForwardDiff.gradient(out) == forwarddiff_grad
+            @test_approx_eq ForwardDiff.value(out) v
+            @test_approx_eq ForwardDiff.gradient(out) g
         end
     end
 end

@@ -263,6 +263,8 @@ const WIDE_NESTED_FDNUM = convert(Dual{N,Dual{M,WIDE_T}}, NESTED_FDNUM)
 @test convert(Dual{N,Dual{M,T}}, FDNUM) === Dual(Dual{M,T}(PRIMAL), convert(Partials{N,Dual{M,T}}, PARTIALS))
 @test convert(Dual{N,Dual{M,WIDE_T}}, FDNUM) === Dual(Dual{M,WIDE_T}(PRIMAL), convert(Partials{N,Dual{M,WIDE_T}}, PARTIALS))
 
+@test Base.promote_array_type(+, Dual{N,T}, T, Base.promote_op(+, Dual{N,T}, T)) == Dual{N,T}
+
 ########
 # Math #
 ########

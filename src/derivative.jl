@@ -7,7 +7,7 @@ type DerivativeResult{V,D} <: ForwardDiffResult
     derivative::D
 end
 
-DerivativeResult(x) = DerivativeResult(x, x)
+DerivativeResult(x) = DerivativeResult(copy(x), copy(x))
 
 value(result::DerivativeResult) = result.value
 derivative(result::DerivativeResult) = result.derivative
@@ -19,9 +19,9 @@ derivative(result::DerivativeResult) = result.derivative
 derivative(f, x) = extract_derivative(f(Dual(x, one(x))))
 
 function derivative!(out, f, x)
-    dual = f(Dual(x, one(x)))
-    load_derivative_value!(out, dual)
-    load_derivative!(out, dual)
+    result = f(Dual(x, one(x)))
+    load_derivative_value!(out, result)
+    load_derivative!(out, result)
     return out
 end
 
@@ -29,7 +29,7 @@ end
 # result extraction #
 #####################
 
-@inline extract_derivative(dual::Dual) = partials(dual, 1)
+@inline extract_derivative(n::Real) = partials(n, 1)
 @inline extract_derivative(arr) = load_derivative!(similar(arr, numtype(eltype(arr))), arr)
 
 function load_derivative!(out, arr)
@@ -44,8 +44,8 @@ end
     return out
 end
 
-@inline function load_derivative!(out::DerivativeResult, dual::Dual)
-    out.derivative = extract_derivative(dual)
+@inline function load_derivative!(out::DerivativeResult, n::Real)
+    out.derivative = extract_derivative(n)
     return out
 end
 
@@ -59,7 +59,7 @@ function load_derivative_value!(out::DerivativeResult, arr)
     return out
 end
 
-@inline function load_derivative_value!(out::DerivativeResult, dual::Dual)
-    out.value = value(dual)
+@inline function load_derivative_value!(out::DerivativeResult, n::Real)
+    out.value = value(n)
     return out
 end

@@ -6,7 +6,7 @@ const XLEN = ForwardDiff.MAX_CHUNK_SIZE
 const YLEN = div(ForwardDiff.MAX_CHUNK_SIZE, 2) + 1
 const X, Y = rand(XLEN), rand(YLEN)
 const CHUNK_SIZES = (1, ForwardDiff.pickchunksize(X), div(XLEN, 2) + 1, XLEN)
-const EPS = 1e-5
+const FINITEDIFF_ERROR = 1e-5
 
 # used to test against results calculated via finite difference
 test_approx_eps(a::Array, b::Array) = @test_approx_eq_eps a b EPS
@@ -14,6 +14,31 @@ test_approx_eps(a::Array, b::Array) = @test_approx_eq_eps a b EPS
 ##################
 # Test Functions #
 ##################
+
+# f: Number -> Number #
+#---------------------#
+
+const NUMBER_TO_NUMBER_FUNCS = tuple(
+    x -> sin(x)^2 / cos(x)^2,
+    x -> 2*x + sqrt(x*x*x),
+    x -> 10.31^(x + x) - x
+)
+
+# f: Number -> Array #
+#--------------------#
+
+const N2NF = NUMBER_TO_NUMBER_FUNCS
+
+const NUMBER_TO_ARRAY_FUNCS = tuple(
+    x -> reshape([N2NF[1](x),
+                  N2NF[2](x),
+                  N2NF[3](x),
+                  N2NF[1](x) - N2NF[2](x),
+                  N2NF[2](x),
+                  N2NF[3](x),
+                  N2NF[2](x),
+                  N2NF[3](x)], 2, 2, 2)
+)
 
 # f: Vector -> Number #
 #---------------------#
@@ -43,7 +68,7 @@ end
 
 self_weighted_logit(x::AbstractVector) = inv(1.0 + exp(-dot(x, x)))
 
-const VECTOR_TO_NUMBER_FUNCS = (rosenbrock, ackley, self_weighted_logit)
+const VECTOR_TO_NUMBER_FUNCS = tuple(rosenbrock, ackley, self_weighted_logit)
 
 # f: Vector -> Vector #
 #---------------------#
@@ -105,6 +130,6 @@ end
 
 trigonometric(x) = (y = zeros(eltype(x), length(Y)); trigonometric!(y, x); return y)
 
-const VECTOR_TO_VECTOR_FUNCS = ((chebyquad!, chebyquad),
-                                (brown_almost_linear!, brown_almost_linear),
-                                (trigonometric!, trigonometric))
+const VECTOR_TO_VECTOR_FUNCS = tuple(tuple(chebyquad!, chebyquad),
+                                     tuple(brown_almost_linear!, brown_almost_linear),
+                                     tuple(trigonometric!, trigonometric))
