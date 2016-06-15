@@ -3,20 +3,20 @@
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.4.svg)](http://pkg.julialang.org/?pkg=ForwardDiff&ver=0.4)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.5.svg)](http://pkg.julialang.org/?pkg=ForwardDiff)
 
-**[Go To ForwardDiff.jl's Documentation](http://www.juliadiff.org/ForwardDiff.jl/)**
+**[Go To ForwardDiff's Documentation](http://www.juliadiff.org/ForwardDiff.jl/)**
 
-**Warning**: Please read [this issue](https://github.com/JuliaDiff/ForwardDiff.jl/issues/83) before attempting nested differentiation with ForwardDiff.jl.
+**Warning**: Please read [this issue](https://github.com/JuliaDiff/ForwardDiff.jl/issues/83) before attempting nested differentiation with ForwardDiff.
 
 # ForwardDiff.jl
 
-ForwardDiff.jl implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
+ForwardDiff implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
 
-While performance can vary depending on the functions you evaluate, the algorithms implemented by ForwardDiff.jl **generally outperform non-AD algorithms in both speed and accuracy.**
+While performance can vary depending on the functions you evaluate, the algorithms implemented by ForwardDiff **generally outperform non-AD algorithms in both speed and accuracy.**
 
 Here's a simple example showing the package in action:
 
 ```julia
-julia> import ForwardDiff
+julia> using ForwardDiff
 
 julia> f(x::Vector) = sum(sin, x) + prod(tan, x) * sum(sqrt, x);
 
@@ -28,7 +28,7 @@ julia> x = rand(5) # small size for example's sake
  0.837125
  0.650451
 
-julia> g = ForwardDiff.gradient(f); # g = ∇f
+julia> g = x -> ForwardDiff.gradient(f, x); # g = ∇f
 
 julia> g(x)
 5-element Array{Float64,1}:
@@ -49,12 +49,12 @@ julia> ForwardDiff.hessian(f, x)
 
 ## News
 
-- 12/29/2015: [ForwardDiff.jl v0.1.4 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/4293).
+- 12/29/2015: [ForwardDiff v0.1.4 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/4293).
 
-- 12/09/2015: [ForwardDiff.jl v0.1.3 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/4182).
+- 12/09/2015: [ForwardDiff v0.1.3 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/4182).
 
-- 10/21/2015: [ForwardDiff.jl v0.1.2 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3835).
+- 10/21/2015: [ForwardDiff v0.1.2 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3835).
 
-- 9/29/2015: [ForwardDiff.jl v0.1.1 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3580).
+- 9/29/2015: [ForwardDiff v0.1.1 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3580).
 
-- 9/3/2015: We're releasing ForwardDiff.jl v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
+- 9/3/2015: We're releasing ForwardDiff v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).

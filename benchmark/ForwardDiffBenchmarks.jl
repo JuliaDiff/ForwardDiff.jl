@@ -3,7 +3,7 @@ module ForwardDiffBenchmarks
 using ForwardDiff
 using BenchmarkTools
 
-include(joinpath(dirname(@__FILE__), "utils.jl"))
+include(joinpath(dirname(dirname(@__FILE__)), "test", "utils.jl"))
 
 name(f) = last(split(string(f), '.'))
 
@@ -32,8 +32,8 @@ for f in VECTOR_TO_NUMBER_FUNCS
         xlen = length(x)
         fval[xlen] = @benchmarkable $(f)($x)
         for c in chunk_sizes
-            fgrad[xlen, c] = @benchmarkable ForwardDiff.gradient($f, $x, chunk_size = $c)
-            fhess[xlen, c] = @benchmarkable ForwardDiff.hessian($f, $x, chunk_size = $c)
+            fgrad[xlen, c] = @benchmarkable ForwardDiff.gradient($f, $x, $(Chunk{c}()))
+            fhess[xlen, c] = @benchmarkable ForwardDiff.hessian($f, $x, $(Chunk{c}()))
         end
     end
 end
@@ -45,7 +45,7 @@ for (f!, f) in VECTOR_TO_VECTOR_FUNCS
         xlen = length(x)
         fval[xlen] = @benchmarkable $(f)($x)
         for c in chunk_sizes
-            fjac[xlen, c] = @benchmarkable ForwardDiff.jacobian($f, $x, chunk_size = $c)
+            fjac[xlen, c] = @benchmarkable ForwardDiff.jacobian($f, $x, $(Chunk{c}()))
         end
     end
 end

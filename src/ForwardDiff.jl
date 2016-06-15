@@ -2,90 +2,106 @@ isdefined(Base, :__precompile__) && __precompile__()
 
 module ForwardDiff
 
-    if VERSION < v"0.4-"
-        warn("ForwardDiff.jl is only officially compatible with Julia v0.4-. You're currently running Julia $VERSION.")
+using Compat
+
+import Calculus
+import NaNMath
+
+#######################
+# compatibility patch #
+#######################
+
+if v"0.4" <= VERSION < v"0.5-"
+    # e.g. @operator Base.:op -> Base.(:op)
+    macro operator(qualified_name)
+        func_name = qualified_name.args[2].args[1]
+        qualified_name.args[2] = func_name
+        return qualified_name
     end
-
-    ###########
-    # imports #
-    ###########
-    import Calculus
-    import NaNMath
-    import Base: *, /, +, -, ^, getindex, length,
-                 hash, ==, <, <=, isequal, copy, zero,
-                 one, float, rand, convert, promote_rule,
-                 read, write, isless, isreal, isnan,
-                 isfinite, isinf, eps, conj, transpose,
-                 ctranspose, eltype, abs, abs2, start,
-                 next, done, atan2, floor, ceil, trunc, round
-
-    const auto_defined_unary_funcs = map(first, Calculus.symbolic_derivatives_1arg())
-
-    for fsym in auto_defined_unary_funcs
-        @eval import Base.$(fsym);
+else
+    macro operator(qualified_name)
+        return qualified_name
     end
+end
 
-    ############
-    # includes #
-    ############
-    include("Partials.jl")
-    include("ForwardDiffNumber.jl")
-    include("GradientNumber.jl")
-    include("HessianNumber.jl")
-    include("TensorNumber.jl")
-    include("api/api.jl")
+#############################
+# types/functions/constants #
+#############################
 
-    #######################
-    # Promotion Utilities #
-    #######################
-    @inline switch_eltype{T,S}(::Type{Vector{T}}, ::Type{S}) = Vector{S}
-    @inline switch_eltype{N,T,S}(::Type{NTuple{N,T}}, ::Type{S}) = NTuple{N,S}
+# multithreading #
+#----------------#
 
-    for F in (:TensorNumber, :GradientNumber, :HessianNumber)
-        @eval begin
-            @inline switch_eltype{N,T,S}(::Type{$F{N,T,NTuple{N,T}}}, ::Type{S}) = $F{N,S,NTuple{N,S}}
-            @inline switch_eltype{N,T,S}(::Type{$F{N,T,Vector{T}}}, ::Type{S}) = $F{N,S,Vector{S}}
+const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923" && Base.Threads.nthreads() > 1
 
-            function promote_rule{N,T1,C1,T2,C2}(::Type{($F){N,T1,C1}},
-                                                 ::Type{($F){N,T2,C2}})
-                P = promote_type(Partials{T1,C1}, Partials{T2,C2})
-                T, C = eltype(P), containtype(P)
-                return ($F){N,T,C}
-            end
+if IS_MULTITHREADED_JULIA
+    const NTHREADS = Base.Threads.nthreads()
+    @inline compat_threadid() = Base.Threads.threadid()
+else
+    const NTHREADS = 1
+    @inline compat_threadid() = 1
+end
 
-            function promote_rule{N,T,C,S<:Real}(::Type{($F){N,T,C}}, ::Type{S})
-                R = promote_type(T, S)
-                return ($F){N,R,switch_eltype(C, R)}
-            end
-        end
+# function generation #
+#---------------------#
+
+const AUTO_DEFINED_UNARY_FUNCS = map(first, Calculus.symbolic_derivatives_1arg())
+const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
+                       :atanh, :log, :log2, :log10, :lgamma, :log1p)
+
+# chunk handling #
+#----------------#
+
+const MAX_CHUNK_SIZE = 10
+
+immutable Chunk{N}
+    function Chunk()
+        @assert N <= MAX_CHUNK_SIZE "cannot create Chunk{$N}: max chunk size is $(MAX_CHUNK_SIZE)"
+        return new()
     end
+end
 
-    @inline function promote_eltype{F<:ForwardDiffNumber}(::Type{F}, types::DataType...)
-        return switch_eltype(F, promote_type(eltype(F), types...))
+@inline Base.copy(chunk::Chunk) = chunk
+
+# This is type-unstable, which is why our docs advise users to manually enter a chunk size
+# when possible. The type instability here doesn't really hurt performance, since most of
+# the heavy lifting happens behind a function barrier, but it can cause inference to give up
+# when predicting the final output type of API functions.
+pickchunk(x) = Chunk{pickchunksize(x)}()
+
+function pickchunksize(x)
+    k = length(x)
+    if k <= MAX_CHUNK_SIZE
+        return k
+    else
+        # Constrained to chunk <= MAX_CHUNK_SIZE, minimize (in order of priority):
+        #   1. the number of chunks that need to be computed
+        #   2. the number of "left over" perturbations in the final chunk
+        nchunks = round(Int, k / MAX_CHUNK_SIZE, RoundUp)
+        return round(Int, k / nchunks, RoundUp)
     end
+end
 
-    @inline promote_typeof(n1::ForwardDiffNumber, n2::ForwardDiffNumber) = promote_type(typeof(n1), typeof(n2))
+# abstract types #
+#----------------#
 
-    @inline promote_eltypesof(n1::ForwardDiffNumber, n2::ForwardDiffNumber, a) = promote_eltype(promote_typeof(n1, n2), typeof(a))
+abstract ForwardDiffResult
 
-    @inline promote_eltypeof(n::ForwardDiffNumber, a) = promote_eltype(typeof(n), typeof(a))
-    @inline promote_eltypeof(n::ForwardDiffNumber, a, b) = promote_eltype(typeof(n), typeof(a), typeof(b))
+############
+# includes #
+############
 
-    ###########
-    # exports #
-    ###########
-    export AllResults,
-           ForwardDiffCache,
-           value,
-           value!,
-           derivative!,
-           derivative,
-           gradient!,
-           jacobian!,
-           jacobian,
-           hessian!,
-           hessian,
-           tensor!,
-           tensor
+include("partials.jl")
+include("dual.jl")
+include("cache.jl")
+include("derivative.jl")
+include("gradient.jl")
+include("jacobian.jl")
+include("hessian.jl")
 
-end # module ForwardDiff
+###########
+# exports #
+###########
+
+export Chunk, DerivativeResult, GradientResult, JacobianResult, HessianResult
+
+end # module
