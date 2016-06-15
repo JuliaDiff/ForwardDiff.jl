@@ -1,11 +1,11 @@
 import ForwardDiff
-
+using ForwardDiff.MAX_CHUNK_SIZE
 using Base.Test
 
-const XLEN = ForwardDiff.MAX_CHUNK_SIZE
-const YLEN = div(ForwardDiff.MAX_CHUNK_SIZE, 2) + 1
+const XLEN = MAX_CHUNK_SIZE
+const YLEN = div(MAX_CHUNK_SIZE, 2) + 1
 const X, Y = rand(XLEN), rand(YLEN)
-const CHUNK_SIZES = (1, ForwardDiff.pickchunksize(X), div(XLEN, 2) + 1, XLEN)
+const CHUNK_SIZES = (1, div(MAX_CHUNK_SIZE, 3), div(MAX_CHUNK_SIZE, 2), MAX_CHUNK_SIZE)
 const FINITEDIFF_ERROR = 1e-5
 
 # used to test against results calculated via finite difference
