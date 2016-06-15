@@ -64,6 +64,10 @@ end
 
 const AUTO_CHUNK_THRESHOLD = 10
 
+# This is type-unstable, which is why we advise users to manually enter a chunk size when
+# possible. The type instability here doesn't really hurt performance, since most of the
+# heavy lifting happens behind a function barrier, but it can cause inference to give up
+# when predicting the final output type of API functions.
 pickchunk(x) = Chunk{pickchunksize(x)}()
 
 function pickchunksize(x)
