@@ -51,7 +51,7 @@ const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
 # chunk handling #
 #----------------#
 
-const MAX_CHUNK_SIZE = 20
+const MAX_CHUNK_SIZE = 10
 
 immutable Chunk{N}
     function Chunk()
@@ -62,8 +62,6 @@ end
 
 @inline Base.copy(chunk::Chunk) = chunk
 
-const AUTO_CHUNK_THRESHOLD = 10
-
 # This is type-unstable, which is why our docs advise users to manually enter a chunk size
 # when possible. The type instability here doesn't really hurt performance, since most of
 # the heavy lifting happens behind a function barrier, but it can cause inference to give up
@@ -72,13 +70,13 @@ pickchunk(x) = Chunk{pickchunksize(x)}()
 
 function pickchunksize(x)
     k = length(x)
-    if k <= AUTO_CHUNK_THRESHOLD
+    if k <= MAX_CHUNK_SIZE
         return k
     else
-        # Constrained to chunk <= AUTO_CHUNK_THRESHOLD, minimize (in order of priority):
+        # Constrained to chunk <= MAX_CHUNK_SIZE, minimize (in order of priority):
         #   1. the number of chunks that need to be computed
         #   2. the number of "left over" perturbations in the final chunk
-        nchunks = round(Int, k / AUTO_CHUNK_THRESHOLD, RoundUp)
+        nchunks = round(Int, k / MAX_CHUNK_SIZE, RoundUp)
         return round(Int, k / nchunks, RoundUp)
     end
 end
