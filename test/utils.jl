@@ -18,27 +18,31 @@ test_approx_eps(a::Array, b::Array) = @test_approx_eq_eps a b EPS
 # f: Number -> Number #
 #---------------------#
 
-const NUMBER_TO_NUMBER_FUNCS = tuple(
-    x -> sin(x)^2 / cos(x)^2,
-    x -> 2*x + sqrt(x*x*x),
-    x -> 10.31^(x + x) - x
-)
+deriv_test_1(x) = sin(x)^2 / cos(x)^2
+deriv_test_2(x) = 2*x + sqrt(x*x*x)
+deriv_test_3(x) = 10.31^(x + x) - x
+deriv_test_4(x) = x
+deriv_test_5(x) = 1
+
+const NUMBER_TO_NUMBER_FUNCS = tuple(deriv_test_1, deriv_test_2,
+                                     deriv_test_3, deriv_test_4,
+                                     deriv_test_5)
 
 # f: Number -> Array #
 #--------------------#
 
-const N2NF = NUMBER_TO_NUMBER_FUNCS
+function deriv_test_6(x)
+    return reshape([deriv_test_1(x),
+                    deriv_test_2(x),
+                    deriv_test_3(x),
+                    deriv_test_1(x) - deriv_test_2(x),
+                    deriv_test_2(x),
+                    deriv_test_3(x),
+                    deriv_test_2(x),
+                    deriv_test_3(x)], 2, 2, 2)
+end
 
-const NUMBER_TO_ARRAY_FUNCS = tuple(
-    x -> reshape([N2NF[1](x),
-                  N2NF[2](x),
-                  N2NF[3](x),
-                  N2NF[1](x) - N2NF[2](x),
-                  N2NF[2](x),
-                  N2NF[3](x),
-                  N2NF[2](x),
-                  N2NF[3](x)], 2, 2, 2)
-)
+const NUMBER_TO_ARRAY_FUNCS = tuple(deriv_test_6)
 
 # f: Vector -> Number #
 #---------------------#
