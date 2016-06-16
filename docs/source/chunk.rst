@@ -103,8 +103,8 @@ What chunk size should I use?
 
 The chunk size for any given problem is heavily dependent on the target function and length
 of the input vector. As such, one should generally perform their own benchmarks to determine
-which chunk size to use. Here are some tips:
+which chunk size to use. Here are some things to keep in mind when selecting a chunk size:
 
-- The max chunk size is ``20``, but usually the chunk size is most optimal at less than or equal to ``10``.
+- The max chunk size is ``10``.
 
 - The chunk size should generally divide evenly into the input dimension. Otherwise, ForwardDiff has to construct and utilize an extra "remainder" chunk to complete the calculation.
