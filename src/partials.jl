@@ -104,7 +104,7 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
-for N in 1:(MAX_CHUNK_SIZE + 1)
+for N in 1:MAX_CHUNK_SIZE
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     @eval @inline iszero_tuple{T}(tup::NTuple{$N,T}) = (z = zero(T); @inbounds return $ex)
 
