@@ -4,6 +4,23 @@ Upgrading from ForwardDiff v0.1 to v0.2
 A few API changes have occured between ForwardDiff v0.1 and v0.2. This document provides
 some examples to help you transform old ForwardDiff code into new ForwardDiff code.
 
+Unexported API Functions
+------------------------
+
+In order to avoid namespace conflicts with other packages, `ForwardDiff's API functions
+<api.html>`_ are no longer exported by default. Thus, you must now fully qualify the
+functions to reference them:
+
+.. code-block:: julia
+
+    # old way
+    using ForwardDiff
+    hessian(f, x)
+
+    # new way
+    using ForwardDiff
+    ForwardDiff.hessian
+
 Setting Chunk Size
 ------------------
 
@@ -35,6 +52,28 @@ For more detail, see our documentation on `retrieving lower-order results
     v = ForwardDiff.value(out)
     g = ForwardDiff.gradient(out)
     h = ForwardDiff.hessian(out)
+
+Higher-Order Differentiation
+----------------------------
+
+In order to maintain feature parity between all API functions, ForwardDiff no longer
+provides the ``tensor`` function. Instead, users can take higher-order/higher-dimensional
+derivatives by composing existing API functions. For example, here's how to reimplement
+``tensor``:
+
+.. code-block:: julia
+
+    # old way
+    ForwardDiff.tensor(f, x)
+
+    # new way
+    function tensor(f, x)
+        n = length(x)
+        out = ForwardDiff.jacobian(y -> ForwardDiff.hessian(f, y), x)
+        return reshape(out, n, n, n)
+    end
+
+    tensor(f, x)
 
 Creating Differentiation Functions
 ----------------------------------
