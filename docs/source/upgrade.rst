@@ -19,7 +19,7 @@ functions to reference them:
 
     # new way
     using ForwardDiff
-    ForwardDiff.hessian
+    ForwardDiff.hessian(f, x)
 
 Setting Chunk Size
 ------------------
