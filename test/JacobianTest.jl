@@ -61,34 +61,36 @@ for (f!, f) in VECTOR_TO_VECTOR_FUNCS
     j = ForwardDiff.jacobian(f, X)
     @test_approx_eq_eps j Calculus.jacobian(f, X, :forward) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
-        chunk = Chunk{c}()
+        for usecache in (true, false)
+            chunk = Chunk{c}()
 
-        # testing f(x)
-        println("  ...testing $f with chunk size $c")
-        out = ForwardDiff.jacobian(f, X, chunk)
-        @test_approx_eq out j
+            # testing f(x)
+            println("  ...testing $f with (chunk size = $c) and (usecache = $usecache)")
+            out = ForwardDiff.jacobian(f, X, chunk; usecache = usecache)
+            @test_approx_eq out j
 
-        out = similar(Y, length(Y), length(X))
-        ForwardDiff.jacobian!(out, f, X, chunk)
-        @test_approx_eq out j
+            out = similar(Y, length(Y), length(X))
+            ForwardDiff.jacobian!(out, f, X, chunk; usecache = usecache)
+            @test_approx_eq out j
 
-        # testing f!(y, x)
-        println("  ...testing $(f!) with chunk size $c")
-        y = zeros(Y)
-        out = ForwardDiff.jacobian(f!, y, X, chunk)
-        @test_approx_eq y v
-        @test_approx_eq out j
+            # testing f!(y, x)
+            println("  ...testing $(f!) with (chunk size = $c) and (usecache = $usecache)")
+            y = zeros(Y)
+            out = ForwardDiff.jacobian(f!, y, X, chunk; usecache = usecache)
+            @test_approx_eq y v
+            @test_approx_eq out j
 
-        y = zeros(Y)
-        out = similar(Y, length(Y), length(X))
-        ForwardDiff.jacobian!(out, f!, y, X, chunk)
-        @test_approx_eq y v
-        @test_approx_eq out j
+            y = zeros(Y)
+            out = similar(Y, length(Y), length(X))
+            ForwardDiff.jacobian!(out, f!, y, X, chunk; usecache = usecache)
+            @test_approx_eq y v
+            @test_approx_eq out j
 
-        out = JacobianResult(zeros(Y), similar(Y, length(Y), length(X)))
-        ForwardDiff.jacobian!(out, f!, X, chunk)
-        @test_approx_eq ForwardDiff.value(out) v
-        @test_approx_eq ForwardDiff.jacobian(out) j
+            out = JacobianResult(zeros(Y), similar(Y, length(Y), length(X)))
+            ForwardDiff.jacobian!(out, f!, X, chunk; usecache = usecache)
+            @test_approx_eq ForwardDiff.value(out) v
+            @test_approx_eq ForwardDiff.jacobian(out) j
+        end
     end
 end
 

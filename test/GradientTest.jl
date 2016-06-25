@@ -55,37 +55,39 @@ for f in VECTOR_TO_NUMBER_FUNCS
     g = ForwardDiff.gradient(f, X)
     @test_approx_eq_eps g Calculus.gradient(f, X) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
-        println("  ...testing $f with chunk size $c")
-        chunk = Chunk{c}()
+        for usecache in (true, false)
+            println("  ...testing $f with (chunk size = $c) and (usecache = $usecache)")
+            chunk = Chunk{c}()
 
-        # single-threaded #
-        #-----------------#
-        out = ForwardDiff.gradient(f, X, chunk)
-        @test_approx_eq out g
-
-        out = similar(X)
-        ForwardDiff.gradient!(out, f, X, chunk)
-        @test_approx_eq out g
-
-        out = GradientResult(X)
-        ForwardDiff.gradient!(out, f, X, chunk)
-        @test_approx_eq ForwardDiff.value(out) v
-        @test_approx_eq ForwardDiff.gradient(out) g
-
-        # multithreaded #
-        #---------------#
-        if ForwardDiff.IS_MULTITHREADED_JULIA
-            out = ForwardDiff.gradient(f, X, chunk; multithread = true)
+            # single-threaded #
+            #-----------------#
+            out = ForwardDiff.gradient(f, X, chunk; usecache = usecache)
             @test_approx_eq out g
 
             out = similar(X)
-            ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
+            ForwardDiff.gradient!(out, f, X, chunk; usecache = usecache)
             @test_approx_eq out g
 
             out = GradientResult(X)
-            ForwardDiff.gradient!(out, f, X, chunk; multithread = true)
+            ForwardDiff.gradient!(out, f, X, chunk; usecache = usecache)
             @test_approx_eq ForwardDiff.value(out) v
             @test_approx_eq ForwardDiff.gradient(out) g
+
+            # multithreaded #
+            #---------------#
+            if ForwardDiff.IS_MULTITHREADED_JULIA
+                out = ForwardDiff.gradient(f, X, chunk; multithread = true, usecache = usecache)
+                @test_approx_eq out g
+
+                out = similar(X)
+                ForwardDiff.gradient!(out, f, X, chunk; multithread = true, usecache = usecache)
+                @test_approx_eq out g
+
+                out = GradientResult(X)
+                ForwardDiff.gradient!(out, f, X, chunk; multithread = true, usecache = usecache)
+                @test_approx_eq ForwardDiff.value(out) v
+                @test_approx_eq ForwardDiff.gradient(out) g
+            end
         end
     end
 end

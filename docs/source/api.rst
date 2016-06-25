@@ -38,54 +38,67 @@ Derivatives of :math:`f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times
 Gradients of :math:`f(x) : \mathbb{R}^n \to \mathbb{R}`
 -------------------------------------------------------
 
-.. function:: ForwardDiff.gradient!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false)
+.. function:: ForwardDiff.gradient!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
-    Compute :math:`\nabla f(\vec{x})`, storing the output in ``out``. If ``length(x)`` is a
-    compile-time constant, it is highly advised to explicitly pass in a value for ``chunk``.
-    If ``chunk`` is not provided, ForwardDiff will try to guess an appropriate value based
-    on ``x`` (see `the chunk configuration documentation <chunk.html>`__). If ``multithread =
-    true``, then leverage multithreading when performing the computation. Note that
-    multithreading support is experimental and may result in slowdown in some cases,
-    especially for small input dimensions.
+    Compute :math:`\nabla f(\vec{x})`, storing the output in ``out``.
 
-.. function:: ForwardDiff.gradient!(out::GradientResult, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false)
+    If ``length(x)`` is a compile-time constant, it is highly advised to explicitly pass in
+    a value for ``chunk``. If ``chunk`` is not provided, ForwardDiff will try to guess an
+    appropriate value based on ``x`` (see `the chunk configuration documentation
+    <chunk.html>`__).
+
+    If ``multithread = true``, then leverage multithreading when performing the computation.
+    Note that multithreading support is experimental and may result in slowdown in some
+    cases, especially for small input dimensions.
+
+    If ``usecache = false``, then don't rely on ForwardDiff's cache to store/retrieve
+    internally used work arrays. If ``length(x)`` is very small, or you need your
+    calculation to be task-safe, then you might benefit from setting ``usecache = false``.
+
+.. function:: ForwardDiff.gradient!(out::GradientResult, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
     Compute :math:`\nabla f(\vec{x})`. The value of :math:`f(\vec{x})` can then be accessed
     by calling ``ForwardDiff.value(out)``, while :math:`\nabla f(\vec{x})` can be accessed
     by calling ``ForwardDiff.gradient(out)``.
 
-.. function:: ForwardDiff.gradient(f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false)
+.. function:: ForwardDiff.gradient(f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
     Compute and return :math:`\nabla f(\vec{x})`.
 
 Jacobians of :math:`f(x) : \mathbb{R}^n \to \mathbb{R}^m`
 ---------------------------------------------------------
 
-.. function:: ForwardDiff.jacobian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+.. function:: ForwardDiff.jacobian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)
 
-    Compute :math:`\mathbf{J}(f)(\vec{x})`, storing the output in ``out``. If ``length(x)``
-    is a compile-time constant, it is highly advised to explicitly pass in a value for
-    ``chunk``. If ``chunk`` is not provided, ForwardDiff will try to guess an appropriate
-    value based on ``x`` (see `the chunk configuration documentation <chunk.html>`__).
+    Compute :math:`\mathbf{J}(f)(\vec{x})`, storing the output in ``out``.
 
-.. function:: ForwardDiff.jacobian!(out, f!, y, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+    If ``length(x)`` is a compile-time constant, it is highly advised to explicitly pass in
+    a value for ``chunk``. If ``chunk`` is not provided, ForwardDiff will try to guess an
+    appropriate value based on ``x`` (see `the chunk configuration documentation
+    <chunk.html>`__).
+
+    If ``usecache = false``, then don't rely on ForwardDiff's cache to store/retrieve
+    internally used work arrays. If ``length(x)`` is very small, or you need your
+    calculation to be task-safe, then you might benefit from setting ``usecache = false``.
+
+.. function:: ForwardDiff.jacobian!(out, f!, y, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be called as
     ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``. The output
     matrix is stored in ``out``.
 
-.. function:: ForwardDiff.jacobian!(out::JacobianResult, f!, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+.. function:: ForwardDiff.jacobian!(out::JacobianResult, f!, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be called as
     ``f!(ForwardDiff.value(out), x)`` such that the output of :math:`f(\vec{x})` is stored
     in ``ForwardDiff.value(out)``. The output matrix can then be accessed by calling
     ``ForwardDiff.jacobian(out)``.
 
-.. function:: ForwardDiff.jacobian(f, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+.. function:: ForwardDiff.jacobian(f, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)
 
     Compute and return :math:`\mathbf{J}(f)(\vec{x})`.
 
-.. function:: ForwardDiff.jacobian(f!, y, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+.. function:: ForwardDiff.jacobian(f!, y, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)
 
     Compute and return :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be
     called as ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``.
@@ -93,20 +106,30 @@ Jacobians of :math:`f(x) : \mathbb{R}^n \to \mathbb{R}^m`
 Hessians of :math:`f(x) : \mathbb{R}^n \to \mathbb{R}`
 ------------------------------------------------------
 
-.. function:: ForwardDiff.hessian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+.. function:: ForwardDiff.hessian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
-    Compute :math:`\mathbf{H}(f)(\vec{x})`, storing the output in ``out``. If ``length(x)``
-    is a compile-time constant, it is highly advised to explicitly pass in a value for
-    ``chunk``. If ``chunk`` is not provided, ForwardDiff will try to guess an appropriate
-    value based on ``x`` (see `the chunk configuration documentation <chunk.html>`__).
+    Compute :math:`\mathbf{H}(f)(\vec{x})`, storing the output in ``out``.
 
-.. function:: ForwardDiff.hessian!(out::HessianResult, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false)
+    If ``length(x)`` is a compile-time constant, it is highly advised to explicitly pass in
+    a value for ``chunk``. If ``chunk`` is not provided, ForwardDiff will try to guess an
+    appropriate value based on ``x`` (see `the chunk configuration documentation
+    <chunk.html>`__).
+
+    If ``multithread = true``, then leverage multithreading when performing the computation.
+    Note that multithreading support is experimental and may result in slowdown in some
+    cases, especially for small input dimensions.
+
+    If ``usecache = false``, then don't rely on ForwardDiff's cache to store/retrieve
+    internally used work arrays. If ``length(x)`` is very small, or you need your
+    calculation to be task-safe, then you might benefit from setting ``usecache = false``.
+
+.. function:: ForwardDiff.hessian!(out::HessianResult, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
     Compute :math:`\mathbf{H}(f)(\vec{x})`. The value of :math:`f(\vec{x})` can then be
     accessed by calling ``ForwardDiff.value(out)``, :math:`\nabla f(\vec{x})` can be
     accessed by calling ``ForwardDiff.gradient(out)``, and :math:`\mathbf{H}(f)(\vec{x})`
     can be accessed by calling ``ForwardDiff.hessian(out)``.
 
-.. function:: ForwardDiff.hessian(f, x, chunk::Chunk = ForwardDiff.pickchunk(x))
+.. function:: ForwardDiff.hessian(f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
     Compute and return :math:`\mathbf{H}(f)(\vec{x})`.

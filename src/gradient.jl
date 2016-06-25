@@ -16,23 +16,27 @@ gradient(result::GradientResult) = result.gradient
 # API methods #
 ###############
 
-function gradient{N}(f, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function gradient{N}(f, x, chunk::Chunk{N} = pickchunk(x);
+                     multithread::Bool = false,
+                     usecache::Bool = true)
     if N == length(x)
-        return vector_mode_gradient(f, x, chunk)
+        return vector_mode_gradient(f, x, chunk, usecache)
     elseif multithread
-        return multithread_chunk_mode_gradient(f, x, chunk)
+        return multithread_chunk_mode_gradient(f, x, chunk, usecache)
     else
-        return chunk_mode_gradient(f, x, chunk)
+        return chunk_mode_gradient(f, x, chunk, usecache)
     end
 end
 
-function gradient!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function gradient!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x);
+                      multithread::Bool = false,
+                      usecache::Bool = true)
     if N == length(x)
-        vector_mode_gradient!(out, f, x, chunk)
+        vector_mode_gradient!(out, f, x, chunk, usecache)
     elseif multithread
-        multithread_chunk_mode_gradient!(out, f, x, chunk)
+        multithread_chunk_mode_gradient!(out, f, x, chunk, usecache)
     else
-        chunk_mode_gradient!(out, f, x, chunk)
+        chunk_mode_gradient!(out, f, x, chunk, usecache)
     end
     return out
 end
@@ -79,21 +83,21 @@ end
 # vector mode #
 #-------------#
 
-function compute_vector_mode_gradient(f, x, chunk)
-    cache = jacobian_cachefetch!(x, chunk)
+function compute_vector_mode_gradient(f, x, chunk, usecache)
+    cache = jacobian_cachefetch!(x, chunk, usecache)
     xdual = cache.dualvec
     seed!(xdual, x, cache.seeds, 1)
     return f(xdual)
 end
 
-function vector_mode_gradient(f, x, chunk)
-    dual = compute_vector_mode_gradient(f, x, chunk)
+function vector_mode_gradient(f, x, chunk, usecache)
+    dual = compute_vector_mode_gradient(f, x, chunk, usecache)
     out = similar(x, numtype(dual))
     return load_gradient!(out, dual)
 end
 
-function vector_mode_gradient!(out, f, x, chunk)
-    dual = compute_vector_mode_gradient(f, x, chunk)
+function vector_mode_gradient!(out, f, x, chunk, usecache)
+    dual = compute_vector_mode_gradient(f, x, chunk, usecache)
     load_gradient_value!(out, dual)
     load_gradient!(out, dual)
     return out
@@ -114,7 +118,7 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         middlechunks = 2:div(xlen - lastchunksize, N)
 
         # fetch and seed work vectors
-        cache = jacobian_cachefetch!(x, chunk)
+        cache = jacobian_cachefetch!(x, chunk, usecache)
         xdual = cache.dualvec
         seeds = cache.seeds
         zeroseed = zero(eltype(seeds))
@@ -148,11 +152,11 @@ function chunk_mode_gradient_expr(out_definition::Expr)
     end
 end
 
-@eval function chunk_mode_gradient{N}(f, x, chunk::Chunk{N})
+@eval function chunk_mode_gradient{N}(f, x, chunk::Chunk{N}, usecache)
     $(chunk_mode_gradient_expr(:(out = similar(x, numtype(dual)))))
 end
 
-@eval function chunk_mode_gradient!{N}(out, f, x, chunk::Chunk{N})
+@eval function chunk_mode_gradient!{N}(out, f, x, chunk::Chunk{N}, usecache)
     $(chunk_mode_gradient_expr(:()))
 end
 
@@ -172,7 +176,7 @@ if IS_MULTITHREADED_JULIA
             middlechunks = 2:div(xlen - lastchunksize, N)
 
             # fetch and seed work vectors
-            caches = multithread_jacobian_cachefetch!(x, chunk)
+            caches = multithread_jacobian_cachefetch!(x, chunk, usecache)
             zeroseed = zero(eltype(seeds))
 
             Base.Threads.@threads for t in 1:NTHREADS
@@ -214,11 +218,11 @@ if IS_MULTITHREADED_JULIA
         end
     end
 
-    @eval function multithread_chunk_mode_gradient{N}(f, x, chunk::Chunk{N})
+    @eval function multithread_chunk_mode_gradient{N}(f, x, chunk::Chunk{N}, usecache)
         $(multithread_chunk_mode_expr(:(out = similar(x, numtype(dual)))))
     end
 
-    @eval function multithread_chunk_mode_gradient!{N}(out, f, x, chunk::Chunk{N})
+    @eval function multithread_chunk_mode_gradient!{N}(out, f, x, chunk::Chunk{N}, usecache)
         $(multithread_chunk_mode_expr(:()))
     end
 else

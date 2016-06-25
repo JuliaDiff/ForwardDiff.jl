@@ -26,24 +26,34 @@ function Base.copy(cache::JacobianCache)
     return JacobianCache(copy(cache.dualvec), cache.seeds, cache.remainder_seeds)
 end
 
-function multithread_jacobian_cachefetch!{T,N}(::Type{T}, xlen, chunk::Chunk{N}, alt::Bool = false)
-    key = (xlen, N, T, alt)
-    if haskey(JACOBIAN_CACHE, key)
-        return JACOBIAN_CACHE[key]::Vector{JacobianCache{N,T}}
-    else
-        allresults = Vector{JacobianCache{N,T}}(NTHREADS)
-        result = JacobianCache(T, xlen, chunk)
-        allresults[1] = result
-        for i in 2:NTHREADS
-            allresults[i] = copy(result)
+function construct_jacobian_caches{T,N}(::Type{T}, xlen, chunk::Chunk{N})
+    allresults = Vector{JacobianCache{N,T}}(NTHREADS)
+    result = JacobianCache(T, xlen, chunk)
+    allresults[1] = result
+    for i in 2:NTHREADS
+        allresults[i] = copy(result)
+    end
+    return allresults
+end
+
+function multithread_jacobian_cachefetch!{T,N}(::Type{T}, xlen, chunk::Chunk{N},
+                                               usecache::Bool, alt::Bool = false)
+    if usecache
+        key = (xlen, N, T, alt)
+        if haskey(JACOBIAN_CACHE, key)
+            return JACOBIAN_CACHE[key]::Vector{JacobianCache{N,T}}
+        else
+            allresults = construct_jacobian_caches(T, xlen, chunk)
+            JACOBIAN_CACHE[key] = allresults
+            return allresults::Vector{JacobianCache{N,T}}
         end
-        JACOBIAN_CACHE[key] = allresults
-        return allresults::Vector{JacobianCache{N,T}}
+    else
+        return construct_jacobian_caches(T, xlen, chunk)::Vector{JacobianCache{N,T}}
     end
 end
 
-function multithread_jacobian_cachefetch!(x, chunk::Chunk, alt::Bool = false)
-    return multithread_jacobian_cachefetch!(eltype(x), length(x), chunk, alt)
+function multithread_jacobian_cachefetch!(x, args...)
+    return multithread_jacobian_cachefetch!(eltype(x), length(x), args...)
 end
 
 function jacobian_cachefetch!(args...)
@@ -75,24 +85,33 @@ function Base.copy(cache::HessianCache)
     return HessianCache(copy(cache.dualvec), cache.inseeds, cache.outseeds)
 end
 
-function multithread_hessian_cachefetch!{T,N}(::Type{T}, chunk::Chunk{N})
-    key = (N, T)
-    if haskey(HESSIAN_CACHE, key)
-        return HESSIAN_CACHE[key]::Vector{HessianCache{N,T}}
-    else
-        allresults = Vector{HessianCache{N,T}}(NTHREADS)
-        result = HessianCache(T, chunk)
-        allresults[1] = result
-        for i in 2:NTHREADS
-            allresults[i] = copy(result)
+function construct_hessian_caches{T,N}(::Type{T}, chunk::Chunk{N})
+    allresults = Vector{HessianCache{N,T}}(NTHREADS)
+    result = HessianCache(T, chunk)
+    allresults[1] = result
+    for i in 2:NTHREADS
+        allresults[i] = copy(result)
+    end
+    return allresults
+end
+
+function multithread_hessian_cachefetch!{T,N}(::Type{T}, chunk::Chunk{N}, usecache::Bool)
+    if usecache
+        key = (N, T)
+        if haskey(HESSIAN_CACHE, key)
+            return HESSIAN_CACHE[key]::Vector{HessianCache{N,T}}
+        else
+            allresults = construct_hessian_caches(T, chunk)
+            HESSIAN_CACHE[key] = allresults
+            return allresults::Vector{HessianCache{N,T}}
         end
-        HESSIAN_CACHE[key] = allresults
-        return allresults::Vector{HessianCache{N,T}}
+    else
+        return construct_hessian_caches(T, chunk)::Vector{HessianCache{N,T}}
     end
 end
 
-function multithread_hessian_cachefetch!(x, chunk::Chunk)
-    return multithread_hessian_cachefetch!(eltype(x), chunk)
+function multithread_hessian_cachefetch!(x, args...)
+    return multithread_hessian_cachefetch!(eltype(x), args...)
 end
 
 function hessian_cachefetch!(args...)
