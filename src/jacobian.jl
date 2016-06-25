@@ -203,7 +203,7 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
         end
 
         # do final chunk
-        seed!(xdual, x, cache.remainder_seeds, lastchunkindex, lastchunksize)
+        seed!(xdual, x, seeds, lastchunkindex, lastchunksize)
         $(ydual_compute)
         load_jacobian_chunk!(out, ydual, lastchunkindex, lastchunksize)
 

@@ -6,60 +6,36 @@ const JACOBIAN_CACHE = Dict{Tuple{Int,Int,DataType,Bool},Any}()
 
 immutable JacobianCache{N,T}
     dualvec::Vector{Dual{N,T}}
-    seeds::Vector{Partials{N,T}}
-    remainder_seeds::Vector{Partials{N,T}}
+    seeds::NTuple{N,Partials{N,T}}
 end
 
 function JacobianCache{T,N}(::Type{T}, xlen, chunk::Chunk{N})
     dualvec = Vector{Dual{N,T}}(xlen)
     seeds = construct_seeds(T, chunk)
-    remainder = xlen % N
-    if remainder == 0
-        remainder_seeds = seeds
-    else
-        remainder_seeds = construct_seeds(T, chunk, remainder)
-    end
-    return JacobianCache{N,T}(dualvec, seeds, remainder_seeds)
+    return JacobianCache{N,T}(dualvec, seeds)
 end
 
-function Base.copy(cache::JacobianCache)
-    return JacobianCache(copy(cache.dualvec), cache.seeds, cache.remainder_seeds)
-end
+Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.dualvec), cache.seeds)
 
-function construct_jacobian_caches{T,N}(::Type{T}, xlen, chunk::Chunk{N})
-    allresults = Vector{JacobianCache{N,T}}(NTHREADS)
-    result = JacobianCache(T, xlen, chunk)
-    allresults[1] = result
-    for i in 2:NTHREADS
-        allresults[i] = copy(result)
-    end
-    return allresults
-end
-
-function multithread_jacobian_cachefetch!{T,N}(::Type{T}, xlen, chunk::Chunk{N},
-                                               usecache::Bool, alt::Bool = false)
+@eval function multithread_jacobian_cachefetch!{T,N}(::Type{T}, xlen, chunk::Chunk{N},
+                                                     usecache::Bool, alt::Bool = false)
     if usecache
         key = (xlen, N, T, alt)
         if haskey(JACOBIAN_CACHE, key)
-            return JACOBIAN_CACHE[key]::Vector{JacobianCache{N,T}}
+            return JACOBIAN_CACHE[key]::NTuple{$NTHREADS,JacobianCache{N,T}}
         else
             allresults = construct_jacobian_caches(T, xlen, chunk)
             JACOBIAN_CACHE[key] = allresults
-            return allresults::Vector{JacobianCache{N,T}}
+            return allresults::NTuple{$NTHREADS,JacobianCache{N,T}}
         end
     else
-        return construct_jacobian_caches(T, xlen, chunk)::Vector{JacobianCache{N,T}}
+        return construct_jacobian_caches(T, xlen, chunk)::NTuple{$NTHREADS,JacobianCache{N,T}}
     end
 end
 
-function multithread_jacobian_cachefetch!(x, args...)
-    return multithread_jacobian_cachefetch!(eltype(x), length(x), args...)
-end
+multithread_jacobian_cachefetch!(x, args...) = multithread_jacobian_cachefetch!(eltype(x), length(x), args...)
 
-function jacobian_cachefetch!(args...)
-    return multithread_jacobian_cachefetch!(args...)[compat_threadid()]
-end
-
+jacobian_cachefetch!(args...) = multithread_jacobian_cachefetch!(args...)[compat_threadid()]
 
 ########################
 # caching for Hessians #
@@ -70,8 +46,8 @@ const HESSIAN_CACHE = Dict{Tuple{Int,DataType},Any}()
 
 immutable HessianCache{N,T}
     dualvec::Vector{Dual{N,Dual{N,T}}}
-    inseeds::Vector{Partials{N,T}}
-    outseeds::Vector{Partials{N,Dual{N,T}}}
+    inseeds::NTuple{N,Partials{N,T}}
+    outseeds::NTuple{N,Partials{N,Dual{N,T}}}
 end
 
 function HessianCache{T,N}(::Type{T}, chunk::Chunk{N})
@@ -81,56 +57,30 @@ function HessianCache{T,N}(::Type{T}, chunk::Chunk{N})
     return HessianCache{N,T}(dualvec, inseeds, outseeds)
 end
 
-function Base.copy(cache::HessianCache)
-    return HessianCache(copy(cache.dualvec), cache.inseeds, cache.outseeds)
-end
+Base.copy(cache::HessianCache) = HessianCache(copy(cache.dualvec), cache.inseeds, cache.outseeds)
 
-function construct_hessian_caches{T,N}(::Type{T}, chunk::Chunk{N})
-    allresults = Vector{HessianCache{N,T}}(NTHREADS)
-    result = HessianCache(T, chunk)
-    allresults[1] = result
-    for i in 2:NTHREADS
-        allresults[i] = copy(result)
-    end
-    return allresults
-end
-
-function multithread_hessian_cachefetch!{T,N}(::Type{T}, chunk::Chunk{N}, usecache::Bool)
+@eval function multithread_hessian_cachefetch!{T,N}(::Type{T}, chunk::Chunk{N}, usecache::Bool)
     if usecache
         key = (N, T)
         if haskey(HESSIAN_CACHE, key)
-            return HESSIAN_CACHE[key]::Vector{HessianCache{N,T}}
+            return HESSIAN_CACHE[key]::NTuple{$NTHREADS,HessianCache{N,T}}
         else
             allresults = construct_hessian_caches(T, chunk)
             HESSIAN_CACHE[key] = allresults
-            return allresults::Vector{HessianCache{N,T}}
+            return allresults::NTuple{$NTHREADS,HessianCache{N,T}}
         end
     else
-        return construct_hessian_caches(T, chunk)::Vector{HessianCache{N,T}}
+        return construct_hessian_caches(T, chunk)::NTuple{$NTHREADS,HessianCache{N,T}}
     end
 end
 
-function multithread_hessian_cachefetch!(x, args...)
-    return multithread_hessian_cachefetch!(eltype(x), args...)
-end
+multithread_hessian_cachefetch!(x, args...) = multithread_hessian_cachefetch!(eltype(x), args...)
 
-function hessian_cachefetch!(args...)
-    return multithread_hessian_cachefetch!(args...)[compat_threadid()]
-end
+hessian_cachefetch!(args...) = multithread_hessian_cachefetch!(args...)[compat_threadid()]
 
 #################
 # Partial seeds #
 #################
-
-function construct_seeds{T,N}(::Type{T}, ::Chunk{N}, len = N)
-    seeds = Vector{Partials{N,T}}(len)
-    seed_unit = one(T)
-    zero_partials = zero(Partials{N,T})
-    for i in eachindex(seeds)
-        seeds[i] = setindex(zero_partials, seed_unit, i)
-    end
-    return seeds
-end
 
 function seedall!{N,T}(xdual::Vector{Dual{N,T}}, x, seed::Partials{N,T})
     for i in eachindex(xdual)
@@ -148,8 +98,7 @@ function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, seed::Partials{N,T}, index)
     return xdual
 end
 
-function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, seeds::Vector{Partials{N,T}}, index,
-                    chunksize = N)
+function seed!{N,T}(xdual::Vector{Dual{N,T}}, x,seeds::NTuple{N,Partials{N,T}}, index, chunksize = N)
     offset = index - 1
     for i in 1:chunksize
         j = i + offset
@@ -158,10 +107,34 @@ function seed!{N,T}(xdual::Vector{Dual{N,T}}, x, seeds::Vector{Partials{N,T}}, i
     return xdual
 end
 
-function seedhess!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x, inseeds::Vector{Partials{N,T}},
-                        outseeds::Vector{Partials{N,Dual{N,T}}})
+function seedhess!{N,T}(xdual::Vector{Dual{N,Dual{N,T}}}, x,
+                        inseeds::NTuple{N,Partials{N,T}},
+                        outseeds::NTuple{N,Partials{N,Dual{N,T}}})
     for i in 1:N
         xdual[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseeds[i]), outseeds[i])
     end
     return xdual
+end
+
+#####################
+# @eval'd functions #
+#####################
+
+@eval function construct_jacobian_caches{T,N}(::Type{T}, xlen, chunk::Chunk{N})
+    result = JacobianCache(T, xlen, chunk)
+    return $(Expr(:tuple, :result, [:(copy(result)) for i in 2:NTHREADS]...))
+end
+
+@eval function construct_hessian_caches{T,N}(::Type{T}, chunk::Chunk{N})
+    result = HessianCache(T, chunk)
+    return $(Expr(:tuple, :result, [:(copy(result)) for i in 2:NTHREADS]...))
+end
+
+for N in 1:MAX_CHUNK_SIZE
+    ex = Expr(:tuple, [:(setindex(zero_partials, seed_unit, $i)) for i in 1:N]...)
+    @eval function construct_seeds{T}(::Type{T}, ::Chunk{$N})
+        seed_unit = one(T)
+        zero_partials = zero(Partials{$N,T})
+        return $ex
+    end
 end
