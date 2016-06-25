@@ -141,7 +141,7 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         end
 
         # do final chunk
-        seed!(xdual, x, cache.remainder_seeds, lastchunkindex, lastchunksize)
+        seed!(xdual, x, seeds, lastchunkindex, lastchunksize)
         dual = f(xdual)
         load_gradient_chunk!(out, dual, lastchunkindex, lastchunksize)
 
@@ -207,7 +207,7 @@ if IS_MULTITHREADED_JULIA
             end
 
             # do final chunk
-            seed!(current_xdual, x, current_cache.remainder_seeds, lastchunkindex, lastchunksize)
+            seed!(current_xdual, x, seeds, lastchunkindex, lastchunksize)
             current_dual = f(current_xdual)
             load_gradient_chunk!(out, current_dual, lastchunkindex, lastchunksize)
 
