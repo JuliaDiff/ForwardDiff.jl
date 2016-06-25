@@ -18,19 +18,23 @@ hessian(result::HessianResult) = result.hessian
 # API methods #
 ###############
 
-function hessian{N}(f, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function hessian{N}(f, x, chunk::Chunk{N} = pickchunk(x);
+                    multithread::Bool = false,
+                    usecache::Bool = true)
     if N == length(x)
-        return vector_mode_hessian(f, x, chunk)
+        return vector_mode_hessian(f, x, chunk, usecache)
     else
-        return chunk_mode_hessian(f, x, chunk; multithread = multithread)
+        return chunk_mode_hessian(f, x, chunk, multithread, usecache)
     end
 end
 
-function hessian!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function hessian!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x);
+                     multithread::Bool = false,
+                     usecache::Bool = true)
     if N == length(x)
-        vector_mode_hessian!(out, f, x, chunk)
+        vector_mode_hessian!(out, f, x, chunk, usecache)
     else
-        chunk_mode_hessian!(out, f, x, chunk; multithread = multithread)
+        chunk_mode_hessian!(out, f, x, chunk, multithread, usecache)
     end
     return out
 end
@@ -75,21 +79,21 @@ end
 # vector mode #
 #-------------#
 
-function compute_vector_mode_hessian(f, x, chunk)
-    cache = hessian_cachefetch!(x, chunk)
+function compute_vector_mode_hessian(f, x, chunk, usecache)
+    cache = hessian_cachefetch!(x, chunk, usecache)
     xdual = cache.dualvec
     seedhess!(xdual, x, cache.inseeds, cache.outseeds)
     return f(xdual)
 end
 
-function vector_mode_hessian(f, x, chunk)
-    dual = compute_vector_mode_hessian(f, x, chunk)
+function vector_mode_hessian(f, x, chunk, usecache)
+    dual = compute_vector_mode_hessian(f, x, chunk, usecache)
     out = similar(x, numtype(numtype(dual)), length(x), length(x))
     return load_hessian!(out, dual)
 end
 
-function vector_mode_hessian!(out, f, x, chunk)
-    dual = compute_vector_mode_hessian(f, x, chunk)
+function vector_mode_hessian!(out, f, x, chunk, usecache)
+    dual = compute_vector_mode_hessian(f, x, chunk, usecache)
     load_hessian_value!(out, dual)
     load_hessian_gradient!(out, dual)
     load_hessian!(out, dual)
@@ -99,25 +103,26 @@ end
 # chunk mode #
 #------------#
 
-function chunk_mode_hessian(f, x, chunk::Chunk; multithread = false)
-    gradf = y -> ForwardDiff.gradient(f, y, chunk; multithread = multithread)
-    return ForwardDiff.jacobian(gradf, x, chunk)
+function chunk_mode_hessian(f, x, chunk::Chunk, multithread::Bool, usecache::Bool)
+    gradf = y -> ForwardDiff.gradient(f, y, chunk; multithread = multithread, usecache = usecache)
+    return ForwardDiff.jacobian(gradf, x, chunk; usecache = usecache)
 end
 
-function chunk_mode_hessian!(out, f, x, chunk::Chunk; multithread = false)
-    gradf = y -> ForwardDiff.gradient(f, y, chunk; multithread = multithread)
-    ForwardDiff.jacobian!(out, gradf, x, chunk)
+function chunk_mode_hessian!(out, f, x, chunk::Chunk, multithread::Bool, usecache::Bool)
+    gradf = y -> ForwardDiff.gradient(f, y, chunk; multithread = multithread, usecache = usecache)
+    ForwardDiff.jacobian!(out, gradf, x, chunk; usecache = usecache)
     return out
 end
 
-function chunk_mode_hessian!{T,N}(out::HessianResult{T}, f, x, chunk::Chunk{N}; multithread = false)
+function chunk_mode_hessian!{T,N}(out::HessianResult{T}, f, x, chunk::Chunk{N},
+                                  multithread::Bool, usecache::Bool)
     gradvec = similar(out.gradient, Dual{N,T})
     gradresult = GradientResult(first(gradvec), gradvec)
     gradf = y -> begin
-        ForwardDiff.gradient!(gradresult, f, y, chunk; multithread = multithread)
+        ForwardDiff.gradient!(gradresult, f, y, chunk; multithread = multithread, usecache = usecache)
         return ForwardDiff.gradient(gradresult)
     end
-    ForwardDiff.jacobian!(out.hessian, gradf, x, chunk)
+    ForwardDiff.jacobian!(out.hessian, gradf, x, chunk; usecache = usecache)
     out.value = ForwardDiff.value(ForwardDiff.value(gradresult))
     for i in eachindex(gradvec)
         out.gradient[i] = ForwardDiff.value(gradvec[i])

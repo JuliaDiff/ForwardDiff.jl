@@ -62,39 +62,41 @@ for f in VECTOR_TO_NUMBER_FUNCS
     # finite difference approximation error is really bad for Hessians...
     @test_approx_eq_eps h Calculus.hessian(f, X) 0.01
     for c in CHUNK_SIZES
-        println("  ...testing $f with chunk size $c")
-        chunk = Chunk{c}()
+        for usecache in (true, false)
+            println("  ...testing $f with (chunk size = $c) and (usecache = $usecache)")
+            chunk = Chunk{c}()
 
-        # single-threaded #
-        #-----------------#
-        out = ForwardDiff.hessian(f, X, chunk)
-        @test_approx_eq out h
-
-        out = similar(X, length(X), length(X))
-        ForwardDiff.hessian!(out, f, X, chunk)
-        @test_approx_eq out h
-
-        out = HessianResult(X)
-        ForwardDiff.hessian!(out, f, X, chunk)
-        @test_approx_eq ForwardDiff.value(out) v
-        @test_approx_eq ForwardDiff.gradient(out) g
-        @test_approx_eq ForwardDiff.hessian(out) h
-
-        # multithreaded #
-        #---------------#
-        if ForwardDiff.IS_MULTITHREADED_JULIA
-            out = ForwardDiff.hessian(f, X, chunk; multithread = true)
+            # single-threaded #
+            #-----------------#
+            out = ForwardDiff.hessian(f, X, chunk; usecache = usecache)
             @test_approx_eq out h
 
             out = similar(X, length(X), length(X))
-            ForwardDiff.hessian!(out, f, X, chunk; multithread = true)
+            ForwardDiff.hessian!(out, f, X, chunk; usecache = usecache)
             @test_approx_eq out h
 
             out = HessianResult(X)
-            ForwardDiff.hessian!(out, f, X, chunk; multithread = true)
+            ForwardDiff.hessian!(out, f, X, chunk; usecache = usecache)
             @test_approx_eq ForwardDiff.value(out) v
             @test_approx_eq ForwardDiff.gradient(out) g
             @test_approx_eq ForwardDiff.hessian(out) h
+
+            # multithreaded #
+            #---------------#
+            if ForwardDiff.IS_MULTITHREADED_JULIA
+                out = ForwardDiff.hessian(f, X, chunk; multithread = true, usecache = usecache)
+                @test_approx_eq out h
+
+                out = similar(X, length(X), length(X))
+                ForwardDiff.hessian!(out, f, X, chunk; multithread = true, usecache = usecache)
+                @test_approx_eq out h
+
+                out = HessianResult(X)
+                ForwardDiff.hessian!(out, f, X, chunk; multithread = true, usecache = usecache)
+                @test_approx_eq ForwardDiff.value(out) v
+                @test_approx_eq ForwardDiff.gradient(out) g
+                @test_approx_eq ForwardDiff.hessian(out) h
+            end
         end
     end
 end

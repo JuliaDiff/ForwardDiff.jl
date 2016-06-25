@@ -16,51 +16,59 @@ jacobian(result::JacobianResult) = result.jacobian
 # API methods #
 ###############
 
-function jacobian{N}(f, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function jacobian{N}(f, x, chunk::Chunk{N} = pickchunk(x);
+                      multithread::Bool = false,
+                      usecache::Bool = true)
     if N == length(x)
-        return vector_mode_jacobian(f, x, chunk)
+        return vector_mode_jacobian(f, x, chunk, usecache)
     elseif multithread
-        return multithread_chunk_mode_jacobian(f, x, chunk)
+        return multithread_chunk_mode_jacobian(f, x, chunk, usecache)
     else
-        return chunk_mode_jacobian(f, x, chunk)
+        return chunk_mode_jacobian(f, x, chunk, usecache)
     end
 end
 
-function jacobian{N}(f!, y, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function jacobian{N}(f!, y, x, chunk::Chunk{N} = pickchunk(x);
+                      multithread::Bool = false,
+                      usecache::Bool = true)
     if N == length(x)
-        return vector_mode_jacobian(f!, y, x, chunk)
+        return vector_mode_jacobian(f!, y, x, chunk, usecache)
     elseif multithread
-        return multithread_chunk_mode_jacobian(f!, y, x, chunk)
+        return multithread_chunk_mode_jacobian(f!, y, x, chunk, usecache)
     else
-        return chunk_mode_jacobian(f!, y, x, chunk)
+        return chunk_mode_jacobian(f!, y, x, chunk, usecache)
     end
 end
 
-function jacobian!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function jacobian!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x);
+                      multithread::Bool = false,
+                      usecache::Bool = true)
     if N == length(x)
-        vector_mode_jacobian!(out, f, x, chunk)
+        vector_mode_jacobian!(out, f, x, chunk, usecache)
     elseif multithread
-        multithread_chunk_mode_jacobian!(out, f, x, chunk)
+        multithread_chunk_mode_jacobian!(out, f, x, chunk, usecache)
     else
-        chunk_mode_jacobian!(out, f, x, chunk)
+        chunk_mode_jacobian!(out, f, x, chunk, usecache)
     end
     return out
 end
 
-function jacobian!{N}(out, f!, y, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
+function jacobian!{N}(out, f!, y, x, chunk::Chunk{N} = pickchunk(x);
+                      multithread::Bool = false,
+                      usecache::Bool = true)
     @assert !(isa(out, JacobianResult)) "use jacobian!(JacobianResult(out, y), f!, x, ...) instead of jacobian!(out, f!, y, x, ...)"
     if N == length(x)
-        vector_mode_jacobian!(out, f!, y, x, chunk)
+        vector_mode_jacobian!(out, f!, y, x, chunk, usecache)
     elseif multithread
-        multithread_chunk_mode_jacobian!(out, f!, y, x, chunk)
+        multithread_chunk_mode_jacobian!(out, f!, y, x, chunk, usecache)
     else
-        chunk_mode_jacobian!(out, f!, y, x, chunk)
+        chunk_mode_jacobian!(out, f!, y, x, chunk, usecache)
     end
     return out
 end
 
-function jacobian!{N}(out::JacobianResult, f!, x, chunk::Chunk{N} = pickchunk(x); multithread = false)
-    jacobian!(out.jacobian, f!, out.value, x, chunk; multithread = multithread)
+function jacobian!{N}(out::JacobianResult, f!, x, chunk::Chunk{N} = pickchunk(x); kwargs...)
+    jacobian!(out.jacobian, f!, out.value, x, chunk; kwargs...)
     return out
 end
 
@@ -114,16 +122,16 @@ end
 # vector mode #
 #-------------#
 
-function compute_vector_mode_jacobian(f, x, chunk)
-    cache = jacobian_cachefetch!(x, chunk)
+function compute_vector_mode_jacobian(f, x, chunk, usecache)
+    cache = jacobian_cachefetch!(x, chunk, usecache)
     xdual = cache.dualvec
     seed!(xdual, x, cache.seeds, 1)
     return f(xdual)
 end
 
-function compute_vector_mode_jacobian(f!, y, x, chunk)
-    cache = jacobian_cachefetch!(x, chunk)
-    ycache = jacobian_cachefetch!(y, chunk, true)
+function compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
+    cache = jacobian_cachefetch!(x, chunk, usecache)
+    ycache = jacobian_cachefetch!(y, chunk, usecache, true)
     xdual = cache.dualvec
     ydual = ycache.dualvec
     seed!(xdual, x, cache.seeds, 1)
@@ -132,26 +140,26 @@ function compute_vector_mode_jacobian(f!, y, x, chunk)
     return ydual
 end
 
-function vector_mode_jacobian{N}(f, x, chunk::Chunk{N})
-    ydual = compute_vector_mode_jacobian(f, x, chunk)
+function vector_mode_jacobian{N}(f, x, chunk::Chunk{N}, usecache)
+    ydual = compute_vector_mode_jacobian(f, x, chunk, usecache)
     out = similar(ydual, numtype(eltype(ydual)), length(ydual), N)
     return load_jacobian!(out, ydual)
 end
 
-function vector_mode_jacobian{N}(f!, y, x, chunk::Chunk{N})
-    ydual = compute_vector_mode_jacobian(f!, y, x, chunk)
+function vector_mode_jacobian{N}(f!, y, x, chunk::Chunk{N}, usecache)
+    ydual = compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
     load_jacobian_value!(y, ydual)
     out = similar(y, length(y), N)
     return load_jacobian!(out, ydual)
 end
 
-function vector_mode_jacobian!(out, f, x, chunk)
-    ydual = compute_vector_mode_jacobian(f, x, chunk)
+function vector_mode_jacobian!(out, f, x, chunk, usecache)
+    ydual = compute_vector_mode_jacobian(f, x, chunk, usecache)
     return load_jacobian!(out, ydual)
 end
 
-function vector_mode_jacobian!(out, f!, y, x, chunk)
-    ydual = compute_vector_mode_jacobian(f!, y, x, chunk)
+function vector_mode_jacobian!(out, f!, y, x, chunk, usecache)
+    ydual = compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
     load_jacobian_value!(y, ydual)
     return load_jacobian!(out, ydual)
 end
@@ -205,18 +213,18 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
     end
 end
 
-@eval function chunk_mode_jacobian{N}(f, x, chunk::Chunk{N})
+@eval function chunk_mode_jacobian{N}(f, x, chunk::Chunk{N}, usecache)
     $(jacobian_chunk_mode_expr(:(out = similar(x, numtype(eltype(ydual)), length(ydual), xlen)),
-                               :(cache = jacobian_cachefetch!(x, chunk)),
+                               :(cache = jacobian_cachefetch!(x, chunk, usecache)),
                                :(ydual = f(xdual)),
                                :()))
 end
 
-@eval function chunk_mode_jacobian{N}(f!, y, x, chunk::Chunk{N})
+@eval function chunk_mode_jacobian{N}(f!, y, x, chunk::Chunk{N}, usecache)
     $(jacobian_chunk_mode_expr(:(out = similar(y, numtype(eltype(ydual)), length(ydual), xlen)),
                                quote
-                                   cache = jacobian_cachefetch!(x, chunk)
-                                   ycache = jacobian_cachefetch!(y, chunk, true)
+                                   cache = jacobian_cachefetch!(x, chunk, usecache)
+                                   ycache = jacobian_cachefetch!(y, chunk, usecache, true)
                                    ydual = ycache.dualvec
                                    yzeroseed = zero(eltype(ycache.seeds))
                                end,
@@ -224,18 +232,18 @@ end
                                :(load_jacobian_value!(y, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f, x, chunk::Chunk{N})
+@eval function chunk_mode_jacobian!{N}(out, f, x, chunk::Chunk{N}, usecache)
     $(jacobian_chunk_mode_expr(:(),
-                               :(cache = jacobian_cachefetch!(x, chunk)),
+                               :(cache = jacobian_cachefetch!(x, chunk, usecache)),
                                :(ydual = f(xdual)),
                                :()))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f!, y, x, chunk::Chunk{N})
+@eval function chunk_mode_jacobian!{N}(out, f!, y, x, chunk::Chunk{N}, usecache)
     $(jacobian_chunk_mode_expr(:(),
                                quote
-                                   cache = jacobian_cachefetch!(x, chunk)
-                                   ycache = jacobian_cachefetch!(y, chunk, true)
+                                   cache = jacobian_cachefetch!(x, chunk, usecache)
+                                   ycache = jacobian_cachefetch!(y, chunk, usecache, true)
                                    ydual = ycache.dualvec
                                    yzeroseed = zero(eltype(ycache.seeds))
                                end,
