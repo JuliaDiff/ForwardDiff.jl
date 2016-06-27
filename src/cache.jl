@@ -20,17 +20,13 @@ Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.dualvec), cache.seeds
 @eval function multithread_jacobian_cachefetch!{T,N}(::Type{T}, xlen, chunk::Chunk{N},
                                                      usecache::Bool, alt::Bool = false)
     if usecache
-        key = (xlen, N, T, alt)
-        if haskey(JACOBIAN_CACHE, key)
-            return JACOBIAN_CACHE[key]::NTuple{$NTHREADS,JacobianCache{N,T}}
-        else
-            allresults = construct_jacobian_caches(T, xlen, chunk)
-            JACOBIAN_CACHE[key] = allresults
-            return allresults::NTuple{$NTHREADS,JacobianCache{N,T}}
+        result = get!(JACOBIAN_CACHE, (xlen, N, T, alt)) do
+            construct_jacobian_caches(T, xlen, chunk)
         end
     else
-        return construct_jacobian_caches(T, xlen, chunk)::NTuple{$NTHREADS,JacobianCache{N,T}}
+        result = construct_jacobian_caches(T, xlen, chunk)
     end
+    return result::NTuple{$NTHREADS,JacobianCache{N,T}}
 end
 
 multithread_jacobian_cachefetch!(x, args...) = multithread_jacobian_cachefetch!(eltype(x), length(x), args...)
@@ -61,17 +57,13 @@ Base.copy(cache::HessianCache) = HessianCache(copy(cache.dualvec), cache.inseeds
 
 @eval function multithread_hessian_cachefetch!{T,N}(::Type{T}, chunk::Chunk{N}, usecache::Bool)
     if usecache
-        key = (N, T)
-        if haskey(HESSIAN_CACHE, key)
-            return HESSIAN_CACHE[key]::NTuple{$NTHREADS,HessianCache{N,T}}
-        else
-            allresults = construct_hessian_caches(T, chunk)
-            HESSIAN_CACHE[key] = allresults
-            return allresults::NTuple{$NTHREADS,HessianCache{N,T}}
+        result = get!(HESSIAN_CACHE, (N, T)) do
+            construct_hessian_caches(T, chunk)
         end
     else
-        return construct_hessian_caches(T, chunk)::NTuple{$NTHREADS,HessianCache{N,T}}
+        result = construct_hessian_caches(T, chunk)
     end
+    return result::NTuple{$NTHREADS,HessianCache{N,T}}
 end
 
 multithread_hessian_cachefetch!(x, args...) = multithread_hessian_cachefetch!(eltype(x), args...)
