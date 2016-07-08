@@ -160,7 +160,6 @@ Base.promote_array_type{D<:Dual, A<:AbstractFloat, P}(F, ::Type{D}, ::Type{A}, :
 Base.promote_array_type{A<:AbstractFloat, D<:Dual}(F, ::Type{A}, ::Type{D}) = promote_type(D, A)
 Base.promote_array_type{A<:AbstractFloat, D<:Dual, P}(F, ::Type{A}, ::Type{D}, ::Type{P}) = P
 
-
 Base.float{N,T}(n::Dual{N,T}) = Dual{N,promote_type(T, Float16)}(n)
 
 ########
