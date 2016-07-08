@@ -28,12 +28,12 @@ Base.done(partials::Partials, i) = done(partials.values, i)
 @inline iszero(partials::Partials) = iszero_tuple(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
-@inline Base.zero{N,T}(::Type{Partials{N,T}}) = Partials(zero_tuple(NTuple{N,T}))
+@inline Base.zero{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(zero_tuple(NTuple{N,T}))
 
 @inline Base.rand(partials::Partials) = rand(typeof(partials))
-@inline Base.rand{N,T}(::Type{Partials{N,T}}) = Partials(rand_tuple(NTuple{N,T}))
+@inline Base.rand{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(rand_tuple(NTuple{N,T}))
 @inline Base.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
-@inline Base.rand{N,T}(rng::AbstractRNG, ::Type{Partials{N,T}}) = Partials(rand_tuple(rng, NTuple{N,T}))
+@inline Base.rand{N,T}(rng::AbstractRNG, ::Type{Partials{N,T}}) = Partials{N,T}(rand_tuple(rng, NTuple{N,T}))
 
 Base.isequal{N}(a::Partials{N}, b::Partials{N}) = isequal(a.values, b.values)
 @operator(Base.:(==)){N}(a::Partials{N}, b::Partials{N}) = a.values == b.values
@@ -45,7 +45,7 @@ Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 
 @inline Base.copy(partials::Partials) = partials
 
-Base.read{N,T}(io::IO, ::Type{Partials{N,T}}) = Partials(ntuple(i->read(io, T), Val{N}))
+Base.read{N,T}(io::IO, ::Type{Partials{N,T}}) = Partials{N,T}(ntuple(i->read(io, T), Val{N}))
 
 function Base.write(io::IO, partials::Partials)
     for p in partials
@@ -82,6 +82,16 @@ end
     bfactor = -aval/(bval*bval)
     return _mul_partials(a, b, afactor, bfactor)
 end
+
+# edge cases where N == 0 #
+#-------------------------#
+
+@inline @operator(Base.:+){A,B}(a::Partials{0,A}, b::Partials{0,B}) = Partials{0,promote_type(A,B)}(tuple())
+@inline @operator(Base.:-){A,B}(a::Partials{0,A}, b::Partials{0,B}) = Partials{0,promote_type(A,B)}(tuple())
+@inline @operator(Base.:-){T}(partials::Partials{0,T}) = partials
+@inline @operator(Base.:*){T}(partials::Partials{0,T}, x::Real) = Partials{0,promote_type(T,typeof(x))}(tuple())
+@inline @operator(Base.:*){T}(x::Real, partials::Partials{0,T}) = Partials{0,promote_type(T,typeof(x))}(tuple())
+@inline @operator(Base.:/){T}(partials::Partials{0,T}, x::Real) = Partials{0,promote_type(T,typeof(x))}(tuple())
 
 ##################################
 # Generated Functions on NTuples #
