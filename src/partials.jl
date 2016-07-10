@@ -93,6 +93,9 @@ end
 @inline @operator(Base.:*){T}(x::Real, partials::Partials{0,T}) = Partials{0,promote_type(T,typeof(x))}(tuple())
 @inline @operator(Base.:/){T}(partials::Partials{0,T}, x::Real) = Partials{0,promote_type(T,typeof(x))}(tuple())
 
+@inline _mul_partials{A,B}(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) = Partials{0,promote_type(A,B)}(tuple())
+@inline _div_partials{A,B}(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) = Partials{0,promote_type(A,B)}(tuple())
+
 ##################################
 # Generated Functions on NTuples #
 ##################################

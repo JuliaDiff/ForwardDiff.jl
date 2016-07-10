@@ -7,6 +7,8 @@ using ForwardDiff.Partials
 samerng() = MersenneTwister(1)
 
 for N in (0, 3), T in (Int, Float32, Float64)
+    println("  ...testing Partials{$N,$T}")
+
     VALUES = ntuple(n -> rand(T), Val{N})
     PARTIALS = Partials{N,T}(VALUES)
 
@@ -33,7 +35,7 @@ for N in (0, 3), T in (Int, Float32, Float64)
     end
 
     @test start(PARTIALS) == start(VALUES)
-    N > 0 && (@test next(PARTIALS, start(PARTIALS)) == next(VALUES, start(VALUES)))
+    @test N == 0 || (next(PARTIALS, start(PARTIALS)) == next(VALUES, start(VALUES)))
     @test done(PARTIALS, start(PARTIALS)) == done(VALUES, start(VALUES))
 
     i = 1

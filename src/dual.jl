@@ -56,6 +56,9 @@ macro ambiguous(ex)
     f = def.args[1].args[1].args[1]
     return quote
         $(f)(a::Dual, b::Dual) = error("npartials($(typeof(a))) != npartials($(typeof(b)))")
+        $(f)(a::Dual{0}, b::Dual{0}) = Dual($(f)(value(a), value(b)))
+        $(f)(a::Dual{0}, b::Dual) = $(f)(value(a), b)
+        $(f)(a::Dual, b::Dual{0}) = $(f)(a, value(b))
         $(esc(ex))
     end
 end
@@ -103,10 +106,19 @@ end
 isconstant(n::Dual) = iszero(partials(n))
 
 @ambiguous Base.isequal{N}(a::Dual{N}, b::Dual{N}) = isequal(value(a), value(b))
+Base.isequal(a::Dual{0}, b::Dual{0}) = isequal(value(a), value(b))
+
 @ambiguous @operator(Base.:(==)){N}(a::Dual{N}, b::Dual{N}) = value(a) == value(b)
+@operator(Base.:(==))(a::Dual{0}, b::Dual{0}) = value(a) == value(b)
+
 @ambiguous Base.isless{N}(a::Dual{N}, b::Dual{N}) = value(a) < value(b)
+Base.isless(a::Dual{0}, b::Dual{0}) = value(a) < value(b)
+
 @ambiguous @operator(Base.:<){N}(a::Dual{N}, b::Dual{N}) = isless(a, b)
+@operator(Base.:<)(a::Dual{0}, b::Dual{0}) = isless(a, b)
+
 @ambiguous @operator(Base.:(<=)){N}(a::Dual{N}, b::Dual{N}) = <=(value(a), value(b))
+@operator(Base.:(<=))(a::Dual{0}, b::Dual{0}) = <=(value(a), value(b))
 
 for T in (AbstractFloat, Irrational, Real)
     Base.isequal(n::Dual, x::T) = isequal(value(n), x)
@@ -214,7 +226,7 @@ end
 for f in (macroexpand(:(@operator(Base.:^))), :(NaNMath.pow))
     @eval begin
         @ambiguous @inline function ($f){N}(n1::Dual{N}, n2::Dual{N})
-            if iszero(partials(n2))
+            if isconstant(n2)
                 return $(f)(n1, value(n2))
             else
                 v1, v2 = value(n1), value(n2)
