@@ -1,11 +1,11 @@
 using ForwardDiff
 
-print("Testing Partials...")
+println("Testing Partials...")
 tic()
 include("PartialsTest.jl")
 println("done (took $(toq()) seconds).")
 
-print("Testing Dual...")
+println("Testing Dual...")
 tic()
 include("DualTest.jl")
 println("done (took $(toq()) seconds).")

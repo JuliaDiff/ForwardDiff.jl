@@ -56,6 +56,11 @@ macro ambiguous(ex)
     f = def.args[1].args[1].args[1]
     return quote
         $(f)(a::Dual, b::Dual) = error("npartials($(typeof(a))) != npartials($(typeof(b)))")
+        if !(in($f, (isequal, ==, isless, <, <=, <)))
+            $(f)(a::Dual{0}, b::Dual{0}) = Dual($(f)(value(a), value(b)))
+            $(f)(a::Dual{0}, b::Dual) = $(f)(value(a), b)
+            $(f)(a::Dual, b::Dual{0}) = $(f)(a, value(b))
+        end
         $(esc(ex))
     end
 end
@@ -214,7 +219,7 @@ end
 for f in (macroexpand(:(@operator(Base.:^))), :(NaNMath.pow))
     @eval begin
         @ambiguous @inline function ($f){N}(n1::Dual{N}, n2::Dual{N})
-            if iszero(partials(n2))
+            if isconstant(n2)
                 return $(f)(n1, value(n2))
             else
                 v1, v2 = value(n1), value(n2)
