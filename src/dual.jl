@@ -156,7 +156,7 @@ Base.promote_rule{N,A<:Real,B<:Real}(::Type{A}, ::Type{Dual{N,B}}) = Dual{N,prom
 Base.convert(::Type{Dual}, n::Dual) = n
 Base.convert{N1,N2,T<:Real}(D::Type{Dual{N1,T}}, n::Dual{N2}) = error("can't convert $(typeof(n)) to $(D)")
 Base.convert{N,T<:Real}(::Type{Dual{N,T}}, n::Dual{N}) = Dual(convert(T, value(n)), convert(Partials{N,T}, partials(n)))
-Base.convert{N,T<:Real}(::Type{Dual{N,T}}, n::Dual{N,T}) = n
+Base.convert{D<:Dual}(::Type{D}, n::D) = n
 Base.convert{N,T<:Real}(::Type{Dual{N,T}}, x::Real) = Dual(convert(T, x), zero(Partials{N,T}))
 Base.convert(::Type{Dual}, x::Real) = Dual(x)
 
