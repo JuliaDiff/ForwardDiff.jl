@@ -51,6 +51,9 @@ for N in (0, 3), T in (Int, Float32, Float64)
     @test zero(PARTIALS) == zero(typeof(PARTIALS))
     @test zero(PARTIALS).values == map(zero, VALUES)
 
+    @test one(PARTIALS) == one(typeof(PARTIALS))
+    @test one(PARTIALS).values == map(one, VALUES)
+
     @test rand(samerng(), PARTIALS) == rand(samerng(), typeof(PARTIALS))
 
     @test ForwardDiff.iszero(PARTIALS) == (N == 0)

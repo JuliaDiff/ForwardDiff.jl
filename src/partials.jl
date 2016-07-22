@@ -30,6 +30,9 @@ Base.done(partials::Partials, i) = done(partials.values, i)
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
 @inline Base.zero{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(zero_tuple(NTuple{N,T}))
 
+@inline Base.one(partials::Partials) = one(typeof(partials))
+@inline Base.one{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(one_tuple(NTuple{N,T}))
+
 @inline Base.rand(partials::Partials) = rand(typeof(partials))
 @inline Base.rand{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(rand_tuple(NTuple{N,T}))
 @inline Base.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
@@ -114,6 +117,7 @@ end
 
 @inline iszero_tuple(::Tuple{}) = true
 @inline zero_tuple(::Type{Tuple{}}) = tuple()
+@inline one_tuple(::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
@@ -123,6 +127,7 @@ for N in 1:MAX_CHUNK_SIZE
 
     ex = tupexpr(i -> :(z), N)
     @eval @inline zero_tuple{T}(::Type{NTuple{$N,T}}) = (z = zero(T); $ex)
+    @eval @inline one_tuple{T}(::Type{NTuple{$N,T}}) = (z = one(T); $ex)
 
     ex  = tupexpr(i -> :(rand(rng, T)), N)
     @eval @inline rand_tuple{T}(rng::AbstractRNG, ::Type{NTuple{$N,T}}) = $ex
@@ -136,10 +141,10 @@ for N in 1:MAX_CHUNK_SIZE
     ex = tupexpr(i -> :(tup[$i] / x), N)
     @eval @inline div_tuple_by_scalar(tup::NTuple{$N}, x) = $ex
 
-    ex = tupexpr(i -> :(a[$i]+b[$i]), N)
+    ex = tupexpr(i -> :(a[$i] + b[$i]), N)
     @eval @inline add_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
 
-    ex = tupexpr(i -> :(a[$i]-b[$i]), N)
+    ex = tupexpr(i -> :(a[$i] - b[$i]), N)
     @eval @inline sub_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
 
     ex = tupexpr(i -> :(-tup[$i]), N)
