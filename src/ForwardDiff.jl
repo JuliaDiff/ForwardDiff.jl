@@ -7,23 +7,6 @@ using Compat
 import Calculus
 import NaNMath
 
-#######################
-# compatibility patch #
-#######################
-
-if v"0.4" <= VERSION < v"0.5-"
-    # e.g. @operator Base.:op -> Base.(:op)
-    macro operator(qualified_name)
-        func_name = qualified_name.args[2].args[1]
-        qualified_name.args[2] = func_name
-        return qualified_name
-    end
-else
-    macro operator(qualified_name)
-        return qualified_name
-    end
-end
-
 #############################
 # types/functions/constants #
 #############################
