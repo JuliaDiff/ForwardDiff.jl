@@ -85,7 +85,7 @@ end
 
 function compute_vector_mode_gradient(f, x, chunk, usecache)
     cache = jacobian_cachefetch!(x, chunk, usecache)
-    xdual = cache.dualvec
+    xdual = cache.duals
     seed!(xdual, x, cache.seeds, 1)
     return f(xdual)
 end
@@ -119,7 +119,7 @@ function chunk_mode_gradient_expr(out_definition::Expr)
 
         # fetch and seed work vectors
         cache = jacobian_cachefetch!(x, chunk, usecache)
-        xdual = cache.dualvec
+        xdual = cache.duals
         seeds = cache.seeds
         zeroseed = zero(eltype(seeds))
         seedall!(xdual, x, zeroseed)
@@ -180,12 +180,12 @@ if IS_MULTITHREADED_JULIA
             zeroseed = zero(eltype(seeds))
 
             Base.Threads.@threads for t in 1:NTHREADS
-                seedall!(caches[t].dualvec, x, zeroseed)
+                seedall!(caches[t].duals, x, zeroseed)
             end
 
             # do first chunk manually to calculate output type
             current_cache = caches[compat_threadid()]
-            current_xdual = current_cache.dualvec
+            current_xdual = current_cache.duals
             current_seeds = current_cache.seeds
             seed!(current_xdual, x, current_seeds, 1)
             current_dual = f(current_xdual)
@@ -197,7 +197,7 @@ if IS_MULTITHREADED_JULIA
             Base.Threads.@threads for c in middlechunks
                 # see https://github.com/JuliaLang/julia/issues/14948
                 local chunk_cache = caches[compat_threadid()]
-                local chunk_xdual = chunk_cache.dualvec
+                local chunk_xdual = chunk_cache.duals
                 local chunk_seeds = chunk_cache.seeds
                 local chunk_index = ((c - 1) * N + 1)
                 seed!(chunk_xdual, x, seeds, chunk_index)

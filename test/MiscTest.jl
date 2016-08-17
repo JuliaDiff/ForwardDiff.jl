@@ -56,6 +56,14 @@ testf2 = x -> testdf(x[1]) * f(x[2])
 
 @test_approx_eq ForwardDiff.gradient(f2, x) ForwardDiff.gradient(testf2, x)
 
+######################################
+# Higher-Dimensional Differentiation #
+######################################
+
+x = rand(3, 3)
+
+@test_approx_eq ForwardDiff.jacobian(inv, x) -kron(inv(x'), inv(x))
+
 ########################
 # Conversion/Promotion #
 ########################

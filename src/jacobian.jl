@@ -17,8 +17,8 @@ jacobian(result::JacobianResult) = result.jacobian
 ###############
 
 function jacobian{N}(f, x, chunk::Chunk{N} = pickchunk(x);
-                      multithread::Bool = false,
-                      usecache::Bool = true)
+                     multithread::Bool = false,
+                     usecache::Bool = true)
     if N == length(x)
         return vector_mode_jacobian(f, x, chunk, usecache)
     elseif multithread
@@ -124,7 +124,7 @@ end
 
 function compute_vector_mode_jacobian(f, x, chunk, usecache)
     cache = jacobian_cachefetch!(x, chunk, usecache)
-    xdual = cache.dualvec
+    xdual = cache.duals
     seed!(xdual, x, cache.seeds, 1)
     return f(xdual)
 end
@@ -132,8 +132,8 @@ end
 function compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
     cache = jacobian_cachefetch!(x, chunk, usecache)
     ycache = jacobian_cachefetch!(y, chunk, usecache, true)
-    xdual = cache.dualvec
-    ydual = ycache.dualvec
+    xdual = cache.duals
+    ydual = ycache.duals
     seed!(xdual, x, cache.seeds, 1)
     seedall!(ydual, y, zero(eltype(ycache.seeds)))
     f!(ydual, xdual)
@@ -155,13 +155,15 @@ end
 
 function vector_mode_jacobian!(out, f, x, chunk, usecache)
     ydual = compute_vector_mode_jacobian(f, x, chunk, usecache)
-    return load_jacobian!(out, ydual)
+    load_jacobian!(reshape(out, length(ydual), length(x)), ydual)
+    return out
 end
 
 function vector_mode_jacobian!(out, f!, y, x, chunk, usecache)
     ydual = compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
     load_jacobian_value!(y, ydual)
-    return load_jacobian!(out, ydual)
+    load_jacobian!(reshape(out, length(y), length(x)), ydual)
+    return out
 end
 
 # chunk mode #
@@ -179,9 +181,9 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
         lastchunkindex = xlen - lastchunksize + 1
         middlechunks = 2:div(xlen - lastchunksize, N)
 
-        # fetch and seed work vectors
+        # fetch and seed work arrays
         $(cache_definition)
-        xdual = cache.dualvec
+        xdual = cache.duals
         seeds = cache.seeds
         zeroseed = zero(eltype(seeds))
         seedall!(xdual, x, zeroseed)
@@ -191,7 +193,8 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
         $(ydual_compute)
         seed!(xdual, x, zeroseed, 1)
         $(out_definition)
-        load_jacobian_chunk!(out, ydual, 1, N)
+        out_reshaped = reshape(out, length(ydual), length(xdual))
+        load_jacobian_chunk!(out_reshaped, ydual, 1, N)
 
         # do middle chunks
         for c in middlechunks
@@ -199,13 +202,13 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
             seed!(xdual, x, seeds, i)
             $(ydual_compute)
             seed!(xdual, x, zeroseed, i)
-            load_jacobian_chunk!(out, ydual, i, N)
+            load_jacobian_chunk!(out_reshaped, ydual, i, N)
         end
 
         # do final chunk
         seed!(xdual, x, seeds, lastchunkindex, lastchunksize)
         $(ydual_compute)
-        load_jacobian_chunk!(out, ydual, lastchunkindex, lastchunksize)
+        load_jacobian_chunk!(out_reshaped, ydual, lastchunkindex, lastchunksize)
 
         $(y_definition)
 
@@ -225,7 +228,7 @@ end
                                quote
                                    cache = jacobian_cachefetch!(x, chunk, usecache)
                                    ycache = jacobian_cachefetch!(y, chunk, usecache, true)
-                                   ydual = ycache.dualvec
+                                   ydual = ycache.duals
                                    yzeroseed = zero(eltype(ycache.seeds))
                                end,
                                :(f!(seedall!(ydual, y, yzeroseed), xdual)),
@@ -244,7 +247,7 @@ end
                                quote
                                    cache = jacobian_cachefetch!(x, chunk, usecache)
                                    ycache = jacobian_cachefetch!(y, chunk, usecache, true)
-                                   ydual = ycache.dualvec
+                                   ydual = ycache.duals
                                    yzeroseed = zero(eltype(ycache.seeds))
                                end,
                                :(f!(seedall!(ydual, y, yzeroseed), xdual)),
