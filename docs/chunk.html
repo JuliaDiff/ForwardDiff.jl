@@ -1,0 +1,326 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Configuring Partial Derivative Chunks &mdash; ForwardDiff.jl 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ForwardDiff.jl 0.1.0 documentation" href="index.html"/>
+        <link rel="next" title="Accessing Lower-Order Results" href="lower_order_results.html"/>
+        <link rel="prev" title="ForwardDiff API" href="api.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+
+        
+          <a href="index.html" class="icon icon-home"> ForwardDiff.jl
+        
+
+        
+        </a>
+
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <p class="caption"><span class="caption-text">User Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">ForwardDiff API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#restrictions-on-the-target-function">Restrictions on the target function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Configuring Partial Derivative Chunks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-chunk-size-should-i-use">What chunk size should I use?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lower_order_results.html">Accessing Lower-Order Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lower_order_results.html#the-wrong-way">The Wrong Way</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lower_order_results.html#the-right-way">The Right Way</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from ForwardDiff v0.1 to v0.2</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#unexported-api-functions">Unexported API Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#setting-chunk-size">Setting Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#retrieving-lower-order-results">Retrieving Lower-Order Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#higher-order-differentiation">Higher-Order Differentiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#creating-differentiation-functions">Creating Differentiation Functions</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#dual-number-implementation">Dual Number Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#forwarddiff-s-api">ForwardDiff&#8217;s API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to Contribute</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#manually-optimizing-unary-functions">Manually Optimizing Unary Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#implementing-new-functions">Implementing New Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#unary-functions-via-calculus-jl">Unary Functions Via Calculus.jl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#manually-adding-functions-to-forwarddiff">Manually Adding Functions to ForwardDiff</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">ForwardDiff.jl</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Configuring Partial Derivative Chunks</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/chunk.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="configuring-partial-derivative-chunks">
+<h1>Configuring Partial Derivative Chunks<a class="headerlink" href="#configuring-partial-derivative-chunks" title="Permalink to this headline">¶</a></h1>
+<p>ForwardDiff performs partial derivative evaluation on one &#8220;chunk&#8221; of the input vector at a
+time. Each differentation of a chunk requires a call to the target function as well as
+additional memory proportional to the square of the chunk&#8217;s size. Thus, a smaller chunk size
+makes better use of memory bandwidth at the cost of more calls to the target function, while
+a larger chunk size reduces calls to the target function at the cost of more memory
+bandwidth.</p>
+<p>The user can specify the chunk size they wish to use by passing in <code class="docutils literal"><span class="pre">Chunk{N}()</span></code> as an
+argument to the API functions, where <code class="docutils literal"><span class="pre">N</span></code> is the desired chunk size. For example:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span class="n">julia</span><span class="o">&gt;</span> <span class="k">import</span> <span class="n">ForwardDiff</span>
+
+<span class="c"># let&#39;s use a Rosenbrock function as our target function</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span><span class="nf"> rosenbrock</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+           <span class="n">a</span> <span class="o">=</span> <span class="n">one</span><span class="p">(</span><span class="n">eltype</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+           <span class="n">b</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">a</span>
+           <span class="n">result</span> <span class="o">=</span> <span class="n">zero</span><span class="p">(</span><span class="n">eltype</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="k">in</span> <span class="mi">1</span><span class="p">:</span><span class="n">length</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+               <span class="n">result</span> <span class="o">+=</span> <span class="p">(</span><span class="n">a</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">^</span><span class="mi">2</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span><span class="o">^</span><span class="mi">2</span>
+           <span class="k">end</span>
+           <span class="k">return</span> <span class="n">result</span>
+       <span class="k">end</span>
+<span class="n">rosenbrock</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span><span class="nf"> with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
+
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">x</span> <span class="o">=</span> <span class="n">rand</span><span class="p">(</span><span class="mi">10000</span><span class="p">);</span>
+
+<span class="c"># (input length of 10000) / (chunk size of 1) = (10000 1-element chunks)</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">1</span><span class="p">}());</span>
+  <span class="mf">0.403879</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">11</span> <span class="n">allocations</span><span class="p">:</span> <span class="mf">78.469</span> <span class="n">KB</span><span class="p">)</span>
+
+<span class="c"># (input length of 10000) / (chunk size of 4) = (2500 4-element chunks)</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">4</span><span class="p">}());</span>
+  <span class="mf">0.314482</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">11</span> <span class="n">allocations</span><span class="p">:</span> <span class="mf">78.469</span> <span class="n">KB</span><span class="p">)</span>
+
+<span class="c"># (input length of 10000) / (chunk size of 10) = (1000 10-element chunks)</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">10</span><span class="p">}());</span>
+  <span class="mf">0.265994</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">11</span> <span class="n">allocations</span><span class="p">:</span> <span class="mf">78.469</span> <span class="n">KB</span><span class="p">)</span>
+
+<span class="c"># (input length of 10000) / (chunk size of 16) = (625 16-element chunks)</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">16</span><span class="p">}());</span>
+  <span class="mf">0.294078</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">11</span> <span class="n">allocations</span><span class="p">:</span> <span class="mf">78.469</span> <span class="n">KB</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If you do not explicity provide a chunk size, ForwardDiff will try to guess one for you
+based on your input vector:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+<span class="mf">0.265604</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">11</span> <span class="n">allocations</span><span class="p">:</span> <span class="mf">78.469</span> <span class="n">KB</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If your input dimension is a constant, you should explicitly select a chunk size rather than
+relying on ForwardDiff&#8217;s heuristic. There are two reasons for this. The first is that
+ForwardDiff&#8217;s heuristic depends only on the input dimension, whereas in reality the optimal
+chunk size will also depend on the target function. The second is that ForwardDiff&#8217;s
+heuristic is inherently type-unstable, which can cause the entire call to be type-unstable:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span class="c"># type-unstable if you don&#39;t manually provide a chunk size</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">code_warntype</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">);</span>
+<span class="n">Variables</span><span class="p">:</span>
+  <span class="c">#self#::ForwardDiff.#gradient</span>
+  <span class="n">f</span><span class="p">::</span><span class="c">#rosenbrock</span>
+  <span class="n">x</span><span class="p">::</span><span class="n">Array</span><span class="p">{</span><span class="kt">Float64</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span>
+
+<span class="n">Body</span><span class="p">:</span>
+  <span class="k">begin</span>
+      <span class="k">return</span> <span class="p">(</span><span class="c">#self#::ForwardDiff.#gradient)(f::#rosenbrock,x::Array{Float64,1},((Core.apply_type)(ForwardDiff.Chunk,(ForwardDiff.pickchunksize)(x::Array{Float64,1})::Int64)::Type{_&lt;:ForwardDiff.Chunk})()::ForwardDiff.Chunk{N})::Any</span>
+  <span class="k">end</span><span class="p">::</span><span class="kt">Any</span>
+
+<span class="c"># type-stable if you manually provide a chunk size</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">code_warntype</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">10</span><span class="p">}());</span>
+<span class="n">Variables</span><span class="p">:</span>
+  <span class="c">#self#::ForwardDiff.#gradient</span>
+  <span class="n">f</span><span class="p">::</span><span class="c">#rosenbrock</span>
+  <span class="n">x</span><span class="p">::</span><span class="n">Array</span><span class="p">{</span><span class="kt">Float64</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span>
+  <span class="n">chunk</span><span class="p">::</span><span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Chunk</span><span class="p">{</span><span class="mi">10</span><span class="p">}</span>
+
+<span class="n">Body</span><span class="p">:</span>
+  <span class="k">begin</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">ForwardDiff</span><span class="o">.</span><span class="c">#gradient#21)(false,#self#::ForwardDiff.#gradient,f::#rosenbrock,x::Array{Float64,1},chunk::ForwardDiff.Chunk{10})::Array{Float64,1}</span>
+  <span class="k">end</span><span class="p">::</span><span class="n">Array</span><span class="p">{</span><span class="kt">Float64</span><span class="p">,</span><span class="mi">1</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>If your input dimension is a runtime variable, you can rely on ForwardDiff&#8217;s heuristic
+without sacrificing type stability by manually asserting the output type, or - even better -
+by using the in-place API functions:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span class="c"># will be type-stable since you&#39;re asserting the output type</span>
+<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">)::</span><span class="n">Vector</span><span class="p">{</span><span class="kt">Float64</span><span class="p">}</span>
+
+<span class="c"># will be type-stable since `out` is returned, and Julia knows the type of `out`</span>
+<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="what-chunk-size-should-i-use">
+<h2>What chunk size should I use?<a class="headerlink" href="#what-chunk-size-should-i-use" title="Permalink to this headline">¶</a></h2>
+<p>The chunk size for any given problem is heavily dependent on the target function and length
+of the input vector. As such, one should generally perform their own benchmarks to determine
+which chunk size to use. Here are some things to keep in mind when selecting a chunk size:</p>
+<ul class="simple">
+<li>The max chunk size is <code class="docutils literal"><span class="pre">10</span></code>.</li>
+<li>The chunk size should generally divide evenly into the input dimension. Otherwise, ForwardDiff has to construct and utilize an extra &#8220;remainder&#8221; chunk to complete the calculation.</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="lower_order_results.html" class="btn btn-neutral float-right" title="Accessing Lower-Order Results" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="api.html" class="btn btn-neutral" title="ForwardDiff API" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Jarrett Revels, Theodore Papamarkou, Miles Lubin, and other contributors.
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
