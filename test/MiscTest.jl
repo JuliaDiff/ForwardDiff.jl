@@ -43,6 +43,18 @@ test_tensor_output = reshape([240.0  -400.0     0.0;
 
 @test_approx_eq tensor(rosenbrock, [0.1, 0.2, 0.3]) test_tensor_output
 
+test_nested_jacobian_output = [-sin(1)  0.0     0.0;
+                               -0.0    -0.0    -0.0;
+                               -0.0    -0.0    -0.0;
+                                0.0     0.0     0.0;
+                               -0.0    -sin(2) -0.0;
+                               -0.0    -0.0    -0.0;
+                                0.0     0.0     0.0;
+                               -0.0    -0.0    -0.0;
+                               -0.0    -0.0    -sin(3)]
+
+@test_approx_eq ForwardDiff.jacobian(x -> ForwardDiff.jacobian(sin, x), [1, 2, 3]) test_nested_jacobian_output
+
 # Issue #59 example #
 #-------------------#
 
@@ -63,6 +75,15 @@ testf2 = x -> testdf(x[1]) * f(x[2])
 x = rand(3, 3)
 
 @test_approx_eq ForwardDiff.jacobian(inv, x) -kron(inv(x'), inv(x))
+
+x = [1, 2, 3]
+
+function vector_hessian(f, x)
+   n = length(x)
+   out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
+   return reshape(out, n, n)
+end
+
 
 ########################
 # Conversion/Promotion #
