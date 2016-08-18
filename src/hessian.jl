@@ -81,7 +81,7 @@ end
 
 function compute_vector_mode_hessian(f, x, chunk, usecache)
     cache = hessian_cachefetch!(x, chunk, usecache)
-    xdual = cache.dualvec
+    xdual = cache.duals
     seedhess!(xdual, x, cache.inseeds, cache.outseeds)
     return f(xdual)
 end
