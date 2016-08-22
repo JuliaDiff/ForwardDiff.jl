@@ -60,3 +60,17 @@ julia> ForwardDiff.hessian(f, x)
 - 9/29/2015: [ForwardDiff v0.1.1 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3580).
 
 - 9/3/2015: We're releasing ForwardDiff v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
+
+## Publications
+
+If you find ForwardDiff useful in your work, we kindly request that you cite [the following paper](https://arxiv.org/abs/1607.07892):
+
+```
+@article{RevelsLubinPapamarkou2016,
+    title = {Forward-Mode Automatic Differentiation in Julia},
+   author = {{Revels}, J. and {Lubin}, M. and {Papamarkou}, T.},
+  journal = {arXiv:1607.07892 [cs.MS]},
+     year = {2016},
+     url = {https://arxiv.org/abs/1607.07892}
+}
+```
