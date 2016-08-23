@@ -16,7 +16,8 @@ function JacobianCache{N}(x, chunk::Chunk{N})
     return JacobianCache{N,T,typeof(duals)}(duals, seeds)
 end
 
-@inline jacobian_dual_type{T,M,N}(::Array{T,M}, ::Chunk{N}) = Array{Dual{N,T},M}
+@inline jacobian_dual_type{N}(arr, ::Chunk{N}) = Array{Dual{N,eltype(arr)},ndims(arr)}
+@inline jacobian_dual_type{T,M,N}(::AbstractArray{T,M}, ::Chunk{N}) = Array{Dual{N,T},M}
 
 Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
 
@@ -56,7 +57,8 @@ function HessianCache{N}(x, chunk::Chunk{N})
     return HessianCache{N,T,typeof(duals)}(duals, inseeds, outseeds)
 end
 
-@inline hessian_dual_type{T,M,N}(::Array{T,M}, ::Chunk{N}) = Array{Dual{N,Dual{N,T}},M}
+@inline hessian_dual_type{N}(arr, ::Chunk{N}) = Array{Dual{Dual{N,eltype(arr)}},ndims(arr)}
+@inline hessian_dual_type{T,M,N}(::AbstractArray{T,M}, ::Chunk{N}) = Array{Dual{N,Dual{N,T}},M}
 
 Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, cache.outseeds)
 
