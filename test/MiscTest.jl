@@ -2,6 +2,7 @@ module MiscTest
 
 import NaNMath
 
+using Compat
 using Base.Test
 using ForwardDiff
 
@@ -72,18 +73,19 @@ testf2 = x -> testdf(x[1]) * f(x[2])
 # Higher-Dimensional Differentiation #
 ######################################
 
-x = rand(3, 3)
+x = rand(5, 5)
 
 @test_approx_eq ForwardDiff.jacobian(inv, x) -kron(inv(x'), inv(x))
 
-x = [1, 2, 3]
+#########################################
+# Differentiation with non-Array inputs #
+#########################################
 
-function vector_hessian(f, x)
-   n = length(x)
-   out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
-   return reshape(out, n, n)
-end
+x = rand(5, 5)
+jinvx = ForwardDiff.jacobian(inv, x)
 
+@test_approx_eq jinvx ForwardDiff.jacobian(inv, sparse(x))
+@test_approx_eq jinvx ForwardDiff.jacobian(inv, Compat.view(x, 1:5, 1:5))
 
 ########################
 # Conversion/Promotion #
