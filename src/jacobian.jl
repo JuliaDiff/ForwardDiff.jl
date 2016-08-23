@@ -212,7 +212,7 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
 
         $(y_definition)
 
-        return out
+        return reshape(out_reshaped, size(out))
     end
 end
 
