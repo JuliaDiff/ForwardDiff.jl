@@ -11,13 +11,13 @@ end
 
 function JacobianCache{N}(x, chunk::Chunk{N})
     T = eltype(x)
-    duals = Array{Dual{N,T}}(size(x))
+    duals = similar(x, Dual{N,T}, size(x))
     seeds = construct_seeds(T, chunk)
     return JacobianCache{N,T,typeof(duals)}(duals, seeds)
 end
 
-@inline jacobian_dual_type{N}(arr, ::Chunk{N}) = Array{Dual{N,eltype(arr)},ndims(arr)}
-@inline jacobian_dual_type{T,M,N}(::AbstractArray{T,M}, ::Chunk{N}) = Array{Dual{N,T},M}
+@inline jacobian_dual_type{N}(arr, ::Chunk{N}) = typeof(similar(arr, Dual{N,eltype(arr)},size(arr)))
+@inline jacobian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = typeof(similar(arr, Dual{N,T}, size(arr)))
 
 Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
 
@@ -51,14 +51,14 @@ end
 
 function HessianCache{N}(x, chunk::Chunk{N})
     T = eltype(x)
-    duals = Array{Dual{N,Dual{N,T}}}(size(x))
+    duals = similar(x, Dual{N,Dual{N,T}}, size(x))
     inseeds = construct_seeds(T, chunk)
     outseeds = construct_seeds(Dual{N,T}, chunk)
     return HessianCache{N,T,typeof(duals)}(duals, inseeds, outseeds)
 end
 
-@inline hessian_dual_type{N}(arr, ::Chunk{N}) = Array{Dual{Dual{N,eltype(arr)}},ndims(arr)}
-@inline hessian_dual_type{T,M,N}(::AbstractArray{T,M}, ::Chunk{N}) = Array{Dual{N,Dual{N,T}},M}
+@inline hessian_dual_type{N}(arr, ::Chunk{N}) = typeof(similar(arr, Dual{Dual{N,eltype(arr)}}, size(arr)))
+@inline hessian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = typeof(similar(arr, Dual{N,Dual{N,T}}, size(arr)))
 
 Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, cache.outseeds)
 
