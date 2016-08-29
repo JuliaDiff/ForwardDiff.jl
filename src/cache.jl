@@ -18,7 +18,7 @@ end
 
 @inline Base.@pure @generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
     pnum = eltype_param_number(x.name.primary)
-    tname = x.name.name
+    tname = x.name.primary
     tparams = collect(x.parameters)
     tparams[pnum] = S
     newtype = :($(tname){$(tparams...)})
