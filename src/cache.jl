@@ -1,3 +1,30 @@
+####################################
+# AbstractArray eltype replacement #
+####################################
+function eltype_param_number(T)
+    if T.name.name == :AbstractArray
+        return 1
+    else
+        T_super = supertype(T)
+        param_number = eltype_param_number(T_super)
+        tv = T_super.parameters[param_number]
+        for i = 1:T.parameters.length
+            if tv == T.parameters[i]
+                return i
+            end
+        end
+    end
+end
+
+@inline Base.@pure @generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
+    pnum = eltype_param_number(x.name.primary)
+    tname = x.name.name
+    tparams = collect(x.parameters)
+    tparams[pnum] = S
+    newtype = :($(tname){$(tparams...)})
+    return newtype
+end
+
 #######################################
 # caching for Jacobians and gradients #
 #######################################
@@ -16,8 +43,7 @@ function JacobianCache{N}(x, chunk::Chunk{N})
     return JacobianCache{N,T,typeof(duals)}(duals, seeds)
 end
 
-@inline jacobian_dual_type{N}(arr, ::Chunk{N}) = typeof(similar(arr, Dual{N,eltype(arr)},size(arr)))
-@inline jacobian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = typeof(similar(arr, Dual{N,T}, size(arr)))
+@inline jacobian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = replace_eltype(arr, Dual{N,T})
 
 Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
 
@@ -57,8 +83,7 @@ function HessianCache{N}(x, chunk::Chunk{N})
     return HessianCache{N,T,typeof(duals)}(duals, inseeds, outseeds)
 end
 
-@inline hessian_dual_type{N}(arr, ::Chunk{N}) = typeof(similar(arr, Dual{Dual{N,eltype(arr)}}, size(arr)))
-@inline hessian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = typeof(similar(arr, Dual{N,Dual{N,T}}, size(arr)))
+@inline hessian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = replace_eltype(arr, Dual{N,Dual{N,T}})
 
 Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, cache.outseeds)
 
