@@ -1,7 +1,7 @@
 ####################################
 # AbstractArray eltype replacement #
 ####################################
-function eltype_param_number(T)
+function eltype_param_number{T<:AbstractArray}(::Type{T})
     if T.name.name == :AbstractArray
         return 1
     else
@@ -17,16 +17,20 @@ function eltype_param_number(T)
 end
 
 @inline Base.@pure @generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
-    pnum = eltype_param_number(x.name.primary)
-    tname = x.name.primary
-    tparams = collect(x.parameters)
-    tparams[pnum] = S
-    newtype = :($(tname){$(tparams...)})
-    return newtype
+    if x.mutable
+        pnum = eltype_param_number(x.name.primary)
+        tname = x.name.primary
+        tparams = collect(x.parameters)
+        tparams[pnum] = S
+        newtype = :($(tname){$(tparams...)})
+        return newtype
+    else
+        return :(typeof(similar(x, S, size(x))))
+    end
 end
 
 # Fallback method
-@inline replace_eltype{T}(x, ::Type{S}) = typeof(similar(x, S, size(x)))
+@inline replace_eltype{T}(x, ::Type{T}) = typeof(similar(x, T, size(x)))
 
 #######################################
 # caching for Jacobians and gradients #
