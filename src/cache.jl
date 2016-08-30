@@ -29,9 +29,6 @@ end
     end
 end
 
-# Fallback method
-@inline replace_eltype{T}(x, ::Type{T}) = typeof(similar(x, T, size(x)))
-
 #######################################
 # caching for Jacobians and gradients #
 #######################################
