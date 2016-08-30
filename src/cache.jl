@@ -16,17 +16,23 @@ function eltype_param_number{T<:AbstractArray}(::Type{T})
     end
 end
 
-@inline @generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
+@generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
     if x.mutable
         pnum = eltype_param_number(x.name.primary)
         tname = x.name.primary
         tparams = collect(x.parameters)
         tparams[pnum] = S
-        newtype = :($(tname){$(tparams...)})
-        return newtype
+        newtype = quote
+            $(Expr(:meta, :inline))
+            $(tname){$(tparams...)}
+        end
     else
-        return :(typeof(similar(x, S, size(x))))
+        newtype = quote
+            $(Expr(:meta, :inline))
+            typeof(similar(x, S, size(x)))
+        end
     end
+    return newtype
 end
 
 #######################################
