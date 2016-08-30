@@ -81,10 +81,15 @@ x = rand(5, 5)
 # Differentiation with non-Array inputs #
 #########################################
 
-x = rand(5, 5)
-jinvx = ForwardDiff.jacobian(inv, x)
+x = rand(5,5)
 
-@test_approx_eq jinvx ForwardDiff.jacobian(inv, sparse(x))
+# Sparse
+f = x -> sum(sin, x) + prod(tan, x) * sum(sqrt, x)
+gfx = ForwardDiff.gradient(f, x)
+@test_approx_eq gfx ForwardDiff.gradient(f, sparse(x))
+
+# Views
+jinvx = ForwardDiff.jacobian(inv, x)
 @test_approx_eq jinvx ForwardDiff.jacobian(inv, Compat.view(x, 1:5, 1:5))
 
 ########################
