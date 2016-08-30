@@ -1,3 +1,40 @@
+####################################
+# AbstractArray eltype replacement #
+####################################
+function eltype_param_number{T<:AbstractArray}(::Type{T})
+    if T.name.name == :AbstractArray
+        return 1
+    else
+        T_super = supertype(T)
+        param_number = eltype_param_number(T_super)
+        tv = T_super.parameters[param_number]
+        for i = 1:T.parameters.length
+            if tv == T.parameters[i]
+                return i
+            end
+        end
+    end
+end
+
+@generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
+    if x.mutable
+        pnum = eltype_param_number(x.name.primary)
+        tname = x.name.primary
+        tparams = collect(x.parameters)
+        tparams[pnum] = S
+        newtype = quote
+            $(Expr(:meta, :inline))
+            $(tname){$(tparams...)}
+        end
+    else
+        newtype = quote
+            $(Expr(:meta, :inline))
+            typeof(similar(x, S, size(x)))
+        end
+    end
+    return newtype
+end
+
 #######################################
 # caching for Jacobians and gradients #
 #######################################
@@ -11,19 +48,18 @@ end
 
 function JacobianCache{N}(x, chunk::Chunk{N})
     T = eltype(x)
-    duals = Array{Dual{N,T}}(size(x))
+    duals = similar(x, Dual{N,T}, size(x))
     seeds = construct_seeds(T, chunk)
     return JacobianCache{N,T,typeof(duals)}(duals, seeds)
 end
 
-@inline jacobian_dual_type{N}(arr, ::Chunk{N}) = Array{Dual{N,eltype(arr)},ndims(arr)}
-@inline jacobian_dual_type{T,M,N}(::AbstractArray{T,M}, ::Chunk{N}) = Array{Dual{N,T},M}
+@inline jacobian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = replace_eltype(arr, Dual{N,T})
 
 Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
 
-@eval function multithread_jacobian_cachefetch!{N}(x, chunk::Chunk{N}, usecache::Bool,
+@eval function multithread_jacobian_cachefetch!{T<:AbstractArray, N}(x::T, chunk::Chunk{N}, usecache::Bool,
                                                    alt::Bool = false)
-    T, xlen = eltype(x), length(x)
+    S, xlen = eltype(x), length(x)
     if usecache
         result = get!(JACOBIAN_CACHE, (xlen, N, T, alt)) do
             construct_jacobian_caches(x, chunk)
@@ -31,7 +67,7 @@ Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
     else
         result = construct_jacobian_caches(x, chunk)
     end
-    return result::NTuple{$NTHREADS,JacobianCache{N,T,jacobian_dual_type(x, chunk)}}
+    return result::NTuple{$NTHREADS,JacobianCache{N,S,jacobian_dual_type(x, chunk)}}
 end
 
 jacobian_cachefetch!(args...) = multithread_jacobian_cachefetch!(args...)[compat_threadid()]
@@ -51,19 +87,18 @@ end
 
 function HessianCache{N}(x, chunk::Chunk{N})
     T = eltype(x)
-    duals = Array{Dual{N,Dual{N,T}}}(size(x))
+    duals = similar(x, Dual{N,Dual{N,T}}, size(x))
     inseeds = construct_seeds(T, chunk)
     outseeds = construct_seeds(Dual{N,T}, chunk)
     return HessianCache{N,T,typeof(duals)}(duals, inseeds, outseeds)
 end
 
-@inline hessian_dual_type{N}(arr, ::Chunk{N}) = Array{Dual{Dual{N,eltype(arr)}},ndims(arr)}
-@inline hessian_dual_type{T,M,N}(::AbstractArray{T,M}, ::Chunk{N}) = Array{Dual{N,Dual{N,T}},M}
+@inline hessian_dual_type{T,M,N}(arr::AbstractArray{T,M}, ::Chunk{N}) = replace_eltype(arr, Dual{N,Dual{N,T}})
 
 Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, cache.outseeds)
 
-@eval function multithread_hessian_cachefetch!{N}(x, chunk::Chunk{N}, usecache::Bool)
-    T = eltype(x)
+@eval function multithread_hessian_cachefetch!{T<:AbstractArray,N}(x::T, chunk::Chunk{N}, usecache::Bool)
+    S = eltype(x)
     if usecache
         result = get!(HESSIAN_CACHE, (N, T)) do
             construct_hessian_caches(x, chunk)
@@ -71,7 +106,7 @@ Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, 
     else
         result = construct_hessian_caches(x, chunk)
     end
-    return result::NTuple{$NTHREADS,HessianCache{N,T,hessian_dual_type(x, chunk)}}
+    return result::NTuple{$NTHREADS,HessianCache{N,S,hessian_dual_type(x, chunk)}}
 end
 
 hessian_cachefetch!(args...) = multithread_hessian_cachefetch!(args...)[compat_threadid()]
