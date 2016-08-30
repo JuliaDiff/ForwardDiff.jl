@@ -16,7 +16,7 @@ function eltype_param_number{T<:AbstractArray}(::Type{T})
     end
 end
 
-@inline Base.@pure @generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
+@inline @generated function replace_eltype{T,S}(x::AbstractArray{T}, ::Type{S})
     if x.mutable
         pnum = eltype_param_number(x.name.primary)
         tname = x.name.primary
