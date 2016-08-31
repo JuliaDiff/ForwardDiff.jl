@@ -1,6 +1,7 @@
 ####################################
 # AbstractArray eltype replacement #
 ####################################
+
 function eltype_param_number{T<:AbstractArray}(::Type{T})
     if T.name.name == :AbstractArray
         return 1
@@ -57,7 +58,7 @@ end
 
 Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
 
-@eval function multithread_jacobian_cachefetch!{T<:AbstractArray, N}(x::T, chunk::Chunk{N}, usecache::Bool,
+@eval function multithread_jacobian_cachefetch!{N}(x, chunk::Chunk{N}, usecache::Bool,
                                                    alt::Bool = false)
     S, xlen = eltype(x), length(x)
     if usecache
@@ -97,7 +98,7 @@ end
 
 Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, cache.outseeds)
 
-@eval function multithread_hessian_cachefetch!{T<:AbstractArray,N}(x::T, chunk::Chunk{N}, usecache::Bool)
+@eval function multithread_hessian_cachefetch!{N}(x, chunk::Chunk{N}, usecache::Bool)
     S = eltype(x)
     if usecache
         result = get!(HESSIAN_CACHE, (N, T)) do
