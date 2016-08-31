@@ -1,6 +1,7 @@
 ####################################
 # AbstractArray eltype replacement #
 ####################################
+
 function eltype_param_number{T<:AbstractArray}(::Type{T})
     if T.name.name == :AbstractArray
         return 1
@@ -57,17 +58,17 @@ end
 
 Base.copy(cache::JacobianCache) = JacobianCache(copy(cache.duals), cache.seeds)
 
-@eval function multithread_jacobian_cachefetch!{T<:AbstractArray, N}(x::T, chunk::Chunk{N}, usecache::Bool,
+@eval function multithread_jacobian_cachefetch!{X,N}(x::X, chunk::Chunk{N}, usecache::Bool,
                                                    alt::Bool = false)
-    S, xlen = eltype(x), length(x)
+    T, xlen = eltype(x), length(x)
     if usecache
-        result = get!(JACOBIAN_CACHE, (xlen, N, T, alt)) do
+        result = get!(JACOBIAN_CACHE, (xlen, N, X, alt)) do
             construct_jacobian_caches(x, chunk)
         end
     else
         result = construct_jacobian_caches(x, chunk)
     end
-    return result::NTuple{$NTHREADS,JacobianCache{N,S,jacobian_dual_type(x, chunk)}}
+    return result::NTuple{$NTHREADS,JacobianCache{N,T,jacobian_dual_type(x, chunk)}}
 end
 
 jacobian_cachefetch!(args...) = multithread_jacobian_cachefetch!(args...)[compat_threadid()]
@@ -97,16 +98,16 @@ end
 
 Base.copy(cache::HessianCache) = HessianCache(copy(cache.duals), cache.inseeds, cache.outseeds)
 
-@eval function multithread_hessian_cachefetch!{T<:AbstractArray,N}(x::T, chunk::Chunk{N}, usecache::Bool)
-    S = eltype(x)
+@eval function multithread_hessian_cachefetch!{X,N}(x::X, chunk::Chunk{N}, usecache::Bool)
+    T = eltype(x)
     if usecache
-        result = get!(HESSIAN_CACHE, (N, T)) do
+        result = get!(HESSIAN_CACHE, (N, X)) do
             construct_hessian_caches(x, chunk)
         end
     else
         result = construct_hessian_caches(x, chunk)
     end
-    return result::NTuple{$NTHREADS,HessianCache{N,S,hessian_dual_type(x, chunk)}}
+    return result::NTuple{$NTHREADS,HessianCache{N,T,hessian_dual_type(x, chunk)}}
 end
 
 hessian_cachefetch!(args...) = multithread_hessian_cachefetch!(args...)[compat_threadid()]
