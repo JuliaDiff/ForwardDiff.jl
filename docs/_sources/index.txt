@@ -14,6 +14,7 @@ This `wikipedia page`_ on automatic differentiation is a useful resource for lea
    :caption: User Documentation
 
    install.rst
+   limitations.rst
    api.rst
    chunk.rst
    lower_order_results.rst

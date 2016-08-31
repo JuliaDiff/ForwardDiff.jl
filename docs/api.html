@@ -32,7 +32,7 @@
   
     <link rel="top" title="ForwardDiff.jl 0.2.3 documentation" href="index.html"/>
         <link rel="next" title="Configuring Partial Derivative Chunks" href="chunk.html"/>
-        <link rel="prev" title="Installation and Version Requirements" href="install.html"/> 
+        <link rel="prev" title="Limitations of ForwardDiff" href="limitations.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -74,8 +74,8 @@
               <p class="caption"><span class="caption-text">User Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations of ForwardDiff</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">ForwardDiff API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#restrictions-on-the-target-function">Restrictions on the target function</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
@@ -156,19 +156,9 @@
             
   <div class="section" id="forwarddiff-api">
 <h1>ForwardDiff API<a class="headerlink" href="#forwarddiff-api" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="restrictions-on-the-target-function">
-<h2>Restrictions on the target function<a class="headerlink" href="#restrictions-on-the-target-function" title="Permalink to this headline">¶</a></h2>
-<p>ForwardDiff can only differentiate functions that adhere to the following rules:</p>
-<ul class="simple">
-<li><strong>The function can only be composed of generic Julia functions.</strong> ForwardDiff cannot propagate derivative information through non-Julia code. Thus, your function may not work if it makes calls to external, non-Julia programs, e.g. uses explicit BLAS calls instead of <code class="docutils literal"><span class="pre">Ax_mul_Bx</span></code>-style functions.</li>
-<li><strong>The function must be unary (i.e., only accept a single argument).</strong> The <code class="docutils literal"><span class="pre">jacobian</span></code> function is the exception to this restriction; see below for details.</li>
-<li><strong>The function must accept an argument whose type is a subtype of</strong> <code class="docutils literal"><span class="pre">Vector</span></code> <strong>or</strong> <code class="docutils literal"><span class="pre">Real</span></code>. The argument type does not need to be annotated in the function definition.</li>
-<li><strong>The function&#8217;s argument type cannot be too restrictively annotated.</strong> In this case, &#8220;too restrictive&#8221; means more restrictive than <code class="docutils literal"><span class="pre">x::Vector</span></code> or <code class="docutils literal"><span class="pre">x::Real</span></code>.</li>
-<li><strong>The function should be</strong> <a class="reference external" href="http://julia.readthedocs.org/en/latest/manual/performance-tips/#write-type-stable-functions">type-stable</a> <strong>.</strong> This is not a strict limitation in every case, but in some cases, lack of type-stability can cause errors. At the very least, type-instablity can severely hinder performance.</li>
-</ul>
-</div>
 <div class="section" id="derivatives-of">
 <h2>Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span><a class="headerlink" href="#derivatives-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.derivative</span></code> to differentiate functions of the form <code class="docutils literal"><span class="pre">f(::Real)::Real</span></code> and <code class="docutils literal"><span class="pre">f(::Real)::AbstractArray</span></code>.</p>
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.derivative!(out, f, x)</code></dt>
@@ -192,6 +182,7 @@ calling <code class="docutils literal"><span class="pre">ForwardDiff.derivative(
 </div>
 <div class="section" id="gradients-of">
 <h2>Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span><a class="headerlink" href="#gradients-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.gradient</span></code> to differentiate functions of the form <code class="docutils literal"><span class="pre">f(::AbstractArray)::Real</span></code>.</p>
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.gradient!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)</code></dt>
@@ -224,6 +215,7 @@ by calling <code class="docutils literal"><span class="pre">ForwardDiff.gradient
 </div>
 <div class="section" id="jacobians-of">
 <h2>Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span><a class="headerlink" href="#jacobians-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.jacobian</span></code> to differentiate functions of the form <code class="docutils literal"><span class="pre">f(::AbstractArray)::AbstractArray</span></code>.</p>
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.jacobian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)</code></dt>
@@ -269,6 +261,7 @@ called as <code class="docutils literal"><span class="pre">f!(y,</span> <span cl
 </div>
 <div class="section" id="hessians-of">
 <h2>Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span><a class="headerlink" href="#hessians-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.hessian</span></code> to perform second-order differentiation on functions of the form <code class="docutils literal"><span class="pre">f(::AbstractArray)::Real</span></code>.</p>
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.hessian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)</code></dt>
@@ -362,7 +355,7 @@ form <code class="docutils literal"><span class="pre">f!(y,</span> <span class="
         <a href="chunk.html" class="btn btn-neutral float-right" title="Configuring Partial Derivative Chunks" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="install.html" class="btn btn-neutral" title="Installation and Version Requirements" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="limitations.html" class="btn btn-neutral" title="Limitations of ForwardDiff" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -1,25 +1,10 @@
 ForwardDiff API
 ===============
 
-Restrictions on the target function
------------------------------------
-
-ForwardDiff can only differentiate functions that adhere to the following rules:
-
-- **The function can only be composed of generic Julia functions.** ForwardDiff cannot propagate derivative information through non-Julia code. Thus, your function may not work if it makes calls to external, non-Julia programs, e.g. uses explicit BLAS calls instead of ``Ax_mul_Bx``-style functions.
-
-- **The function must be unary (i.e., only accept a single argument).** The ``jacobian`` function is the exception to this restriction; see below for details.
-
-- **The function must accept an argument whose type is a subtype of** ``Vector`` **or** ``Real``. The argument type does not need to be annotated in the function definition.
-
-- **The function's argument type cannot be too restrictively annotated.** In this case, "too restrictive" means more restrictive than ``x::Vector`` or ``x::Real``.
-
-- **The function should be** `type-stable`_ **.** This is not a strict limitation in every case, but in some cases, lack of type-stability can cause errors. At the very least, type-instablity can severely hinder performance.
-
-.. _`type-stable`: http://julia.readthedocs.org/en/latest/manual/performance-tips/#write-type-stable-functions
-
 Derivatives of :math:`f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}`
 --------------------------------------------------------------------------------------------------
+
+Use ``ForwardDiff.derivative`` to differentiate functions of the form ``f(::Real)::Real`` and ``f(::Real)::AbstractArray``.
 
 .. function:: ForwardDiff.derivative!(out, f, x)
 
@@ -36,7 +21,9 @@ Derivatives of :math:`f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times
     Compute and return :math:`f'(x)`.
 
 Gradients of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}`
--------------------------------------------------------
+------------------------------------------------------------------------------------------------
+
+Use ``ForwardDiff.gradient`` to differentiate functions of the form ``f(::AbstractArray)::Real``.
 
 .. function:: ForwardDiff.gradient!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
@@ -66,7 +53,9 @@ Gradients of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}
     Compute and return :math:`\nabla f(\vec{x})`.
 
 Jacobians of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}`
----------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Use ``ForwardDiff.jacobian`` to differentiate functions of the form ``f(::AbstractArray)::AbstractArray``.
 
 .. function:: ForwardDiff.jacobian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); usecache = true)
 
@@ -104,7 +93,9 @@ Jacobians of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}
     called as ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``.
 
 Hessians of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}`
-------------------------------------------------------
+-----------------------------------------------------------------------------------------------
+
+Use ``ForwardDiff.hessian`` to perform second-order differentiation on functions of the form ``f(::AbstractArray)::Real``.
 
 .. function:: ForwardDiff.hessian!(out, f, x, chunk::Chunk = ForwardDiff.pickchunk(x); multithread = false, usecache = true)
 
