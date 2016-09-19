@@ -89,17 +89,33 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
         @test floor(Int, FDNUM2) === floor(Int, PRIMAL2)
         @test floor(Int, NESTED_FDNUM) === floor(Int, PRIMAL)
 
+        @test floor(FDNUM) === floor(PRIMAL)
+        @test floor(FDNUM2) === floor(PRIMAL2)
+        @test floor(NESTED_FDNUM) === floor(PRIMAL)
+
         @test ceil(Int, FDNUM) === ceil(Int, PRIMAL)
         @test ceil(Int, FDNUM2) === ceil(Int, PRIMAL2)
         @test ceil(Int, NESTED_FDNUM) === ceil(Int, PRIMAL)
+
+        @test ceil(FDNUM) === ceil(PRIMAL)
+        @test ceil(FDNUM2) === ceil(PRIMAL2)
+        @test ceil(NESTED_FDNUM) === ceil(PRIMAL)
 
         @test trunc(Int, FDNUM) === trunc(Int, PRIMAL)
         @test trunc(Int, FDNUM2) === trunc(Int, PRIMAL2)
         @test trunc(Int, NESTED_FDNUM) === trunc(Int, PRIMAL)
 
+        @test trunc(FDNUM) === trunc(PRIMAL)
+        @test trunc(FDNUM2) === trunc(PRIMAL2)
+        @test trunc(NESTED_FDNUM) === trunc(PRIMAL)
+
         @test round(Int, FDNUM) === round(Int, PRIMAL)
         @test round(Int, FDNUM2) === round(Int, PRIMAL2)
         @test round(Int, NESTED_FDNUM) === round(Int, PRIMAL)
+
+        @test round(FDNUM) === round(PRIMAL)
+        @test round(FDNUM2) === round(PRIMAL2)
+        @test round(NESTED_FDNUM) === round(PRIMAL)
     end
 
     @test hash(FDNUM) === hash(PRIMAL)

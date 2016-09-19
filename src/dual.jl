@@ -71,11 +71,16 @@ Base.eps(n::Dual) = eps(value(n))
 Base.eps{D<:Dual}(::Type{D}) = eps(numtype(D))
 
 Base.floor{T<:Real}(::Type{T}, n::Dual) = floor(T, value(n))
-Base.ceil{T<:Real}(::Type{T}, n::Dual) = ceil(T, value(n))
-Base.trunc{T<:Real}(::Type{T}, n::Dual) = trunc(T, value(n))
-Base.round{T<:Real}(::Type{T}, n::Dual) = round(T, value(n))
+Base.floor(n::Dual) = floor(value(n))
 
-const FDNUM_HASH = hash(Dual)
+Base.ceil{T<:Real}(::Type{T}, n::Dual) = ceil(T, value(n))
+Base.ceil(n::Dual) = ceil(value(n))
+
+Base.trunc{T<:Real}(::Type{T}, n::Dual) = trunc(T, value(n))
+Base.trunc(n::Dual) = trunc(value(n))
+
+Base.round{T<:Real}(::Type{T}, n::Dual) = round(T, value(n))
+Base.round(n::Dual) = round(value(n))
 
 Base.hash(n::Dual) = hash(value(n))
 Base.hash(n::Dual, hsh::UInt64) = hash(value(n), hsh)
