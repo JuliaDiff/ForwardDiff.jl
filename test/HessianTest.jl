@@ -39,7 +39,7 @@ for c in (Chunk{1}(), Chunk{2}(), Chunk{3}())
     if ForwardDiff.IS_MULTITHREADED_JULIA
         @test_approx_eq h ForwardDiff.hessian(rosenbrock, x, c; multithread = true)
 
-        out = similar(x)
+        out = similar(x, 3, 3)
         ForwardDiff.hessian!(out, rosenbrock, x, c; multithread = true)
         @test_approx_eq out h
 
