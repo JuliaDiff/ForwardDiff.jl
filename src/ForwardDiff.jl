@@ -14,7 +14,7 @@ import NaNMath
 # multithreading #
 #----------------#
 
-const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923" && Base.Threads.nthreads() > 1
+const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923"
 
 if IS_MULTITHREADED_JULIA
     const NTHREADS = Base.Threads.nthreads()

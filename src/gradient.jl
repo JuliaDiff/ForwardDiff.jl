@@ -177,16 +177,16 @@ if IS_MULTITHREADED_JULIA
 
             # fetch and seed work vectors
             caches = multithread_jacobian_cachefetch!(x, chunk, usecache)
-            zeroseed = zero(eltype(seeds))
+            current_cache = caches[compat_threadid()]
+            current_xdual = current_cache.duals
+            current_seeds = current_cache.seeds
+            zeroseed = zero(eltype(current_seeds))
 
             Base.Threads.@threads for t in 1:NTHREADS
                 seedall!(caches[t].duals, x, zeroseed)
             end
 
             # do first chunk manually to calculate output type
-            current_cache = caches[compat_threadid()]
-            current_xdual = current_cache.duals
-            current_seeds = current_cache.seeds
             seed!(current_xdual, x, current_seeds, 1)
             current_dual = f(current_xdual)
             seed!(current_xdual, x, zeroseed, 1)
@@ -200,14 +200,14 @@ if IS_MULTITHREADED_JULIA
                 local chunk_xdual = chunk_cache.duals
                 local chunk_seeds = chunk_cache.seeds
                 local chunk_index = ((c - 1) * N + 1)
-                seed!(chunk_xdual, x, seeds, chunk_index)
+                seed!(chunk_xdual, x, chunk_seeds, chunk_index)
                 local chunk_dual = f(chunk_xdual)
                 seed!(chunk_xdual, x, zeroseed, chunk_index)
                 load_gradient_chunk!(out, chunk_dual, chunk_index, N)
             end
 
             # do final chunk
-            seed!(current_xdual, x, seeds, lastchunkindex, lastchunksize)
+            seed!(current_xdual, x, current_seeds, lastchunkindex, lastchunksize)
             current_dual = f(current_xdual)
             load_gradient_chunk!(out, current_dual, lastchunkindex, lastchunksize)
 
@@ -219,7 +219,7 @@ if IS_MULTITHREADED_JULIA
     end
 
     @eval function multithread_chunk_mode_gradient{N}(f, x, chunk::Chunk{N}, usecache)
-        $(multithread_chunk_mode_expr(:(out = similar(x, numtype(dual)))))
+        $(multithread_chunk_mode_expr(:(out = similar(x, numtype(current_dual)))))
     end
 
     @eval function multithread_chunk_mode_gradient!{N}(out, f, x, chunk::Chunk{N}, usecache)
