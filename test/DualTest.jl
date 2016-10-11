@@ -14,6 +14,12 @@ samerng() = MersenneTwister(1)
 # exponent by one
 intrand(T) = T == Int ? rand(2:10) : rand(T)
 
+# fix testing issue with Base.hypot(::Int...) undefined in 0.4
+if v"0.4" <= VERSION < v"0.5"
+    Base.hypot(x::Int, y::Int) = Base.hypot(Float64(x), Float64(y))
+    Base.hypot(x, y, z) = hypot(hypot(x, y), z)
+end
+
 for N in (0,3), M in (0,4), T in (Int, Float32)
     println("  ...testing Dual{$N,$T} and Dual{$N,Dual{$M,$T}}")
 
@@ -405,6 +411,20 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
             end
         end
     end
+
+    # Manually Optimized Functions #
+    # ---------------------------- #
+
+    let
+        x = FDNUM
+        y = FDNUM2
+
+        @test isapprox(hypot(x, y), sqrt(x*x + y*y), rtol=1e-6)
+        @test isapprox(hypot(x, y, x), sqrt(x*x + y*y + x*x), rtol=1e-6)
+        @test isapprox(collect(ForwardDiff.sincos(x)), [sin(x), cos(x)], rtol=1e-6)
+
+    end
+
 end
 
 end # module
