@@ -413,17 +413,11 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     end
 
     # Manually Optimized Functions #
-    # ---------------------------- #
+    #------------------------------#
 
-    let
-        x = FDNUM
-        y = FDNUM2
-
-        @test isapprox(hypot(x, y), sqrt(x*x + y*y), rtol=1e-6)
-        @test isapprox(hypot(x, y, x), sqrt(x*x + y*y + x*x), rtol=1e-6)
-        @test isapprox(collect(ForwardDiff.sincos(x)), [sin(x), cos(x)], rtol=1e-6)
-
-    end
+    test_approx_diffnums(hypot(FDNUM, FDNUM2), sqrt(FDNUM^2 + FDNUM2^2))
+    test_approx_diffnums(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
+    map(test_approx_diffnums, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM)))
 
 end
 

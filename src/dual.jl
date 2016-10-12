@@ -318,22 +318,11 @@ end
     return Dual(sqrtv, deriv * partials(n))
 end
 
-@inline Base.hypot{N}(x::Dual{N}, y::Dual{N}) = calc_hypot(x, y)
-@inline Base.hypot(x::Dual, y::Real) = calc_hypot(x, y)
-@inline Base.hypot(x::Real, y::Dual) = calc_hypot(x, y)
-
 @inline function calc_hypot(x, y)
     vx = value(x)
     vy = value(y)
     h = hypot(vx, vy)
     return Dual(h, (vx/h) * partials(x) + (vy/h) * partials(y))
-end
-
-# define hypot(x,y,z) for combinations of {Dual,Real}
-DualReal = (:Dual, :Real)
-for A in DualReal, B in DualReal, C in DualReal
-    (A === :Real && B === :Real && C === :Real) && continue
-    @eval(@inline Base.hypot(x::$A, y::$B, z::$C) = calc_hypot(x, y, z))
 end
 
 @inline function calc_hypot(x, y, z)
@@ -344,14 +333,20 @@ end
     return Dual(h, (vx/h) * partials(x) + (vy/h) * partials(y) + (vz/h) * partials(z))
 end
 
+@inline Base.hypot{N}(x::Dual{N}, y::Dual{N}) = calc_hypot(x, y)
+@inline Base.hypot(x::Dual, y::Real) = calc_hypot(x, y)
+@inline Base.hypot(x::Real, y::Dual) = calc_hypot(x, y)
+
+for A in (:(Dual{N}), :Real), B in (:(Dual{N}), :Real), C in (:(Dual{N}), :Real)
+    (A == B == C == :Real) && continue
+    @eval(@inline Base.hypot{N}(x::$A, y::$B, z::$C) = calc_hypot(x, y, z))
+end
+
 @inline sincos(n) = (sin(n), cos(n))
 
 @inline function sincos(n::Dual)
     sn, cn = sincos(value(n))
-    return (
-        Dual(sn, cn * partials(n)),
-        Dual(cn, -sn * partials(n)),
-    )
+    return (Dual(sn, cn * partials(n)), Dual(cn, -sn * partials(n)))
 end
 
 # Other Functions #
