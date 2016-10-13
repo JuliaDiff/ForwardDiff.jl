@@ -82,4 +82,7 @@ can SIMD-vectorize the addition:
       ret void
     }
 
-Note that whether or not SIMD instructions can actually be used will depend on your machine.
+Note that whether or not SIMD instructions can actually be used will depend on your machine
+and Julia build. For example, pre-built Julia binaries might not emit vectorized LLVM
+bitcode. To overcome this specific issue, you can `locally rebuild Julia's system image
+<http://docs.julialang.org/en/latest/devdocs/sysimg/>`_.

@@ -165,7 +165,7 @@
 <p>Many operations on ForwardDiff&#8217;s dual numbers are amenable to <a class="reference external" href="https://en.wikipedia.org/wiki/SIMD#Hardware">SIMD vectorization</a>. For some ForwardDiff benchmarks, we&#8217;ve
 seen SIMD vectorization yield <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/98#issuecomment-253149761">speedups of almost 3x</a>.</p>
 <p>To enable SIMD optimizations, start your Julia process with the <code class="docutils literal"><span class="pre">-O3</span></code> flag. This flag
-enables <a class="reference external" href="http://llvm.org/docs/Vectorizers.html#the-slp-vectorizer">LLVM&#8217;s SLPVectorizerPass</a>. during compilation, which
+enables <a class="reference external" href="http://llvm.org/docs/Vectorizers.html#the-slp-vectorizer">LLVM&#8217;s SLPVectorizerPass</a> during compilation, which
 attempts to automatically insert SIMD instructions where possible for certain arithmetic
 operations.</p>
 <p>Here&#8217;s an example of LLVM bitcode generated for an addition of two <code class="docutils literal"><span class="pre">Dual</span></code> numbers without
@@ -231,7 +231,9 @@ can SIMD-vectorize the addition:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Note that whether or not SIMD instructions can actually be used will depend on your machine.</p>
+<p>Note that whether or not SIMD instructions can actually be used will depend on your machine
+and Julia build. For example, pre-built Julia binaries might not emit vectorized LLVM
+bitcode. To overcome this specific issue, you can <a class="reference external" href="http://docs.julialang.org/en/latest/devdocs/sysimg/">locally rebuild Julia&#8217;s system image</a>.</p>
 </div>
 </div>
 

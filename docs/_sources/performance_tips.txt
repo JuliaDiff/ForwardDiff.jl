@@ -11,7 +11,7 @@ seen SIMD vectorization yield `speedups of almost 3x
 
 To enable SIMD optimizations, start your Julia process with the ``-O3`` flag. This flag
 enables `LLVM's SLPVectorizerPass
-<http://llvm.org/docs/Vectorizers.html#the-slp-vectorizer>`_. during compilation, which
+<http://llvm.org/docs/Vectorizers.html#the-slp-vectorizer>`_ during compilation, which
 attempts to automatically insert SIMD instructions where possible for certain arithmetic
 operations.
 
@@ -82,4 +82,7 @@ can SIMD-vectorize the addition:
       ret void
     }
 
-Note that whether or not SIMD instructions can actually be used will depend on your machine.
+Note that whether or not SIMD instructions can actually be used will depend on your machine
+and Julia build. For example, pre-built Julia binaries might not emit vectorized LLVM
+bitcode. To overcome this specific issue, you can `locally rebuild Julia's system image
+<http://docs.julialang.org/en/latest/devdocs/sysimg/>`_.
