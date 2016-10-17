@@ -73,10 +73,10 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     @test ForwardDiff.npartials(NESTED_FDNUM) == N
     @test ForwardDiff.npartials(typeof(NESTED_FDNUM)) == N
 
-    @test ForwardDiff.numtype(FDNUM) == T
-    @test ForwardDiff.numtype(typeof(FDNUM)) == T
-    @test ForwardDiff.numtype(NESTED_FDNUM) == Dual{M,T}
-    @test ForwardDiff.numtype(typeof(NESTED_FDNUM)) == Dual{M,T}
+    @test ForwardDiff.valtype(FDNUM) == T
+    @test ForwardDiff.valtype(typeof(FDNUM)) == T
+    @test ForwardDiff.valtype(NESTED_FDNUM) == Dual{M,T}
+    @test ForwardDiff.valtype(typeof(NESTED_FDNUM)) == Dual{M,T}
 
     #####################
     # Generic Functions #

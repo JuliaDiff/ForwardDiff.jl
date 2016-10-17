@@ -8,6 +8,10 @@ using ForwardDiff
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
+# seed RNG, thus making result inaccuracies deterministic
+# so we don't have to retune EPS for arbitrary inputs
+srand(1)
+
 ##########################
 # Nested Differentiation #
 ##########################

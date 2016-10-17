@@ -11,7 +11,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 # test vs. Calculus.jl #
 ########################
 
-x = 1
+const x = 1
 
 for f in NUMBER_TO_NUMBER_FUNCS
     println("  ...testing $f")
@@ -19,10 +19,10 @@ for f in NUMBER_TO_NUMBER_FUNCS
     d = ForwardDiff.derivative(f, x)
     @test_approx_eq_eps d Calculus.derivative(f, x) FINITEDIFF_ERROR
 
-    out = DerivativeResult(zero(v))
+    out = DiffResult(zero(v))
     ForwardDiff.derivative!(out, f, x)
-    @test_approx_eq ForwardDiff.value(out) v
-    @test_approx_eq ForwardDiff.derivative(out) d
+    @test_approx_eq DiffBase.value(out) v
+    @test_approx_eq DiffBase.derivative(out) d
 end
 
 for f in NUMBER_TO_ARRAY_FUNCS
@@ -35,10 +35,10 @@ for f in NUMBER_TO_ARRAY_FUNCS
     ForwardDiff.derivative!(out, f, x)
     @test_approx_eq out d
 
-    out = DerivativeResult(similar(v))
+    out = DiffResult(similar(v))
     ForwardDiff.derivative!(out, f, x)
-    @test_approx_eq ForwardDiff.value(out) v
-    @test_approx_eq ForwardDiff.derivative(out) d
+    @test_approx_eq DiffBase.value(out) v
+    @test_approx_eq DiffBase.derivative(out) d
 end
 
 

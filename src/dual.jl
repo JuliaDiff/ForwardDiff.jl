@@ -43,9 +43,9 @@ Dual(value::Real, partials::Real...) = Dual(value, partials)
 @inline degree{T}(::Type{T}) = 0
 degree{N,T}(::Type{Dual{N,T}}) = 1 + degree(T)
 
-@inline numtype(T) = Any
-@inline numtype{N,T}(::Dual{N,T}) = T
-@inline numtype{N,T}(::Type{Dual{N,T}}) = T
+@inline valtype(T) = Any
+@inline valtype{N,T}(::Dual{N,T}) = T
+@inline valtype{N,T}(::Type{Dual{N,T}}) = T
 
 #####################
 # Generic Functions #
@@ -68,7 +68,7 @@ end
 Base.copy(n::Dual) = n
 
 Base.eps(n::Dual) = eps(value(n))
-Base.eps{D<:Dual}(::Type{D}) = eps(numtype(D))
+Base.eps{D<:Dual}(::Type{D}) = eps(valtype(D))
 
 Base.floor{T<:Real}(::Type{T}, n::Dual) = floor(T, value(n))
 Base.floor(n::Dual) = floor(value(n))

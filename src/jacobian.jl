@@ -1,109 +1,66 @@
-##################
-# JacobianResult #
-##################
-
-type JacobianResult{V,J} <: ForwardDiffResult
-    value::V
-    jacobian::J
-end
-
-JacobianResult(x) = JacobianResult(similar(x), similar(x, length(x), length(x)))
-
-value(result::JacobianResult) = result.value
-jacobian(result::JacobianResult) = result.jacobian
-
 ###############
 # API methods #
 ###############
 
-function jacobian{N}(f, x, chunk::Chunk{N} = pickchunk(x);
-                     multithread::Bool = false,
-                     usecache::Bool = true)
-    if N == length(x)
-        return vector_mode_jacobian(f, x, chunk, usecache)
-    elseif multithread
-        return multithread_chunk_mode_jacobian(f, x, chunk, usecache)
+function jacobian(f, x, opts::Options = Options(x))
+    if chunksize(opts) == length(x)
+        return vector_mode_jacobian(f, x, opts)
     else
-        return chunk_mode_jacobian(f, x, chunk, usecache)
+        return chunk_mode_jacobian(f, x, opts)
     end
 end
 
-function jacobian{N}(f!, y, x, chunk::Chunk{N} = pickchunk(x);
-                      multithread::Bool = false,
-                      usecache::Bool = true)
-    if N == length(x)
-        return vector_mode_jacobian(f!, y, x, chunk, usecache)
-    elseif multithread
-        return multithread_chunk_mode_jacobian(f!, y, x, chunk, usecache)
+function jacobian(f!, y, x, opts::Options = Options(y, x))
+    if chunksize(opts) == length(x)
+        return vector_mode_jacobian(f!, y, x, opts)
     else
-        return chunk_mode_jacobian(f!, y, x, chunk, usecache)
+        return chunk_mode_jacobian(f!, y, x, opts)
     end
 end
 
-function jacobian!{N}(out, f, x, chunk::Chunk{N} = pickchunk(x);
-                      multithread::Bool = false,
-                      usecache::Bool = true)
-    if N == length(x)
-        vector_mode_jacobian!(out, f, x, chunk, usecache)
-    elseif multithread
-        multithread_chunk_mode_jacobian!(out, f, x, chunk, usecache)
+function jacobian!(out, f, x, opts::Options = Options(x))
+    if chunksize(opts) == length(x)
+        vector_mode_jacobian!(out, f, x, opts)
     else
-        chunk_mode_jacobian!(out, f, x, chunk, usecache)
+        chunk_mode_jacobian!(out, f, x, opts)
     end
     return out
 end
 
-function jacobian!{N}(out, f!, y, x, chunk::Chunk{N} = pickchunk(x);
-                      multithread::Bool = false,
-                      usecache::Bool = true)
-    @assert !(isa(out, JacobianResult)) "use jacobian!(JacobianResult(out, y), f!, x, ...) instead of jacobian!(out, f!, y, x, ...)"
-    if N == length(x)
-        vector_mode_jacobian!(out, f!, y, x, chunk, usecache)
-    elseif multithread
-        multithread_chunk_mode_jacobian!(out, f!, y, x, chunk, usecache)
+function jacobian!(out, f!, y, x, opts::Options = Options(y, x))
+    @assert !(isa(out, DiffResult)) "use jacobian!(out::DiffResult, f!, x, ...) instead of jacobian!(out::DiffResult, f!, y, x, ...)"
+    if chunksize(opts) == length(x)
+        vector_mode_jacobian!(out, f!, y, x, opts)
     else
-        chunk_mode_jacobian!(out, f!, y, x, chunk, usecache)
+        chunk_mode_jacobian!(out, f!, y, x, opts)
     end
     return out
 end
 
-function jacobian!{N}(out::JacobianResult, f!, x, chunk::Chunk{N} = pickchunk(x); kwargs...)
-    jacobian!(out.jacobian, f!, out.value, x, chunk; kwargs...)
+function jacobian!{N,T,D<:Tuple}(out::DiffResult, f!, x, opts::Options{N,T,D} = Options(DiffBase.value(out), x))
+    jacobian!(DiffBase.jacobian(out), f!, DiffBase.value(out), x, opts)
     return out
 end
 
-#######################
-# workhorse functions #
-#######################
-
+#####################
 # result extraction #
-#-------------------#
+#####################
 
-function load_jacobian_value!(y, ydual)
-    for i in eachindex(y)
-        y[i] = value(ydual[i])
-    end
-    return y
-end
-
-function load_jacobian_value!(out::JacobianResult, ydual)
-    load_jacobian_value!(out.value, ydual)
-    return out
-end
-
-function load_jacobian!(out, ydual)
-    for col in 1:size(out, 2), row in 1:size(out, 1)
-        out[row, col] = partials(ydual[row], col)
+function extract_jacobian!(out::AbstractArray, ydual::AbstractArray, n)
+    out_reshaped = reshape(out, length(ydual), n)
+    for col in 1:size(out_reshaped, 2), row in 1:size(out_reshaped, 1)
+        out_reshaped[row, col] = partials(ydual[row], col)
     end
     return out
 end
 
-@inline function load_jacobian!(out::JacobianResult, ydual)
-    load_jacobian!(out.jacobian, ydual)
+function extract_jacobian!(out::DiffResult, ydual::AbstractArray, n)
+    DiffBase.value!(value, out, ydual)
+    extract_jacobian!(DiffBase.jacobian(out), ydual, n)
     return out
 end
 
-function load_jacobian_chunk!(out, ydual, index, chunksize)
+function extract_jacobian_chunk!(out, ydual, index, chunksize)
     offset = index - 1
     for i in 1:chunksize
         col = i + offset
@@ -114,63 +71,44 @@ function load_jacobian_chunk!(out, ydual, index, chunksize)
     return out
 end
 
-@inline function load_jacobian_chunk!(out::JacobianResult, ydual, index, chunksize)
-    load_jacobian_chunk!(out.jacobian, ydual, index, chunksize)
-    return out
-end
+reshape_jacobian(out, ydual, xdual) = reshape(out, length(ydual), length(xdual))
+reshape_jacobian(out::DiffResult, ydual, xdual) = reshape_jacobian(DiffBase.jacobian(out), ydual, xdual)
 
+###############
 # vector mode #
-#-------------#
+###############
 
-function compute_vector_mode_jacobian(f, x, chunk, usecache)
-    cache = jacobian_cachefetch!(x, chunk, usecache)
-    xdual = cache.duals
-    seed!(xdual, x, cache.seeds, 1)
-    return f(xdual)
+function vector_mode_jacobian{N}(f, x, opts::Options{N})
+    ydual = vector_mode_dual_eval(f, x, opts)
+    out = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
+    return extract_jacobian!(out, ydual, N)
 end
 
-function compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
-    cache = jacobian_cachefetch!(x, chunk, usecache)
-    ycache = jacobian_cachefetch!(y, chunk, usecache, true)
-    xdual = cache.duals
-    ydual = ycache.duals
-    seed!(xdual, x, cache.seeds, 1)
-    seedall!(ydual, y, zero(eltype(ycache.seeds)))
-    f!(ydual, xdual)
-    return ydual
-end
-
-function vector_mode_jacobian{N}(f, x, chunk::Chunk{N}, usecache)
-    ydual = compute_vector_mode_jacobian(f, x, chunk, usecache)
-    out = similar(ydual, numtype(eltype(ydual)), length(ydual), N)
-    return load_jacobian!(out, ydual)
-end
-
-function vector_mode_jacobian{N}(f!, y, x, chunk::Chunk{N}, usecache)
-    ydual = compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
-    load_jacobian_value!(y, ydual)
+function vector_mode_jacobian{N,T,D<:Tuple}(f!, y, x, opts::Options{N,T,D})
+    ydual = vector_mode_dual_eval(f!, y, x, opts)
+    map!(value, y, ydual)
     out = similar(y, length(y), N)
-    return load_jacobian!(out, ydual)
+    return extract_jacobian!(out, ydual, N)
 end
 
-function vector_mode_jacobian!(out, f, x, chunk, usecache)
-    ydual = compute_vector_mode_jacobian(f, x, chunk, usecache)
-    load_jacobian!(reshape(out, length(ydual), length(x)), ydual)
+function vector_mode_jacobian!{N,T,D<:AbstractArray}(out, f, x, opts::Options{N,T,D})
+    ydual = vector_mode_dual_eval(f, x, opts)
+    extract_jacobian!(out, ydual, N)
     return out
 end
 
-function vector_mode_jacobian!(out, f!, y, x, chunk, usecache)
-    ydual = compute_vector_mode_jacobian(f!, y, x, chunk, usecache)
-    load_jacobian_value!(y, ydual)
-    load_jacobian!(reshape(out, length(y), length(x)), ydual)
+function vector_mode_jacobian!{N}(out::AbstractArray, f!, y, x, opts::Options{N})
+    ydual = vector_mode_dual_eval(f!, y, x, opts)
+    map!(value, y, ydual)
+    extract_jacobian!(out, ydual, N)
     return out
 end
 
 # chunk mode #
 #------------#
 
-function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
-                                  ydual_compute::Expr, y_definition::Expr)
+function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Expr,
+                                  out_definition::Expr, y_definition::Expr)
     return quote
         @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
@@ -181,75 +119,74 @@ function jacobian_chunk_mode_expr(out_definition::Expr, cache_definition::Expr,
         lastchunkindex = xlen - lastchunksize + 1
         middlechunks = 2:div(xlen - lastchunksize, N)
 
-        # fetch and seed work arrays
-        $(cache_definition)
-        xdual = cache.duals
-        seeds = cache.seeds
-        zeroseed = zero(eltype(seeds))
-        seedall!(xdual, x, zeroseed)
+        # seed work arrays
+        $(work_array_definition)
+        seeds = opts.seeds
 
         # do first chunk manually to calculate output type
-        seed!(xdual, x, seeds, 1)
-        $(ydual_compute)
-        seed!(xdual, x, zeroseed, 1)
+        seed!(xdual, x, 1, seeds)
+        $(compute_ydual)
+        seed!(xdual, x, 1)
         $(out_definition)
-        out_reshaped = reshape(out, length(ydual), length(xdual))
-        load_jacobian_chunk!(out_reshaped, ydual, 1, N)
+        out_reshaped = reshape_jacobian(out, ydual, xdual)
+        extract_jacobian_chunk!(out_reshaped, ydual, 1, N)
 
         # do middle chunks
         for c in middlechunks
             i = ((c - 1) * N + 1)
-            seed!(xdual, x, seeds, i)
-            $(ydual_compute)
-            seed!(xdual, x, zeroseed, i)
-            load_jacobian_chunk!(out_reshaped, ydual, i, N)
+            seed!(xdual, x, i, seeds)
+            $(compute_ydual)
+            seed!(xdual, x, i)
+            extract_jacobian_chunk!(out_reshaped, ydual, i, N)
         end
 
         # do final chunk
-        seed!(xdual, x, seeds, lastchunkindex, lastchunksize)
-        $(ydual_compute)
-        load_jacobian_chunk!(out_reshaped, ydual, lastchunkindex, lastchunksize)
+        seed!(xdual, x, lastchunkindex, seeds, lastchunksize)
+        $(compute_ydual)
+        extract_jacobian_chunk!(out_reshaped, ydual, lastchunkindex, lastchunksize)
 
         $(y_definition)
 
-        return reshape(out_reshaped, size(out))
+        return out
     end
 end
 
-@eval function chunk_mode_jacobian{N}(f, x, chunk::Chunk{N}, usecache)
-    $(jacobian_chunk_mode_expr(:(out = similar(x, numtype(eltype(ydual)), length(ydual), xlen)),
-                               :(cache = jacobian_cachefetch!(x, chunk, usecache)),
+@eval function chunk_mode_jacobian{N}(f, x, opts::Options{N})
+    $(jacobian_chunk_mode_expr(quote
+                                   xdual = opts.duals
+                                   seed!(xdual, x)
+                               end,
                                :(ydual = f(xdual)),
+                               :(out = similar(ydual, valtype(eltype(ydual)), length(ydual), xlen)),
                                :()))
 end
 
-@eval function chunk_mode_jacobian{N}(f!, y, x, chunk::Chunk{N}, usecache)
-    $(jacobian_chunk_mode_expr(:(out = similar(y, numtype(eltype(ydual)), length(ydual), xlen)),
-                               quote
-                                   cache = jacobian_cachefetch!(x, chunk, usecache)
-                                   ycache = jacobian_cachefetch!(y, chunk, usecache, true)
-                                   ydual = ycache.duals
-                                   yzeroseed = zero(eltype(ycache.seeds))
+@eval function chunk_mode_jacobian{N}(f!, y, x, opts::Options{N})
+    $(jacobian_chunk_mode_expr(quote
+                                   ydual, xdual = opts.duals
+                                   seed!(xdual, x)
                                end,
-                               :(f!(seedall!(ydual, y, yzeroseed), xdual)),
-                               :(load_jacobian_value!(y, ydual))))
+                               :(f!(seed!(ydual, y), xdual)),
+                               :(out = similar(y, length(y), xlen)),
+                               :(map!(value, y, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f, x, chunk::Chunk{N}, usecache)
-    $(jacobian_chunk_mode_expr(:(),
-                               :(cache = jacobian_cachefetch!(x, chunk, usecache)),
+@eval function chunk_mode_jacobian!{N}(out, f, x, opts::Options{N})
+    $(jacobian_chunk_mode_expr(quote
+                                   xdual = opts.duals
+                                   seed!(xdual, x)
+                               end,
                                :(ydual = f(xdual)),
+                               :(),
                                :()))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f!, y, x, chunk::Chunk{N}, usecache)
-    $(jacobian_chunk_mode_expr(:(),
-                               quote
-                                   cache = jacobian_cachefetch!(x, chunk, usecache)
-                                   ycache = jacobian_cachefetch!(y, chunk, usecache, true)
-                                   ydual = ycache.duals
-                                   yzeroseed = zero(eltype(ycache.seeds))
+@eval function chunk_mode_jacobian!{N}(out, f!, y, x, opts::Options{N})
+    $(jacobian_chunk_mode_expr(quote
+                                   ydual, xdual = opts.duals
+                                   seed!(xdual, x)
                                end,
-                               :(f!(seedall!(ydual, y, yzeroseed), xdual)),
-                               :(load_jacobian_value!(y, ydual))))
+                               :(f!(seed!(ydual, y), xdual)),
+                               :(),
+                               :(map!(value, y, ydual))))
 end

@@ -1,4 +1,4 @@
-immutable Partials{N,T}
+immutable Partials{N,T} <: AbstractArray{N,T}
     values::NTuple{N,T}
 end
 
@@ -6,13 +6,14 @@ end
 # Utility/Accessor Functions #
 ##############################
 
-@inline numtype{N,T}(::Partials{N,T}) = T
-@inline numtype{N,T}(::Type{Partials{N,T}}) = T
+@inline valtype{N,T}(::Partials{N,T}) = T
+@inline valtype{N,T}(::Type{Partials{N,T}}) = T
 
 @inline npartials{N}(::Partials{N}) = N
 @inline npartials{N,T}(::Type{Partials{N,T}}) = N
 
 @inline Base.length{N}(::Partials{N}) = N
+@inline Base.size{N}(::Partials{N}) = (N,)
 
 @inline Base.getindex(partials::Partials, i) = partials.values[i]
 setindex{N,T}(partials::Partials{N,T}, v, i) = Partials{N,T}((partials[1:i-1]..., v, partials[i+1:N]...))
