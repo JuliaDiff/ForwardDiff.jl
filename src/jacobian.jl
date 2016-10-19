@@ -178,7 +178,7 @@ end
                                end,
                                :(ydual = f(xdual)),
                                :(),
-                               :()))
+                               :(extract_value!(out, ydual))))
 end
 
 @eval function chunk_mode_jacobian!{N}(out, f!, y, x, opts::Options{N})
