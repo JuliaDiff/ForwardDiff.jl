@@ -7,12 +7,13 @@ using ForwardDiff
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
-#############################
-# rosenbrock hardcoded test #
-#############################
+##################
+# hardcoded test #
+##################
 
+f = DiffBase.rosenbrock_1
 x = [0.1, 0.2, 0.3]
-v = rosenbrock(x)
+v = f(x)
 g = [-9.4, 15.6, 52.0]
 
 for c in (1, 2, 3)
@@ -21,24 +22,24 @@ for c in (1, 2, 3)
 
     # single-threaded #
     #-----------------#
-    @test_approx_eq g ForwardDiff.gradient(rosenbrock, x, opts)
-    @test_approx_eq g ForwardDiff.gradient(rosenbrock, x)
+    @test_approx_eq g ForwardDiff.gradient(f, x, opts)
+    @test_approx_eq g ForwardDiff.gradient(f, x)
 
     out = similar(x)
-    ForwardDiff.gradient!(out, rosenbrock, x, opts)
+    ForwardDiff.gradient!(out, f, x, opts)
     @test_approx_eq out g
 
     out = similar(x)
-    ForwardDiff.gradient!(out, rosenbrock, x)
+    ForwardDiff.gradient!(out, f, x)
     @test_approx_eq out g
 
     out = GradientResult(x)
-    ForwardDiff.gradient!(out, rosenbrock, x, opts)
+    ForwardDiff.gradient!(out, f, x, opts)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
 
     out = GradientResult(x)
-    ForwardDiff.gradient!(out, rosenbrock, x)
+    ForwardDiff.gradient!(out, f, x)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
 
@@ -47,14 +48,14 @@ for c in (1, 2, 3)
     if ForwardDiff.IS_MULTITHREADED_JULIA
         multi_opts = ntuple(i -> copy(opts), ForwardDiff.NTHREADS)
 
-        @test_approx_eq g ForwardDiff.gradient(rosenbrock, x, multi_opts)
+        @test_approx_eq g ForwardDiff.gradient(f, x, multi_opts)
 
         out = similar(x)
-        ForwardDiff.gradient!(out, rosenbrock, x, multi_opts)
+        ForwardDiff.gradient!(out, f, x, multi_opts)
         @test_approx_eq out g
 
         out = GradientResult(x)
-        ForwardDiff.gradient!(out, rosenbrock, x, multi_opts)
+        ForwardDiff.gradient!(out, f, x, multi_opts)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
     end
@@ -64,7 +65,7 @@ end
 # test vs. Calculus.jl #
 ########################
 
-for f in VECTOR_TO_NUMBER_FUNCS
+for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test_approx_eq_eps g Calculus.gradient(f, X) FINITEDIFF_ERROR

@@ -84,24 +84,32 @@ end
 # test vs. Calculus.jl #
 ########################
 
-for (f!, f) in VECTOR_TO_VECTOR_FUNCS
+for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test_approx_eq_eps j Calculus.jacobian(f, X, :forward) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
         opts = Options{c}(X)
-        yopts = Options{c}(zeros(Y), X)
 
-        # testing f(x)
         println("  ...testing $f with chunk size = $c")
         out = ForwardDiff.jacobian(f, X, opts)
         @test_approx_eq out j
 
-        out = similar(Y, length(Y), length(X))
+        out = similar(X, length(X), length(X))
         ForwardDiff.jacobian!(out, f, X, opts)
         @test_approx_eq out j
+    end
+end
 
-        # testing f!(y, x)
+for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
+    v = zeros(Y)
+    f!(v, X)
+    j = ForwardDiff.jacobian(f!, zeros(Y), X)
+    @test_approx_eq_eps j Calculus.jacobian(x -> (y = zeros(Y); f!(y, x); y), X, :forward) FINITEDIFF_ERROR
+    for c in CHUNK_SIZES
+        opts = Options{c}(X)
+        yopts = Options{c}(zeros(Y), X)
+
         println("  ...testing $(f!) with chunk size = $c")
         y = zeros(Y)
         out = ForwardDiff.jacobian(f!, y, X, yopts)

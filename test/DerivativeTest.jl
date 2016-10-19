@@ -13,7 +13,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 const x = 1
 
-for f in NUMBER_TO_NUMBER_FUNCS
+for f in DiffBase.NUMBER_TO_NUMBER_FUNCS
     println("  ...testing $f")
     v = f(x)
     d = ForwardDiff.derivative(f, x)
@@ -25,7 +25,7 @@ for f in NUMBER_TO_NUMBER_FUNCS
     @test_approx_eq DiffBase.derivative(out) d
 end
 
-for f in NUMBER_TO_ARRAY_FUNCS
+for f in DiffBase.NUMBER_TO_ARRAY_FUNCS
     println("  ...testing $f")
     v = f(x)
     d = ForwardDiff.derivative(f, x)

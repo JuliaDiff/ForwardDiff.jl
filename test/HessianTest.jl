@@ -11,8 +11,9 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 # rosenbrock hardcoded test #
 #############################
 
+f = DiffBase.rosenbrock_1
 x = [0.1, 0.2, 0.3]
-v = rosenbrock(x)
+v = f(x)
 g = [-9.4, 15.6, 52.0]
 h = [-66.0  -40.0    0.0;
      -40.0  130.0  -80.0;
@@ -27,36 +28,36 @@ for c in (1, 2, 3)
 
     # single-threaded #
     #-----------------#
-    @test_approx_eq h ForwardDiff.hessian(rosenbrock, x)
-    @test_approx_eq h ForwardDiff.hessian(rosenbrock, x, outer_opts)
-    @test_approx_eq h ForwardDiff.hessian(rosenbrock, x, outer_opts, inner_opts)
+    @test_approx_eq h ForwardDiff.hessian(f, x)
+    @test_approx_eq h ForwardDiff.hessian(f, x, outer_opts)
+    @test_approx_eq h ForwardDiff.hessian(f, x, outer_opts, inner_opts)
 
     out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, rosenbrock, x)
+    ForwardDiff.hessian!(out, f, x)
     @test_approx_eq out h
 
     out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, rosenbrock, x, outer_opts)
+    ForwardDiff.hessian!(out, f, x, outer_opts)
     @test_approx_eq out h
 
     out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, rosenbrock, x, outer_opts, inner_opts)
+    ForwardDiff.hessian!(out, f, x, outer_opts, inner_opts)
     @test_approx_eq out h
 
     out = HessianResult(x)
-    ForwardDiff.hessian!(out, rosenbrock, x)
+    ForwardDiff.hessian!(out, f, x)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
     @test_approx_eq DiffBase.hessian(out) h
 
     out = HessianResult(x)
-    ForwardDiff.hessian!(out, rosenbrock, x, outer_opts2)
+    ForwardDiff.hessian!(out, f, x, outer_opts2)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
     @test_approx_eq DiffBase.hessian(out) h
 
     out = HessianResult(x)
-    ForwardDiff.hessian!(out, rosenbrock, x, outer_opts2, inner_opts2)
+    ForwardDiff.hessian!(out, f, x, outer_opts2, inner_opts2)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
     @test_approx_eq DiffBase.hessian(out) h
@@ -67,14 +68,14 @@ for c in (1, 2, 3)
         multi_opts = ntuple(i -> copy(inner_opts), ForwardDiff.NTHREADS)
         multi_opts2 = ntuple(i -> copy(inner_opts2), ForwardDiff.NTHREADS)
 
-        @test_approx_eq h ForwardDiff.hessian(rosenbrock, x, outer_opts, multi_opts)
+        @test_approx_eq h ForwardDiff.hessian(f, x, outer_opts, multi_opts)
 
         out = similar(x, 3, 3)
-        ForwardDiff.hessian!(out, rosenbrock, x, outer_opts, multi_opts)
+        ForwardDiff.hessian!(out, f, x, outer_opts, multi_opts)
         @test_approx_eq out h
 
         out = HessianResult(x)
-        ForwardDiff.hessian!(out, rosenbrock, x, outer_opts2, multi_opts2)
+        ForwardDiff.hessian!(out, f, x, outer_opts2, multi_opts2)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
         @test_approx_eq DiffBase.hessian(out) h
@@ -85,7 +86,7 @@ end
 # test vs. Calculus.jl #
 ########################
 
-for f in VECTOR_TO_NUMBER_FUNCS
+for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     h = ForwardDiff.hessian(f, X)

@@ -8,10 +8,6 @@ using ForwardDiff
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
-# seed RNG, thus making result inaccuracies deterministic
-# so we don't have to retune EPS for arbitrary inputs
-srand(1)
-
 ##########################
 # Nested Differentiation #
 ##########################
@@ -46,7 +42,7 @@ test_tensor_output = reshape([240.0  -400.0     0.0;
                                 0.0  -400.0     0.0;
                                 0.0     0.0     0.0], 3, 3, 3)
 
-@test_approx_eq tensor(rosenbrock, [0.1, 0.2, 0.3]) test_tensor_output
+@test_approx_eq tensor(DiffBase.rosenbrock_1, [0.1, 0.2, 0.3]) test_tensor_output
 
 test_nested_jacobian_output = [-sin(1)  0.0     0.0;
                                -0.0    -0.0    -0.0;
