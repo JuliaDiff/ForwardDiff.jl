@@ -19,7 +19,7 @@ for f in DiffBase.NUMBER_TO_NUMBER_FUNCS
     d = ForwardDiff.derivative(f, x)
     @test_approx_eq_eps d Calculus.derivative(f, x) FINITEDIFF_ERROR
 
-    out = DiffResult(zero(v))
+    out = DiffBase.DiffResult(zero(v))
     ForwardDiff.derivative!(out, f, x)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.derivative(out) d
@@ -35,7 +35,7 @@ for f in DiffBase.NUMBER_TO_ARRAY_FUNCS
     ForwardDiff.derivative!(out, f, x)
     @test_approx_eq out d
 
-    out = DiffResult(similar(v))
+    out = DiffBase.DiffResult(similar(v))
     ForwardDiff.derivative!(out, f, x)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.derivative(out) d

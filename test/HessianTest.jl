@@ -21,43 +21,30 @@ h = [-66.0  -40.0    0.0;
 
 for c in (1, 2, 3)
     println("  ...running hardcoded test with chunk size = $c")
-    outer_opts = ForwardDiff.Options{c}(x)
-    inner_opts = ForwardDiff.Options(outer_opts)
-    outer_opts2 = ForwardDiff.Options{c}(x, x)
-    inner_opts2 = ForwardDiff.Options(outer_opts2)
+    opts = ForwardDiff.HessianOptions{c}(x)
+    resultopts = ForwardDiff.HessianOptions{c}(DiffBase.HessianResult(x), x)
 
     # single-threaded #
     #-----------------#
     @test_approx_eq h ForwardDiff.hessian(f, x)
-    @test_approx_eq h ForwardDiff.hessian(f, x, outer_opts)
-    @test_approx_eq h ForwardDiff.hessian(f, x, outer_opts, inner_opts)
+    @test_approx_eq h ForwardDiff.hessian(f, x, opts)
 
     out = similar(x, 3, 3)
     ForwardDiff.hessian!(out, f, x)
     @test_approx_eq out h
 
     out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, f, x, outer_opts)
+    ForwardDiff.hessian!(out, f, x, opts)
     @test_approx_eq out h
 
-    out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, f, x, outer_opts, inner_opts)
-    @test_approx_eq out h
-
-    out = HessianResult(x)
+    out = DiffBase.HessianResult(x)
     ForwardDiff.hessian!(out, f, x)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
     @test_approx_eq DiffBase.hessian(out) h
 
-    out = HessianResult(x)
-    ForwardDiff.hessian!(out, f, x, outer_opts2)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.gradient(out) g
-    @test_approx_eq DiffBase.hessian(out) h
-
-    out = HessianResult(x)
-    ForwardDiff.hessian!(out, f, x, outer_opts2, inner_opts2)
+    out = DiffBase.HessianResult(x)
+    ForwardDiff.hessian!(out, f, x, resultopts)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
     @test_approx_eq DiffBase.hessian(out) h
@@ -65,17 +52,17 @@ for c in (1, 2, 3)
     # multithreaded #
     #---------------#
     if ForwardDiff.IS_MULTITHREADED_JULIA
-        multi_opts = ntuple(i -> copy(inner_opts), ForwardDiff.NTHREADS)
-        multi_opts2 = ntuple(i -> copy(inner_opts2), ForwardDiff.NTHREADS)
+        multi_opts = ForwardDiff.Multithread(opts)
+        multi_resultopts = ForwardDiff.Multithread(resultopts)
 
-        @test_approx_eq h ForwardDiff.hessian(f, x, outer_opts, multi_opts)
+        @test_approx_eq h ForwardDiff.hessian(f, x, multi_opts)
 
         out = similar(x, 3, 3)
-        ForwardDiff.hessian!(out, f, x, outer_opts, multi_opts)
+        ForwardDiff.hessian!(out, f, x, multi_opts)
         @test_approx_eq out h
 
-        out = HessianResult(x)
-        ForwardDiff.hessian!(out, f, x, outer_opts2, multi_opts2)
+        out = DiffBase.HessianResult(x)
+        ForwardDiff.hessian!(out, f, x, multi_resultopts)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
         @test_approx_eq DiffBase.hessian(out) h
@@ -94,22 +81,20 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     @test_approx_eq_eps h Calculus.hessian(f, X) 0.01
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size = $c")
-        outer_opts = ForwardDiff.Options{c}(X)
-        inner_opts = ForwardDiff.Options(outer_opts)
-        outer_opts2 = ForwardDiff.Options{c}(X, X)
-        inner_opts2 = ForwardDiff.Options(outer_opts2)
+        opts = ForwardDiff.HessianOptions{c}(X)
+        resultopts = ForwardDiff.HessianOptions{c}(DiffBase.HessianResult(X), X)
 
         # single-threaded #
         #-----------------#
-        out = ForwardDiff.hessian(f, X, outer_opts, inner_opts)
+        out = ForwardDiff.hessian(f, X, opts)
         @test_approx_eq out h
 
         out = similar(X, length(X), length(X))
-        ForwardDiff.hessian!(out, f, X, outer_opts, inner_opts)
+        ForwardDiff.hessian!(out, f, X, opts)
         @test_approx_eq out h
 
-        out = HessianResult(X)
-        ForwardDiff.hessian!(out, f, X, outer_opts2, inner_opts2)
+        out = DiffBase.HessianResult(X)
+        ForwardDiff.hessian!(out, f, X, resultopts)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
         @test_approx_eq DiffBase.hessian(out) h
@@ -117,18 +102,18 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         # multithreaded #
         #---------------#
         if ForwardDiff.IS_MULTITHREADED_JULIA
-            multi_opts = ntuple(i -> copy(inner_opts), ForwardDiff.NTHREADS)
-            multi_opts2 = ntuple(i -> copy(inner_opts2), ForwardDiff.NTHREADS)
+            multi_opts = ForwardDiff.Multithread(opts)
+            multi_resultopts = ForwardDiff.Multithread(resultopts)
 
-            out = ForwardDiff.hessian(f, X, outer_opts, multi_opts)
+            out = ForwardDiff.hessian(f, X, multi_opts)
             @test_approx_eq out h
 
             out = similar(X, length(X), length(X))
-            ForwardDiff.hessian!(out, f, X, outer_opts, multi_opts)
+            ForwardDiff.hessian!(out, f, X, multi_opts)
             @test_approx_eq out h
 
-            out = HessianResult(X)
-            ForwardDiff.hessian!(out, f, X, outer_opts2, multi_opts2)
+            out = DiffBase.HessianResult(X)
+            ForwardDiff.hessian!(out, f, X, multi_resultopts)
             @test_approx_eq DiffBase.value(out) v
             @test_approx_eq DiffBase.gradient(out) g
             @test_approx_eq DiffBase.hessian(out) h

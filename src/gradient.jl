@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-function gradient(f, x, opts = Options(x))
+function gradient(f, x, opts::AbstractOptions = Options(x))
     if chunksize(opts) == length(x)
         return vector_mode_gradient(f, x, opts)
     else
@@ -10,7 +10,7 @@ function gradient(f, x, opts = Options(x))
     end
 end
 
-function gradient!(out, f, x, opts = Options(x))
+function gradient!(out, f, x, opts::AbstractOptions = Options(x))
     if chunksize(opts) == length(x)
         vector_mode_gradient!(out, f, x, opts)
     else
@@ -133,6 +133,8 @@ end
 if IS_MULTITHREADED_JULIA
     function multithread_chunk_mode_expr(out_definition::Expr)
         return quote
+            opts = gradient_options(multi_opts)
+            N = chunksize(opts)
             @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
             # precalculate loop bounds
@@ -183,11 +185,11 @@ if IS_MULTITHREADED_JULIA
         end
     end
 
-    @eval function chunk_mode_gradient{N}(f, x, opts::Tuple{Vararg{Options{N}}})
+    @eval function chunk_mode_gradient(f, x, multi_opts::Multithread)
         $(multithread_chunk_mode_expr(:(out = similar(x, valtype(current_ydual)))))
     end
 
-    @eval function chunk_mode_gradient!{N}(out, f, x, opts::Tuple{Vararg{Options{N}}})
+    @eval function chunk_mode_gradient!(out, f, x, multi_opts::Multithread)
         $(multithread_chunk_mode_expr(:()))
     end
 else

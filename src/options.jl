@@ -1,8 +1,10 @@
+abstract AbstractOptions
+
 ###########
 # Options #
 ###########
 
-immutable Options{N,T,D}
+immutable Options{N,T,D} <: AbstractOptions
     seeds::NTuple{N,Partials{N,T}}
     duals::D
     # disable default outer constructor
@@ -18,12 +20,6 @@ end
 # when predicting the final output type of API functions.
 Options(x::AbstractArray) = Options{pickchunksize(length(x))}(x)
 Options(y::AbstractArray, x::AbstractArray) = Options{pickchunksize(length(x))}(y, x)
-Options{N,T,D<:AbstractArray}(opts::Options{N,T,D}) = Options{N}(opts.duals)
-
-function Options{N,T,D<:Tuple}(opts::Options{N,T,D})
-    ydual, xdual = opts.duals
-    return Options{N}(xdual)
-end
 
 function (::Type{Options{N}}){N,T}(x::AbstractArray{T})
     seeds = construct_seeds(Partials{N,T})
@@ -40,63 +36,72 @@ function (::Type{Options{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArray{X})
 end
 
 Base.copy{N,T,D}(opts::Options{N,T,D}) = Options{N,T,D}(opts.seeds, copy(opts.duals))
+Base.copy{N,T,D<:Tuple}(opts::Options{N,T,D}) = Options{N,T,D}(opts.seeds, map(copy, opts.duals))
 
 chunksize{N}(::Options{N}) = N
 chunksize{N}(::Tuple{Vararg{Options{N}}}) = N
 
-##################################
-# seed construction/manipulation #
-##################################
+##################
+# HessianOptions #
+##################
 
-for N in 1:MAX_CHUNK_SIZE
-    ex = Expr(:tuple, [:(setindex(zero_partials, seed_unit, $i)) for i in 1:N]...)
-    @eval function construct_seeds{T}(::Type{Partials{$N,T}})
-        seed_unit = one(T)
-        zero_partials = zero(Partials{$N,T})
-        return $ex
-    end
+immutable HessianOptions{N,J,JD,G,GD} <: AbstractOptions
+    gradient_options::Options{N,G,GD}
+    jacobian_options::Options{N,J,JD}
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x,
-                    seed::Partials{N,T} = zero(Partials{N,T}))
-    for i in eachindex(duals)
-        duals[i] = Dual{N,T}(x[i], seed)
-    end
-    return duals
+HessianOptions(x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(x)
+HessianOptions(y, x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(y, x)
+
+function (::Type{HessianOptions{N}}){N}(out::DiffResult, x::AbstractArray)
+    return HessianOptions{N}(DiffBase.gradient(out), x)
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x,
-                    seeds::NTuple{N,Partials{N,T}})
-    for i in 1:N
-        duals[i] = Dual{N,T}(x[i], seeds[i])
-    end
-    return duals
+function (::Type{HessianOptions{N}}){N}(x::AbstractArray)
+    jacobian_options = Options{N}(x)
+    gradient_options = Options{N}(jacobian_options.duals)
+    return HessianOptions(gradient_options, jacobian_options)
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x, index,
-                    seed::Partials{N,T} = zero(Partials{N,T}))
-    offset = index - 1
-    for i in 1:N
-        j = i + offset
-        duals[j] = Dual{N,T}(x[j], seed)
-    end
-    return duals
+function (::Type{HessianOptions{N}}){N}(y::AbstractArray, x::AbstractArray)
+    jacobian_options = Options{N}(y, x)
+    yduals, xduals = jacobian_options.duals
+    gradient_options = Options{N}(xduals)
+    return HessianOptions(gradient_options, jacobian_options)
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x, index,
-                    seeds::NTuple{N,Partials{N,T}}, chunksize = N)
-    offset = index - 1
-    for i in 1:chunksize
-        j = i + offset
-        duals[j] = Dual{N,T}(x[j], seeds[i])
-    end
-    return duals
+Base.copy(opts::HessianOptions) = HessianOptions(copy(opts.gradient_options),
+                                                 copy(opts.jacobian_options))
+
+@inline chunksize{N}(::HessianOptions{N}) = N
+@inline chunksize{N}(::Tuple{Vararg{HessianOptions{N}}}) = N
+
+gradient_options(opts::HessianOptions) = opts.gradient_options
+jacobian_options(opts::HessianOptions) = opts.jacobian_options
+
+###############
+# Multithread #
+###############
+
+immutable Multithread{M,A,B} <: AbstractOptions
+    options1::A
+    options2::B
 end
 
-# function seedhess!{N,T}(duals, x, inseeds::NTuple{N,Partials{N,T}},
-#                         outseeds::NTuple{N,Partials{N,Dual{N,T}}})
-#     for i in 1:N
-#         duals[i] = Dual{N,Dual{N,T}}(Dual{N,T}(x[i], inseeds[i]), outseeds[i])
-#     end
-#     return duals
-# end
+Multithread(opts::AbstractOptions) = Multithread{NTHREADS}(opts)
+
+function (::Type{Multithread{M}}){M}(opts::Options)
+    options1 = ntuple(n -> copy(opts), Val{M})
+    return Multithread{M,typeof(options1),Void}(options1, nothing)
+end
+
+function (::Type{Multithread{M}}){M}(opts::HessianOptions)
+    options1 = Multithread{M}(gradient_options(opts))
+    options2 = copy(jacobian_options(opts))
+    return Multithread{M,typeof(options1),typeof(options2)}(options1, options2)
+end
+
+gradient_options(opts::Multithread) = opts.options1
+jacobian_options(opts::Multithread) = opts.options2
+
+@inline chunksize(opts::Multithread) = chunksize(gradient_options(opts))

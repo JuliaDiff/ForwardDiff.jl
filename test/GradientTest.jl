@@ -33,12 +33,12 @@ for c in (1, 2, 3)
     ForwardDiff.gradient!(out, f, x)
     @test_approx_eq out g
 
-    out = GradientResult(x)
+    out = DiffBase.GradientResult(x)
     ForwardDiff.gradient!(out, f, x, opts)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
 
-    out = GradientResult(x)
+    out = DiffBase.GradientResult(x)
     ForwardDiff.gradient!(out, f, x)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
@@ -46,7 +46,7 @@ for c in (1, 2, 3)
     # multithreaded #
     #---------------#
     if ForwardDiff.IS_MULTITHREADED_JULIA
-        multi_opts = ntuple(i -> copy(opts), ForwardDiff.NTHREADS)
+        multi_opts = ForwardDiff.Multithread(opts)
 
         @test_approx_eq g ForwardDiff.gradient(f, x, multi_opts)
 
@@ -54,7 +54,7 @@ for c in (1, 2, 3)
         ForwardDiff.gradient!(out, f, x, multi_opts)
         @test_approx_eq out g
 
-        out = GradientResult(x)
+        out = DiffBase.GradientResult(x)
         ForwardDiff.gradient!(out, f, x, multi_opts)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
@@ -82,7 +82,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         ForwardDiff.gradient!(out, f, X, opts)
         @test_approx_eq out g
 
-        out = GradientResult(X)
+        out = DiffBase.GradientResult(X)
         ForwardDiff.gradient!(out, f, X, opts)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
@@ -90,7 +90,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         # multithreaded #
         #---------------#
         if ForwardDiff.IS_MULTITHREADED_JULIA
-            multi_opts = ntuple(i -> copy(opts), ForwardDiff.NTHREADS)
+            multi_opts = ForwardDiff.Multithread(opts)
 
             out = ForwardDiff.gradient(f, X, multi_opts)
             @test_approx_eq out g
@@ -99,7 +99,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
             ForwardDiff.gradient!(out, f, X, multi_opts)
             @test_approx_eq out g
 
-            out = GradientResult(X)
+            out = DiffBase.GradientResult(X)
             ForwardDiff.gradient!(out, f, X, multi_opts)
             @test_approx_eq DiffBase.value(out) v
             @test_approx_eq DiffBase.gradient(out) g

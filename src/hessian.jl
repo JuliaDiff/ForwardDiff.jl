@@ -2,28 +2,24 @@
 # API methods #
 ###############
 
-function hessian(f, x, outer_opts = Options(x), inner_opts = Options(outer_opts))
-    ∇f = y -> gradient(f, y, inner_opts)
-    return jacobian(∇f, x, outer_opts)
+function hessian(f, x, opts::AbstractOptions = HessianOptions(x))
+    ∇f = y -> gradient(f, y, gradient_options(opts))
+    return jacobian(∇f, x, jacobian_options(opts))
 end
 
-function hessian!(out, f, x,
-                  outer_opts = Options(x),
-                  inner_opts = Options(outer_opts))
-    ∇f = y -> gradient(f, y, inner_opts)
-    jacobian!(out, ∇f, x, outer_opts)
+function hessian!(out, f, x, opts::AbstractOptions = HessianOptions(x))
+    ∇f = y -> gradient(f, y, gradient_options(opts))
+    jacobian!(out, ∇f, x, jacobian_options(opts))
     return out
 end
 
-function hessian!(out::DiffResult, f, x,
-                  outer_opts = Options(DiffBase.gradient(out), x),
-                  inner_opts = Options(outer_opts))
+function hessian!(out::DiffResult, f, x, opts::AbstractOptions = HessianOptions(out, x))
     ∇f! = (y, z) -> begin
         result = DiffResult(zero(eltype(y)), y)
-        gradient!(result, f, z, inner_opts)
+        gradient!(result, f, z, gradient_options(opts))
         DiffBase.value!(out, value(DiffBase.value(result)))
         return y
     end
-    jacobian!(DiffBase.hessian(out), ∇f!, DiffBase.gradient(out), x, outer_opts)
+    jacobian!(DiffBase.hessian(out), ∇f!, DiffBase.gradient(out), x, jacobian_options(opts))
     return out
 end
