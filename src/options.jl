@@ -18,11 +18,11 @@ end
 # when predicting the final output type of API functions.
 Options(x::AbstractArray) = Options{pickchunksize(length(x))}(x)
 Options(y::AbstractArray, x::AbstractArray) = Options{pickchunksize(length(x))}(y, x)
-Options{N,T,D<:AbstractArray}(opts::Options{N,T,D}) = Options(opts.duals)
+Options{N,T,D<:AbstractArray}(opts::Options{N,T,D}) = Options{N}(opts.duals)
 
 function Options{N,T,D<:Tuple}(opts::Options{N,T,D})
     ydual, xdual = opts.duals
-    return Options(xdual)
+    return Options{N}(xdual)
 end
 
 function (::Type{Options{N}}){N,T}(x::AbstractArray{T})
