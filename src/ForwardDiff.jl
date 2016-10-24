@@ -4,7 +4,7 @@ module ForwardDiff
 
 using Compat
 using DiffBase
-using DiffBase: DiffResult, GradientResult, JacobianResult, HessianResult
+using DiffBase: DiffResult
 
 import Calculus
 import NaNMath
