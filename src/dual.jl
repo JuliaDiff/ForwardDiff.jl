@@ -354,8 +354,8 @@ end
 #-----------------#
 
 @inline function calc_atan2(y, x)
-    z = y/x
-    v= value(z)
+    z = y / x
+    v = value(z)
     atan2v = atan2(value(y), value(x))
     deriv = inv(one(v) + v*v)
     return Dual(atan2v, deriv * partials(z))

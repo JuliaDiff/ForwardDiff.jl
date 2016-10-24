@@ -28,17 +28,11 @@ function jacobian!(out, f, x, opts::Options = Options(x))
 end
 
 function jacobian!(out, f!, y, x, opts::Options = Options(y, x))
-    @assert !(isa(out, DiffResult)) "use jacobian!(out::DiffResult, f!, x, ...) instead of jacobian!(out::DiffResult, f!, y, x, ...)"
     if chunksize(opts) == length(x)
         vector_mode_jacobian!(out, f!, y, x, opts)
     else
         chunk_mode_jacobian!(out, f!, y, x, opts)
     end
-    return out
-end
-
-function jacobian!{N,T,D<:Tuple}(out::DiffResult, f!, x, opts::Options{N,T,D} = Options(DiffBase.value(out), x))
-    jacobian!(DiffBase.jacobian(out), f!, DiffBase.value(out), x, opts)
     return out
 end
 
@@ -55,7 +49,6 @@ function extract_jacobian!(out::AbstractArray, ydual::AbstractArray, n)
 end
 
 function extract_jacobian!(out::DiffResult, ydual::AbstractArray, n)
-    DiffBase.value!(value, out, ydual)
     extract_jacobian!(DiffBase.jacobian(out), ydual, n)
     return out
 end
@@ -81,26 +74,32 @@ reshape_jacobian(out::DiffResult, ydual, xdual) = reshape_jacobian(DiffBase.jaco
 function vector_mode_jacobian{N}(f, x, opts::Options{N})
     ydual = vector_mode_dual_eval(f, x, opts)
     out = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
-    return extract_jacobian!(out, ydual, N)
-end
-
-function vector_mode_jacobian{N,T,D<:Tuple}(f!, y, x, opts::Options{N,T,D})
-    ydual = vector_mode_dual_eval(f!, y, x, opts)
-    map!(value, y, ydual)
-    out = similar(y, length(y), N)
-    return extract_jacobian!(out, ydual, N)
-end
-
-function vector_mode_jacobian!{N,T,D<:AbstractArray}(out, f, x, opts::Options{N,T,D})
-    ydual = vector_mode_dual_eval(f, x, opts)
     extract_jacobian!(out, ydual, N)
+    extract_value!(out, ydual)
     return out
 end
 
-function vector_mode_jacobian!{N}(out::AbstractArray, f!, y, x, opts::Options{N})
+function vector_mode_jacobian{N}(f!, y, x, opts::Options{N})
+    ydual = vector_mode_dual_eval(f!, y, x, opts)
+    map!(value, y, ydual)
+    out = similar(y, length(y), N)
+    extract_jacobian!(out, ydual, N)
+    map!(value, y, ydual)
+    return out
+end
+
+function vector_mode_jacobian!{N}(out, f, x, opts::Options{N})
+    ydual = vector_mode_dual_eval(f, x, opts)
+    extract_jacobian!(out, ydual, N)
+    extract_value!(out, ydual)
+    return out
+end
+
+function vector_mode_jacobian!{N}(out, f!, y, x, opts::Options{N})
     ydual = vector_mode_dual_eval(f!, y, x, opts)
     map!(value, y, ydual)
     extract_jacobian!(out, ydual, N)
+    extract_value!(out, y, ydual)
     return out
 end
 
@@ -188,5 +187,5 @@ end
                                end,
                                :(f!(seed!(ydual, y), xdual)),
                                :(),
-                               :(map!(value, y, ydual))))
+                               :(extract_value!(out, y, ydual))))
 end

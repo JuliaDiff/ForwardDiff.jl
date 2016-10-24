@@ -70,13 +70,17 @@ for c in (1, 2, 3)
     @test_approx_eq y v
 
     out = DiffBase.JacobianResult(zeros(4), zeros(3))
-    ForwardDiff.jacobian!(out, f!, x)
-    @test_approx_eq DiffBase.value(out) v
+    y = zeros(4)
+    ForwardDiff.jacobian!(out, f!, y, x, yopts)
+    @test DiffBase.value(out) == y
+    @test_approx_eq y v
     @test_approx_eq DiffBase.jacobian(out) j
 
     out = DiffBase.JacobianResult(zeros(4), zeros(3))
-    ForwardDiff.jacobian!(out, f!, x, Options(DiffBase.value(out), x))
-    @test_approx_eq DiffBase.value(out) v
+    y = zeros(4)
+    ForwardDiff.jacobian!(out, f!, y, x)
+    @test DiffBase.value(out) == y
+    @test_approx_eq y v
     @test_approx_eq DiffBase.jacobian(out) j
 end
 
@@ -127,14 +131,18 @@ for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
         @test_approx_eq y v
         @test_approx_eq out j
 
-        out = DiffBase.JacobianResult(Y, X)
-        ForwardDiff.jacobian!(out, f!, X)
-        @test_approx_eq DiffBase.value(out) v
+        y = zeros(Y)
+        out = DiffBase.JacobianResult(y, X)
+        ForwardDiff.jacobian!(out, f!, y, X)
+        @test DiffBase.value(out) == y
+        @test_approx_eq y v
         @test_approx_eq DiffBase.jacobian(out) j
 
-        out = DiffBase.JacobianResult(Y, X)
-        ForwardDiff.jacobian!(out, f!, X, yopts)
-        @test_approx_eq DiffBase.value(out) v
+        y = zeros(Y)
+        out = DiffBase.JacobianResult(y, X)
+        ForwardDiff.jacobian!(out, f!, y, X, yopts)
+        @test DiffBase.value(out) == y
+        @test_approx_eq y v
         @test_approx_eq DiffBase.jacobian(out) j
     end
 end

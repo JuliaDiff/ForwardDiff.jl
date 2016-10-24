@@ -21,6 +21,14 @@ end
 @inline extract_value!(out::DiffResult, ydual) = DiffBase.value!(value, out, ydual)
 @inline extract_value!(out, ydual) = nothing
 
+@inline function extract_value!(out, y, ydual)
+    map!(value, y, ydual)
+    copy_value!(out, y)
+end
+
+@inline copy_value!(out::DiffResult, y) = DiffBase.value!(out, y)
+@inline copy_value!(out, y) = nothing
+
 ###################################
 # vector mode function evaluation #
 ###################################
