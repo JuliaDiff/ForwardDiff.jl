@@ -23,3 +23,13 @@ function hessian!(out::DiffResult, f, x, opts::AbstractOptions = HessianOptions(
     jacobian!(DiffBase.hessian(out), ∇f!, DiffBase.gradient(out), x, jacobian_options(opts))
     return out
 end
+
+######################
+# Hessian API Errors #
+######################
+
+const HESS_OPTIONS_ERR_MSG = "To use `hessian`/`hessian!` with options, use `HessianOptions` or `Multithread(::HessianOptions)` instead of `Options`."
+
+hessian(f, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
+hessian!(out, f, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
+hessian!(::DiffResult, f, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)

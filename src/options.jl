@@ -51,11 +51,7 @@ immutable HessianOptions{N,J,JD,G,GD} <: AbstractOptions
 end
 
 HessianOptions(x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(x)
-HessianOptions(y, x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(y, x)
-
-function (::Type{HessianOptions{N}}){N}(out::DiffResult, x::AbstractArray)
-    return HessianOptions{N}(DiffBase.gradient(out), x)
-end
+HessianOptions(out, x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(out, x)
 
 function (::Type{HessianOptions{N}}){N}(x::AbstractArray)
     jacobian_options = Options{N}(x)
@@ -63,8 +59,8 @@ function (::Type{HessianOptions{N}}){N}(x::AbstractArray)
     return HessianOptions(gradient_options, jacobian_options)
 end
 
-function (::Type{HessianOptions{N}}){N}(y::AbstractArray, x::AbstractArray)
-    jacobian_options = Options{N}(y, x)
+function (::Type{HessianOptions{N}}){N}(out::DiffResult, x::AbstractArray)
+    jacobian_options = Options{N}(DiffBase.gradient(out), x)
     yduals, xduals = jacobian_options.duals
     gradient_options = Options{N}(xduals)
     return HessianOptions(gradient_options, jacobian_options)
