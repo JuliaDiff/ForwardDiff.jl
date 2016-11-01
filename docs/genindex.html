@@ -74,30 +74,25 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations of ForwardDiff</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">ForwardDiff API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_api.html">Basic ForwardDiff API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#options">Options</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="chunk.html">Configuring Partial Derivative Chunks</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="chunk.html#what-chunk-size-should-i-use">What chunk size should I use?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_usage.html">Advanced Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#accessing-lower-order-results">Accessing Lower-Order Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#configuring-chunk-size">Configuring Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#simd-vectorization">SIMD Vectorization</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="lower_order_results.html">Accessing Lower-Order Results</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="lower_order_results.html#the-wrong-way">The Wrong Way</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lower_order_results.html#the-right-way">The Right Way</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="performance_tips.html">Performance Tips</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="performance_tips.html#simd-vectorization">SIMD Vectorization</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from ForwardDiff v0.1 to v0.2</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#unexported-api-functions">Unexported API Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#setting-chunk-size">Setting Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#enabling-multithreading">Enabling Multithreading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#retrieving-lower-order-results">Retrieving Lower-Order Results</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#higher-order-differentiation">Higher-Order Differentiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#creating-differentiation-functions">Creating Differentiation Functions</a></li>
@@ -166,21 +161,21 @@
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#ForwardDiff.derivative">ForwardDiff.derivative() (built-in function)</a>
+  <dt><a href="basic_api.html#ForwardDiff.derivative">ForwardDiff.derivative() (built-in function)</a>
   </dt>
 
       
-  <dt><a href="api.html#ForwardDiff.gradient">ForwardDiff.gradient() (built-in function)</a>
+  <dt><a href="basic_api.html#ForwardDiff.gradient">ForwardDiff.gradient() (built-in function)</a>
   </dt>
 
   </dl></td>
   <td style="width: 33%" valign="top"><dl>
       
-  <dt><a href="api.html#ForwardDiff.hessian">ForwardDiff.hessian() (built-in function)</a>
+  <dt><a href="basic_api.html#ForwardDiff.hessian">ForwardDiff.hessian() (built-in function)</a>
   </dt>
 
       
-  <dt><a href="api.html#ForwardDiff.jacobian">ForwardDiff.jacobian() (built-in function)</a>, <a href="api.html#ForwardDiff.jacobian">[1]</a>
+  <dt><a href="basic_api.html#ForwardDiff.jacobian">ForwardDiff.jacobian() (built-in function)</a>, <a href="basic_api.html#ForwardDiff.jacobian">[1]</a>
   </dt>
 
   </dl></td>

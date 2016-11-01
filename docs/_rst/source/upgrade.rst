@@ -51,7 +51,7 @@ Retrieving Lower-Order Results
 ------------------------------
 
 For more detail, see our documentation on `retrieving lower-order results
-<advanced_usage.html#Accessing_Lower_Order_Results>`_.
+<advanced_usage.html#accessing-lower-order-results>`_.
 
 .. code-block:: julia
 
