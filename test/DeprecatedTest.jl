@@ -37,14 +37,9 @@ v = f(x)
 g = ForwardDiff.gradient(f, x)
 
 @test ForwardDiff.gradient(f, x, Chunk{1}(); multithread = false) == g
-@test ForwardDiff.gradient(f, x, Chunk{1}(); multithread = true) == g
 
 out = similar(x)
 ForwardDiff.gradient!(out, f, x, Chunk{1}(); multithread = false)
-@test out == g
-
-out = similar(x)
-ForwardDiff.gradient!(out, f, x, Chunk{1}(); multithread = true)
 @test out == g
 
 out = DiffBase.GradientResult(x)
@@ -52,10 +47,18 @@ ForwardDiff.gradient!(out, f, x, Chunk{1}(); multithread = false)
 @test DiffBase.value(out) == v
 @test DiffBase.gradient(out) == g
 
-out = DiffBase.GradientResult(x)
-ForwardDiff.gradient!(out, f, x, Chunk{1}(); multithread = true)
-@test DiffBase.value(out) == v
-@test DiffBase.gradient(out) == g
+if ForwardDiff.IS_MULTITHREADED_JULIA
+    @test ForwardDiff.gradient(f, x, Chunk{1}(); multithread = true) == g
+
+    out = similar(x)
+    ForwardDiff.gradient!(out, f, x, Chunk{1}(); multithread = true)
+    @test out == g
+
+    out = DiffBase.GradientResult(x)
+    ForwardDiff.gradient!(out, f, x, Chunk{1}(); multithread = true)
+    @test DiffBase.value(out) == v
+    @test DiffBase.gradient(out) == g
+end
 
 ######################
 # jacobian/jacobian! #
@@ -70,14 +73,9 @@ y = f(x)
 j = ForwardDiff.jacobian(f, x)
 
 @test ForwardDiff.jacobian(f, x, Chunk{1}(); multithread = false) == j
-@test ForwardDiff.jacobian(f, x, Chunk{1}(); multithread = true) == j
 
 out = similar(x, length(y), length(x))
 ForwardDiff.jacobian!(out, f, x, Chunk{1}(); multithread = false)
-@test out == j
-
-out = similar(x, length(y), length(x))
-ForwardDiff.jacobian!(out, f, x, Chunk{1}(); multithread = true)
 @test out == j
 
 out = DiffBase.JacobianResult(x)
@@ -85,10 +83,18 @@ ForwardDiff.jacobian!(out, f, x, Chunk{1}(); multithread = false)
 @test DiffBase.value(out) == y
 @test DiffBase.jacobian(out) == j
 
-out = DiffBase.JacobianResult(x)
-ForwardDiff.jacobian!(out, f, x, Chunk{1}(); multithread = true)
-@test DiffBase.value(out) == y
-@test DiffBase.jacobian(out) == j
+if ForwardDiff.IS_MULTITHREADED_JULIA
+    @test ForwardDiff.jacobian(f, x, Chunk{1}(); multithread = true) == j
+
+    out = similar(x, length(y), length(x))
+    ForwardDiff.jacobian!(out, f, x, Chunk{1}(); multithread = true)
+    @test out == j
+
+    out = DiffBase.JacobianResult(x)
+    ForwardDiff.jacobian!(out, f, x, Chunk{1}(); multithread = true)
+    @test DiffBase.value(out) == y
+    @test DiffBase.jacobian(out) == j
+end
 
 # f!(y, x) #
 #----------#
@@ -99,14 +105,9 @@ f!(y, x)
 j = ForwardDiff.jacobian(f!, y, x)
 
 @test ForwardDiff.jacobian(f!, y, x, Chunk{1}(); multithread = false) == j
-@test ForwardDiff.jacobian(f!, y, x, Chunk{1}(); multithread = true) == j
 
 out = similar(x, length(y), length(x))
 ForwardDiff.jacobian!(out, f!, y, x, Chunk{1}(); multithread = false)
-@test out == j
-
-out = similar(x, length(y), length(x))
-ForwardDiff.jacobian!(out, f!, y, x, Chunk{1}(); multithread = true)
 @test out == j
 
 out = DiffBase.JacobianResult(y, x)
@@ -114,10 +115,18 @@ ForwardDiff.jacobian!(out, f!, y, x, Chunk{1}(); multithread = false)
 @test DiffBase.value(out) == y
 @test DiffBase.jacobian(out) == j
 
-out = DiffBase.JacobianResult(y, x)
-ForwardDiff.jacobian!(out, f!, y, x, Chunk{1}(); multithread = true)
-@test DiffBase.value(out) == y
-@test DiffBase.jacobian(out) == j
+if ForwardDiff.IS_MULTITHREADED_JULIA
+    @test ForwardDiff.jacobian(f!, y, x, Chunk{1}(); multithread = true) == j
+
+    out = similar(x, length(y), length(x))
+    ForwardDiff.jacobian!(out, f!, y, x, Chunk{1}(); multithread = true)
+    @test out == j
+
+    out = DiffBase.JacobianResult(y, x)
+    ForwardDiff.jacobian!(out, f!, y, x, Chunk{1}(); multithread = true)
+    @test DiffBase.value(out) == y
+    @test DiffBase.jacobian(out) == j
+end
 
 ####################
 # hessian/hessian! #
@@ -130,14 +139,9 @@ g = ForwardDiff.gradient(f, x)
 h = ForwardDiff.hessian(f, x, Chunk{1}())
 
 @test ForwardDiff.hessian(f, x, Chunk{1}(); multithread = false) == h
-@test ForwardDiff.hessian(f, x, Chunk{1}(); multithread = true) == h
 
 out = similar(x, length(x), length(x))
 ForwardDiff.hessian!(out, f, x, Chunk{1}(); multithread = false)
-@test out == h
-
-out = similar(x, length(x), length(x))
-ForwardDiff.hessian!(out, f, x, Chunk{1}(); multithread = true)
 @test out == h
 
 out = DiffBase.HessianResult(x)
@@ -146,11 +150,19 @@ ForwardDiff.hessian!(out, f, x, Chunk{1}(); multithread = false)
 @test DiffBase.gradient(out) == g
 @test DiffBase.hessian(out) == h
 
-out = DiffBase.HessianResult(x)
-ForwardDiff.hessian!(out, f, x, Chunk{1}(); multithread = true)
-@test DiffBase.value(out) == v
-@test DiffBase.gradient(out) == g
-@test DiffBase.hessian(out) == h
+if ForwardDiff.IS_MULTITHREADED_JULIA
+    @test ForwardDiff.hessian(f, x, Chunk{1}(); multithread = true) == h
+
+    out = similar(x, length(x), length(x))
+    ForwardDiff.hessian!(out, f, x, Chunk{1}(); multithread = true)
+    @test out == h
+
+    out = DiffBase.HessianResult(x)
+    ForwardDiff.hessian!(out, f, x, Chunk{1}(); multithread = true)
+    @test DiffBase.value(out) == v
+    @test DiffBase.gradient(out) == g
+    @test DiffBase.hessian(out) == h
+end
 
 info("Deprecation testing is now complete, so any further deprecation warnings are real.")
 
