@@ -21,13 +21,13 @@ end
 Options(x::AbstractArray) = Options{pickchunksize(length(x))}(x)
 Options(y::AbstractArray, x::AbstractArray) = Options{pickchunksize(length(x))}(y, x)
 
-function (::Type{Options{N}}){N,T}(x::AbstractArray{T})
+function @compat (::Type{Options{N}}){N,T}(x::AbstractArray{T})
     seeds = construct_seeds(Partials{N,T})
     duals = similar(x, Dual{N,T})
     return Options{N,T,typeof(duals)}(seeds, duals)
 end
 
-function (::Type{Options{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArray{X})
+function @compat (::Type{Options{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArray{X})
     seeds = construct_seeds(Partials{N,X})
     yduals = similar(y, Dual{N,Y})
     xduals = similar(x, Dual{N,X})
@@ -53,13 +53,13 @@ end
 HessianOptions(x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(x)
 HessianOptions(out, x::AbstractArray) = HessianOptions{pickchunksize(length(x))}(out, x)
 
-function (::Type{HessianOptions{N}}){N}(x::AbstractArray)
+function @compat (::Type{HessianOptions{N}}){N}(x::AbstractArray)
     jacobian_options = Options{N}(x)
     gradient_options = Options{N}(jacobian_options.duals)
     return HessianOptions(gradient_options, jacobian_options)
 end
 
-function (::Type{HessianOptions{N}}){N}(out::DiffResult, x::AbstractArray)
+function @compat (::Type{HessianOptions{N}}){N}(out::DiffResult, x::AbstractArray)
     jacobian_options = Options{N}(DiffBase.gradient(out), x)
     yduals, xduals = jacobian_options.duals
     gradient_options = Options{N}(xduals)
@@ -86,12 +86,12 @@ end
 
 Multithread(opts::AbstractOptions) = Multithread{NTHREADS}(opts)
 
-function (::Type{Multithread{M}}){M}(opts::Options)
+function @compat (::Type{Multithread{M}}){M}(opts::Options)
     options1 = ntuple(n -> copy(opts), Val{M})
     return Multithread{M,typeof(options1),Void}(options1, nothing)
 end
 
-function (::Type{Multithread{M}}){M}(opts::HessianOptions)
+function @compat (::Type{Multithread{M}}){M}(opts::HessianOptions)
     options1 = Multithread{M}(gradient_options(opts))
     options2 = copy(jacobian_options(opts))
     return Multithread{M,typeof(options1),typeof(options2)}(options1, options2)
