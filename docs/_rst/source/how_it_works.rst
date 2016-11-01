@@ -94,9 +94,10 @@ the result. For example, to calculate the partial derivatives for the gradient o
     \to
     f(\vec{x}_{\epsilon}) = f(\vec{x}) + \sum_{i=1}^N \frac{\delta f(\vec{x})}{\delta x_i} \epsilon_i
 
-In reality, ForwardDiff does this calculation in `chunks of the input vector <chunk.html>`_.
-To provide a simple example of this, let's examine the case where the input vector size is
-4 and the chunk size is 2. It then takes two calls to :math:`f` to evaluate the gradient:
+In reality, ForwardDiff does this calculation in `chunks of the input vector
+<advanced_usage.html#Configuring_Chunk_Size>`_. To provide a simple example of this, let's
+examine the case where the input vector size is 4 and the chunk size is 2. It then takes two
+calls to :math:`f` to evaluate the gradient:
 
 .. math::
 
