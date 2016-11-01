@@ -36,6 +36,17 @@ Setting Chunk Size
     # current v0.3 style
     ForwardDiff.gradient(f, x, ForwardDiff.Options{10}(x))
 
+Enabling Multithreading
+-----------------------
+
+.. code-block:: julia
+
+    # old v0.1/v0.2 style
+    ForwardDiff.gradient(f, x; multithread = true)
+
+    # current v0.3 style
+    ForwardDiff.gradient(f, x, ForwardDiff.Multithread(ForwardDiff.Options(x)))
+
 Retrieving Lower-Order Results
 ------------------------------
 

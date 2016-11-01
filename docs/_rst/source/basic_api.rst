@@ -114,4 +114,5 @@ for you. However, it is highly recomended to `specify the chunk size manually wh
     Wrap the given ``opts`` in a ``Multithread`` instance, which can then be passed to
     gradient or Hessian methods in order to enable experimental multithreading. The
     number of threads ``M`` may be explicitly specified as a type parameter, or omitted,
-    in which case ``M`` will default to ``Base.Threads.nthreads()``.
+    in which case ``M`` will default to ``Base.Threads.nthreads()``. Note that Jacobian
+    methods do not yet support multithreading.
