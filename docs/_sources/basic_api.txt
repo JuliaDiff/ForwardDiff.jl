@@ -86,33 +86,49 @@ for you. However, it is highly recomended to `specify the chunk size manually wh
 
 .. function:: ForwardDiff.Options{N}(x)
 
-    Construct an ``Options`` instance based on the type and shape of the input
-    vector ``x``. This constructor does not store/modify ``x``.
+    Construct an ``Options`` instance based on the type and shape of the input vector ``x``.
+    The returned ``Options`` instance contains all the work buffers required by
+    ForwardDiff's gradient/Jacobian methods. If taking the Jacobian of a target function
+    with the form ``f!(y, x)``, use the constructor ``ForwardDiff.Options{N}(y, x)``
+    instead.
+
+    This constructor does not store/modify ``x``.
 
 .. function:: ForwardDiff.Options{N}(y, x)
 
-    Construct an ``Options`` instance based on the type and shape of the output
-    vector ``y`` and the input vector ``x``. This constructor should be used
-    when calling ``ForwardDiff.jacobian``/``ForwardDiff.jacobian!`` with a
-    a target function of the form ``f!(y, x)``. This constructor does not
-    store/modify ``y`` or ``x``.
+    Construct an ``Options`` instance based on the type and shape of the output vector ``y``
+    and the input vector ``x``. The returned ``Options`` instance contains all the work
+    buffers required by  ``ForwardDiff.jacobian``/``ForwardDiff.jacobian!`` with a target
+    function of the form ``f!(y, x)``.
+
+    This constructor does not store/modify ``y`` or ``x``.
 
 .. function:: ForwardDiff.HessianOptions{N}(x)
 
-    Construct a ``HessianOptions`` instance based on the type and shape of the input
-    vector ``x``. This constructor does not store/modify ``x``.
+    Construct a ``HessianOptions`` instance based on the type and shape of the input vector
+    ``x``. The returned ``HessianOptions`` instance contains all the work buffers required
+    by ForwardDiff's Hessian methods. If using
+    ``ForwardDiff.hessian!(out::DiffBase.DiffResult, args...)``, use the constructor
+    ``ForwardDiff.HessianOptions{N}(out, x)`` instead.
+
+    This constructor does not store/modify ``x``.
 
 .. function:: ForwardDiff.HessianOptions{N}(out::DiffBase.DiffResult, x)
 
     Construct an ``HessianOptions`` instance based on the type and shape of the storage in
-    ``out`` and the input vector ``x``. This constructor should be used when calling
-    ``ForwardDiff.hessian!(out::DiffBase.DiffResult, args...)``. This constructor does not
-    store/modify ``out`` or ``x``.
+    ``out`` and the input vector ``x``. The returned ``HessianOptions`` instance contains
+    all the work buffers required by ``ForwardDiff.hessian!(out::DiffBase.DiffResult,
+    args...)``.
 
-.. function:: ForwardDiff.Multithread{M}(opts::AbstractOptions)
+    This constructor does not store/modify ``out`` or ``x``.
+
+.. function:: ForwardDiff.Multithread(opts::AbstractOptions)
 
     Wrap the given ``opts`` in a ``Multithread`` instance, which can then be passed to
-    gradient or Hessian methods in order to enable experimental multithreading. The
-    number of threads ``M`` may be explicitly specified as a type parameter, or omitted,
-    in which case ``M`` will default to ``Base.Threads.nthreads()``. Note that Jacobian
+    gradient or Hessian methods in order to enable experimental multithreading. Jacobian
     methods do not yet support multithreading.
+
+    Note that multithreaded ForwardDiff API methods will attempt to use all available
+    threads. In the future, once Julia exposes more fine-grained threading primitives,
+    a ``Multithread`` constructor may be added which takes in a user-provided subset
+    of thread IDs instead of using all available threads.

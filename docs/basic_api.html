@@ -252,44 +252,55 @@ for you. However, it is highly recomended to <a class="reference external" href=
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.Options{N}(x)</code></dt>
-<dd><p>Construct an <code class="docutils literal"><span class="pre">Options</span></code> instance based on the type and shape of the input
-vector <code class="docutils literal"><span class="pre">x</span></code>. This constructor does not store/modify <code class="docutils literal"><span class="pre">x</span></code>.</p>
+<dd><p>Construct an <code class="docutils literal"><span class="pre">Options</span></code> instance based on the type and shape of the input vector <code class="docutils literal"><span class="pre">x</span></code>.
+The returned <code class="docutils literal"><span class="pre">Options</span></code> instance contains all the work buffers required by
+ForwardDiff&#8217;s gradient/Jacobian methods. If taking the Jacobian of a target function
+with the form <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code>, use the constructor <code class="docutils literal"><span class="pre">ForwardDiff.Options{N}(y,</span> <span class="pre">x)</span></code>
+instead.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">x</span></code>.</p>
 </dd></dl>
 
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.Options{N}(y, x)</code></dt>
-<dd><p>Construct an <code class="docutils literal"><span class="pre">Options</span></code> instance based on the type and shape of the output
-vector <code class="docutils literal"><span class="pre">y</span></code> and the input vector <code class="docutils literal"><span class="pre">x</span></code>. This constructor should be used
-when calling <code class="docutils literal"><span class="pre">ForwardDiff.jacobian</span></code>/<code class="docutils literal"><span class="pre">ForwardDiff.jacobian!</span></code> with a
-a target function of the form <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code>. This constructor does not
-store/modify <code class="docutils literal"><span class="pre">y</span></code> or <code class="docutils literal"><span class="pre">x</span></code>.</p>
+<dd><p>Construct an <code class="docutils literal"><span class="pre">Options</span></code> instance based on the type and shape of the output vector <code class="docutils literal"><span class="pre">y</span></code>
+and the input vector <code class="docutils literal"><span class="pre">x</span></code>. The returned <code class="docutils literal"><span class="pre">Options</span></code> instance contains all the work
+buffers required by  <code class="docutils literal"><span class="pre">ForwardDiff.jacobian</span></code>/<code class="docutils literal"><span class="pre">ForwardDiff.jacobian!</span></code> with a target
+function of the form <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code>.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">y</span></code> or <code class="docutils literal"><span class="pre">x</span></code>.</p>
 </dd></dl>
 
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.HessianOptions{N}(x)</code></dt>
-<dd><p>Construct a <code class="docutils literal"><span class="pre">HessianOptions</span></code> instance based on the type and shape of the input
-vector <code class="docutils literal"><span class="pre">x</span></code>. This constructor does not store/modify <code class="docutils literal"><span class="pre">x</span></code>.</p>
+<dd><p>Construct a <code class="docutils literal"><span class="pre">HessianOptions</span></code> instance based on the type and shape of the input vector
+<code class="docutils literal"><span class="pre">x</span></code>. The returned <code class="docutils literal"><span class="pre">HessianOptions</span></code> instance contains all the work buffers required
+by ForwardDiff&#8217;s Hessian methods. If using
+<code class="docutils literal"><span class="pre">ForwardDiff.hessian!(out::DiffBase.DiffResult,</span> <span class="pre">args...)</span></code>, use the constructor
+<code class="docutils literal"><span class="pre">ForwardDiff.HessianOptions{N}(out,</span> <span class="pre">x)</span></code> instead.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">x</span></code>.</p>
 </dd></dl>
 
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.HessianOptions{N}(out::DiffBase.DiffResult, x)</code></dt>
 <dd><p>Construct an <code class="docutils literal"><span class="pre">HessianOptions</span></code> instance based on the type and shape of the storage in
-<code class="docutils literal"><span class="pre">out</span></code> and the input vector <code class="docutils literal"><span class="pre">x</span></code>. This constructor should be used when calling
-<code class="docutils literal"><span class="pre">ForwardDiff.hessian!(out::DiffBase.DiffResult,</span> <span class="pre">args...)</span></code>. This constructor does not
-store/modify <code class="docutils literal"><span class="pre">out</span></code> or <code class="docutils literal"><span class="pre">x</span></code>.</p>
+<code class="docutils literal"><span class="pre">out</span></code> and the input vector <code class="docutils literal"><span class="pre">x</span></code>. The returned <code class="docutils literal"><span class="pre">HessianOptions</span></code> instance contains
+all the work buffers required by <code class="docutils literal"><span class="pre">ForwardDiff.hessian!(out::DiffBase.DiffResult,</span>
+<span class="pre">args...)</span></code>.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">out</span></code> or <code class="docutils literal"><span class="pre">x</span></code>.</p>
 </dd></dl>
 
 <dl class="function">
-<dt>
-<code class="descname">ForwardDiff.Multithread{M}(opts::AbstractOptions)</code></dt>
+<dt id="ForwardDiff.Multithread">
+<code class="descclassname">ForwardDiff.</code><code class="descname">Multithread</code><span class="sig-paren">(</span><em>opts::AbstractOptions</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.Multithread" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wrap the given <code class="docutils literal"><span class="pre">opts</span></code> in a <code class="docutils literal"><span class="pre">Multithread</span></code> instance, which can then be passed to
-gradient or Hessian methods in order to enable experimental multithreading. The
-number of threads <code class="docutils literal"><span class="pre">M</span></code> may be explicitly specified as a type parameter, or omitted,
-in which case <code class="docutils literal"><span class="pre">M</span></code> will default to <code class="docutils literal"><span class="pre">Base.Threads.nthreads()</span></code>. Note that Jacobian
+gradient or Hessian methods in order to enable experimental multithreading. Jacobian
 methods do not yet support multithreading.</p>
+<p>Note that multithreaded ForwardDiff API methods will attempt to use all available
+threads. In the future, once Julia exposes more fine-grained threading primitives,
+a <code class="docutils literal"><span class="pre">Multithread</span></code> constructor may be added which takes in a user-provided subset
+of thread IDs instead of using all available threads.</p>
 </dd></dl>
 
 </div>
