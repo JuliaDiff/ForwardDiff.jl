@@ -79,22 +79,20 @@ jacobian_options(opts::HessianOptions) = opts.jacobian_options
 # Multithread #
 ###############
 
-immutable Multithread{M,A,B} <: AbstractOptions
+immutable Multithread{A,B} <: AbstractOptions
     options1::A
     options2::B
 end
 
-Multithread(opts::AbstractOptions) = Multithread{NTHREADS}(opts)
-
-@compat (::Type{Multithread{M}}){M}(opts::Options) = begin
-    options1 = ntuple(n -> copy(opts), Val{M})
-    return Multithread{M,typeof(options1),Void}(options1, nothing)
+@eval function Multithread(opts::Options)
+    options1 = ntuple(n -> copy(opts), Val{$NTHREADS})
+    return Multithread(options1, nothing)
 end
 
-@compat (::Type{Multithread{M}}){M}(opts::HessianOptions) = begin
-    options1 = Multithread{M}(gradient_options(opts))
+function Multithread(opts::HessianOptions)
+    options1 = Multithread(gradient_options(opts))
     options2 = copy(jacobian_options(opts))
-    return Multithread{M,typeof(options1),typeof(options2)}(options1, options2)
+    return Multithread(options1, options2)
 end
 
 gradient_options(opts::Multithread) = opts.options1
