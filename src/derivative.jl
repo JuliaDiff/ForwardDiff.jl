@@ -2,9 +2,9 @@
 # API methods #
 ###############
 
-derivative(f, x) = extract_derivative(f(Dual(x, one(x))))
+derivative{F}(f::F, x) = extract_derivative(f(Dual(x, one(x))))
 
-function derivative!(out, f, x)
+function derivative!{F}(out, f::F, x)
     y = f(Dual(x, one(x)))
     extract_derivative!(out, y)
     return out

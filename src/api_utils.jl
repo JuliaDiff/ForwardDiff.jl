@@ -33,16 +33,16 @@ end
 # vector mode function evaluation #
 ###################################
 
-vector_mode_dual_eval(f, x, opts::Multithread) = vector_mode_dual_eval(f, x, gradient_options(opts))
-vector_mode_dual_eval(f, x, opts::Tuple) = vector_mode_dual_eval(f, x, first(opts))
+vector_mode_dual_eval{F}(f::F, x, opts::Multithread) = vector_mode_dual_eval(f, x, gradient_options(opts))
+vector_mode_dual_eval{F}(f::F, x, opts::Tuple) = vector_mode_dual_eval(f, x, first(opts))
 
-function vector_mode_dual_eval(f, x, opts)
+function vector_mode_dual_eval{F}(f::F, x, opts)
     xdual = opts.duals
     seed!(xdual, x, opts.seeds)
     return f(xdual)
 end
 
-function vector_mode_dual_eval(f!, y, x, opts)
+function vector_mode_dual_eval{F}(f!::F, y, x, opts)
     ydual, xdual = opts.duals
     seed!(xdual, x, opts.seeds)
     seed!(ydual, y)

@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-function gradient(f, x, opts::AbstractOptions = Options(x))
+function gradient{F}(f::F, x, opts::AbstractOptions = Options(x))
     if chunksize(opts) == length(x)
         return vector_mode_gradient(f, x, opts)
     else
@@ -10,7 +10,7 @@ function gradient(f, x, opts::AbstractOptions = Options(x))
     end
 end
 
-function gradient!(out, f, x, opts::AbstractOptions = Options(x))
+function gradient!{F}(out, f::F, x, opts::AbstractOptions = Options(x))
     if chunksize(opts) == length(x)
         vector_mode_gradient!(out, f, x, opts)
     else
@@ -56,13 +56,13 @@ end
 # vector mode #
 ###############
 
-function vector_mode_gradient(f, x, opts)
+function vector_mode_gradient{F}(f::F, x, opts)
     ydual = vector_mode_dual_eval(f, x, opts)
     out = similar(x, valtype(ydual))
     return extract_gradient!(out, ydual)
 end
 
-function vector_mode_gradient!(out, f, x, opts)
+function vector_mode_gradient!{F}(out, f::F, x, opts)
     ydual = vector_mode_dual_eval(f, x, opts)
     extract_gradient!(out, ydual)
     return out
@@ -119,11 +119,11 @@ function chunk_mode_gradient_expr(out_definition::Expr)
     end
 end
 
-@eval function chunk_mode_gradient{N}(f, x, opts::Options{N})
+@eval function chunk_mode_gradient{F,N}(f::F, x, opts::Options{N})
     $(chunk_mode_gradient_expr(:(out = similar(x, valtype(ydual)))))
 end
 
-@eval function chunk_mode_gradient!{N}(out, f, x, opts::Options{N})
+@eval function chunk_mode_gradient!{F,N}(out, f::F, x, opts::Options{N})
     $(chunk_mode_gradient_expr(:()))
 end
 
@@ -185,11 +185,11 @@ if IS_MULTITHREADED_JULIA
         end
     end
 
-    @eval function chunk_mode_gradient(f, x, multi_opts::Multithread)
+    @eval function chunk_mode_gradient{F}(f::F, x, multi_opts::Multithread)
         $(multithread_chunk_mode_expr(:(out = similar(x, valtype(current_ydual)))))
     end
 
-    @eval function chunk_mode_gradient!(out, f, x, multi_opts::Multithread)
+    @eval function chunk_mode_gradient!{F}(out, f::F, x, multi_opts::Multithread)
         $(multithread_chunk_mode_expr(:()))
     end
 else

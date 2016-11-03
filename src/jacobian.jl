@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-function jacobian(f, x, opts::Options = Options(x))
+function jacobian{F}(f::F, x, opts::Options = Options(x))
     if chunksize(opts) == length(x)
         return vector_mode_jacobian(f, x, opts)
     else
@@ -10,7 +10,7 @@ function jacobian(f, x, opts::Options = Options(x))
     end
 end
 
-function jacobian(f!, y, x, opts::Options = Options(y, x))
+function jacobian{F}(f!::F, y, x, opts::Options = Options(y, x))
     if chunksize(opts) == length(x)
         return vector_mode_jacobian(f!, y, x, opts)
     else
@@ -18,7 +18,7 @@ function jacobian(f!, y, x, opts::Options = Options(y, x))
     end
 end
 
-function jacobian!(out, f, x, opts::Options = Options(x))
+function jacobian!{F}(out, f::F, x, opts::Options = Options(x))
     if chunksize(opts) == length(x)
         vector_mode_jacobian!(out, f, x, opts)
     else
@@ -27,7 +27,7 @@ function jacobian!(out, f, x, opts::Options = Options(x))
     return out
 end
 
-function jacobian!(out, f!, y, x, opts::Options = Options(y, x))
+function jacobian!{F}(out, f!::F, y, x, opts::Options = Options(y, x))
     if chunksize(opts) == length(x)
         vector_mode_jacobian!(out, f!, y, x, opts)
     else
@@ -71,7 +71,7 @@ reshape_jacobian(out::DiffResult, ydual, xdual) = reshape_jacobian(DiffBase.jaco
 # vector mode #
 ###############
 
-function vector_mode_jacobian{N}(f, x, opts::Options{N})
+function vector_mode_jacobian{F,N}(f::F, x, opts::Options{N})
     ydual = vector_mode_dual_eval(f, x, opts)
     out = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     extract_jacobian!(out, ydual, N)
@@ -79,7 +79,7 @@ function vector_mode_jacobian{N}(f, x, opts::Options{N})
     return out
 end
 
-function vector_mode_jacobian{N}(f!, y, x, opts::Options{N})
+function vector_mode_jacobian{F,N}(f!::F, y, x, opts::Options{N})
     ydual = vector_mode_dual_eval(f!, y, x, opts)
     map!(value, y, ydual)
     out = similar(y, length(y), N)
@@ -88,14 +88,14 @@ function vector_mode_jacobian{N}(f!, y, x, opts::Options{N})
     return out
 end
 
-function vector_mode_jacobian!{N}(out, f, x, opts::Options{N})
+function vector_mode_jacobian!{F,N}(out, f::F, x, opts::Options{N})
     ydual = vector_mode_dual_eval(f, x, opts)
     extract_jacobian!(out, ydual, N)
     extract_value!(out, ydual)
     return out
 end
 
-function vector_mode_jacobian!{N}(out, f!, y, x, opts::Options{N})
+function vector_mode_jacobian!{F,N}(out, f!::F, y, x, opts::Options{N})
     ydual = vector_mode_dual_eval(f!, y, x, opts)
     map!(value, y, ydual)
     extract_jacobian!(out, ydual, N)
@@ -150,7 +150,7 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
     end
 end
 
-@eval function chunk_mode_jacobian{N}(f, x, opts::Options{N})
+@eval function chunk_mode_jacobian{F,N}(f::F, x, opts::Options{N})
     $(jacobian_chunk_mode_expr(quote
                                    xdual = opts.duals
                                    seed!(xdual, x)
@@ -160,7 +160,7 @@ end
                                :()))
 end
 
-@eval function chunk_mode_jacobian{N}(f!, y, x, opts::Options{N})
+@eval function chunk_mode_jacobian{F,N}(f!::F, y, x, opts::Options{N})
     $(jacobian_chunk_mode_expr(quote
                                    ydual, xdual = opts.duals
                                    seed!(xdual, x)
@@ -170,7 +170,7 @@ end
                                :(map!(value, y, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f, x, opts::Options{N})
+@eval function chunk_mode_jacobian!{F,N}(out, f::F, x, opts::Options{N})
     $(jacobian_chunk_mode_expr(quote
                                    xdual = opts.duals
                                    seed!(xdual, x)
@@ -180,7 +180,7 @@ end
                                :(extract_value!(out, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{N}(out, f!, y, x, opts::Options{N})
+@eval function chunk_mode_jacobian!{F,N}(out, f!::F, y, x, opts::Options{N})
     $(jacobian_chunk_mode_expr(quote
                                    ydual, xdual = opts.duals
                                    seed!(xdual, x)

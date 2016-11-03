@@ -2,18 +2,18 @@
 # API methods #
 ###############
 
-function hessian(f, x, opts::AbstractOptions = HessianOptions(x))
+function hessian{F}(f::F, x, opts::AbstractOptions = HessianOptions(x))
     ∇f = y -> gradient(f, y, gradient_options(opts))
     return jacobian(∇f, x, jacobian_options(opts))
 end
 
-function hessian!(out, f, x, opts::AbstractOptions = HessianOptions(x))
+function hessian!{F}(out, f::F, x, opts::AbstractOptions = HessianOptions(x))
     ∇f = y -> gradient(f, y, gradient_options(opts))
     jacobian!(out, ∇f, x, jacobian_options(opts))
     return out
 end
 
-function hessian!(out::DiffResult, f, x, opts::AbstractOptions = HessianOptions(out, x))
+function hessian!{F}(out::DiffResult, f::F, x, opts::AbstractOptions = HessianOptions(out, x))
     ∇f! = (y, z) -> begin
         result = DiffResult(zero(eltype(y)), y)
         gradient!(result, f, z, gradient_options(opts))
@@ -30,6 +30,6 @@ end
 
 const HESS_OPTIONS_ERR_MSG = "To use `hessian`/`hessian!` with options, use `HessianOptions` or `Multithread(::HessianOptions)` instead of `Options`."
 
-hessian(f, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
-hessian!(out, f, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
-hessian!(::DiffResult, f, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
+hessian{F}(f::F, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
+hessian!{F}(out, f::F, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
+hessian!{F}(::DiffResult, f::F, x, ::Options) = error(HESS_OPTIONS_ERR_MSG)
