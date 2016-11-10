@@ -2,19 +2,19 @@
 # API methods #
 ###############
 
-function gradient{F}(f::F, x, opts::AbstractOptions = Options(x))
-    if chunksize(opts) == length(x)
-        return vector_mode_gradient(f, x, opts)
+function gradient{F}(f::F, x, cfg::AbstractConfig = Config(x))
+    if chunksize(cfg) == length(x)
+        return vector_mode_gradient(f, x, cfg)
     else
-        return chunk_mode_gradient(f, x, opts)
+        return chunk_mode_gradient(f, x, cfg)
     end
 end
 
-function gradient!{F}(out, f::F, x, opts::AbstractOptions = Options(x))
-    if chunksize(opts) == length(x)
-        vector_mode_gradient!(out, f, x, opts)
+function gradient!{F}(out, f::F, x, cfg::AbstractConfig = Config(x))
+    if chunksize(cfg) == length(x)
+        vector_mode_gradient!(out, f, x, cfg)
     else
-        chunk_mode_gradient!(out, f, x, opts)
+        chunk_mode_gradient!(out, f, x, cfg)
     end
     return out
 end
@@ -56,14 +56,14 @@ end
 # vector mode #
 ###############
 
-function vector_mode_gradient{F}(f::F, x, opts)
-    ydual = vector_mode_dual_eval(f, x, opts)
+function vector_mode_gradient{F}(f::F, x, cfg)
+    ydual = vector_mode_dual_eval(f, x, cfg)
     out = similar(x, valtype(ydual))
     return extract_gradient!(out, ydual)
 end
 
-function vector_mode_gradient!{F}(out, f::F, x, opts)
-    ydual = vector_mode_dual_eval(f, x, opts)
+function vector_mode_gradient!{F}(out, f::F, x, cfg)
+    ydual = vector_mode_dual_eval(f, x, cfg)
     extract_gradient!(out, ydual)
     return out
 end
@@ -87,8 +87,8 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         middlechunks = 2:div(xlen - lastchunksize, N)
 
         # seed work vectors
-        xdual = opts.duals
-        seeds = opts.seeds
+        xdual = cfg.duals
+        seeds = cfg.seeds
         seed!(xdual, x)
 
         # do first chunk manually to calculate output type
@@ -119,11 +119,11 @@ function chunk_mode_gradient_expr(out_definition::Expr)
     end
 end
 
-@eval function chunk_mode_gradient{F,N}(f::F, x, opts::Options{N})
+@eval function chunk_mode_gradient{F,N}(f::F, x, cfg::Config{N})
     $(chunk_mode_gradient_expr(:(out = similar(x, valtype(ydual)))))
 end
 
-@eval function chunk_mode_gradient!{F,N}(out, f::F, x, opts::Options{N})
+@eval function chunk_mode_gradient!{F,N}(out, f::F, x, cfg::Config{N})
     $(chunk_mode_gradient_expr(:()))
 end
 
@@ -133,8 +133,8 @@ end
 if IS_MULTITHREADED_JULIA
     function multithread_chunk_mode_expr(out_definition::Expr)
         return quote
-            opts = gradient_options(multi_opts)
-            N = chunksize(opts)
+            cfg = gradient_options(multi_cfg)
+            N = chunksize(cfg)
             @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
             # precalculate loop bounds
@@ -145,12 +145,12 @@ if IS_MULTITHREADED_JULIA
             middlechunks = 2:div(xlen - lastchunksize, N)
 
             # fetch and seed work vectors
-            current_opts = opts[compat_threadid()]
-            current_xdual = current_opts.duals
-            current_seeds = current_opts.seeds
+            current_cfg = cfg[compat_threadid()]
+            current_xdual = current_cfg.duals
+            current_seeds = current_cfg.seeds
 
-            Base.Threads.@threads for t in 1:length(opts)
-                seed!(opts[t].duals, x)
+            Base.Threads.@threads for t in 1:length(cfg)
+                seed!(cfg[t].duals, x)
             end
 
             # do first chunk manually to calculate output type
@@ -163,9 +163,9 @@ if IS_MULTITHREADED_JULIA
             # do middle chunks
             Base.Threads.@threads for c in middlechunks
                 # see https://github.com/JuliaLang/julia/issues/14948
-                local chunk_opts = opts[compat_threadid()]
-                local chunk_xdual = chunk_opts.duals
-                local chunk_seeds = chunk_opts.seeds
+                local chunk_cfg = cfg[compat_threadid()]
+                local chunk_xdual = chunk_cfg.duals
+                local chunk_seeds = chunk_cfg.seeds
                 local chunk_index = ((c - 1) * N + 1)
                 seed!(chunk_xdual, x, chunk_index, chunk_seeds)
                 local chunk_dual = f(chunk_xdual)
@@ -185,14 +185,14 @@ if IS_MULTITHREADED_JULIA
         end
     end
 
-    @eval function chunk_mode_gradient{F}(f::F, x, multi_opts::Multithread)
+    @eval function chunk_mode_gradient{F}(f::F, x, multi_cfg::Multithread)
         $(multithread_chunk_mode_expr(:(out = similar(x, valtype(current_ydual)))))
     end
 
-    @eval function chunk_mode_gradient!{F}(out, f::F, x, multi_opts::Multithread)
+    @eval function chunk_mode_gradient!{F}(out, f::F, x, multi_cfg::Multithread)
         $(multithread_chunk_mode_expr(:()))
     end
 else
-    chunk_mode_gradient(f, x, opts::Tuple) = error("Multithreading is not enabled for this Julia installation.")
-    chunk_mode_gradient!(out, f, x, opts::Tuple) = chunk_mode_gradient!(f, x, opts)
+    chunk_mode_gradient(f, x, cfg::Tuple) = error("Multithreading is not enabled for this Julia installation.")
+    chunk_mode_gradient!(out, f, x, cfg::Tuple) = chunk_mode_gradient!(f, x, cfg)
 end

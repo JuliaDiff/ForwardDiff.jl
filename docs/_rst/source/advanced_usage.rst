@@ -57,25 +57,25 @@ For example:
     # output buffer
     julia> out = similar(x);
 
-    # construct Options with chunk size of 1
-    julia> opts1 = ForwardDiff.Options{1}(x);
+    # construct Config with chunk size of 1
+    julia> cfg1 = ForwardDiff.Config{1}(x);
 
-    # construct Options with chunk size of 4
-    julia> opts4 = ForwardDiff.Options{4}(x);
+    # construct Config with chunk size of 4
+    julia> cfg4 = ForwardDiff.Config{4}(x);
 
-    # construct Options with chunk size of 10
-    julia> opts10 = ForwardDiff.Options{10}(x);
+    # construct Config with chunk size of 10
+    julia> cfg10 = ForwardDiff.Config{10}(x);
 
     # (input length of 10000) / (chunk size of 1) = (10000 1-element chunks)
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, opts1);
+    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg1);
       0.408305 seconds (4 allocations: 160 bytes)
 
     # (input length of 10000) / (chunk size of 4) = (2500 4-element chunks)
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, opts4);
+    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg4);
       0.295764 seconds (4 allocations: 160 bytes)
 
     # (input length of 10000) / (chunk size of 10) = (1000 10-element chunks)
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, opts10);
+    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg10);
       0.267396 seconds (4 allocations: 160 bytes)
 
 If you do not explicity provide a chunk size, ForwardDiff will try to guess one for you
@@ -83,11 +83,11 @@ based on your input vector:
 
 .. code-block:: julia
 
-    # The Options constructor will automatically select a
+    # The Config constructor will automatically select a
     # chunk size in one is not explicitly provided
-    julia> opts = ForwardDiff.Options(x);
+    julia> cfg = ForwardDiff.Config(x);
 
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, opts);
+    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg);
     0.266920 seconds (4 allocations: 160 bytes)
 
 If your input dimension is a constant, you should explicitly select a chunk size rather than

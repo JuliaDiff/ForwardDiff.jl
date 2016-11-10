@@ -18,15 +18,15 @@ g = [-9.4, 15.6, 52.0]
 
 for c in (1, 2, 3)
     println("  ...running hardcoded test with chunk size = $c")
-    opts = ForwardDiff.Options{c}(x)
+    cfg = ForwardDiff.Config{c}(x)
 
     # single-threaded #
     #-----------------#
-    @test_approx_eq g ForwardDiff.gradient(f, x, opts)
+    @test_approx_eq g ForwardDiff.gradient(f, x, cfg)
     @test_approx_eq g ForwardDiff.gradient(f, x)
 
     out = similar(x)
-    ForwardDiff.gradient!(out, f, x, opts)
+    ForwardDiff.gradient!(out, f, x, cfg)
     @test_approx_eq out g
 
     out = similar(x)
@@ -34,7 +34,7 @@ for c in (1, 2, 3)
     @test_approx_eq out g
 
     out = DiffBase.GradientResult(x)
-    ForwardDiff.gradient!(out, f, x, opts)
+    ForwardDiff.gradient!(out, f, x, cfg)
     @test_approx_eq DiffBase.value(out) v
     @test_approx_eq DiffBase.gradient(out) g
 
@@ -46,16 +46,16 @@ for c in (1, 2, 3)
     # multithreaded #
     #---------------#
     if ForwardDiff.IS_MULTITHREADED_JULIA
-        multi_opts = ForwardDiff.Multithread(opts)
+        multi_cfg = ForwardDiff.Multithread(cfg)
 
-        @test_approx_eq g ForwardDiff.gradient(f, x, multi_opts)
+        @test_approx_eq g ForwardDiff.gradient(f, x, multi_cfg)
 
         out = similar(x)
-        ForwardDiff.gradient!(out, f, x, multi_opts)
+        ForwardDiff.gradient!(out, f, x, multi_cfg)
         @test_approx_eq out g
 
         out = DiffBase.GradientResult(x)
-        ForwardDiff.gradient!(out, f, x, multi_opts)
+        ForwardDiff.gradient!(out, f, x, multi_cfg)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
     end
@@ -71,36 +71,36 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     @test_approx_eq_eps g Calculus.gradient(f, X) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size = $c")
-        opts = ForwardDiff.Options{c}(X)
+        cfg = ForwardDiff.Config{c}(X)
 
         # single-threaded #
         #-----------------#
-        out = ForwardDiff.gradient(f, X, opts)
+        out = ForwardDiff.gradient(f, X, cfg)
         @test_approx_eq out g
 
         out = similar(X)
-        ForwardDiff.gradient!(out, f, X, opts)
+        ForwardDiff.gradient!(out, f, X, cfg)
         @test_approx_eq out g
 
         out = DiffBase.GradientResult(X)
-        ForwardDiff.gradient!(out, f, X, opts)
+        ForwardDiff.gradient!(out, f, X, cfg)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.gradient(out) g
 
         # multithreaded #
         #---------------#
         if ForwardDiff.IS_MULTITHREADED_JULIA
-            multi_opts = ForwardDiff.Multithread(opts)
+            multi_cfg = ForwardDiff.Multithread(cfg)
 
-            out = ForwardDiff.gradient(f, X, multi_opts)
+            out = ForwardDiff.gradient(f, X, multi_cfg)
             @test_approx_eq out g
 
             out = similar(X)
-            ForwardDiff.gradient!(out, f, X, multi_opts)
+            ForwardDiff.gradient!(out, f, X, multi_cfg)
             @test_approx_eq out g
 
             out = DiffBase.GradientResult(X)
-            ForwardDiff.gradient!(out, f, X, multi_opts)
+            ForwardDiff.gradient!(out, f, X, multi_cfg)
             @test_approx_eq DiffBase.value(out) v
             @test_approx_eq DiffBase.gradient(out) g
         end

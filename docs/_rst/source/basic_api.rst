@@ -19,12 +19,12 @@ Gradients of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}
 
 Use ``ForwardDiff.gradient`` to differentiate functions of the form ``f(::AbstractArray)::Real``.
 
-.. function:: ForwardDiff.gradient!(out, f, x, opts = ForwardDiff.Options(x))
+.. function:: ForwardDiff.gradient!(out, f, x, cfg = ForwardDiff.Config(x))
 
     Compute :math:`\nabla f(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``opts`` yourself (see the `Options`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `Config`_ section below).
 
-.. function:: ForwardDiff.gradient(f, x, opts = ForwardDiff.Options(x))
+.. function:: ForwardDiff.gradient(f, x, cfg = ForwardDiff.Config(x))
 
     Compute and return :math:`\nabla f(\vec{x})`.
 
@@ -33,22 +33,22 @@ Jacobians of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}
 
 Use ``ForwardDiff.jacobian`` to differentiate functions of the form ``f(::AbstractArray)::AbstractArray``.
 
-.. function:: ForwardDiff.jacobian!(out, f, x, opts = ForwardDiff.Options(x))
+.. function:: ForwardDiff.jacobian!(out, f, x, cfg = ForwardDiff.Config(x))
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``opts`` yourself (see the `Options`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `Config`_ section below).
 
-.. function:: ForwardDiff.jacobian!(out, f!, y, x, opts = ForwardDiff.Options(y, x))
+.. function:: ForwardDiff.jacobian!(out, f!, y, x, cfg = ForwardDiff.Config(y, x))
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be called as
     ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``. The output
     matrix is stored in ``out``.
 
-.. function:: ForwardDiff.jacobian(f, x, opts = ForwardDiff.Options(x))
+.. function:: ForwardDiff.jacobian(f, x, cfg = ForwardDiff.Config(x))
 
     Compute and return :math:`\mathbf{J}(f)(\vec{x})`.
 
-.. function:: ForwardDiff.jacobian(f!, y, x, opts = ForwardDiff.Options(y, x))
+.. function:: ForwardDiff.jacobian(f!, y, x, cfg = ForwardDiff.Config(y, x))
 
     Compute and return :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be
     called as ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``.
@@ -58,20 +58,20 @@ Hessians of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} 
 
 Use ``ForwardDiff.hessian`` to perform second-order differentiation on functions of the form ``f(::AbstractArray)::Real``.
 
-.. function:: ForwardDiff.hessian!(out, f, x, opts = ForwardDiff.HessianOptions(x))
+.. function:: ForwardDiff.hessian!(out, f, x, cfg = ForwardDiff.HessianConfig(x))
 
     Compute :math:`\mathbf{H}(f)(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``opts`` yourself (see the `Options`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `Config`_ section below).
 
-.. function:: ForwardDiff.hessian(f, x, opts = ForwardDiff.HessianOptions(x))
+.. function:: ForwardDiff.hessian(f, x, cfg = ForwardDiff.HessianConfig(x))
 
     Compute and return :math:`\mathbf{H}(f)(\vec{x})`.
 
-Options
--------
+The ``Config`` Type
+-------------------
 
 For the sake of convenience and performance, all "extra" information used by ForwardDiff's
-API methods is bundled up in the ``ForwardDiff.AbstractOptions`` family of types. Theses
+API methods is bundled up in the ``ForwardDiff.AbstractConfig`` family of types. Theses
 types allow the user to easily feed several different parameters to ForwardDiff's  API
 methods, such as `chunk size <advanced_usage.html#configuring-chunk-size>`_, work buffers,
 multithreading configurations, and perturbation seed configurations.
@@ -84,47 +84,47 @@ type parameter, or omitted, in which case ForwardDiff will automatically select 
 for you. However, it is highly recomended to `specify the chunk size manually when possible
 <advanced_usage.html#configuring-chunk-size>`_.
 
-.. function:: ForwardDiff.Options{N}(x)
+.. function:: ForwardDiff.Config{N}(x)
 
-    Construct an ``Options`` instance based on the type and shape of the input vector ``x``.
-    The returned ``Options`` instance contains all the work buffers required by
+    Construct an ``Config`` instance based on the type and shape of the input vector ``x``.
+    The returned ``Config`` instance contains all the work buffers required by
     ForwardDiff's gradient/Jacobian methods. If taking the Jacobian of a target function
-    with the form ``f!(y, x)``, use the constructor ``ForwardDiff.Options{N}(y, x)``
+    with the form ``f!(y, x)``, use the constructor ``ForwardDiff.Config{N}(y, x)``
     instead.
 
     This constructor does not store/modify ``x``.
 
-.. function:: ForwardDiff.Options{N}(y, x)
+.. function:: ForwardDiff.Config{N}(y, x)
 
-    Construct an ``Options`` instance based on the type and shape of the output vector ``y``
-    and the input vector ``x``. The returned ``Options`` instance contains all the work
+    Construct an ``Config`` instance based on the type and shape of the output vector ``y``
+    and the input vector ``x``. The returned ``Config`` instance contains all the work
     buffers required by  ``ForwardDiff.jacobian``/``ForwardDiff.jacobian!`` with a target
     function of the form ``f!(y, x)``.
 
     This constructor does not store/modify ``y`` or ``x``.
 
-.. function:: ForwardDiff.HessianOptions{N}(x)
+.. function:: ForwardDiff.HessianConfig{N}(x)
 
-    Construct a ``HessianOptions`` instance based on the type and shape of the input vector
-    ``x``. The returned ``HessianOptions`` instance contains all the work buffers required
+    Construct a ``HessianConfig`` instance based on the type and shape of the input vector
+    ``x``. The returned ``HessianConfig`` instance contains all the work buffers required
     by ForwardDiff's Hessian methods. If using
     ``ForwardDiff.hessian!(out::DiffBase.DiffResult, args...)``, use the constructor
-    ``ForwardDiff.HessianOptions{N}(out, x)`` instead.
+    ``ForwardDiff.HessianConfig{N}(out, x)`` instead.
 
     This constructor does not store/modify ``x``.
 
-.. function:: ForwardDiff.HessianOptions{N}(out::DiffBase.DiffResult, x)
+.. function:: ForwardDiff.HessianConfig{N}(out::DiffBase.DiffResult, x)
 
-    Construct an ``HessianOptions`` instance based on the type and shape of the storage in
-    ``out`` and the input vector ``x``. The returned ``HessianOptions`` instance contains
+    Construct an ``HessianConfig`` instance based on the type and shape of the storage in
+    ``out`` and the input vector ``x``. The returned ``HessianConfig`` instance contains
     all the work buffers required by ``ForwardDiff.hessian!(out::DiffBase.DiffResult,
     args...)``.
 
     This constructor does not store/modify ``out`` or ``x``.
 
-.. function:: ForwardDiff.Multithread(opts::AbstractOptions)
+.. function:: ForwardDiff.Multithread(cfg::AbstractConfig)
 
-    Wrap the given ``opts`` in a ``Multithread`` instance, which can then be passed to
+    Wrap the given ``cfg`` in a ``Multithread`` instance, which can then be passed to
     gradient or Hessian methods in order to enable experimental multithreading. Jacobian
     methods do not yet support multithreading.
 
