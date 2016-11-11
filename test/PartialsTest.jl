@@ -21,8 +21,8 @@ for N in (0, 3), T in (Int, Float32, Float64)
 
     @test PARTIALS.values == VALUES
 
-    @test ForwardDiff.numtype(PARTIALS) == T
-    @test ForwardDiff.numtype(typeof(PARTIALS)) == T
+    @test ForwardDiff.valtype(PARTIALS) == T
+    @test ForwardDiff.valtype(typeof(PARTIALS)) == T
 
     @test ForwardDiff.npartials(PARTIALS) == N
     @test ForwardDiff.npartials(typeof(PARTIALS)) == N

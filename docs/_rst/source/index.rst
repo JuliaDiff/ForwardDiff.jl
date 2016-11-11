@@ -15,10 +15,8 @@ This `wikipedia page`_ on automatic differentiation is a useful resource for lea
 
    install.rst
    limitations.rst
-   api.rst
-   chunk.rst
-   lower_order_results.rst
-   performance_tips.rst
+   basic_api.rst
+   advanced_usage.rst
    upgrade.rst
 
 .. toctree::

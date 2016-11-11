@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="ForwardDiff.jl 0.2.3 documentation" href="index.html"/>
-        <link rel="next" title="ForwardDiff API" href="api.html"/>
+        <link rel="next" title="Basic ForwardDiff API" href="basic_api.html"/>
         <link rel="prev" title="Installation and Version Requirements" href="install.html"/> 
 
   
@@ -75,30 +75,25 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">Limitations of ForwardDiff</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">ForwardDiff API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="api.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_api.html">Basic ForwardDiff API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-config-type">The <code class="docutils literal"><span class="pre">Config</span></code> Type</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="chunk.html">Configuring Partial Derivative Chunks</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="chunk.html#what-chunk-size-should-i-use">What chunk size should I use?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_usage.html">Advanced Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#accessing-lower-order-results">Accessing Lower-Order Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#configuring-chunk-size">Configuring Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#simd-vectorization">SIMD Vectorization</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="lower_order_results.html">Accessing Lower-Order Results</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="lower_order_results.html#the-wrong-way">The Wrong Way</a></li>
-<li class="toctree-l2"><a class="reference internal" href="lower_order_results.html#the-right-way">The Right Way</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="performance_tips.html">Performance Tips</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="performance_tips.html#simd-vectorization">SIMD Vectorization</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from ForwardDiff v0.1 to v0.2</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#unexported-api-functions">Unexported API Functions</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#setting-chunk-size">Setting Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#enabling-multithreading">Enabling Multithreading</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#retrieving-lower-order-results">Retrieving Lower-Order Results</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#higher-order-differentiation">Higher-Order Differentiation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="upgrade.html#creating-differentiation-functions">Creating Differentiation Functions</a></li>
@@ -166,10 +161,10 @@ of all the roadblocks we&#8217;ve seen users run into (&#8220;target function&#8
 function being differentiated):</p>
 <ul class="simple">
 <li><strong>The target function can only be composed of generic Julia functions.</strong> ForwardDiff cannot propagate derivative information through non-Julia code. Thus, your function may not work if it makes calls to external, non-Julia programs, e.g. uses explicit BLAS calls instead of <code class="docutils literal"><span class="pre">Ax_mul_Bx</span></code>-style functions.</li>
-<li><strong>The target function must be unary (i.e., only accept a single argument).</strong> There is an exception to this rule for ForwardDiff&#8217;s <code class="docutils literal"><span class="pre">jacobian</span></code> API; see <a class="reference external" href="api.html">the API documentation</a> for details.</li>
+<li><strong>The target function must be unary (i.e., only accept a single argument).</strong> There is an exception to this rule for ForwardDiff&#8217;s <code class="docutils literal"><span class="pre">jacobian</span></code> API; see <a class="reference external" href="basic_api.html">the API documentation</a> for details.</li>
 <li><strong>The target function must be written generically enough to accept numbers of type ``T&lt;:Real`` as input  (or arrays of these numbers).</strong> The function doesn&#8217;t require a specific type signature, as long as the type signature is generic enough to avoid breaking this rule. This also means that any storage assigned used within the function must be generic as well (see <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/136#issuecomment-237941790">this comment</a> for an example).</li>
 <li><strong>Nested differentiation of closures is dangerous.</strong> Differentiating closures is safe, and nested differentation is safe, but you might be vulnerable to a subtle bug if you try to do both. See <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/83">the relevant issue</a> for details.</li>
-<li><strong>The types of array inputs must be subtypes of</strong> <code class="docutils literal"><span class="pre">AbstractArray</span></code> <strong>.</strong> Non-<code class="docutils literal"><span class="pre">AbstractArray</span></code> array-like types are not  officially supported. However, these types might very well work if they overload <code class="docutils literal"><span class="pre">ForwardDiff.replace_eltype{A,S}(x::A,</span> <span class="pre">::Type{S})</span></code> (whose definition can be found in <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/src/cache.jl">this file</a>), which returns the type of <code class="docutils literal"><span class="pre">x</span></code> where the element type is replaced with <code class="docutils literal"><span class="pre">S</span></code>.</li>
+<li><strong>The types of array inputs must be subtypes of</strong> <code class="docutils literal"><span class="pre">AbstractArray</span></code> <strong>.</strong> Non-<code class="docutils literal"><span class="pre">AbstractArray</span></code> array-like types are not officially supported.</li>
 </ul>
 </div>
 
@@ -179,7 +174,7 @@ function being differentiated):</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="api.html" class="btn btn-neutral float-right" title="ForwardDiff API" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="basic_api.html" class="btn btn-neutral float-right" title="Basic ForwardDiff API" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="install.html" class="btn btn-neutral" title="Installation and Version Requirements" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

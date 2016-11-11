@@ -106,7 +106,7 @@ pygments_style = 'sphinx'
 todo_include_todos = False
 
 
-# -- Options for HTML output ----------------------------------------------
+# -- Config for HTML output ----------------------------------------------
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
@@ -207,7 +207,7 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'ForwardDiffjldoc'
 
-# -- Options for LaTeX output ---------------------------------------------
+# -- Config for LaTeX output ---------------------------------------------
 
 latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
@@ -252,7 +252,7 @@ latex_documents = [
 #latex_domain_indices = True
 
 
-# -- Options for manual page output ---------------------------------------
+# -- Config for manual page output ---------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
@@ -265,7 +265,7 @@ man_pages = [
 #man_show_urls = False
 
 
-# -- Options for Texinfo output -------------------------------------------
+# -- Config for Texinfo output -------------------------------------------
 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,

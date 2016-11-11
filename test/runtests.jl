@@ -41,3 +41,8 @@ if Base.JLOptions().opt_level >= 3 && VERSION >= v"0.5"
     include("SIMDTest.jl")
     println("done (took $(toq()) seconds).")
 end
+
+println("Testing deprecations...")
+tic()
+include("DeprecatedTest.jl")
+println("done (took $(toq()) seconds).")

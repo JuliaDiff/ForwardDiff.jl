@@ -1,0 +1,376 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Basic ForwardDiff API &mdash; ForwardDiff.jl 0.2.3 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ForwardDiff.jl 0.2.3 documentation" href="index.html"/>
+        <link rel="next" title="Advanced Usage Guide" href="advanced_usage.html"/>
+        <link rel="prev" title="Limitations of ForwardDiff" href="limitations.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        
+
+        
+          <a href="index.html" class="icon icon-home"> ForwardDiff.jl
+        
+
+        
+        </a>
+
+        
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+        
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+          
+          
+              <p class="caption"><span class="caption-text">User Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
+<li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations of ForwardDiff</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Basic ForwardDiff API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-config-type">The <code class="docutils literal"><span class="pre">Config</span></code> Type</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_usage.html">Advanced Usage Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#accessing-lower-order-results">Accessing Lower-Order Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#configuring-chunk-size">Configuring Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#simd-vectorization">SIMD Vectorization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#unexported-api-functions">Unexported API Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#setting-chunk-size">Setting Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#enabling-multithreading">Enabling Multithreading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#retrieving-lower-order-results">Retrieving Lower-Order Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#higher-order-differentiation">Higher-Order Differentiation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upgrade.html#creating-differentiation-functions">Creating Differentiation Functions</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Developer Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#dual-number-implementation">Dual Number Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#forwarddiff-s-api">ForwardDiff&#8217;s API</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to Contribute</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#manually-optimizing-unary-functions">Manually Optimizing Unary Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#implementing-new-functions">Implementing New Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#unary-functions-via-calculus-jl">Unary Functions Via Calculus.jl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="contributing.html#manually-adding-functions-to-forwarddiff">Manually Adding Functions to ForwardDiff</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">ForwardDiff.jl</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Basic ForwardDiff API</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/basic_api.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document">
+            
+  <div class="section" id="basic-forwarddiff-api">
+<h1>Basic ForwardDiff API<a class="headerlink" href="#basic-forwarddiff-api" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="derivatives-of">
+<h2>Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span><a class="headerlink" href="#derivatives-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.derivative</span></code> to differentiate functions of the form <code class="docutils literal"><span class="pre">f(::Real)::Real</span></code> and <code class="docutils literal"><span class="pre">f(::Real)::AbstractArray</span></code>.</p>
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.derivative!(out, f, x)</code></dt>
+<dd><p>Compute <span class="math">\(f'(x)\)</span>, storing the output in <code class="docutils literal"><span class="pre">out</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ForwardDiff.derivative">
+<code class="descclassname">ForwardDiff.</code><code class="descname">derivative</code><span class="sig-paren">(</span><em>f</em>, <em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.derivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute and return <span class="math">\(f'(x)\)</span>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="gradients-of">
+<h2>Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span><a class="headerlink" href="#gradients-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.gradient</span></code> to differentiate functions of the form <code class="docutils literal"><span class="pre">f(::AbstractArray)::Real</span></code>.</p>
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.gradient!(out, f, x, cfg = ForwardDiff.Config(x))</code></dt>
+<dd><p>Compute <span class="math">\(\nabla f(\vec{x})\)</span>, storing the output in <code class="docutils literal"><span class="pre">out</span></code>. It is highly
+advised to preallocate <code class="docutils literal"><span class="pre">cfg</span></code> yourself (see the <a href="#id1"><span class="problematic" id="id2">`Config`_</span></a> section below).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ForwardDiff.gradient">
+<code class="descclassname">ForwardDiff.</code><code class="descname">gradient</code><span class="sig-paren">(</span><em>f</em>, <em>x</em>, <em>cfg = ForwardDiff.Config(x)</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.gradient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute and return <span class="math">\(\nabla f(\vec{x})\)</span>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="jacobians-of">
+<h2>Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span><a class="headerlink" href="#jacobians-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.jacobian</span></code> to differentiate functions of the form <code class="docutils literal"><span class="pre">f(::AbstractArray)::AbstractArray</span></code>.</p>
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.jacobian!(out, f, x, cfg = ForwardDiff.Config(x))</code></dt>
+<dd><p>Compute <span class="math">\(\mathbf{J}(f)(\vec{x})\)</span>, storing the output in <code class="docutils literal"><span class="pre">out</span></code>. It is highly
+advised to preallocate <code class="docutils literal"><span class="pre">cfg</span></code> yourself (see the <a href="#id3"><span class="problematic" id="id4">`Config`_</span></a> section below).</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.jacobian!(out, f!, y, x, cfg = ForwardDiff.Config(y, x))</code></dt>
+<dd><p>Compute <span class="math">\(\mathbf{J}(f)(\vec{x})\)</span>, where <span class="math">\(f(\vec{x})\)</span> can be called as
+<code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code> such that the output of <span class="math">\(f(\vec{x})\)</span> is stored in <code class="docutils literal"><span class="pre">y</span></code>. The output
+matrix is stored in <code class="docutils literal"><span class="pre">out</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ForwardDiff.jacobian">
+<code class="descclassname">ForwardDiff.</code><code class="descname">jacobian</code><span class="sig-paren">(</span><em>f</em>, <em>x</em>, <em>cfg = ForwardDiff.Config(x)</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.jacobian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute and return <span class="math">\(\mathbf{J}(f)(\vec{x})\)</span>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descclassname">ForwardDiff.</code><code class="descname">jacobian</code><span class="sig-paren">(</span><em>f!</em>, <em>y</em>, <em>x</em>, <em>cfg = ForwardDiff.Config(y</em>, <em>x)</em><span class="sig-paren">)</span></dt>
+<dd><p>Compute and return <span class="math">\(\mathbf{J}(f)(\vec{x})\)</span>, where <span class="math">\(f(\vec{x})\)</span> can be
+called as <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code> such that the output of <span class="math">\(f(\vec{x})\)</span> is stored in <code class="docutils literal"><span class="pre">y</span></code>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="hessians-of">
+<h2>Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span><a class="headerlink" href="#hessians-of" title="Permalink to this headline">¶</a></h2>
+<p>Use <code class="docutils literal"><span class="pre">ForwardDiff.hessian</span></code> to perform second-order differentiation on functions of the form <code class="docutils literal"><span class="pre">f(::AbstractArray)::Real</span></code>.</p>
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.hessian!(out, f, x, cfg = ForwardDiff.HessianConfig(x))</code></dt>
+<dd><p>Compute <span class="math">\(\mathbf{H}(f)(\vec{x})\)</span>, storing the output in <code class="docutils literal"><span class="pre">out</span></code>. It is highly
+advised to preallocate <code class="docutils literal"><span class="pre">cfg</span></code> yourself (see the <a href="#id5"><span class="problematic" id="id6">`Config`_</span></a> section below).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ForwardDiff.hessian">
+<code class="descclassname">ForwardDiff.</code><code class="descname">hessian</code><span class="sig-paren">(</span><em>f</em>, <em>x</em>, <em>cfg = ForwardDiff.HessianConfig(x)</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.hessian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute and return <span class="math">\(\mathbf{H}(f)(\vec{x})\)</span>.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="the-config-type">
+<h2>The <code class="docutils literal"><span class="pre">Config</span></code> Type<a class="headerlink" href="#the-config-type" title="Permalink to this headline">¶</a></h2>
+<p>For the sake of convenience and performance, all &#8220;extra&#8221; information used by ForwardDiff&#8217;s
+API methods is bundled up in the <code class="docutils literal"><span class="pre">ForwardDiff.AbstractConfig</span></code> family of types. Theses
+types allow the user to easily feed several different parameters to ForwardDiff&#8217;s  API
+methods, such as <a class="reference external" href="advanced_usage.html#configuring-chunk-size">chunk size</a>, work buffers,
+multithreading configurations, and perturbation seed configurations.</p>
+<p>ForwardDiff&#8217;s basic API methods will allocate these types automatically by default,
+but you can drastically reduce memory usage if you preallocate them yourself.</p>
+<p>Note that for all constructors below, the chunk size <code class="docutils literal"><span class="pre">N</span></code> may be explictly provided as a
+type parameter, or omitted, in which case ForwardDiff will automatically select a chunk size
+for you. However, it is highly recomended to <a class="reference external" href="advanced_usage.html#configuring-chunk-size">specify the chunk size manually when possible</a>.</p>
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.Config{N}(x)</code></dt>
+<dd><p>Construct an <code class="docutils literal"><span class="pre">Config</span></code> instance based on the type and shape of the input vector <code class="docutils literal"><span class="pre">x</span></code>.
+The returned <code class="docutils literal"><span class="pre">Config</span></code> instance contains all the work buffers required by
+ForwardDiff&#8217;s gradient/Jacobian methods. If taking the Jacobian of a target function
+with the form <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code>, use the constructor <code class="docutils literal"><span class="pre">ForwardDiff.Config{N}(y,</span> <span class="pre">x)</span></code>
+instead.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">x</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.Config{N}(y, x)</code></dt>
+<dd><p>Construct an <code class="docutils literal"><span class="pre">Config</span></code> instance based on the type and shape of the output vector <code class="docutils literal"><span class="pre">y</span></code>
+and the input vector <code class="docutils literal"><span class="pre">x</span></code>. The returned <code class="docutils literal"><span class="pre">Config</span></code> instance contains all the work
+buffers required by  <code class="docutils literal"><span class="pre">ForwardDiff.jacobian</span></code>/<code class="docutils literal"><span class="pre">ForwardDiff.jacobian!</span></code> with a target
+function of the form <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code>.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">y</span></code> or <code class="docutils literal"><span class="pre">x</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.HessianConfig{N}(x)</code></dt>
+<dd><p>Construct a <code class="docutils literal"><span class="pre">HessianConfig</span></code> instance based on the type and shape of the input vector
+<code class="docutils literal"><span class="pre">x</span></code>. The returned <code class="docutils literal"><span class="pre">HessianConfig</span></code> instance contains all the work buffers required
+by ForwardDiff&#8217;s Hessian methods. If using
+<code class="docutils literal"><span class="pre">ForwardDiff.hessian!(out::DiffBase.DiffResult,</span> <span class="pre">args...)</span></code>, use the constructor
+<code class="docutils literal"><span class="pre">ForwardDiff.HessianConfig{N}(out,</span> <span class="pre">x)</span></code> instead.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">x</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.HessianConfig{N}(out::DiffBase.DiffResult, x)</code></dt>
+<dd><p>Construct an <code class="docutils literal"><span class="pre">HessianConfig</span></code> instance based on the type and shape of the storage in
+<code class="docutils literal"><span class="pre">out</span></code> and the input vector <code class="docutils literal"><span class="pre">x</span></code>. The returned <code class="docutils literal"><span class="pre">HessianConfig</span></code> instance contains
+all the work buffers required by <code class="docutils literal"><span class="pre">ForwardDiff.hessian!(out::DiffBase.DiffResult,</span>
+<span class="pre">args...)</span></code>.</p>
+<p>This constructor does not store/modify <code class="docutils literal"><span class="pre">out</span></code> or <code class="docutils literal"><span class="pre">x</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="ForwardDiff.Multithread">
+<code class="descclassname">ForwardDiff.</code><code class="descname">Multithread</code><span class="sig-paren">(</span><em>cfg::AbstractConfig</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.Multithread" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrap the given <code class="docutils literal"><span class="pre">cfg</span></code> in a <code class="docutils literal"><span class="pre">Multithread</span></code> instance, which can then be passed to
+gradient or Hessian methods in order to enable experimental multithreading. Jacobian
+methods do not yet support multithreading.</p>
+<p>Note that multithreaded ForwardDiff API methods will attempt to use all available
+threads. In the future, once Julia exposes more fine-grained threading primitives,
+a <code class="docutils literal"><span class="pre">Multithread</span></code> constructor may be added which takes in a user-provided subset
+of thread IDs instead of using all available threads.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="advanced_usage.html" class="btn btn-neutral float-right" title="Advanced Usage Guide" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="limitations.html" class="btn btn-neutral" title="Limitations of ForwardDiff" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Jarrett Revels, Theodore Papamarkou, Miles Lubin, and other contributors.
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.2.3',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
