@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-function gradient{F}(f::F, x, cfg::AbstractConfig = Config(x))
+function gradient{F}(f::F, x, cfg::AbstractConfig = GradientConfig(x))
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -10,7 +10,7 @@ function gradient{F}(f::F, x, cfg::AbstractConfig = Config(x))
     end
 end
 
-function gradient!{F}(out, f::F, x, cfg::AbstractConfig = Config(x))
+function gradient!{F}(out, f::F, x, cfg::AbstractConfig = GradientConfig(x))
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(out, f, x, cfg)
     else
@@ -119,11 +119,11 @@ function chunk_mode_gradient_expr(out_definition::Expr)
     end
 end
 
-@eval function chunk_mode_gradient{F,N}(f::F, x, cfg::Config{N})
+@eval function chunk_mode_gradient{F,N}(f::F, x, cfg::GradientConfig{N})
     $(chunk_mode_gradient_expr(:(out = similar(x, valtype(ydual)))))
 end
 
-@eval function chunk_mode_gradient!{F,N}(out, f::F, x, cfg::Config{N})
+@eval function chunk_mode_gradient!{F,N}(out, f::F, x, cfg::GradientConfig{N})
     $(chunk_mode_gradient_expr(:()))
 end
 
@@ -133,7 +133,7 @@ end
 if IS_MULTITHREADED_JULIA
     function multithread_chunk_mode_expr(out_definition::Expr)
         return quote
-            cfg = gradient_options(multi_cfg)
+            cfg = gradient_config(multi_cfg)
             N = chunksize(cfg)
             @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
@@ -185,11 +185,11 @@ if IS_MULTITHREADED_JULIA
         end
     end
 
-    @eval function chunk_mode_gradient{F}(f::F, x, multi_cfg::Multithread)
+    @eval function chunk_mode_gradient{F}(f::F, x, multi_cfg::MultithreadConfig)
         $(multithread_chunk_mode_expr(:(out = similar(x, valtype(current_ydual)))))
     end
 
-    @eval function chunk_mode_gradient!{F}(out, f::F, x, multi_cfg::Multithread)
+    @eval function chunk_mode_gradient!{F}(out, f::F, x, multi_cfg::MultithreadConfig)
         $(multithread_chunk_mode_expr(:()))
     end
 else
