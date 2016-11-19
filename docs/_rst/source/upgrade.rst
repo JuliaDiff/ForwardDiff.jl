@@ -34,7 +34,7 @@ Setting Chunk Size
     ForwardDiff.gradient(f, x, Chunk{10}())
 
     # current v0.3 style
-    ForwardDiff.gradient(f, x, ForwardDiff.Config{10}(x))
+    ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{10}(x))
 
 Enabling Multithreading
 -----------------------
@@ -45,7 +45,7 @@ Enabling Multithreading
     ForwardDiff.gradient(f, x; multithread = true)
 
     # current v0.3 style
-    ForwardDiff.gradient(f, x, ForwardDiff.Multithread(ForwardDiff.Config(x)))
+    ForwardDiff.gradient(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.GradientConfig(x)))
 
 Retrieving Lower-Order Results
 ------------------------------

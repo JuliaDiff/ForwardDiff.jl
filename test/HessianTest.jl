@@ -52,8 +52,8 @@ for c in (1, 2, 3)
     # multithreaded #
     #---------------#
     if ForwardDiff.IS_MULTITHREADED_JULIA
-        multi_cfg = ForwardDiff.Multithread(cfg)
-        multi_resultcfg = ForwardDiff.Multithread(resultcfg)
+        multi_cfg = ForwardDiff.MultithreadConfig(cfg)
+        multi_resultcfg = ForwardDiff.MultithreadConfig(resultcfg)
 
         @test_approx_eq h ForwardDiff.hessian(f, x, multi_cfg)
 
@@ -102,8 +102,8 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         # multithreaded #
         #---------------#
         if ForwardDiff.IS_MULTITHREADED_JULIA
-            multi_cfg = ForwardDiff.Multithread(cfg)
-            multi_resultcfg = ForwardDiff.Multithread(resultcfg)
+            multi_cfg = ForwardDiff.MultithreadConfig(cfg)
+            multi_resultcfg = ForwardDiff.MultithreadConfig(resultcfg)
 
             out = ForwardDiff.hessian(f, X, multi_cfg)
             @test_approx_eq out h

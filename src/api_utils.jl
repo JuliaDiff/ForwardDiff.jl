@@ -33,7 +33,7 @@ end
 # vector mode function evaluation #
 ###################################
 
-vector_mode_dual_eval{F}(f::F, x, cfg::Multithread) = vector_mode_dual_eval(f, x, gradient_options(cfg))
+vector_mode_dual_eval{F}(f::F, x, cfg::MultithreadConfig) = vector_mode_dual_eval(f, x, gradient_config(cfg))
 vector_mode_dual_eval{F}(f::F, x, cfg::Tuple) = vector_mode_dual_eval(f, x, first(cfg))
 
 function vector_mode_dual_eval{F}(f::F, x, cfg)

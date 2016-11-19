@@ -18,7 +18,7 @@ g = [-9.4, 15.6, 52.0]
 
 for c in (1, 2, 3)
     println("  ...running hardcoded test with chunk size = $c")
-    cfg = ForwardDiff.Config{c}(x)
+    cfg = ForwardDiff.GradientConfig{c}(x)
 
     # single-threaded #
     #-----------------#
@@ -46,7 +46,7 @@ for c in (1, 2, 3)
     # multithreaded #
     #---------------#
     if ForwardDiff.IS_MULTITHREADED_JULIA
-        multi_cfg = ForwardDiff.Multithread(cfg)
+        multi_cfg = ForwardDiff.MultithreadConfig(cfg)
 
         @test_approx_eq g ForwardDiff.gradient(f, x, multi_cfg)
 
@@ -71,7 +71,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     @test_approx_eq_eps g Calculus.gradient(f, X) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size = $c")
-        cfg = ForwardDiff.Config{c}(X)
+        cfg = ForwardDiff.GradientConfig{c}(X)
 
         # single-threaded #
         #-----------------#
@@ -90,7 +90,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         # multithreaded #
         #---------------#
         if ForwardDiff.IS_MULTITHREADED_JULIA
-            multi_cfg = ForwardDiff.Multithread(cfg)
+            multi_cfg = ForwardDiff.MultithreadConfig(cfg)
 
             out = ForwardDiff.gradient(f, X, multi_cfg)
             @test_approx_eq out g

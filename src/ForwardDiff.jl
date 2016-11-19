@@ -44,7 +44,7 @@ const MAX_CHUNK_SIZE = 10
 
 include("partials.jl")
 include("dual.jl")
-include("options.jl")
+include("config.jl")
 include("api_utils.jl")
 include("derivative.jl")
 include("gradient.jl")
