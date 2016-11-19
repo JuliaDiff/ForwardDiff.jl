@@ -21,8 +21,9 @@ Use ``ForwardDiff.gradient`` to differentiate functions of the form ``f(::Abstra
 
 .. function:: ForwardDiff.gradient!(out, f, x, cfg = ForwardDiff.GradientConfig(x))
 
-    Compute :math:`\nabla f(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``cfg`` yourself (see the `AbstractConfig`_ section below).
+    Compute :math:`\nabla f(\vec{x})`, storing the output in ``out``. It is highly advised
+    to preallocate ``cfg`` yourself (see the `AbstractConfig
+    <basic_api.html#the-abstractconfig-types>`_ section below).
 
 .. function:: ForwardDiff.gradient(f, x, cfg = ForwardDiff.GradientConfig(x))
 
@@ -36,7 +37,8 @@ Use ``ForwardDiff.jacobian`` to differentiate functions of the form ``f(::Abstra
 .. function:: ForwardDiff.jacobian!(out, f, x, cfg = ForwardDiff.JacobianConfig(x))
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``cfg`` yourself (see the `AbstractConfig`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `AbstractConfig
+    <basic_api.html#the-abstractconfig-types>`_ section below).
 
 .. function:: ForwardDiff.jacobian!(out, f!, y, x, cfg = ForwardDiff.JacobianConfig(y, x))
 
@@ -61,7 +63,8 @@ Use ``ForwardDiff.hessian`` to perform second-order differentiation on functions
 .. function:: ForwardDiff.hessian!(out, f, x, cfg = ForwardDiff.HessianConfig(x))
 
     Compute :math:`\mathbf{H}(f)(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``cfg`` yourself (see the `AbstractConfig`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `AbstractConfig
+    <basic_api.html#the-abstractconfig-types>`_ section below).
 
 .. function:: ForwardDiff.hessian(f, x, cfg = ForwardDiff.HessianConfig(x))
 
