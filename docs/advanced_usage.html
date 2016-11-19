@@ -80,7 +80,7 @@
 <li class="toctree-l2"><a class="reference internal" href="basic_api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-config-type">The <code class="docutils literal"><span class="pre">Config</span></code> Type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-abstractconfig-types">The <code class="docutils literal"><span class="pre">AbstractConfig</span></code> Types</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">Advanced Usage Guide</a><ul>
@@ -201,14 +201,14 @@ bandwidth.</p>
 <span class="c"># output buffer</span>
 <span class="n">julia</span><span class="o">&gt;</span> <span class="n">out</span> <span class="o">=</span> <span class="n">similar</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
 
-<span class="c"># construct Config with chunk size of 1</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg1</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Config</span><span class="p">{</span><span class="mi">1</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
+<span class="c"># construct GradientConfig with chunk size of 1</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg1</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">{</span><span class="mi">1</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
 
-<span class="c"># construct Config with chunk size of 4</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg4</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Config</span><span class="p">{</span><span class="mi">4</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
+<span class="c"># construct GradientConfig with chunk size of 4</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg4</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">{</span><span class="mi">4</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
 
-<span class="c"># construct Config with chunk size of 10</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg10</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Config</span><span class="p">{</span><span class="mi">10</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
+<span class="c"># construct GradientConfig with chunk size of 10</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg10</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">{</span><span class="mi">10</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
 
 <span class="c"># (input length of 10000) / (chunk size of 1) = (10000 1-element chunks)</span>
 <span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg1</span><span class="p">);</span>
@@ -225,9 +225,9 @@ bandwidth.</p>
 </div>
 <p>If you do not explicity provide a chunk size, ForwardDiff will try to guess one for you
 based on your input vector:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span class="c"># The Config constructor will automatically select a</span>
+<div class="highlight-julia"><div class="highlight"><pre><span class="c"># The GradientConfig constructor will automatically select a</span>
 <span class="c"># chunk size in one is not explicitly provided</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
 
 <span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg</span><span class="p">);</span>
 <span class="mf">0.266920</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">4</span> <span class="n">allocations</span><span class="p">:</span> <span class="mi">160</span> <span class="n">bytes</span><span class="p">)</span>

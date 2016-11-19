@@ -80,7 +80,7 @@
 <li class="toctree-l2"><a class="reference internal" href="basic_api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
 <li class="toctree-l2"><a class="reference internal" href="basic_api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-config-type">The <code class="docutils literal"><span class="pre">Config</span></code> Type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-abstractconfig-types">The <code class="docutils literal"><span class="pre">AbstractConfig</span></code> Types</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="advanced_usage.html">Advanced Usage Guide</a><ul>
@@ -181,7 +181,7 @@ functions to reference them:</p>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">10</span><span class="p">}())</span>
 
 <span class="c"># current v0.3 style</span>
-<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Config</span><span class="p">{</span><span class="mi">10</span><span class="p">}(</span><span class="n">x</span><span class="p">))</span>
+<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">{</span><span class="mi">10</span><span class="p">}(</span><span class="n">x</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
@@ -191,7 +191,7 @@ functions to reference them:</p>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">;</span> <span class="n">multithread</span> <span class="o">=</span> <span class="n">true</span><span class="p">)</span>
 
 <span class="c"># current v0.3 style</span>
-<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Multithread</span><span class="p">(</span><span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Config</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">MultithreadConfig</span><span class="p">(</span><span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
 </pre></div>
 </div>
 </div>

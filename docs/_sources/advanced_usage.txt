@@ -57,14 +57,14 @@ For example:
     # output buffer
     julia> out = similar(x);
 
-    # construct Config with chunk size of 1
-    julia> cfg1 = ForwardDiff.Config{1}(x);
+    # construct GradientConfig with chunk size of 1
+    julia> cfg1 = ForwardDiff.GradientConfig{1}(x);
 
-    # construct Config with chunk size of 4
-    julia> cfg4 = ForwardDiff.Config{4}(x);
+    # construct GradientConfig with chunk size of 4
+    julia> cfg4 = ForwardDiff.GradientConfig{4}(x);
 
-    # construct Config with chunk size of 10
-    julia> cfg10 = ForwardDiff.Config{10}(x);
+    # construct GradientConfig with chunk size of 10
+    julia> cfg10 = ForwardDiff.GradientConfig{10}(x);
 
     # (input length of 10000) / (chunk size of 1) = (10000 1-element chunks)
     julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg1);
@@ -83,9 +83,9 @@ based on your input vector:
 
 .. code-block:: julia
 
-    # The Config constructor will automatically select a
+    # The GradientConfig constructor will automatically select a
     # chunk size in one is not explicitly provided
-    julia> cfg = ForwardDiff.Config(x);
+    julia> cfg = ForwardDiff.GradientConfig(x);
 
     julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg);
     0.266920 seconds (4 allocations: 160 bytes)

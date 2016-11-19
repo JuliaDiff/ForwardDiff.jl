@@ -19,12 +19,12 @@ Gradients of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}
 
 Use ``ForwardDiff.gradient`` to differentiate functions of the form ``f(::AbstractArray)::Real``.
 
-.. function:: ForwardDiff.gradient!(out, f, x, cfg = ForwardDiff.Config(x))
+.. function:: ForwardDiff.gradient!(out, f, x, cfg = ForwardDiff.GradientConfig(x))
 
     Compute :math:`\nabla f(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``cfg`` yourself (see the `Config`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `AbstractConfig`_ section below).
 
-.. function:: ForwardDiff.gradient(f, x, cfg = ForwardDiff.Config(x))
+.. function:: ForwardDiff.gradient(f, x, cfg = ForwardDiff.GradientConfig(x))
 
     Compute and return :math:`\nabla f(\vec{x})`.
 
@@ -33,22 +33,22 @@ Jacobians of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}
 
 Use ``ForwardDiff.jacobian`` to differentiate functions of the form ``f(::AbstractArray)::AbstractArray``.
 
-.. function:: ForwardDiff.jacobian!(out, f, x, cfg = ForwardDiff.Config(x))
+.. function:: ForwardDiff.jacobian!(out, f, x, cfg = ForwardDiff.JacobianConfig(x))
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``cfg`` yourself (see the `Config`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `AbstractConfig`_ section below).
 
-.. function:: ForwardDiff.jacobian!(out, f!, y, x, cfg = ForwardDiff.Config(y, x))
+.. function:: ForwardDiff.jacobian!(out, f!, y, x, cfg = ForwardDiff.JacobianConfig(y, x))
 
     Compute :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be called as
     ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``. The output
     matrix is stored in ``out``.
 
-.. function:: ForwardDiff.jacobian(f, x, cfg = ForwardDiff.Config(x))
+.. function:: ForwardDiff.jacobian(f, x, cfg = ForwardDiff.JacobianConfig(x))
 
     Compute and return :math:`\mathbf{J}(f)(\vec{x})`.
 
-.. function:: ForwardDiff.jacobian(f!, y, x, cfg = ForwardDiff.Config(y, x))
+.. function:: ForwardDiff.jacobian(f!, y, x, cfg = ForwardDiff.JacobianConfig(y, x))
 
     Compute and return :math:`\mathbf{J}(f)(\vec{x})`, where :math:`f(\vec{x})` can be
     called as ``f!(y, x)`` such that the output of :math:`f(\vec{x})` is stored in ``y``.
@@ -61,14 +61,14 @@ Use ``ForwardDiff.hessian`` to perform second-order differentiation on functions
 .. function:: ForwardDiff.hessian!(out, f, x, cfg = ForwardDiff.HessianConfig(x))
 
     Compute :math:`\mathbf{H}(f)(\vec{x})`, storing the output in ``out``. It is highly
-    advised to preallocate ``cfg`` yourself (see the `Config`_ section below).
+    advised to preallocate ``cfg`` yourself (see the `AbstractConfig`_ section below).
 
 .. function:: ForwardDiff.hessian(f, x, cfg = ForwardDiff.HessianConfig(x))
 
     Compute and return :math:`\mathbf{H}(f)(\vec{x})`.
 
-The ``Config`` Type
--------------------
+The ``AbstractConfig`` Types
+----------------------------
 
 For the sake of convenience and performance, all "extra" information used by ForwardDiff's
 API methods is bundled up in the ``ForwardDiff.AbstractConfig`` family of types. Theses
@@ -84,22 +84,27 @@ type parameter, or omitted, in which case ForwardDiff will automatically select 
 for you. However, it is highly recomended to `specify the chunk size manually when possible
 <advanced_usage.html#configuring-chunk-size>`_.
 
-.. function:: ForwardDiff.Config{N}(x)
+.. function:: ForwardDiff.GradientConfig{N}(x)
 
-    Construct an ``Config`` instance based on the type and shape of the input vector ``x``.
-    The returned ``Config`` instance contains all the work buffers required by
-    ForwardDiff's gradient/Jacobian methods. If taking the Jacobian of a target function
-    with the form ``f!(y, x)``, use the constructor ``ForwardDiff.Config{N}(y, x)``
+    Construct a ``GradientConfig`` instance based on the type and shape of the input vector
+    ``x``. The returned ``GradientConfig`` instance contains all the work buffers required
+    by ForwardDiff's gradient/Jacobian methods. If taking the Jacobian of a target function
+    with the form ``f!(y, x)``, use the constructor ``ForwardDiff.GradientConfig{N}(y, x)``
     instead.
 
     This constructor does not store/modify ``x``.
 
-.. function:: ForwardDiff.Config{N}(y, x)
+.. function:: ForwardDiff.JacobianConfig{N}(x)
 
-    Construct an ``Config`` instance based on the type and shape of the output vector ``y``
-    and the input vector ``x``. The returned ``Config`` instance contains all the work
-    buffers required by  ``ForwardDiff.jacobian``/``ForwardDiff.jacobian!`` with a target
-    function of the form ``f!(y, x)``.
+    Exactly like ``ForwardDiff.GradientConfig{N}(x)``, but returns a `JacobianConfig`
+    instead.
+
+.. function:: ForwardDiff.JacobianConfig{N}(y, x)
+
+    Construct a ``JacobianConfig`` instance based on the type and shape of the output vector
+    ``y`` and the input vector ``x``. The returned ``JacobianConfig`` instance contains all
+    the work buffers required by  ``ForwardDiff.jacobian``/``ForwardDiff.jacobian!`` with a
+    target function of the form ``f!(y, x)``.
 
     This constructor does not store/modify ``y`` or ``x``.
 
@@ -122,13 +127,13 @@ for you. However, it is highly recomended to `specify the chunk size manually wh
 
     This constructor does not store/modify ``out`` or ``x``.
 
-.. function:: ForwardDiff.Multithread(cfg::AbstractConfig)
+.. function:: ForwardDiff.MultithreadConfig(cfg::AbstractConfig)
 
-    Wrap the given ``cfg`` in a ``Multithread`` instance, which can then be passed to
+    Wrap the given ``cfg`` in a ``MultithreadConfig`` instance, which can then be passed to
     gradient or Hessian methods in order to enable experimental multithreading. Jacobian
     methods do not yet support multithreading.
 
     Note that multithreaded ForwardDiff API methods will attempt to use all available
     threads. In the future, once Julia exposes more fine-grained threading primitives,
-    a ``Multithread`` constructor may be added which takes in a user-provided subset
+    a ``MultithreadConfig`` constructor may be added which takes in a user-provided subset
     of thread IDs instead of using all available threads.
