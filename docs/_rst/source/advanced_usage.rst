@@ -113,11 +113,9 @@ One final question remains: How should you select a chunk size? The answer is es
 the optimal chunk size is heavily dependent on the target function and length of the input
 vector.
 
-When selecting a chunk size, keep in mind that the maximum allowed size is ``10`` (to
-change this, you can alter the ``MAX_CHUNK_SIZE`` constant in ForwardDiff's source and
-reload the package). Also, it is usually best to pick a chunk sizes which divides evenly
-into the input dimension. Otherwise, ForwardDiff has to construct and utilize an extra
-"remainder" chunk to complete the calculation.
+Note that it is usually best to pick a chunk size which divides evenly into the input
+dimension. Otherwise, ForwardDiff has to construct and utilize an extra "remainder" chunk to
+complete the calculation.
 
 Hessian of a vector-valued function
 -----------------------------------

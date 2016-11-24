@@ -2,14 +2,14 @@
 # picking the chunk size #
 ##########################
 
-# Constrained to chunk <= MAX_CHUNK_SIZE, minimize (in order of priority):
+# Constrained to chunk <= CHUNK_THRESHOLD, minimize (in order of priority):
 #   1. the number of chunks that need to be computed
 #   2. the number of "left over" perturbations in the final chunk
 function pickchunksize(k)
-    if k <= MAX_CHUNK_SIZE
+    if k <= CHUNK_THRESHOLD
         return k
     else
-        nchunks = round(Int, k / MAX_CHUNK_SIZE, RoundUp)
+        nchunks = round(Int, k / CHUNK_THRESHOLD, RoundUp)
         return round(Int, k / nchunks, RoundUp)
     end
 end
@@ -54,9 +54,9 @@ end
 # seed construction/manipulation #
 ##################################
 
-for N in 1:MAX_CHUNK_SIZE
+@generated function construct_seeds{N,T}(::Type{Partials{N,T}})
     ex = Expr(:tuple, [:(setindex(zero_partials, seed_unit, $i)) for i in 1:N]...)
-    @eval function construct_seeds{T}(::Type{Partials{$N,T}})
+    return quote
         seed_unit = one(T)
         zero_partials = zero(Partials{$N,T})
         return $ex
