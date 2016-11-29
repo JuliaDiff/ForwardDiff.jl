@@ -112,7 +112,8 @@ end
 function tupexpr(f, N)
     ex = Expr(:tuple, [f(i) for i=1:N]...)
     return quote
-        @inbounds return $(ex)
+        $(Expr(:meta, :inline))
+        @inbounds return $ex
     end
 end
 
@@ -126,6 +127,7 @@ end
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     return quote
         z = zero(T)
+        $(Expr(:meta, :inline))
         @inbounds return $ex
     end
 end
