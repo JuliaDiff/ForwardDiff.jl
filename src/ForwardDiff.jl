@@ -36,7 +36,7 @@ const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
 # chunk settings #
 #----------------#
 
-const MAX_CHUNK_SIZE = 10
+const CHUNK_THRESHOLD = 10
 
 ############
 # includes #

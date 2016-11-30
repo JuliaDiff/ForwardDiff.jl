@@ -112,7 +112,8 @@ end
 function tupexpr(f, N)
     ex = Expr(:tuple, [f(i) for i=1:N]...)
     return quote
-        @inbounds return $(ex)
+        $(Expr(:meta, :inline))
+        @inbounds return $ex
     end
 end
 
@@ -122,37 +123,61 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
-for N in 1:MAX_CHUNK_SIZE
+@generated function iszero_tuple{N,T}(tup::NTuple{N,T})
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
-    @eval @inline iszero_tuple{T}(tup::NTuple{$N,T}) = (z = zero(T); @inbounds return $ex)
+    return quote
+        z = zero(T)
+        $(Expr(:meta, :inline))
+        @inbounds return $ex
+    end
+end
 
+@generated function zero_tuple{N,T}(::Type{NTuple{N,T}})
     ex = tupexpr(i -> :(z), N)
-    @eval @inline zero_tuple{T}(::Type{NTuple{$N,T}}) = (z = zero(T); $ex)
-    @eval @inline one_tuple{T}(::Type{NTuple{$N,T}}) = (z = one(T); $ex)
+    return quote
+        z = zero(T)
+        return $ex
+    end
+end
 
-    ex  = tupexpr(i -> :(rand(rng, T)), N)
-    @eval @inline rand_tuple{T}(rng::AbstractRNG, ::Type{NTuple{$N,T}}) = $ex
+@generated function one_tuple{N,T}(::Type{NTuple{N,T}})
+    ex = tupexpr(i -> :(z), N)
+    return quote
+        z = one(T)
+        return $ex
+    end
+end
 
-    ex = tupexpr(i -> :(rand(T)), N)
-    @eval @inline rand_tuple{T}(::Type{NTuple{$N,T}}) = $ex
+@generated function rand_tuple{N,T}(rng::AbstractRNG, ::Type{NTuple{N,T}})
+    return tupexpr(i -> :(rand(rng, T)), N)
+end
 
-    ex = tupexpr(i -> :(tup[$i] * x), N)
-    @eval @inline scale_tuple(tup::NTuple{$N}, x) = $ex
+@generated function rand_tuple{N,T}(::Type{NTuple{N,T}})
+    return tupexpr(i -> :(rand(T)), N)
+end
 
-    ex = tupexpr(i -> :(tup[$i] / x), N)
-    @eval @inline div_tuple_by_scalar(tup::NTuple{$N}, x) = $ex
+@generated function scale_tuple{N}(tup::NTuple{N}, x)
+    return tupexpr(i -> :(tup[$i] * x), N)
+end
 
-    ex = tupexpr(i -> :(a[$i] + b[$i]), N)
-    @eval @inline add_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
+@generated function div_tuple_by_scalar{N}(tup::NTuple{N}, x)
+    return tupexpr(i -> :(tup[$i] / x), N)
+end
 
-    ex = tupexpr(i -> :(a[$i] - b[$i]), N)
-    @eval @inline sub_tuples(a::NTuple{$N}, b::NTuple{$N}) = $ex
+@generated function add_tuples{N}(a::NTuple{N}, b::NTuple{N})
+    return tupexpr(i -> :(a[$i] + b[$i]), N)
+end
 
-    ex = tupexpr(i -> :(-tup[$i]), N)
-    @eval @inline minus_tuple(tup::NTuple{$N}) = $ex
+@generated function sub_tuples{N}(a::NTuple{N}, b::NTuple{N})
+    return tupexpr(i -> :(a[$i] - b[$i]), N)
+end
 
-    ex = tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
-    @eval @inline mul_tuples(a::NTuple{$N}, b::NTuple{$N}, afactor, bfactor) = $ex
+@generated function minus_tuple{N}(tup::NTuple{N})
+    return tupexpr(i -> :(-tup[$i]), N)
+end
+
+@generated function mul_tuples{N}(a::NTuple{N}, b::NTuple{N}, afactor, bfactor)
+    return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
 end
 
 ###################

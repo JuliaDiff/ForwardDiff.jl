@@ -13,7 +13,7 @@ for Config in (:GradientConfig, :JacobianConfig)
             duals::D
             # disable default outer constructor
             function $Config(seeds, duals)
-                @assert N <= MAX_CHUNK_SIZE
+                @assert N <= CHUNK_THRESHOLD
                 new(seeds, duals)
             end
         end
@@ -82,9 +82,9 @@ Base.copy(cfg::HessianConfig) = HessianConfig(copy(cfg.gradient_config),
 gradient_config(cfg::HessianConfig) = cfg.gradient_config
 jacobian_config(cfg::HessianConfig) = cfg.jacobian_config
 
-###############
+#####################
 # MultithreadConfig #
-###############
+#####################
 
 immutable MultithreadConfig{A,B} <: AbstractConfig
     config1::A
