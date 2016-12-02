@@ -1,4 +1,4 @@
-immutable Partials{N,T} <: AbstractArray{N,T}
+immutable Partials{N,T} <: AbstractVector{T}
     values::NTuple{N,T}
 end
 
@@ -15,12 +15,14 @@ end
 @inline Base.length{N}(::Partials{N}) = N
 @inline Base.size{N}(::Partials{N}) = (N,)
 
-@inline Base.getindex(partials::Partials, i) = partials.values[i]
+@inline Base.getindex(partials::Partials, i::Int) = partials.values[i]
 setindex{N,T}(partials::Partials{N,T}, v, i) = Partials{N,T}((partials[1:i-1]..., v, partials[i+1:N]...))
 
 Base.start(partials::Partials) = start(partials.values)
 Base.next(partials::Partials, i) = next(partials.values, i)
 Base.done(partials::Partials, i) = done(partials.values, i)
+
+Base.linearindexing(::Partials) = Base.LinearFast()
 
 #####################
 # Generic Functions #
