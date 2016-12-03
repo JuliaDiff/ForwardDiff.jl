@@ -209,6 +209,126 @@ expensive operation):
 Likewise, you could write a version of ``vector_hessian`` which supports functions of the
 form ``f!(y, x)``, or perhaps an in-place Jacobian with ``ForwardDiff.jacobian!``.
 
+User defined derivatives
+------------------------
+
+Sometimes one wants to use `ForwardDiff` on a function where a part of the function (here denoted subfunction) does not support dual numbers.
+This could be in cases where the subfunction exists in non Julia code (like a compiled C library) or when the function is implicitly defined.
+If you can provide the derivative of the subfunction then `ForwardDiff` can properly propagate that derivative to the dual numbers so that the original function is still able to be automatically differentiated.
+This technique can also be useful if an optimized version of the derivative is available that is faster to compute than the normal way of propagating dual numbers.
+
+**Note**: When defining a function and its derivative inside another function (for example when creating a closure) the derivative need to be defined first. This is due to a lowering bug in Julia 0.5. In the examples below, the functions are defined in global scope and there the order of function and derivative definition does not matter.
+
+** Derivatives **
+
+Below is a minimum example where we define the explicit derivative for a small function and use the `@implement_derivative` macro to tell `ForwardDiff` that the function `f` has a user supplied derivative. The `@implement_derivative` macro takes two arguments, the first is the name of the function and the second is the name of the function that computes the derivative:
+
+.. code-block:: julia
+    julia> f(x) = x^2 + x;
+
+    julia> Df(x) = (println("I got called"); 2x + 1);
+
+    julia> ForwardDiff.@implement_derivative f Df
+    f (generic function with 2 methods)
+
+    julia> ForwardDiff.derivative(f, 2.0)
+    I got called
+    5.0
+
+
+**Gradients**
+
+Two macros are available for user defined gradients, `@implement_gradient` and `@implement_gradient!`. The first one (without the exclamation mark) takes two arguments. A function `f(x)` where `x` is a `Vector` that returns a scalar and the second `Df(x)`. which also takes a `Vector` but returns the gradient.
+
+.. code-block:: julia
+    julia> g(x) = norm(x);
+
+    julia> Dg(x) = (println("I got called"); x / norm(x))
+
+    julia> ForwardDiff.@implement_gradient g Dg
+    g (generic function with 2 methods)
+
+    julia> ForwardDiff.gradient(g, [1.0, 2.0])
+    I got called
+    2-element Array{Float64,1}:
+     0.447214
+     0.894427
+
+For better performance, use the second macro `@implement_gradient!`. This macro expects three arguments, a function `f(x)`, it's gradient `Df!(G, x)` which updates `G` and a config type that caches some intermediate arrays needed. This type is created from `GradientImplementConfig(T, chunk_size::Int, input_size::Int)` where `T` is the type of the input vector `x`, or `GradientImplementConfig(chunk_size::Int, x)`. The same example is given as above (in real code this code shoule be in a function or with `const` on the variables):
+
+.. code-block:: julia
+    julia> h(x) = norm(x);
+
+    julia> Dh!(G, x) = (println("I got called"); copy!(G, x); scale!(G, 1 / norm(x)));
+
+    julia> config = ForwardDiff.GradientImplementConfig(Float64, 2, 2);
+
+    julia> ForwardDiff.@implement_gradient! h Dh! config
+    h (generic function with 2 methods)
+
+    julia> x = [1.0, 2.0];
+
+    julia> ForwardDiff.gradient(h, x, ForwardDiff.GradientConfig{2}(x))
+    I got called
+    2-element Array{Float64,1}:
+     0.447214
+     0.894427
+
+
+** Jacobians**
+
+Similar to the gradient case there are two macros, `@implement_jacobian` and `@implement_jacobian`. The first macro is used in an analogous fashion as the gradient macro:
+
+.. code-block:: julia
+    julia> p(x) = 5*x;
+
+    julia> Dp(x) = (println("I got called"); 5*eye(length(x)));
+
+    julia> ForwardDiff.@implement_jacobian p Dp
+    p (generic function with 2 methods)
+
+    julia> ForwardDiff.jacobian(p, [1.0, 2.0])
+    I got called
+    2×2 Array{Float64,2}:
+     5.0  0.0
+     0.0  5.0
+
+The second one is the three argument version that also takes a `JacobianImplementConfig` which need access to both the input length and output length:
+
+.. code-lock:: julia
+    julia> q!(y, x) = (copy!(y, x); scale!(y, 5.0));
+
+    julia> function Dq!(J, x)
+               println("I got called")
+               for i in 1:length(x)
+                   J[i,i] = 5.0
+               end
+               return J
+           end;
+
+    julia> x = rand(5);
+
+    julia> y = similar(x);
+
+    julia> J = zeros(5,5);
+
+    julia> chunk_size = 5;
+
+    julia> cfig = ForwardDiff.JacobianImplementConfig(chunk_size, y, x);
+
+    julia> ForwardDiff.@implement_jacobian! q! Dq! cfig
+    q! (generic function with 2 methods)
+
+    julia> ForwardDiff.jacobian!(J, q!, y, x, ForwardDiff.JacobianConfig{chunk_size}(y, x))
+    I got called
+    5×5 Array{Float64,2}:
+     5.0  0.0  0.0  0.0  0.0
+     0.0  5.0  0.0  0.0  0.0
+     0.0  0.0  5.0  0.0  0.0
+     0.0  0.0  0.0  5.0  0.0
+     0.0  0.0  0.0  0.0  5.0
+
+
 SIMD Vectorization
 ------------------
 

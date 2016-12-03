@@ -35,6 +35,11 @@ tic()
 include("MiscTest.jl")
 println("done (took $(toq()) seconds).")
 
+println("Testing user defined derivatives...")
+tic()
+include("UserDefinedDerivativesTest.jl")
+println("done (took $(toq()) seconds).")
+
 if Base.JLOptions().opt_level >= 3
     println("Testing SIMD vectorization...")
     tic()
