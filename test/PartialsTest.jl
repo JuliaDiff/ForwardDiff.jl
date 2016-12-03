@@ -27,6 +27,7 @@ for N in (0, 3), T in (Int, Float32, Float64)
     @test ForwardDiff.npartials(PARTIALS) == N
     @test ForwardDiff.npartials(typeof(PARTIALS)) == N
 
+    @test ndims(PARTIALS) == ndims(PARTIALS2) == 1
     @test length(PARTIALS) == N
     @test length(VALUES) == N
 
