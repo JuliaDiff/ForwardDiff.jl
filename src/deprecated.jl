@@ -30,12 +30,12 @@ export Chunk
 function gradient{N}(f, x, chunk::Chunk{N}; multithread = false, kwargs...)
     if multithread
         Base.depwarn("ForwardDiff.gradient(f, x, ::ForwardDiff.Chunk{N}; multithread = true) is deprecated" *
-                     ", use ForwardDiff.gradient(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.Config{N}(x))) instead.",
+                     ", use ForwardDiff.gradient(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.GradientConfig{N}(x))) instead.",
                      :gradient)
         return gradient(f, x, MultithreadConfig(GradientConfig{N}(x)))
     else
         Base.depwarn("ForwardDiff.gradient(f, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                     "ForwardDiff.gradient(f, x, ForwardDiff.Config{N}(x)) instead.",
+                     "ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{N}(x)) instead.",
                      :gradient)
         return gradient(f, x, GradientConfig{N}(x))
     end
@@ -44,12 +44,12 @@ end
 function gradient!{N}(out, f, x, chunk::Chunk{N}; multithread = false, kwargs...)
     if multithread
         Base.depwarn("ForwardDiff.gradient!(out, f, x, ::ForwardDiff.Chunk{N}; multithread = true) is deprecated" *
-                     ", use ForwardDiff.gradient!(out, f, x, ForwardDiff.MultithreadConfig(ForwardDiff.Config{N}(x))) instead.",
+                     ", use ForwardDiff.gradient!(out, f, x, ForwardDiff.MultithreadConfig(ForwardDiff.GradientConfig{N}(x))) instead.",
                      :gradient!)
         return gradient!(out, f, x, MultithreadConfig(GradientConfig{N}(x)))
     else
         Base.depwarn("ForwardDiff.gradient!(out, f, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                     "ForwardDiff.gradient!(out, f, x, ForwardDiff.Config{N}(x)) instead.",
+                     "ForwardDiff.gradient!(out, f, x, ForwardDiff.GradientConfig{N}(x)) instead.",
                      :gradient!)
         return gradient!(out, f, x, GradientConfig{N}(x))
     end
@@ -61,28 +61,28 @@ end
 
 function jacobian{N}(f, x, chunk::Chunk{N}; kwargs...)
     Base.depwarn("ForwardDiff.jacobian(f, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                 "ForwardDiff.jacobian(f, x, ForwardDiff.Config{N}(x)) instead.",
+                 "ForwardDiff.jacobian(f, x, ForwardDiff.JacobianConfig{N}(x)) instead.",
                  :jacobian)
     return jacobian(f, x, JacobianConfig{N}(x))
 end
 
 function jacobian{N}(f!, y, x, chunk::Chunk{N}; kwargs...)
     Base.depwarn("ForwardDiff.jacobian(f!, y, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                 "ForwardDiff.jacobian(f!, y, x, ForwardDiff.Config{N}(x)) instead.",
+                 "ForwardDiff.jacobian(f!, y, x, ForwardDiff.JacobianConfig{N}(x)) instead.",
                  :jacobian)
     return jacobian(f!, y, x, JacobianConfig{N}(y, x))
 end
 
 function jacobian!{N}(out, f, x, chunk::Chunk{N}; kwargs...)
     Base.depwarn("ForwardDiff.jacobian!(out, f, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                 "ForwardDiff.jacobian!(out, f, x, ForwardDiff.Config{N}(x)) instead.",
+                 "ForwardDiff.jacobian!(out, f, x, ForwardDiff.JacobianConfig{N}(x)) instead.",
                  :jacobian!)
     return jacobian!(out, f, x, JacobianConfig{N}(x))
 end
 
 function jacobian!{N}(out, f!, y, x, chunk::Chunk{N}; kwargs...)
     Base.depwarn("ForwardDiff.jacobian!(out, f, y, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                 "ForwardDiff.jacobian!(out, f, y, x, ForwardDiff.Config{N}(x)) instead.",
+                 "ForwardDiff.jacobian!(out, f, y, x, ForwardDiff.JacobianConfig{N}(x)) instead.",
                  :jacobian!)
     return jacobian!(out, f!, y, x, JacobianConfig{N}(y, x))
 end
@@ -94,12 +94,12 @@ end
 function hessian{N}(f, x, chunk::Chunk{N}; multithread = false, kwargs...)
     if multithread
         Base.depwarn("ForwardDiff.hessian(f, x, ::ForwardDiff.Chunk{N}; multithread = true) is deprecated" *
-                     ", use ForwardDiff.hessian(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.Config{N}(x))) instead.",
+                     ", use ForwardDiff.hessian(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.HessianConfig{N}(x))) instead.",
                      :hessian)
         return hessian(f, x, MultithreadConfig(HessianConfig{N}(x)))
     else
         Base.depwarn("ForwardDiff.hessian(f, x, ::ForwardDiff.Chunk{N}) is deprecated, use " *
-                     "ForwardDiff.hessian(f, x, ForwardDiff.Config{N}(x)) instead.",
+                     "ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig{N}(x)) instead.",
                      :hessian)
         return hessian(f, x, HessianConfig{N}(x))
     end
