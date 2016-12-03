@@ -12,10 +12,7 @@ for Config in (:GradientConfig, :JacobianConfig)
             seeds::NTuple{N,Partials{N,T}}
             duals::D
             # disable default outer constructor
-            function $Config(seeds, duals)
-                @assert N <= CHUNK_THRESHOLD
-                new(seeds, duals)
-            end
+            $Config(seeds, duals) = new(seeds, duals)
         end
 
         # This is type-unstable, which is why our docs advise users to manually enter a chunk size
