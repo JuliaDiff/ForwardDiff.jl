@@ -64,12 +64,12 @@ macro ambiguous(ex)
     if isa(a, Symbol) && isa(b, Symbol) && isa(Ta, Symbol) && isa(Tb, Symbol)
         if Ta == :Real && Tb == :Dual
             return quote
-                $(f){N,M,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
+                @inline $(f){N,M,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 $(esc(ex))
             end
         elseif Ta == :Dual && Tb == :Real
             return quote
-                $(f){N,M,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
+                @inline $(f){N,M,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 $(esc(ex))
             end
         else
@@ -77,11 +77,11 @@ macro ambiguous(ex)
         end
     end
     return quote
-        $(f)(a::Dual, b::Dual) = error("npartials($(typeof(a))) != npartials($(typeof(b)))")
+        @inline $(f)(a::Dual, b::Dual) = error("npartials($(typeof(a))) != npartials($(typeof(b)))")
         if !(in($f, (isequal, ==, isless, <, <=, <)))
-            $(f)(a::Dual{0}, b::Dual{0}) = Dual($(f)(value(a), value(b)))
-            $(f)(a::Dual{0}, b::Dual) = $(f)(value(a), b)
-            $(f)(a::Dual, b::Dual{0}) = $(f)(a, value(b))
+            @inline $(f)(a::Dual{0}, b::Dual{0}) = Dual($(f)(value(a), value(b)))
+            @inline $(f)(a::Dual{0}, b::Dual) = $(f)(value(a), b)
+            @inline $(f)(a::Dual, b::Dual{0}) = $(f)(a, value(b))
         end
         $(esc(ex))
     end
@@ -245,16 +245,12 @@ end
 for f in (macroexpand(:(@compat(Base.:^))), :(NaNMath.pow))
     @eval begin
         @ambiguous @inline function ($f){N}(n1::Dual{N}, n2::Dual{N})
-            if isconstant(n2)
-                return $(f)(n1, value(n2))
-            else
-                v1, v2 = value(n1), value(n2)
-                expv = ($f)(v1, v2)
-                powval = v2 * ($f)(v1, v2 - 1)
-                logval = expv * log(v1)
-                new_partials = _mul_partials(partials(n1), partials(n2), powval, logval)
-                return Dual(expv, new_partials)
-            end
+            v1, v2 = value(n1), value(n2)
+            expv = ($f)(v1, v2)
+            powval = v2 * ($f)(v1, v2 - 1)
+            logval = isconstant(n2) ? one(expv) : expv * log(v1)
+            new_partials = _mul_partials(partials(n1), partials(n2), powval, logval)
+            return Dual(expv, new_partials)
         end
 
         @inline ($f)(::Base.Irrational{:e}, n::Dual) = exp(n)
