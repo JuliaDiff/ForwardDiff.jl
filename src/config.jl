@@ -4,6 +4,8 @@ abstract AbstractConfig
 # Config #
 ###########
 
+@inline chunksize(::Tuple{}) = error("empty tuple passed to `chunksize`")
+
 # Define a few different AbstractConfig types. All these types share the same structure,
 # but feature different constructors and dispatch restrictions in downstream code.
 for Config in (:GradientConfig, :JacobianConfig)
@@ -33,8 +35,8 @@ for Config in (:GradientConfig, :JacobianConfig)
         Base.copy{N,T,D}(cfg::$Config{N,T,D}) = $Config{N,T,D}(cfg.seeds, copy(cfg.duals))
         Base.copy{N,T,D<:Tuple}(cfg::$Config{N,T,D}) = $Config{N,T,D}(cfg.seeds, map(copy, cfg.duals))
 
-        chunksize{N}(::$Config{N}) = N
-        chunksize{N}(::Tuple{Vararg{$Config{N}}}) = N
+        @inline chunksize{N}(::$Config{N}) = N
+        @inline chunksize{N}(::Tuple{Vararg{$Config{N}}}) = N
     end
 end
 

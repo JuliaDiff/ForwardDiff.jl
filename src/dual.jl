@@ -64,18 +64,20 @@ macro ambiguous(ex)
     if isa(a, Symbol) && isa(b, Symbol) && isa(Ta, Symbol) && isa(Tb, Symbol)
         if Ta == :Real && Tb == :Dual
             return quote
-                @inline $(f){N,M,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 @inline $(f){A<:ExternalReal,B<:Dual}($(a)::Dual{0,A}, $(b)::Dual{0,B}) = Dual($(f)(value(a), value(b)))
                 @inline $(f){M,A<:ExternalReal,B<:Dual}($(a)::Dual{0,A}, $(b)::Dual{M,B}) = $(f)(value(a), b)
                 @inline $(f){N,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{0,B}) = $(f)(a, value(b))
+                @inline $(f){N,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{N,B}) = $(body)
+                @inline $(f){N,M,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 $(esc(ex))
             end
         elseif Ta == :Dual && Tb == :Real
             return quote
-                @inline $(f){N,M,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 @inline $(f){A<:Dual,B<:ExternalReal}($(a)::Dual{0,A}, $(b)::Dual{0,B}) = Dual($(f)(value(a), value(b)))
                 @inline $(f){M,A<:Dual,B<:ExternalReal}($(a)::Dual{0,A}, $(b)::Dual{M,B}) = $(f)(value(a), b)
                 @inline $(f){N,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{0,B}) = $(f)(a, value(b))
+                @inline $(f){N,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{N,B}) = $(body)
+                @inline $(f){N,M,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 $(esc(ex))
             end
         else
@@ -83,11 +85,11 @@ macro ambiguous(ex)
         end
     end
     return quote
-        @inline $(f)(a::Dual, b::Dual) = error("npartials($(typeof(a))) != npartials($(typeof(b)))")
+        @inline $(f){N,M,A<:Real,B<:Real}(a::Dual{N,A}, b::Dual{M,B}) = error("npartials($(typeof(a))) != npartials($(typeof(b)))")
         if !(in($f, (isequal, ==, isless, <, <=, <)))
-            @inline $(f)(a::Dual{0}, b::Dual{0}) = Dual($(f)(value(a), value(b)))
-            @inline $(f)(a::Dual{0}, b::Dual) = $(f)(value(a), b)
-            @inline $(f)(a::Dual, b::Dual{0}) = $(f)(a, value(b))
+            @inline $(f){A<:Real,B<:Real}(a::Dual{0,A}, b::Dual{0,B}) = Dual($(f)(value(a), value(b)))
+            @inline $(f){M,A<:Real,B<:Real}(a::Dual{0,A}, b::Dual{M,B}) = $(f)(value(a), b)
+            @inline $(f){N,A<:Real,B<:Real}(a::Dual{N,A}, b::Dual{0,B}) = $(f)(a, value(b))
         end
         $(esc(ex))
     end
@@ -360,10 +362,15 @@ end
 @ambiguous @inline Base.hypot(x::Dual, y::Real) = calc_hypot(x, y)
 @ambiguous @inline Base.hypot(x::Real, y::Dual) = calc_hypot(x, y)
 
-for A in (:(Dual{N}), :Real), B in (:(Dual{N}), :Real), C in (:(Dual{N}), :Real)
-    (A == B == C == :Real) && continue
-    @eval(@inline Base.hypot{N}(x::$A, y::$B, z::$C) = calc_hypot(x, y, z))
-end
+@inline Base.hypot(x::Dual, y::Dual, z::Dual) = calc_hypot(x, y, z)
+
+@inline Base.hypot(x::Real, y::Dual, z::Dual) = calc_hypot(x, y, z)
+@inline Base.hypot(x::Dual, y::Real, z::Dual) = calc_hypot(x, y, z)
+@inline Base.hypot(x::Dual, y::Dual, z::Real) = calc_hypot(x, y, z)
+
+@inline Base.hypot(x::Dual, y::Real, z::Real) = calc_hypot(x, y, z)
+@inline Base.hypot(x::Real, y::Dual, z::Real) = calc_hypot(x, y, z)
+@inline Base.hypot(x::Real, y::Real, z::Dual) = calc_hypot(x, y, z)
 
 @inline sincos(n) = (sin(n), cos(n))
 
