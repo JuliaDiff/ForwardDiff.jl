@@ -54,7 +54,9 @@ test_nested_jacobian_output = [-sin(1)  0.0     0.0;
                                -0.0    -0.0    -0.0;
                                -0.0    -0.0    -sin(3)]
 
-@test_approx_eq ForwardDiff.jacobian(x -> ForwardDiff.jacobian(sin, x), [1, 2, 3]) test_nested_jacobian_output
+sin_jacobian = x -> ForwardDiff.jacobian(y -> broadcast(sin, y), x)
+
+@test_approx_eq ForwardDiff.jacobian(sin_jacobian, [1., 2., 3.]) test_nested_jacobian_output
 
 # Issue #59 example #
 #-------------------#

@@ -1,7 +1,7 @@
 module SIMDTest
 
 using Base.Test
-using ForwardDiff: Dual
+using ForwardDiff: Dual, valtype
 
 const DUALS = (Dual(1., 2., 3., 4.),
                Dual(1., 2., 3., 4., 5.),
@@ -33,7 +33,10 @@ for D in map(typeof, DUALS)
 
     exp_bitcode = sprint(io -> code_llvm(io, ^, (D, D)))
     @test ismatch(r"fadd \<.*?x double\>", exp_bitcode)
-    @test ismatch(r"fmul \<.*?x double\>", exp_bitcode)
+    if !(valtype(D) <: Dual)
+        # see https://github.com/JuliaDiff/ForwardDiff.jl/issues/167
+        @test ismatch(r"fmul \<.*?x double\>", exp_bitcode)
+    end
 
     sum_bitcode = sprint(io -> code_llvm(io, simd_sum, (Vector{D},)))
     @test ismatch(r"fadd \<.*?x double\>", sum_bitcode)
