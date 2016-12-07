@@ -339,7 +339,7 @@ end
 
 @inline function Base.sqrt{N}(n::Dual{N})
     sqrtv = sqrt(value(n))
-    deriv = 0.5 / sqrtv
+    deriv = inv(sqrtv + sqrtv)
     return Dual(sqrtv, deriv * partials(n))
 end
 
