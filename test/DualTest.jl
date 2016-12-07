@@ -344,6 +344,15 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     @test NESTED_FDNUM * PRIMAL === Dual(value(NESTED_FDNUM) * PRIMAL, partials(NESTED_FDNUM) * PRIMAL)
     @test PRIMAL * NESTED_FDNUM === Dual(value(NESTED_FDNUM) * PRIMAL, partials(NESTED_FDNUM) * PRIMAL)
 
+    if M > 0 && N > 0
+        @test Dual(FDNUM) / Dual(PRIMAL) === Dual(FDNUM / PRIMAL)
+        @test Dual(PRIMAL) / Dual(FDNUM) === Dual(PRIMAL / FDNUM)
+        @test Dual(FDNUM) / FDNUM2 === FDNUM / FDNUM2
+        @test FDNUM / Dual(FDNUM2) === FDNUM / FDNUM2
+        @test Dual(FDNUM, FDNUM2) / Dual(PRIMAL) === Dual(FDNUM, FDNUM2) / PRIMAL
+        @test Dual(PRIMAL) / Dual(FDNUM, FDNUM2) === PRIMAL / Dual(FDNUM, FDNUM2)
+    end
+
     test_approx_diffnums(FDNUM / FDNUM2, Dual(value(FDNUM) / value(FDNUM2), ForwardDiff._div_partials(partials(FDNUM), partials(FDNUM2), value(FDNUM), value(FDNUM2))))
     test_approx_diffnums(FDNUM / PRIMAL, Dual(value(FDNUM) / PRIMAL, partials(FDNUM) / PRIMAL))
     test_approx_diffnums(PRIMAL / FDNUM, Dual(PRIMAL / value(FDNUM), (-(PRIMAL) / value(FDNUM)^2) * partials(FDNUM)))
