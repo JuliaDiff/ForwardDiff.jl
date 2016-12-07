@@ -64,18 +64,18 @@ macro ambiguous(ex)
     if isa(a, Symbol) && isa(b, Symbol) && isa(Ta, Symbol) && isa(Tb, Symbol)
         if Ta == :Real && Tb == :Dual
             return quote
-                @inline $(f){A<:ExternalReal,B<:Dual}($(a)::Dual{0,A}, $(b)::Dual{0,B}) = Dual($(f)(value(a), value(b)))
-                @inline $(f){M,A<:ExternalReal,B<:Dual}($(a)::Dual{0,A}, $(b)::Dual{M,B}) = $(f)(value(a), b)
-                @inline $(f){N,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{0,B}) = $(f)(a, value(b))
+                @inline $(f){A<:ExternalReal,B<:Dual}(a::Dual{0,A}, b::Dual{0,B}) = Dual($(f)(value(a), value(b)))
+                @inline $(f){M,A<:ExternalReal,B<:Dual}(a::Dual{0,A}, b::Dual{M,B}) = $(f)(value(a), b)
+                @inline $(f){N,A<:ExternalReal,B<:Dual}(a::Dual{N,A}, b::Dual{0,B}) = $(f)(a, value(b))
                 @inline $(f){N,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{N,B}) = $(body)
                 @inline $(f){N,M,A<:ExternalReal,B<:Dual}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 $(esc(ex))
             end
         elseif Ta == :Dual && Tb == :Real
             return quote
-                @inline $(f){A<:Dual,B<:ExternalReal}($(a)::Dual{0,A}, $(b)::Dual{0,B}) = Dual($(f)(value(a), value(b)))
-                @inline $(f){M,A<:Dual,B<:ExternalReal}($(a)::Dual{0,A}, $(b)::Dual{M,B}) = $(f)(value(a), b)
-                @inline $(f){N,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{0,B}) = $(f)(a, value(b))
+                @inline $(f){A<:Dual,B<:ExternalReal}(a::Dual{0,A}, b::Dual{0,B}) = Dual($(f)(value(a), value(b)))
+                @inline $(f){M,A<:Dual,B<:ExternalReal}(a::Dual{0,A}, b::Dual{M,B}) = $(f)(value(a), b)
+                @inline $(f){N,A<:Dual,B<:ExternalReal}(a::Dual{N,A}, b::Dual{0,B}) = $(f)(a, value(b))
                 @inline $(f){N,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{N,B}) = $(body)
                 @inline $(f){N,M,A<:Dual,B<:ExternalReal}($(a)::Dual{N,A}, $(b)::Dual{M,B}) = $(body)
                 $(esc(ex))
