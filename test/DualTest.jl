@@ -428,6 +428,10 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     test_approx_diffnums(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
     map(test_approx_diffnums, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM)))
 
+    if T === Float32
+        @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
+        @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
+    end
 end
 
 end # module
