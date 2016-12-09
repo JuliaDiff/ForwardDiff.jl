@@ -20,6 +20,15 @@ if v"0.4" <= VERSION < v"0.5"
     Base.hypot(x, y, z) = hypot(hypot(x, y), z)
 end
 
+test_approx_diffnums(a::Real, b::Real) = @test_approx_eq a b
+
+function test_approx_diffnums{N}(a::Dual{N}, b::Dual{N})
+    test_approx_diffnums(value(a), value(b))
+    for i in 1:N
+        test_approx_diffnums(partials(a)[i], partials(b)[i])
+    end
+end
+
 for N in (0,3), M in (0,4), T in (Int, Float32)
     println("  ...testing Dual{$N,$T} and Dual{$N,Dual{$M,$T}}")
 
@@ -305,15 +314,6 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     ########
     # Math #
     ########
-
-    test_approx_diffnums(a::Real, b::Real) = @test_approx_eq a b
-
-    function test_approx_diffnums{N}(a::Dual{N}, b::Dual{N})
-        test_approx_diffnums(value(a), value(b))
-        for i in 1:N
-            test_approx_diffnums(partials(a)[i], partials(b)[i])
-        end
-    end
 
     # Arithmetic #
     #------------#
