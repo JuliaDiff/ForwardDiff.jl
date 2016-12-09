@@ -16,7 +16,7 @@ Base.@deprecate HessianResult(x) DiffBase.HessianResult(x)
 
 immutable Chunk{N}
     function Chunk()
-        Base.depwarn("Chunk{N}() is deprecated, use the ForwardDiff.Config API instead.", :Chunk)
+        Base.depwarn("Chunk{N}() is deprecated, use the ForwardDiff.AbstractConfig API instead.", :Chunk)
         return new()
     end
 end
