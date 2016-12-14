@@ -131,6 +131,9 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
         @test round(FDNUM) === round(PRIMAL)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
+
+        @test Base.rtoldefault(typeof(FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
+        @test Dual(PRIMAL-eps(T), PARTIALS) ≈ FDNUM
     end
 
     @test hash(FDNUM) === hash(PRIMAL)
@@ -432,12 +435,6 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
         @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
     end
-end
-
-let p = Partials((0.0,0.0)),
-    d = Dual(1.0, p)
-    @test Base.rtoldefault(typeof(d)) ≡ Base.rtoldefault(typeof(value(d)))
-    @test Dual(1.0-eps(Float64), p) ≈ d
 end
 
 end # module

@@ -100,6 +100,8 @@ Base.copy(n::Dual) = n
 Base.eps(n::Dual) = eps(value(n))
 Base.eps{D<:Dual}(::Type{D}) = eps(valtype(D))
 
+Base.rtoldefault{N, T <: Real}(::Type{Dual{N,T}}) = Base.rtoldefault(T)
+
 Base.floor{T<:Real}(::Type{T}, n::Dual) = floor(T, value(n))
 Base.floor(n::Dual) = floor(value(n))
 
@@ -172,8 +174,6 @@ Base.isreal(n::Dual) = isreal(value(n))
 Base.isinteger(n::Dual) = isinteger(value(n))
 Base.iseven(n::Dual) = iseven(value(n))
 Base.isodd(n::Dual) = isodd(value(n))
-
-Base.rtoldefault{N, T <: Real}(::Type{Dual{N,T}}) = Base.rtoldefault(T)
 
 ########################
 # Promotion/Conversion #
