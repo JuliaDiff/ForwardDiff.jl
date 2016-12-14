@@ -434,4 +434,10 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     end
 end
 
+let p = Partials((0.0,0.0)),
+    d = Dual(1.0, p)
+    @test Base.rtoldefault(typeof(d)) ≡ Base.rtoldefault(typeof(value(d)))
+    @test Dual(1.0-eps(Float64), p) ≈ d
+end
+
 end # module

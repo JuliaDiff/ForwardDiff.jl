@@ -173,6 +173,8 @@ Base.isinteger(n::Dual) = isinteger(value(n))
 Base.iseven(n::Dual) = iseven(value(n))
 Base.isodd(n::Dual) = isodd(value(n))
 
+Base.rtoldefault{N, T <: Real}(::Type{Dual{N,T}}) = Base.rtoldefault(T)
+
 ########################
 # Promotion/Conversion #
 ########################
