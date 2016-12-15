@@ -9,10 +9,10 @@ samerng() = MersenneTwister(1)
 for N in (0, 3), T in (Int, Float32, Float64)
     println("  ...testing Partials{$N,$T}")
 
-    VALUES = ntuple(n -> rand(T), Val{N})
+    VALUES = (rand(T,N)...)
     PARTIALS = Partials{N,T}(VALUES)
 
-    VALUES2 = ntuple(n -> rand(T), Val{N})
+    VALUES2 = (rand(T,N)...)
     PARTIALS2 = Partials{N,T}(VALUES2)
 
     ##############################
@@ -70,7 +70,7 @@ for N in (0, 3), T in (Int, Float32, Float64)
     @test hash(PARTIALS, hash(1)) == hash(copy(PARTIALS), hash(1))
     @test hash(PARTIALS, hash(1)) == hash(copy(PARTIALS), hash(1))
 
-    const TMPIO = IOBuffer()
+    TMPIO = IOBuffer()
     write(TMPIO, PARTIALS)
     seekstart(TMPIO)
     @test read(TMPIO, typeof(PARTIALS)) == PARTIALS
@@ -84,8 +84,8 @@ for N in (0, 3), T in (Int, Float32, Float64)
     # Conversion/Promotion #
     ########################
 
-    const WIDE_T = widen(T)
-    const WIDE_PARTIALS = convert(Partials{N,WIDE_T}, PARTIALS)
+    WIDE_T = widen(T)
+    WIDE_PARTIALS = convert(Partials{N,WIDE_T}, PARTIALS)
 
     @test typeof(WIDE_PARTIALS) == Partials{N,WIDE_T}
     @test WIDE_PARTIALS == PARTIALS
@@ -101,8 +101,8 @@ for N in (0, 3), T in (Int, Float32, Float64)
     @test (PARTIALS - PARTIALS).values == map(v -> v - v, VALUES)
     @test getfield(-(PARTIALS), :values) == map(-, VALUES)
 
-    const X = rand()
-    const Y = rand()
+    X = rand()
+    Y = rand()
 
     @test X * PARTIALS == PARTIALS * X
     @test (X * PARTIALS).values == map(v -> X * v, VALUES)
@@ -111,6 +111,19 @@ for N in (0, 3), T in (Int, Float32, Float64)
     if N > 0
         @test ForwardDiff._mul_partials(PARTIALS, PARTIALS2, X, Y).values == map((a, b) -> (X * a) + (Y * b), VALUES, VALUES2)
         @test ForwardDiff._div_partials(PARTIALS, PARTIALS2, X, Y) == ForwardDiff._mul_partials(PARTIALS, PARTIALS2, inv(Y), -X/(Y^2))
+
+        ZEROS = Partials((zeros(T, N)...))
+
+        @test (NaN * ZEROS).values == ZEROS.values
+        @test (Inf * ZEROS).values == ZEROS.values
+        @test (ZEROS / 0).values == ZEROS.values
+
+        @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, NaN).values == ZEROS.values
+        @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, X).values == ZEROS.values
+        @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, Inf).values == ZEROS.values
+        @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, X).values == ZEROS.values
+        @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, NaN).values == ZEROS.values
+        @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, Inf).values == ZEROS.values
     end
 end
 

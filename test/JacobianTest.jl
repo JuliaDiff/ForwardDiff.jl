@@ -99,11 +99,11 @@ for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
         out = ForwardDiff.jacobian(f, X, cfg)
         @test_approx_eq out j
 
-        out = similar(X, length(X), length(X))
+        out = similar(X, length(v), length(X))
         ForwardDiff.jacobian!(out, f, X, cfg)
         @test_approx_eq out j
 
-        out = DiffBase.JacobianResult(X)
+        out = DiffBase.DiffResult(similar(v, length(v)), similar(v, length(v), length(X)))
         ForwardDiff.jacobian!(out, f, X, cfg)
         @test_approx_eq DiffBase.value(out) v
         @test_approx_eq DiffBase.jacobian(out) j

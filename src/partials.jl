@@ -75,18 +75,29 @@ Base.convert{N,T}(::Type{Partials{N,T}}, partials::Partials{N,T}) = partials
 @inline @compat(Base.:+){N}(a::Partials{N}, b::Partials{N}) = Partials(add_tuples(a.values, b.values))
 @inline @compat(Base.:-){N}(a::Partials{N}, b::Partials{N}) = Partials(sub_tuples(a.values, b.values))
 @inline @compat(Base.:-)(partials::Partials) = Partials(minus_tuple(partials.values))
-@inline @compat(Base.:*)(partials::Partials, x::Real) = Partials(scale_tuple(partials.values, x))
 @inline @compat(Base.:*)(x::Real, partials::Partials) = partials*x
-@inline @compat(Base.:/)(partials::Partials, x::Real) = Partials(div_tuple_by_scalar(partials.values, x))
 
-@inline function _mul_partials{N}(a::Partials{N}, b::Partials{N}, afactor, bfactor)
-    return Partials(mul_tuples(a.values, b.values, afactor, bfactor))
+# NaN/Inf-safe methods #
+#----------------------#
+
+@inline function @compat(Base.:*)(partials::Partials, x::Real)
+    x = ifelse((isnan(x) || isinf(x)) && iszero(partials), one(x), x)
+    return Partials(scale_tuple(partials.values, x))
+end
+
+@inline function @compat(Base.:/)(partials::Partials, x::Real)
+    x = ifelse(x == zero(x) && iszero(partials), one(x), x)
+    return Partials(div_tuple_by_scalar(partials.values, x))
+end
+
+@inline function _mul_partials{N}(a::Partials{N}, b::Partials{N}, x_a, x_b)
+    x_a = ifelse((isnan(x_a) || isinf(x_a)) && iszero(a), one(x_a), x_a)
+    x_b = ifelse((isnan(x_b) || isinf(x_b)) && iszero(b), one(x_b), x_b)
+    return Partials(mul_tuples(a.values, b.values, x_a, x_b))
 end
 
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
-    afactor = inv(bval)
-    bfactor = -aval/(bval*bval)
-    return _mul_partials(a, b, afactor, bfactor)
+    return _mul_partials(a, b, inv(bval), -(aval / (bval*bval)))
 end
 
 # edge cases where N == 0 #
