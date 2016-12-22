@@ -91,7 +91,7 @@ end
 for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
-    @test_approx_eq_eps j Calculus.jacobian(f, X, :forward) FINITEDIFF_ERROR
+    @test_approx_eq_eps j Calculus.jacobian(x -> vec(f(x)), X, :forward) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
         cfg = JacobianConfig{c}(X)
 
@@ -114,7 +114,7 @@ for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
     v = zeros(Y)
     f!(v, X)
     j = ForwardDiff.jacobian(f!, zeros(Y), X)
-    @test_approx_eq_eps j Calculus.jacobian(x -> (y = zeros(Y); f!(y, x); y), X, :forward) FINITEDIFF_ERROR
+    @test_approx_eq_eps j Calculus.jacobian(x -> (y = zeros(Y); f!(y, x); vec(y)), X, :forward) FINITEDIFF_ERROR
     for c in CHUNK_SIZES
         cfg = JacobianConfig{c}(X)
         ycfg = JacobianConfig{c}(zeros(Y), X)
