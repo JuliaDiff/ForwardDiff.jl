@@ -81,7 +81,7 @@ Base.convert{N,T}(::Type{Partials{N,T}}, partials::Partials{N,T}) = partials
 #----------------------#
 
 @inline function @compat(Base.:*)(partials::Partials, x::Real)
-    x = ifelse((isnan(x) || isinf(x)) && iszero(partials), one(x), x)
+    x = ifelse(!isfinite(x) && iszero(partials), one(x), x)
     return Partials(scale_tuple(partials.values, x))
 end
 
@@ -91,8 +91,8 @@ end
 end
 
 @inline function _mul_partials{N}(a::Partials{N}, b::Partials{N}, x_a, x_b)
-    x_a = ifelse((isnan(x_a) || isinf(x_a)) && iszero(a), one(x_a), x_a)
-    x_b = ifelse((isnan(x_b) || isinf(x_b)) && iszero(b), one(x_b), x_b)
+    x_a = ifelse(!isfinite(x_a) && iszero(a), one(x_a), x_a)
+    x_b = ifelse(!isfinite(x_b) && iszero(b), one(x_b), x_b)
     return Partials(mul_tuples(a.values, b.values, x_a, x_b))
 end
 
