@@ -10,10 +10,10 @@ script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
     - if (julia -e 'VERSION < v"0.5" && exit(1)'); then
         julia -e 'include(joinpath(JULIA_HOME, Base.DATAROOTDIR, "julia", "build_sysimg.jl")); build_sysimg(force=true)';
-        julia -e 'Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.test("ForwardDiff"; coverage=true)';
+        julia -e 'Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.checkout("DiffBase"); Pkg.test("ForwardDiff"; coverage=true)';
         julia -O3 -e 'include(joinpath(Pkg.dir("ForwardDiff"), "test/SIMDTest.jl"))';
       else
-        julia -e 'Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.test("ForwardDiff"; coverage=true)';
+        julia -e 'Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.checkout("DiffBase"); Pkg.test("ForwardDiff"; coverage=true)';
       fi
 after_success:
     - julia -e 'cd(Pkg.dir("ForwardDiff")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'

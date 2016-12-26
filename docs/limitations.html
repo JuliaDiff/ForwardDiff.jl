@@ -45,17 +45,27 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-nav-search">
-        
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
 
-        
-          <a href="index.html" class="icon icon-home"> ForwardDiff.jl
-        
+          
+            <a href="index.html" class="icon icon-home"> ForwardDiff.jl
+          
 
-        
-        </a>
+          
+          </a>
 
-        
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -64,64 +74,31 @@
   </form>
 </div>
 
-        
-      </div>
+          
+        </div>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
-          
-              <p class="caption"><span class="caption-text">User Documentation</span></p>
+            
+            
+                <p class="caption"><span class="caption-text">User Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Limitations of ForwardDiff</a></li>
-<li class="toctree-l1"><a class="reference internal" href="basic_api.html">Basic ForwardDiff API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-abstractconfig-types">The <code class="docutils literal"><span class="pre">AbstractConfig</span></code> Types</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="advanced_usage.html">Advanced Usage Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#accessing-lower-order-results">Accessing Lower-Order Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#configuring-chunk-size">Configuring Chunk Size</a></li>
-<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
-<li class="toctree-l2"><a class="reference internal" href="advanced_usage.html#simd-vectorization">SIMD Vectorization</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#unexported-api-functions">Unexported API Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#setting-chunk-size">Setting Chunk Size</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#enabling-multithreading">Enabling Multithreading</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#retrieving-lower-order-results">Retrieving Lower-Order Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#higher-order-differentiation">Higher-Order Differentiation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#creating-differentiation-functions">Creating Differentiation Functions</a></li>
-</ul>
-</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Limitations of ForwardDiff</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_api.html">Basic ForwardDiff API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced_usage.html">Advanced Usage Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Developer Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#dual-number-implementation">Dual Number Implementation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#forwarddiff-s-api">ForwardDiff&#8217;s API</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to Contribute</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#manually-optimizing-unary-functions">Manually Optimizing Unary Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#implementing-new-functions">Implementing New Functions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing.html#unary-functions-via-calculus-jl">Unary Functions Via Calculus.jl</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing.html#manually-adding-functions-to-forwarddiff">Manually Adding Functions to ForwardDiff</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to Contribute</a></li>
 </ul>
 
+            
           
-        
+        </div>
       </div>
-      &nbsp;
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -136,7 +113,13 @@
       
       <div class="wy-nav-content">
         <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
@@ -151,7 +134,8 @@
   </ul>
   <hr/>
 </div>
-          <div role="main" class="document">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="limitations-of-forwarddiff">
 <h1>Limitations of ForwardDiff<a class="headerlink" href="#limitations-of-forwarddiff" title="Permalink to this headline">¶</a></h1>
@@ -169,6 +153,7 @@ function being differentiated):</p>
 </div>
 
 
+           </div>
           </div>
           <footer>
   
@@ -187,9 +172,10 @@ function being differentiated):</p>
   <div role="contentinfo">
     <p>
         &copy; Copyright 2015, Jarrett Revels, Theodore Papamarkou, Miles Lubin, and other contributors.
+
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 

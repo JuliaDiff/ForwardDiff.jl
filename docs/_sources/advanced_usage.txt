@@ -117,6 +117,43 @@ Note that it is usually best to pick a chunk size which divides evenly into the 
 dimension. Otherwise, ForwardDiff has to construct and utilize an extra "remainder" chunk to
 complete the calculation.
 
+Fixing issues with NaN/Inf return values
+----------------------------------------
+
+ForwardDiff's default behavior is to return ``NaN`` for undefined derivatives (or otherwise
+mirror the behavior of the function in ``Base``, if it would return an error). This is
+usually the correct thing to do, but in some cases can erroneously "poison" values which
+aren't sensitive to the input and thus cause ForwardDiff to incorrectly return ``NaN`` or
+``Inf`` derivatives. For example:
+
+.. code-block:: julia
+
+    # the dual number's perturbation component is zero, so this
+    # variable should not propagate derivative information
+    julia> log(ForwardDiff.Dual(0.0, 0.0))
+    Dual(-Inf,NaN) # oops, this NaN should be 0.0
+
+Here, ForwardDiff computes the derivative of ``log(0.0)`` as ``NaN`` and then propagates
+this derivative by multiplying it by the perturbation component. Usually, ForwardDiff can
+rely on the identity ``x * 0.0 == 0.0`` to prevent the derivatives from propagating when
+the perturbation component is ``0.0``. However, this identity doesn't hold if ``isnan(y)``
+or ``isinf(y)``, in which case a ``NaN`` derivative will be propagated instead.
+
+It is possible to fix this behavior by checking that the perturbation component is zero
+before attempting to propagate derivative information, but this check can noticeably
+decrease performance (~5%-10% on our benchmarks).
+
+In order to preserve performance in the majority of use cases, ForwardDiff disables this
+check by default. If your code is affected by this ``NaN`` behvaior, you can enable
+ForwardDiff's ``NaN``-safe mode by setting ``NANSAFE_MODE_ENABLED`` to ``true`` in
+ForwardDiff's source (this constant is located in ``src/ForwardDiff.jl`` in the
+package's directory).
+
+In the future, we plan on allowing users and downstream library authors to dynamically
+enable ``NaN``-safe mode via the ``AbstractConfig`` API (see `the relevant issue
+<https://github.com/JuliaDiff/ForwardDiff.jl/issues/181>`_).
+
+
 Hessian of a vector-valued function
 -----------------------------------
 
