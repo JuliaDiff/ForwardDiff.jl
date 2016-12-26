@@ -112,18 +112,20 @@ for N in (0, 3), T in (Int, Float32, Float64)
         @test ForwardDiff._mul_partials(PARTIALS, PARTIALS2, X, Y).values == map((a, b) -> (X * a) + (Y * b), VALUES, VALUES2)
         @test ForwardDiff._div_partials(PARTIALS, PARTIALS2, X, Y) == ForwardDiff._mul_partials(PARTIALS, PARTIALS2, inv(Y), -X/(Y^2))
 
-        ZEROS = Partials((zeros(T, N)...))
+        if ForwardDiff.NANSAFE_MODE_ENABLED
+            ZEROS = Partials((zeros(T, N)...))
 
-        @test (NaN * ZEROS).values == ZEROS.values
-        @test (Inf * ZEROS).values == ZEROS.values
-        @test (ZEROS / 0).values == ZEROS.values
+            @test (NaN * ZEROS).values == ZEROS.values
+            @test (Inf * ZEROS).values == ZEROS.values
+            @test (ZEROS / 0).values == ZEROS.values
 
-        @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, NaN).values == ZEROS.values
-        @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, X).values == ZEROS.values
-        @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, Inf).values == ZEROS.values
-        @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, X).values == ZEROS.values
-        @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, NaN).values == ZEROS.values
-        @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, Inf).values == ZEROS.values
+            @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, NaN).values == ZEROS.values
+            @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, X).values == ZEROS.values
+            @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, Inf).values == ZEROS.values
+            @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, X).values == ZEROS.values
+            @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, NaN).values == ZEROS.values
+            @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, Inf).values == ZEROS.values
+        end
     end
 end
 

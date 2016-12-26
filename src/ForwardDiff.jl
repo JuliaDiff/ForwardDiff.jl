@@ -13,6 +13,11 @@ import NaNMath
 # types/functions/constants #
 #############################
 
+# NaN-safe mode switch #
+#----------------------#
+
+const NANSAFE_MODE_ENABLED = false
+
 # multithreading #
 #----------------#
 
