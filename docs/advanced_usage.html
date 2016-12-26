@@ -45,17 +45,27 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-nav-search">
-        
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
 
-        
-          <a href="index.html" class="icon icon-home"> ForwardDiff.jl
-        
+          
+            <a href="index.html" class="icon icon-home"> ForwardDiff.jl
+          
 
-        
-        </a>
+          
+          </a>
 
-        
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -64,64 +74,38 @@
   </form>
 </div>
 
-        
-      </div>
+          
+        </div>
 
-      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
           
-          
-              <p class="caption"><span class="caption-text">User Documentation</span></p>
+            
+            
+                <p class="caption"><span class="caption-text">User Documentation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation and Version Requirements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations of ForwardDiff</a></li>
-<li class="toctree-l1"><a class="reference internal" href="basic_api.html">Basic ForwardDiff API</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#derivatives-of">Derivatives of <span class="math">\(f(x) : \mathbb{R} \to \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#gradients-of">Gradients of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#jacobians-of">Jacobians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}^{m_1} \times \dots \times \mathbb{R}^{m_k}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#hessians-of">Hessians of <span class="math">\(f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}\)</span></a></li>
-<li class="toctree-l2"><a class="reference internal" href="basic_api.html#the-abstractconfig-types">The <code class="docutils literal"><span class="pre">AbstractConfig</span></code> Types</a></li>
-</ul>
-</li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Advanced Usage Guide</a><ul>
+<li class="toctree-l1"><a class="reference internal" href="basic_api.html">Basic ForwardDiff API</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Advanced Usage Guide</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#accessing-lower-order-results">Accessing Lower-Order Results</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configuring-chunk-size">Configuring Chunk Size</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fixing-issues-with-nan-inf-return-values">Fixing issues with NaN/Inf return values</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#hessian-of-a-vector-valued-function">Hessian of a vector-valued function</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#simd-vectorization">SIMD Vectorization</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#unexported-api-functions">Unexported API Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#setting-chunk-size">Setting Chunk Size</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#enabling-multithreading">Enabling Multithreading</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#retrieving-lower-order-results">Retrieving Lower-Order Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#higher-order-differentiation">Higher-Order Differentiation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upgrade.html#creating-differentiation-functions">Creating Differentiation Functions</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="upgrade.html">Upgrading from Older Versions of ForwardDiff</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Developer Documentation</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#dual-number-implementation">Dual Number Implementation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="how_it_works.html#forwarddiff-s-api">ForwardDiff&#8217;s API</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to Contribute</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#manually-optimizing-unary-functions">Manually Optimizing Unary Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="contributing.html#implementing-new-functions">Implementing New Functions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="contributing.html#unary-functions-via-calculus-jl">Unary Functions Via Calculus.jl</a></li>
-<li class="toctree-l3"><a class="reference internal" href="contributing.html#manually-adding-functions-to-forwarddiff">Manually Adding Functions to ForwardDiff</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">How to Contribute</a></li>
 </ul>
 
+            
           
-        
+        </div>
       </div>
-      &nbsp;
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -136,7 +120,13 @@
       
       <div class="wy-nav-content">
         <div class="rst-content">
-          <div role="navigation" aria-label="breadcrumbs navigation">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
@@ -151,7 +141,8 @@
   </ul>
   <hr/>
 </div>
-          <div role="main" class="document">
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="advanced-usage-guide">
 <h1>Advanced Usage Guide<a class="headerlink" href="#advanced-usage-guide" title="Permalink to this headline">¶</a></h1>
@@ -181,7 +172,7 @@ makes better use of memory bandwidth at the cost of more calls to the target fun
 a larger chunk size reduces calls to the target function at the cost of more memory
 bandwidth.</p>
 <p>For example:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span class="n">julia</span><span class="o">&gt;</span> <span class="k">import</span> <span class="n">ForwardDiff</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">julia</span><span class="o">&gt;</span> <span class="k">import</span> <span class="n">ForwardDiff</span>
 
 <span class="c"># let&#39;s use a Rosenbrock function as our target function</span>
 <span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span><span class="nf"> rosenbrock</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
@@ -211,25 +202,25 @@ bandwidth.</p>
 <span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg10</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">{</span><span class="mi">10</span><span class="p">}(</span><span class="n">x</span><span class="p">);</span>
 
 <span class="c"># (input length of 10000) / (chunk size of 1) = (10000 1-element chunks)</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg1</span><span class="p">);</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg1</span><span class="p">);</span>
   <span class="mf">0.408305</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">4</span> <span class="n">allocations</span><span class="p">:</span> <span class="mi">160</span> <span class="n">bytes</span><span class="p">)</span>
 
 <span class="c"># (input length of 10000) / (chunk size of 4) = (2500 4-element chunks)</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg4</span><span class="p">);</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg4</span><span class="p">);</span>
   <span class="mf">0.295764</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">4</span> <span class="n">allocations</span><span class="p">:</span> <span class="mi">160</span> <span class="n">bytes</span><span class="p">)</span>
 
 <span class="c"># (input length of 10000) / (chunk size of 10) = (1000 10-element chunks)</span>
-<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg10</span><span class="p">);</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg10</span><span class="p">);</span>
   <span class="mf">0.267396</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">4</span> <span class="n">allocations</span><span class="p">:</span> <span class="mi">160</span> <span class="n">bytes</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>If you do not explicity provide a chunk size, ForwardDiff will try to guess one for you
 based on your input vector:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span class="c"># The GradientConfig constructor will automatically select a</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># The GradientConfig constructor will automatically select a</span>
 <span class="c"># chunk size in one is not explicitly provided</span>
 <span class="n">julia</span><span class="o">&gt;</span> <span class="n">cfg</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
 
-<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg</span><span class="p">);</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">time</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">cfg</span><span class="p">);</span>
 <span class="mf">0.266920</span> <span class="n">seconds</span> <span class="p">(</span><span class="mi">4</span> <span class="n">allocations</span><span class="p">:</span> <span class="mi">160</span> <span class="n">bytes</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -241,11 +232,11 @@ heuristic is inherently type-unstable, which can cause the entire call to be typ
 <p>If your input dimension is a runtime variable, you can rely on ForwardDiff&#8217;s heuristic
 without sacrificing type stability by manually asserting the output type, or - even better -
 by using the in-place API functions:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span class="c"># will be type-stable since you&#39;re asserting the output type</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># will be type-stable since you&#39;re asserting the output type</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">)::</span><span class="n">Vector</span><span class="p">{</span><span class="kt">Float64</span><span class="p">}</span>
 
 <span class="c"># will be type-stable since `out` is returned, and Julia knows the type of `out`</span>
-<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="o">!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">rosenbrock</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>One final question remains: How should you select a chunk size? The answer is essentially
@@ -256,22 +247,51 @@ vector.</p>
 dimension. Otherwise, ForwardDiff has to construct and utilize an extra &#8220;remainder&#8221; chunk to
 complete the calculation.</p>
 </div>
+<div class="section" id="fixing-issues-with-nan-inf-return-values">
+<h2>Fixing issues with NaN/Inf return values<a class="headerlink" href="#fixing-issues-with-nan-inf-return-values" title="Permalink to this headline">¶</a></h2>
+<p>ForwardDiff&#8217;s default behavior is to return <code class="docutils literal"><span class="pre">NaN</span></code> for undefined derivatives (or otherwise
+mirror the behavior of the function in <code class="docutils literal"><span class="pre">Base</span></code>, if it would return an error). This is
+usually the correct thing to do, but in some cases can erroneously &#8220;poison&#8221; values which
+aren&#8217;t sensitive to the input and thus cause ForwardDiff to incorrectly return <code class="docutils literal"><span class="pre">NaN</span></code> or
+<code class="docutils literal"><span class="pre">Inf</span></code> derivatives. For example:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># the dual number&#39;s perturbation component is zero, so this</span>
+<span class="c"># variable should not propagate derivative information</span>
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">log</span><span class="p">(</span><span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Dual</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">))</span>
+<span class="n">Dual</span><span class="p">(</span><span class="o">-</span><span class="nb">Inf</span><span class="p">,</span><span class="n">NaN</span><span class="p">)</span> <span class="c"># oops, this NaN should be 0.0</span>
+</pre></div>
+</div>
+<p>Here, ForwardDiff computes the derivative of <code class="docutils literal"><span class="pre">log(0.0)</span></code> as <code class="docutils literal"><span class="pre">NaN</span></code> and then propagates
+this derivative by multiplying it by the perturbation component. Usually, ForwardDiff can
+rely on the identity <code class="docutils literal"><span class="pre">x</span> <span class="pre">*</span> <span class="pre">0.0</span> <span class="pre">==</span> <span class="pre">0.0</span></code> to prevent the derivatives from propagating when
+the perturbation component is <code class="docutils literal"><span class="pre">0.0</span></code>. However, this identity doesn&#8217;t hold if <code class="docutils literal"><span class="pre">isnan(y)</span></code>
+or <code class="docutils literal"><span class="pre">isinf(y)</span></code>, in which case a <code class="docutils literal"><span class="pre">NaN</span></code> derivative will be propagated instead.</p>
+<p>It is possible to fix this behavior by checking that the perturbation component is zero
+before attempting to propagate derivative information, but this check can noticeably
+decrease performance (~5%-10% on our benchmarks).</p>
+<p>In order to preserve performance in the majority of use cases, ForwardDiff disables this
+check by default. If your code is affected by this <code class="docutils literal"><span class="pre">NaN</span></code> behvaior, you can enable
+ForwardDiff&#8217;s <code class="docutils literal"><span class="pre">NaN</span></code>-safe mode by setting <code class="docutils literal"><span class="pre">NANSAFE_MODE_ENABLED</span></code> to <code class="docutils literal"><span class="pre">true</span></code> in
+ForwardDiff&#8217;s source (this constant is located in <code class="docutils literal"><span class="pre">src/ForwardDiff.jl</span></code> in the
+package&#8217;s directory).</p>
+<p>In the future, we plan on allowing users and downstream library authors to dynamically
+enable <code class="docutils literal"><span class="pre">NaN</span></code>-safe mode via the <code class="docutils literal"><span class="pre">AbstractConfig</span></code> API (see <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/181">the relevant issue</a>).</p>
+</div>
 <div class="section" id="hessian-of-a-vector-valued-function">
 <h2>Hessian of a vector-valued function<a class="headerlink" href="#hessian-of-a-vector-valued-function" title="Permalink to this headline">¶</a></h2>
 <p>While ForwardDiff does not have a built-in function for taking Hessians of vector-valued
 functions, you can easily compose calls to <code class="docutils literal"><span class="pre">ForwardDiff.jacobian</span></code> to accomplish this.
 For example:</p>
-<div class="highlight-julia"><div class="highlight"><pre>julia&gt; ForwardDiff.jacobian(x -&gt; ForwardDiff.jacobian(sin, x), [1,2,3])
-9×3 Array{Float64,2}:
- -0.841471   0.0        0.0
- -0.0       -0.0       -0.0
- -0.0       -0.0       -0.0
- 0.0        0.0        0.0
- -0.0       -0.909297  -0.0
- -0.0       -0.0       -0.0
- 0.0        0.0        0.0
- -0.0       -0.0       -0.0
- -0.0       -0.0       -0.14112
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">julia</span><span class="o">&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">sin</span><span class="p">,</span> <span class="n">x</span><span class="p">),</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+<span class="mi">9</span><span class="n">×3</span> <span class="n">Array</span><span class="p">{</span><span class="kt">Float64</span><span class="p">,</span><span class="mi">2</span><span class="p">}:</span>
+ <span class="o">-</span><span class="mf">0.841471</span>   <span class="mf">0.0</span>        <span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>
+ <span class="mf">0.0</span>        <span class="mf">0.0</span>        <span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.909297</span>  <span class="o">-</span><span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>
+ <span class="mf">0.0</span>        <span class="mf">0.0</span>        <span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.14112</span>
 </pre></div>
 </div>
 <p>Since this functionality is composed from ForwardDiff&#8217;s existing API rather than built into
@@ -279,29 +299,29 @@ it, you&#8217;re free to construct a <code class="docutils literal"><span class=
 example, if you require the shape of the output to be a tensor rather than a block matrix,
 you can do so with a <code class="docutils literal"><span class="pre">reshape</span></code> (note that <code class="docutils literal"><span class="pre">reshape</span></code> does not copy data, so it&#8217;s not an
 expensive operation):</p>
-<div class="highlight-julia"><div class="highlight"><pre>julia&gt; function vector_hessian(f, x)
-       n = length(x)
-       out = ForwardDiff.jacobian(x -&gt; ForwardDiff.jacobian(f, x), x)
-       return reshape(out, n, n, n)
-   end
-vector_hessian (generic function with 1 method)
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">julia</span><span class="o">&gt;</span> <span class="k">function</span><span class="nf"> vector_hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+       <span class="n">n</span> <span class="o">=</span> <span class="n">length</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+       <span class="n">out</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">),</span> <span class="n">x</span><span class="p">)</span>
+       <span class="k">return</span> <span class="n">reshape</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+   <span class="k">end</span>
+<span class="n">vector_hessian</span> <span class="p">(</span><span class="n">generic</span> <span class="k">function</span><span class="nf"> with</span> <span class="mi">1</span> <span class="n">method</span><span class="p">)</span>
 
-julia&gt; vector_hessian(sin, [1, 2, 3])
-3×3×3 Array{Float64,3}:
-[:, :, 1] =
- -0.841471   0.0   0.0
- -0.0       -0.0  -0.0
- -0.0       -0.0  -0.0
+<span class="n">julia</span><span class="o">&gt;</span> <span class="n">vector_hessian</span><span class="p">(</span><span class="n">sin</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="mi">3</span><span class="n">×3×3</span> <span class="n">Array</span><span class="p">{</span><span class="kt">Float64</span><span class="p">,</span><span class="mi">3</span><span class="p">}:</span>
+<span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span>
+ <span class="o">-</span><span class="mf">0.841471</span>   <span class="mf">0.0</span>   <span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.0</span>
 
-[:, :, 2] =
-  0.0   0.0        0.0
- -0.0  -0.909297  -0.0
- -0.0  -0.0       -0.0
+<span class="p">[:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span>
+  <span class="mf">0.0</span>   <span class="mf">0.0</span>        <span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.909297</span>  <span class="o">-</span><span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.0</span>       <span class="o">-</span><span class="mf">0.0</span>
 
-[:, :, 3] =
-  0.0   0.0   0.0
- -0.0  -0.0  -0.0
- -0.0  -0.0  -0.14112
+<span class="p">[:,</span> <span class="p">:,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span>
+  <span class="mf">0.0</span>   <span class="mf">0.0</span>   <span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.0</span>
+ <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.0</span>  <span class="o">-</span><span class="mf">0.14112</span>
 </pre></div>
 </div>
 <p>Likewise, you could write a version of <code class="docutils literal"><span class="pre">vector_hessian</span></code> which supports functions of the
@@ -317,7 +337,7 @@ attempts to automatically insert SIMD instructions where possible for certain ar
 operations.</p>
 <p>Here&#8217;s an example of LLVM bitcode generated for an addition of two <code class="docutils literal"><span class="pre">Dual</span></code> numbers without
 SIMD instructions (i.e. not starting Julia with <code class="docutils literal"><span class="pre">-O3</span></code>):</p>
-<div class="highlight-julia"><div class="highlight"><pre><span class="n">julia</span><span class="o">&gt;</span> <span class="k">using</span> <span class="n">ForwardDiff</span><span class="p">:</span> <span class="n">Dual</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">julia</span><span class="o">&gt;</span> <span class="k">using</span> <span class="n">ForwardDiff</span><span class="p">:</span> <span class="n">Dual</span>
 
 <span class="n">julia</span><span class="o">&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">Dual</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mf">3.</span><span class="p">,</span> <span class="mf">4.</span><span class="p">)</span>
 <span class="n">Dual</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">2.0</span><span class="p">,</span><span class="mf">3.0</span><span class="p">,</span><span class="mf">4.0</span><span class="p">)</span>
@@ -363,7 +383,7 @@ SIMD instructions (i.e. not starting Julia with <code class="docutils literal"><
 </div>
 <p>If we start up Julia with <code class="docutils literal"><span class="pre">-O3</span></code> instead, the call to <code class="docutils literal"><span class="pre">&#64;code_llvm</span></code> will show that LLVM
 can SIMD-vectorize the addition:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">code_llvm</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">julia</span><span class="o">&gt;</span> <span class="p">@</span><span class="n">code_llvm</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
 
 <span class="n">define</span> <span class="n">void</span> <span class="p">@</span><span class="s">&quot;julia_+_70842&quot;</span><span class="p">(</span><span class="o">%</span><span class="n">Dual</span><span class="o">*</span> <span class="n">noalias</span> <span class="n">sret</span><span class="p">,</span> <span class="o">%</span><span class="n">Dual</span><span class="o">*</span><span class="p">,</span> <span class="o">%</span><span class="n">Dual</span><span class="o">*</span><span class="p">)</span> <span class="c">#0 {</span>
 <span class="n">top</span><span class="p">:</span>
@@ -385,6 +405,7 @@ bitcode. To overcome this specific issue, you can <a class="reference external" 
 </div>
 
 
+           </div>
           </div>
           <footer>
   
@@ -403,9 +424,10 @@ bitcode. To overcome this specific issue, you can <a class="reference external" 
   <div role="contentinfo">
     <p>
         &copy; Copyright 2015, Jarrett Revels, Theodore Papamarkou, Miles Lubin, and other contributors.
+
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
