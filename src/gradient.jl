@@ -19,6 +19,17 @@ function gradient!{F}(out, f::F, x, cfg::AbstractConfig = GradientConfig(x))
     return out
 end
 
+# add option for user to pass arguments to f()
+function gradient{F}(f::F, x, cfg::AbstractConfig = GradientConfig(x), args...)
+    if chunksize(cfg) == length(x)
+        return vector_mode_gradient(f, x, cfg, args...)
+    else
+        error("chunk_mode_gradient is not currently set up with args...")
+        return chunk_mode_gradient(f, x, cfg)
+    end
+end
+#gradient{F}(f::F, x, args...) = gradient{F}(f::F, x, cfg::AbstractConfig = GradientConfig(x), args...)
+
 #####################
 # result extraction #
 #####################
@@ -66,6 +77,13 @@ function vector_mode_gradient!{F}(out, f::F, x, cfg)
     ydual = vector_mode_dual_eval(f, x, cfg)
     extract_gradient!(out, ydual)
     return out
+end
+
+# add option for user to pass arguments to f()
+function vector_mode_gradient{F}(f::F, x, cfg, args...)
+    ydual = vector_mode_dual_eval(f, x, cfg, args...)
+    out = similar(x, valtype(ydual))
+    return extract_gradient!(out, ydual)
 end
 
 ##############
