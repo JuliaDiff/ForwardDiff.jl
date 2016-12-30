@@ -131,6 +131,10 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
         @test round(FDNUM) === round(PRIMAL)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
+
+        @test Base.rtoldefault(typeof(FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
+        @test Dual(PRIMAL-eps(T), PARTIALS) ≈ FDNUM
+        @test Base.rtoldefault(typeof(NESTED_FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
     end
 
     @test hash(FDNUM) === hash(PRIMAL)
