@@ -308,10 +308,13 @@ for fsym in AUTO_DEFINED_UNARY_FUNCS
     v = :v
     deriv = Calculus.differentiate(:($(fsym)($v)), v)
 
-    @eval begin
-        @inline function Base.$(fsym)(n::Dual)
-            $(v) = value(n)
-            return Dual($(fsym)($v), $(deriv) * partials(n))
+    # exp and sqrt are manually defined below
+    if !(in(fsym, (:exp, :sqrt)))
+        @eval begin
+            @inline function Base.$(fsym)(n::Dual)
+                $(v) = value(n)
+                return Dual($(fsym)($v), $(deriv) * partials(n))
+            end
         end
     end
 
