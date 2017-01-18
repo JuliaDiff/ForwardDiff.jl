@@ -21,7 +21,7 @@ f = x -> sum(sin, x) + prod(tan, x) * sum(sqrt, x)
 g = x -> ForwardDiff.gradient(f, x)
 j = x -> ForwardDiff.jacobian(g, x)
 
-@test_approx_eq ForwardDiff.hessian(f, x) j(x)
+@test isapprox(ForwardDiff.hessian(f, x), j(x))
 
 # higher-order derivatives #
 #--------------------------#
@@ -42,7 +42,7 @@ test_tensor_output = reshape([240.0  -400.0     0.0;
                                 0.0  -400.0     0.0;
                                 0.0     0.0     0.0], 3, 3, 3)
 
-@test_approx_eq tensor(DiffBase.rosenbrock_1, [0.1, 0.2, 0.3]) test_tensor_output
+@test isapprox(tensor(DiffBase.rosenbrock_1, [0.1, 0.2, 0.3]), test_tensor_output)
 
 test_nested_jacobian_output = [-sin(1)  0.0     0.0;
                                -0.0    -0.0    -0.0;
@@ -56,7 +56,7 @@ test_nested_jacobian_output = [-sin(1)  0.0     0.0;
 
 sin_jacobian = x -> ForwardDiff.jacobian(y -> broadcast(sin, y), x)
 
-@test_approx_eq ForwardDiff.jacobian(sin_jacobian, [1., 2., 3.]) test_nested_jacobian_output
+@test isapprox(ForwardDiff.jacobian(sin_jacobian, [1., 2., 3.]), test_nested_jacobian_output)
 
 # Issue #59 example #
 #-------------------#
@@ -69,7 +69,7 @@ testdf = x -> (((cos(x)^2)/3) - (sin(x)^2)/3) / 2
 f2 = x -> df(x[1]) * f(x[2])
 testf2 = x -> testdf(x[1]) * f(x[2])
 
-@test_approx_eq ForwardDiff.gradient(f2, x) ForwardDiff.gradient(testf2, x)
+@test isapprox(ForwardDiff.gradient(f2, x), ForwardDiff.gradient(testf2, x))
 
 ######################################
 # Higher-Dimensional Differentiation #
@@ -77,7 +77,7 @@ testf2 = x -> testdf(x[1]) * f(x[2])
 
 x = rand(5, 5)
 
-@test_approx_eq ForwardDiff.jacobian(inv, x) -kron(inv(x'), inv(x))
+@test isapprox(ForwardDiff.jacobian(inv, x), -kron(inv(x'), inv(x)))
 
 #########################################
 # Differentiation with non-Array inputs #
@@ -88,11 +88,11 @@ x = rand(5,5)
 # Sparse
 f = x -> sum(sin, x) + prod(tan, x) * sum(sqrt, x)
 gfx = ForwardDiff.gradient(f, x)
-@test_approx_eq gfx ForwardDiff.gradient(f, sparse(x))
+@test isapprox(gfx, ForwardDiff.gradient(f, sparse(x)))
 
 # Views
 jinvx = ForwardDiff.jacobian(inv, x)
-@test_approx_eq jinvx ForwardDiff.jacobian(inv, Compat.view(x, 1:5, 1:5))
+@test isapprox(jinvx, ForwardDiff.jacobian(inv, Compat.view(x, 1:5, 1:5)))
 
 ########################
 # Conversion/Promotion #
@@ -116,7 +116,7 @@ jac0 = reshape(vcat([[zeros(N*(i-1)); a; zeros(N^2-N*i)] for i = 1:N]...), N^2, 
 for op in (-, +, .-, .+, ./, .*)
     f = x -> [op(x[1], a); op(x[2], a); op(x[3], a); op(x[4], a)]
     jac = ForwardDiff.jacobian(f, a)
-    @test_approx_eq jac0 jac
+    @test isapprox(jac0, jac)
 end
 
 # NaNs #

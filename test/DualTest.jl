@@ -20,7 +20,7 @@ if v"0.4" <= VERSION < v"0.5"
     Base.hypot(x, y, z) = hypot(hypot(x, y), z)
 end
 
-test_approx_diffnums(a::Real, b::Real) = @test_approx_eq a b
+test_approx_diffnums(a::Real, b::Real) = @test isapprox(a, b)
 
 function test_approx_diffnums{N}(a::Dual{N}, b::Dual{N})
     test_approx_diffnums(value(a), value(b))

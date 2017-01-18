@@ -21,8 +21,8 @@ for f in DiffBase.NUMBER_TO_NUMBER_FUNCS
 
     out = DiffBase.DiffResult(zero(v), zero(v))
     ForwardDiff.derivative!(out, f, x)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.derivative(out) d
+    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffBase.derivative(out), d)
 end
 
 for f in DiffBase.NUMBER_TO_ARRAY_FUNCS
@@ -33,12 +33,12 @@ for f in DiffBase.NUMBER_TO_ARRAY_FUNCS
 
     out = similar(v)
     ForwardDiff.derivative!(out, f, x)
-    @test_approx_eq out d
+    @test isapprox(out, d)
 
     out = DiffBase.DiffResult(zero(v), similar(d))
     ForwardDiff.derivative!(out, f, x)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.derivative(out) d
+    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffBase.derivative(out), d)
 end
 
 
