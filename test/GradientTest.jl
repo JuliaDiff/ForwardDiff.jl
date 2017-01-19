@@ -22,42 +22,42 @@ for c in (1, 2, 3)
 
     # single-threaded #
     #-----------------#
-    @test_approx_eq g ForwardDiff.gradient(f, x, cfg)
-    @test_approx_eq g ForwardDiff.gradient(f, x)
+    @test isapprox(g, ForwardDiff.gradient(f, x, cfg))
+    @test isapprox(g, ForwardDiff.gradient(f, x))
 
     out = similar(x)
     ForwardDiff.gradient!(out, f, x, cfg)
-    @test_approx_eq out g
+    @test isapprox(out, g)
 
     out = similar(x)
     ForwardDiff.gradient!(out, f, x)
-    @test_approx_eq out g
+    @test isapprox(out, g)
 
     out = DiffBase.GradientResult(x)
     ForwardDiff.gradient!(out, f, x, cfg)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.gradient(out) g
+    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffBase.gradient(out), g)
 
     out = DiffBase.GradientResult(x)
     ForwardDiff.gradient!(out, f, x)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.gradient(out) g
+    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffBase.gradient(out), g)
 
     # multithreaded #
     #---------------#
     if ForwardDiff.IS_MULTITHREADED_JULIA
         multi_cfg = ForwardDiff.MultithreadConfig(cfg)
 
-        @test_approx_eq g ForwardDiff.gradient(f, x, multi_cfg)
+        @test isapprox(g, ForwardDiff.gradient(f, x, multi_cfg))
 
         out = similar(x)
         ForwardDiff.gradient!(out, f, x, multi_cfg)
-        @test_approx_eq out g
+        @test isapprox(out, g)
 
         out = DiffBase.GradientResult(x)
         ForwardDiff.gradient!(out, f, x, multi_cfg)
-        @test_approx_eq DiffBase.value(out) v
-        @test_approx_eq DiffBase.gradient(out) g
+        @test isapprox(DiffBase.value(out), v)
+        @test isapprox(DiffBase.gradient(out), g)
     end
 end
 
@@ -76,16 +76,16 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         # single-threaded #
         #-----------------#
         out = ForwardDiff.gradient(f, X, cfg)
-        @test_approx_eq out g
+        @test isapprox(out, g)
 
         out = similar(X)
         ForwardDiff.gradient!(out, f, X, cfg)
-        @test_approx_eq out g
+        @test isapprox(out, g)
 
         out = DiffBase.GradientResult(X)
         ForwardDiff.gradient!(out, f, X, cfg)
-        @test_approx_eq DiffBase.value(out) v
-        @test_approx_eq DiffBase.gradient(out) g
+        @test isapprox(DiffBase.value(out), v)
+        @test isapprox(DiffBase.gradient(out), g)
 
         # multithreaded #
         #---------------#
@@ -93,16 +93,16 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
             multi_cfg = ForwardDiff.MultithreadConfig(cfg)
 
             out = ForwardDiff.gradient(f, X, multi_cfg)
-            @test_approx_eq out g
+            @test isapprox(out, g)
 
             out = similar(X)
             ForwardDiff.gradient!(out, f, X, multi_cfg)
-            @test_approx_eq out g
+            @test isapprox(out, g)
 
             out = DiffBase.GradientResult(X)
             ForwardDiff.gradient!(out, f, X, multi_cfg)
-            @test_approx_eq DiffBase.value(out) v
-            @test_approx_eq DiffBase.gradient(out) g
+            @test isapprox(DiffBase.value(out), v)
+            @test isapprox(DiffBase.gradient(out), g)
         end
     end
 end

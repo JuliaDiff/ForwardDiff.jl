@@ -26,28 +26,28 @@ for c in (1, 2, 3)
 
     # single-threaded #
     #-----------------#
-    @test_approx_eq h ForwardDiff.hessian(f, x)
-    @test_approx_eq h ForwardDiff.hessian(f, x, cfg)
+    @test isapprox(h, ForwardDiff.hessian(f, x))
+    @test isapprox(h, ForwardDiff.hessian(f, x, cfg))
 
     out = similar(x, 3, 3)
     ForwardDiff.hessian!(out, f, x)
-    @test_approx_eq out h
+    @test isapprox(out, h)
 
     out = similar(x, 3, 3)
     ForwardDiff.hessian!(out, f, x, cfg)
-    @test_approx_eq out h
+    @test isapprox(out, h)
 
     out = DiffBase.HessianResult(x)
     ForwardDiff.hessian!(out, f, x)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.gradient(out) g
-    @test_approx_eq DiffBase.hessian(out) h
+    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffBase.gradient(out), g)
+    @test isapprox(DiffBase.hessian(out), h)
 
     out = DiffBase.HessianResult(x)
     ForwardDiff.hessian!(out, f, x, resultcfg)
-    @test_approx_eq DiffBase.value(out) v
-    @test_approx_eq DiffBase.gradient(out) g
-    @test_approx_eq DiffBase.hessian(out) h
+    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffBase.gradient(out), g)
+    @test isapprox(DiffBase.hessian(out), h)
 
     # multithreaded #
     #---------------#
@@ -55,17 +55,17 @@ for c in (1, 2, 3)
         multi_cfg = ForwardDiff.MultithreadConfig(cfg)
         multi_resultcfg = ForwardDiff.MultithreadConfig(resultcfg)
 
-        @test_approx_eq h ForwardDiff.hessian(f, x, multi_cfg)
+        @test isapprox(h, ForwardDiff.hessian(f, x, multi_cfg))
 
         out = similar(x, 3, 3)
         ForwardDiff.hessian!(out, f, x, multi_cfg)
-        @test_approx_eq out h
+        @test isapprox(out, h)
 
         out = DiffBase.HessianResult(x)
         ForwardDiff.hessian!(out, f, x, multi_resultcfg)
-        @test_approx_eq DiffBase.value(out) v
-        @test_approx_eq DiffBase.gradient(out) g
-        @test_approx_eq DiffBase.hessian(out) h
+        @test isapprox(DiffBase.value(out), v)
+        @test isapprox(DiffBase.gradient(out), g)
+        @test isapprox(DiffBase.hessian(out), h)
     end
 end
 
@@ -87,17 +87,17 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         # single-threaded #
         #-----------------#
         out = ForwardDiff.hessian(f, X, cfg)
-        @test_approx_eq out h
+        @test isapprox(out, h)
 
         out = similar(X, length(X), length(X))
         ForwardDiff.hessian!(out, f, X, cfg)
-        @test_approx_eq out h
+        @test isapprox(out, h)
 
         out = DiffBase.HessianResult(X)
         ForwardDiff.hessian!(out, f, X, resultcfg)
-        @test_approx_eq DiffBase.value(out) v
-        @test_approx_eq DiffBase.gradient(out) g
-        @test_approx_eq DiffBase.hessian(out) h
+        @test isapprox(DiffBase.value(out), v)
+        @test isapprox(DiffBase.gradient(out), g)
+        @test isapprox(DiffBase.hessian(out), h)
 
         # multithreaded #
         #---------------#
@@ -106,17 +106,17 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
             multi_resultcfg = ForwardDiff.MultithreadConfig(resultcfg)
 
             out = ForwardDiff.hessian(f, X, multi_cfg)
-            @test_approx_eq out h
+            @test isapprox(out, h)
 
             out = similar(X, length(X), length(X))
             ForwardDiff.hessian!(out, f, X, multi_cfg)
-            @test_approx_eq out h
+            @test isapprox(out, h)
 
             out = DiffBase.HessianResult(X)
             ForwardDiff.hessian!(out, f, X, multi_resultcfg)
-            @test_approx_eq DiffBase.value(out) v
-            @test_approx_eq DiffBase.gradient(out) g
-            @test_approx_eq DiffBase.hessian(out) h
+            @test isapprox(DiffBase.value(out), v)
+            @test isapprox(DiffBase.gradient(out), g)
+            @test isapprox(DiffBase.hessian(out), h)
         end
     end
 end
