@@ -11,6 +11,3 @@ const YLEN = div(CHUNK_THRESHOLD, 2) + 1
 const X, Y = rand(XLEN), rand(YLEN)
 const CHUNK_SIZES = (1, div(CHUNK_THRESHOLD, 3), div(CHUNK_THRESHOLD, 2), CHUNK_THRESHOLD, CHUNK_THRESHOLD + 1)
 const FINITEDIFF_ERROR = 1.5e-5
-
-# used to test against results calculated via finite difference
-test_approx_eps(a::Array, b::Array) = @test_approx_eq_eps a b EPS

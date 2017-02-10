@@ -113,9 +113,9 @@ N = 4
 a = ones(N)
 jac0 = reshape(vcat([[zeros(N*(i-1)); a; zeros(N^2-N*i)] for i = 1:N]...), N^2, N)
 
-for op in (-, +, .-, .+, ./, .*)
-    f = x -> [op(x[1], a); op(x[2], a); op(x[3], a); op(x[4], a)]
-    jac = ForwardDiff.jacobian(f, a)
+for op in (:-, :+, :.-, :.+, :./, :.*)
+    f = @eval x -> [$op(x[1], a); $op(x[2], a); $op(x[3], a); $op(x[4], a)]
+    jac = @eval ForwardDiff.jacobian(f, a)
     @test isapprox(jac0, jac)
 end
 
