@@ -10,11 +10,11 @@ abstract AbstractConfig
 # but feature different constructors and dispatch restrictions in downstream code.
 for Config in (:GradientConfig, :JacobianConfig)
     @eval begin
-        immutable $Config{N,T,D} <: AbstractConfig
+        @compat immutable $Config{N,T,D} <: AbstractConfig
             seeds::NTuple{N,Partials{N,T}}
             duals::D
             # disable default outer constructor
-            $Config(seeds, duals) = new(seeds, duals)
+            (::Type{$Config{N,T,D}}){N,T,D}(seeds, duals) = new{N,T,D}(seeds, duals)
         end
 
         # This is type-unstable, which is why our docs advise users to manually enter a chunk size

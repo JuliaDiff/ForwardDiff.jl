@@ -23,7 +23,8 @@ end
 if VERSION < v"0.5"
     # isapprox on v0.4 doesn't properly set the tolerance
     # for mixed-precision inputs, while @test_approx_eq does
-    test_approx_diffnums(a::Real, b::Real) = @test_approx_eq a b
+    # Use @eval to avoid expanding @test_approx_eq on 0.6 where it's deprecated
+    @eval test_approx_diffnums(a::Real, b::Real) = @test_approx_eq a b
 else
     test_approx_diffnums(a::Real, b::Real) = @test isapprox(a, b)
 end

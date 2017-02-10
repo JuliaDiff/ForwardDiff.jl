@@ -68,7 +68,7 @@ end
 for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
-    @test_approx_eq_eps g Calculus.gradient(f, X) FINITEDIFF_ERROR
+    @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size = $c")
         cfg = ForwardDiff.GradientConfig{c}(X)
