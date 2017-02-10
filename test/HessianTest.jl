@@ -78,7 +78,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     g = ForwardDiff.gradient(f, X)
     h = ForwardDiff.hessian(f, X)
     # finite difference approximation error is really bad for Hessians...
-    @test_approx_eq_eps h Calculus.hessian(f, X) 0.01
+    @test isapprox(h, Calculus.hessian(f, X), atol=0.02)
     for c in CHUNK_SIZES
         println("  ...testing $f with chunk size = $c")
         cfg = ForwardDiff.HessianConfig{c}(X)
