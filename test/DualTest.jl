@@ -6,6 +6,7 @@ using ForwardDiff: Partials, Dual, value, partials
 
 import NaNMath
 import Calculus
+importall SpecialFunctions
 
 samerng() = MersenneTwister(1)
 
