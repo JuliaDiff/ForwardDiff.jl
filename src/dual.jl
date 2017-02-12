@@ -403,10 +403,28 @@ end
 # Pretty Printing #
 ###################
 
+const _subscripts = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉"]
+
 function Base.show{N}(io::IO, n::Dual{N})
-    print(io, "Dual(", value(n))
-    for i in 1:N
-        print(io, ",", partials(n, i))
+    parts, val = partials(n), value(n)
+    compact = get(io, :compact, false)
+    show(io, val)
+    for (i, p) in enumerate(parts)
+        if signbit(p) && !isnan(p)
+            p = -p
+            print(io, compact ? "-" : " - ")
+        else
+            print(io, compact ? "+" : " + ")
+        end
+        show(io, p)
+        if !(isa(p, Integer) && !isa(p, Bool) || isa(p, AbstractFloat) && isfinite(p))
+            print(io, "*")
+        end
+        print(io, "ɛ")
+        if length(parts) > 1
+            for d in reverse(digits(i))
+                print(io, _subscripts[d + 1])
+            end
+        end
     end
-    print(io, ")")
 end
