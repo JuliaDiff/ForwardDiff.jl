@@ -211,4 +211,30 @@ end
 # Pretty Printing #
 ###################
 
-Base.show{N}(io::IO, p::Partials{N}) = print(io, "Partials", p.values)
+const _subscripts = ["₀", "₁", "₂", "₃", "₄", "₅", "₆", "₇", "₈", "₉"]
+
+Base.show(io::IO, ::MIME"text/plain", p::Partials) = show(io, p)
+
+function Base.show{N}(io::IO, parts::Partials{N}, showing_dual = false)
+    compact = get(io, :compact, false)
+    for (i, p) in enumerate(parts)
+        if showing_dual == true || i != 1
+            if signbit(p) && !isnan(p)
+                p = -p
+                print(io, compact ? "-" : " - ")
+            else
+                print(io, compact ? "+" : " + ")
+            end
+        end
+        show(io, p)
+        if !(isa(p, Integer) && !isa(p, Bool) || isa(p, AbstractFloat) && isfinite(p))
+            print(io, "*")
+        end
+        print(io, "ɛ")
+        if length(parts) > 1
+            for d in reverse(digits(i))
+                print(io, _subscripts[d + 1])
+            end
+        end
+    end
+end
