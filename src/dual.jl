@@ -252,7 +252,7 @@ end
 # Exponentiation #
 #----------------#
 
-for f in (:(Base.:^)), :(NaNMath.pow))
+for f in (:(Base.:^), :(NaNMath.pow))
     @eval begin
         @ambiguous @inline function ($f){N}(n1::Dual{N}, n2::Dual{N})
             v1, v2 = value(n1), value(n2)
