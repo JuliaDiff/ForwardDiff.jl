@@ -23,7 +23,7 @@ for Config in (:GradientConfig, :JacobianConfig)
         # when predicting the final output type of API functions.
         $Config(x::AbstractArray) = $Config{pickchunksize(length(x))}(x)
 
-        @compat (::Type{$Config{N}}){N,T}(x::AbstractArray{T}) = begin
+        function (::Type{$Config{N}}){N,T}(x::AbstractArray{T})
             seeds = construct_seeds(Partials{N,T})
             duals = similar(x, Dual{N,T})
             return $Config{N,T,typeof(duals)}(seeds, duals)
@@ -39,7 +39,7 @@ end
 
 JacobianConfig(y::AbstractArray, x::AbstractArray) = JacobianConfig{pickchunksize(length(x))}(y, x)
 
-@compat (::Type{JacobianConfig{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArray{X}) = begin
+function (::Type{JacobianConfig{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArray{X})
     seeds = construct_seeds(Partials{N,X})
     yduals = similar(y, Dual{N,Y})
     xduals = similar(x, Dual{N,X})
@@ -59,13 +59,13 @@ end
 HessianConfig(x::AbstractArray) = HessianConfig{pickchunksize(length(x))}(x)
 HessianConfig(out, x::AbstractArray) = HessianConfig{pickchunksize(length(x))}(out, x)
 
-@compat (::Type{HessianConfig{N}}){N}(x::AbstractArray) = begin
+function (::Type{HessianConfig{N}}){N}(x::AbstractArray)
     jacobian_config = JacobianConfig{N}(x)
     gradient_config = GradientConfig{N}(jacobian_config.duals)
     return HessianConfig(gradient_config, jacobian_config)
 end
 
-@compat (::Type{HessianConfig{N}}){N}(out::DiffResult, x::AbstractArray) = begin
+function (::Type{HessianConfig{N}}){N}(out::DiffResult, x::AbstractArray)
     jacobian_config = JacobianConfig{N}(DiffBase.gradient(out), x)
     yduals, xduals = jacobian_config.duals
     gradient_config = GradientConfig{N}(xduals)
