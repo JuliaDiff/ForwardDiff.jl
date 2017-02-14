@@ -1,4 +1,4 @@
-julia 0.4
+julia 0.5
 DiffBase 0.0.3
 Compat 0.8.6
 Calculus 0.2.0
