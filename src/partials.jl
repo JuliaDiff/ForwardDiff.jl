@@ -6,6 +6,11 @@ end
 # Utility/Accessor Functions #
 ##############################
 
+@generated function single_seed{N,T,i}(::Type{Partials{N,T}}, ::Type{Val{i}})
+    ex = Expr(:tuple, [ifelse(i === j, :(one(T)), :(zero(T))) for j in 1:N]...)
+    return :(Partials($(ex)))
+end
+
 @inline valtype{N,T}(::Partials{N,T}) = T
 @inline valtype{N,T}(::Type{Partials{N,T}}) = T
 
@@ -16,7 +21,6 @@ end
 @inline Base.size{N}(::Partials{N}) = (N,)
 
 @inline Base.getindex(partials::Partials, i::Int) = partials.values[i]
-setindex{N,T}(partials::Partials{N,T}, v, i) = Partials{N,T}((partials[1:i-1]..., v, partials[i+1:N]...))
 
 Base.start(partials::Partials) = start(partials.values)
 Base.next(partials::Partials, i) = next(partials.values, i)

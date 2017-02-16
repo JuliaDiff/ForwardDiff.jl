@@ -55,12 +55,7 @@ end
 ##################################
 
 @generated function construct_seeds{N,T}(::Type{Partials{N,T}})
-    ex = Expr(:tuple, [:(setindex(zero_partials, seed_unit, $i)) for i in 1:N]...)
-    return quote
-        seed_unit = one(T)
-        zero_partials = zero(Partials{$N,T})
-        return $ex
-    end
+    return Expr(:tuple, [:(single_seed(Partials{N,T}, Val{$i})) for i in 1:N]...)
 end
 
 function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x,
