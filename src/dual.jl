@@ -23,6 +23,7 @@ end
 Dual(value::Real, partials::Tuple) = Dual(value, Partials(partials))
 Dual(value::Real, partials::Tuple{}) = Dual(value, Partials{0,typeof(value)}(partials))
 Dual(value::Real, partials::Real...) = Dual(value, partials)
+Dual{T<:Real,N,i}(value::T, ::Type{Val{N}}, ::Type{Val{i}}) = Dual(value, single_seed(Partials{N,T}, Val{i}))
 
 ##############################
 # Utility/Accessor Functions #

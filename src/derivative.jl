@@ -2,9 +2,14 @@
 # API methods #
 ###############
 
-derivative{F}(f::F, x) = extract_derivative(f(Dual(x, one(x))))
+derivative{F}(f::F, x::Real) = extract_derivative(f(Dual(x, one(x))))
 
-function derivative!{F}(out, f::F, x)
+@generated function derivative{F,N}(f::F, x::NTuple{N,Real})
+    args = [:(Dual(x[$i], Val{N}, Val{$i})) for i in 1:N]
+    return :(extract_derivative(f($(args...))))
+end
+
+function derivative!{F}(out, f::F, x::Real)
     y = f(Dual(x, one(x)))
     extract_derivative!(out, y)
     return out
@@ -14,7 +19,10 @@ end
 # result extraction #
 #####################
 
-@inline extract_derivative(y::Real) = partials(y, 1)
+@generated extract_derivative{N}(y::Dual{N}) = Expr(:tuple, [:(partials(y, $i)) for i in 1:N]...)
+
+@inline extract_derivative(y::Dual{1}) = partials(y, 1)
+@inline extract_derivative(y::Real) = zero(y)
 @inline extract_derivative(y::AbstractArray) = extract_derivative!(similar(y, valtype(eltype(y))), y)
 
 extract_derivative!(out::AbstractArray, y::AbstractArray) = map!(extract_derivative, out, y)
