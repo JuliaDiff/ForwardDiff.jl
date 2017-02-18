@@ -22,7 +22,7 @@ Base.start(partials::Partials) = start(partials.values)
 Base.next(partials::Partials, i) = next(partials.values, i)
 Base.done(partials::Partials, i) = done(partials.values, i)
 
-Base.linearindexing(::Partials) = Base.LinearFast()
+@compat Base.IndexStyle(::Partials) = Base.IndexLinear()
 
 #####################
 # Generic Functions #
