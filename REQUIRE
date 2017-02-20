@@ -1,5 +1,5 @@
 julia 0.5
 DiffBase 0.0.3
-Compat 0.8.6
+Compat 0.17.0
 Calculus 0.2.0
 NaNMath 0.2.2

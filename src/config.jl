@@ -1,4 +1,4 @@
-abstract AbstractConfig
+@compat abstract type AbstractConfig end
 
 ###########
 # Config #
