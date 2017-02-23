@@ -6,6 +6,7 @@ using ForwardDiff: Partials, Dual, value, partials
 
 import NaNMath
 import Calculus
+import SpecialFunctions
 
 samerng() = MersenneTwister(1)
 
@@ -405,29 +406,29 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
             try
                 v = :v
                 deriv = Calculus.differentiate(:($(fsym)($v)), v)
-                is_domain_err_func = fsym in DOMAIN_ERR_FUNCS
-                is_nanmath_func = fsym in ForwardDiff.NANMATH_FUNCS
-                is_unsupported_nested_func = fsym in UNSUPPORTED_NESTED_FUNCS
-                @eval begin
-                    fdnum = $(is_domain_err_func ? FDNUM + 1 : FDNUM)
-                    $(v) = ForwardDiff.value(fdnum)
-                    $(test_approx_diffnums)($(fsym)(fdnum), ForwardDiff.Dual($(fsym)($v), $(deriv) * ForwardDiff.partials(fdnum)))
-                    if $(is_nanmath_func)
-                        $(test_approx_diffnums)(NaNMath.$(fsym)(fdnum), ForwardDiff.Dual(NaNMath.$(fsym)($v), $(deriv) * ForwardDiff.partials(fdnum)))
-                    end
-
-                    if $(!(is_unsupported_nested_func))
-                        nested_fdnum = $(is_domain_err_func ? NESTED_FDNUM + 1 : NESTED_FDNUM)
-                        $(v) = ForwardDiff.value(nested_fdnum)
-                        $(test_approx_diffnums)($(fsym)(nested_fdnum), ForwardDiff.Dual($(fsym)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
-                        if $(is_nanmath_func)
-                            $(test_approx_diffnums)(NaNMath.$(fsym)(nested_fdnum), ForwardDiff.Dual(NaNMath.$(fsym)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
+                is_nanmath_func = in(fsym, ForwardDiff.NANMATH_FUNCS)
+                is_special_func = in(fsym, ForwardDiff.SPECIAL_FUNCS)
+                is_domain_err_func = in(fsym, DOMAIN_ERR_FUNCS)
+                is_unsupported_nested_func = in(fsym, UNSUPPORTED_NESTED_FUNCS)
+                tested_funcs = Vector{Expr}(0)
+                is_nanmath_func && push!(tested_funcs, :(NaNMath.$(fsym)))
+                is_special_func && push!(tested_funcs, :(SpecialFunctions.$(fsym)))
+                (!(is_special_func) || VERSION < v"0.6.0-dev.2767") && push!(tested_funcs, :(Base.$(fsym)))
+                for func in tested_funcs
+                    @eval begin
+                        fdnum = $(is_domain_err_func ? FDNUM + 1 : FDNUM)
+                        $(v) = ForwardDiff.value(fdnum)
+                        $(test_approx_diffnums)($(func)(fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(fdnum)))
+                        if $(!(is_unsupported_nested_func))
+                            nested_fdnum = $(is_domain_err_func ? NESTED_FDNUM + 1 : NESTED_FDNUM)
+                            $(v) = ForwardDiff.value(nested_fdnum)
+                            $(test_approx_diffnums)($(func)(nested_fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
                         end
                     end
                 end
             catch err
                 warn("Encountered error when testing $(fsym)(::Dual):")
-                throw(err)
+                rethrow(err)
             end
         end
     end

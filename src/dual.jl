@@ -310,10 +310,21 @@ for fsym in AUTO_DEFINED_UNARY_FUNCS
 
     # exp and sqrt are manually defined below
     if !(in(fsym, (:exp, :sqrt)))
-        @eval begin
-            @inline function Base.$(fsym)(n::Dual)
-                $(v) = value(n)
-                return Dual($(fsym)($v), $(deriv) * partials(n))
+        is_special_function = in(fsym, SPECIAL_FUNCS)
+        if is_special_function
+            @eval begin
+                @inline function SpecialFunctions.$(fsym)(n::Dual)
+                    $(v) = value(n)
+                    return Dual(SpecialFunctions.$(fsym)($v), $(deriv) * partials(n))
+                end
+            end
+        end
+        if !(is_special_function) || VERSION < v"0.6.0-dev.2767"
+            @eval begin
+                @inline function Base.$(fsym)(n::Dual)
+                    $(v) = value(n)
+                    return Dual(Base.$(fsym)($v), $(deriv) * partials(n))
+                end
             end
         end
     end

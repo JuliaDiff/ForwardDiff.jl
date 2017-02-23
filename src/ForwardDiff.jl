@@ -8,6 +8,7 @@ using DiffBase: DiffResult
 
 import Calculus
 import NaNMath
+import SpecialFunctions
 
 #############################
 # types/functions/constants #
@@ -35,8 +36,16 @@ end
 #---------------------#
 
 const AUTO_DEFINED_UNARY_FUNCS = map(first, Calculus.symbolic_derivatives_1arg())
+
 const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
                        :atanh, :log, :log2, :log10, :lgamma, :log1p)
+
+const SPECIAL_FUNCS = (:erf, :erfc, :erfinv, :erfcinv, :erfi, :erfcx,
+                       :dawson, :digamma, :eta, :zeta, :airyai, :airyaiprime,
+                       :airybi, :airybiprime, :airyaix, :besselj, :besselj0,
+                       :besselj1, :besseljx, :bessely, :bessely0, :bessely1,
+                       :besselyx, :besselh, :hankelh1, :hankelh1x, :hankelh2,
+                       :hankelh2x, :besseli, :besselix, :besselk, :besselkx)
 
 # chunk settings #
 #----------------#
