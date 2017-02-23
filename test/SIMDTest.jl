@@ -36,10 +36,11 @@ for D in map(typeof, DUALS)
     if !(valtype(D) <: Dual)
         # see https://github.com/JuliaDiff/ForwardDiff.jl/issues/167
         @test ismatch(r"fmul \<.*?x double\>", exp_bitcode)
-    end
 
-    sum_bitcode = sprint(io -> code_llvm(io, simd_sum, (Vector{D},)))
-    @test ismatch(r"fadd \<.*?x double\>", sum_bitcode)
+        # see https://github.com/JuliaDiff/ForwardDiff.jl/pull/201
+        sum_bitcode = sprint(io -> code_llvm(io, simd_sum, (Vector{D},)))
+        @test ismatch(r"fadd \<.*?x double\>", sum_bitcode)
+    end
 end
 
 end # module
