@@ -27,19 +27,19 @@ end
 # Constructors #
 ################
 
-(::Type{Dual{T}}){T,N,V}(value::V, partials::Partials{N,V}) = Dual{T,V,N}(value, partials)
+@inline (::Type{Dual{T}}){T,N,V}(value::V, partials::Partials{N,V}) = Dual{T,V,N}(value, partials)
 
-function (::Type{Dual{T}}){T,N,A,B}(value::A, partials::Partials{N,B})
+@inline function (::Type{Dual{T}}){T,N,A,B}(value::A, partials::Partials{N,B})
     C = promote_type(A, B)
     return Dual{T}(convert(C, value), convert(Partials{N,C}, partials))
 end
 
-(::Type{Dual{T}}){T}(value::Real, partials::Tuple) = Dual{T}(value, Partials(partials))
-(::Type{Dual{T}}){T}(value::Real, partials::Tuple{}) = Dual{T}(value, Partials{0,typeof(value)}(partials))
-(::Type{Dual{T}}){T}(value::Real, partials::Real...) = Dual{T}(value, partials)
-(::Type{Dual{T}}){T,V<:Real,N,i}(value::V, ::Type{Val{N}}, ::Type{Val{i}}) = Dual{T}(value, single_seed(Partials{N,V}, Val{i}))
+@inline (::Type{Dual{T}}){T}(value::Real, partials::Tuple) = Dual{T}(value, Partials(partials))
+@inline (::Type{Dual{T}}){T}(value::Real, partials::Tuple{}) = Dual{T}(value, Partials{0,typeof(value)}(partials))
+@inline (::Type{Dual{T}}){T}(value::Real, partials::Real...) = Dual{T}(value, partials)
+@inline (::Type{Dual{T}}){T,V<:Real,N,i}(value::V, ::Type{Val{N}}, ::Type{Val{i}}) = Dual{T}(value, single_seed(Partials{N,V}, Val{i}))
 
-Dual(args...) = Dual{Void}(args...)
+@inline Dual(args...) = Dual{Void}(args...)
 
 ##############################
 # Utility/Accessor Functions #
@@ -63,6 +63,25 @@ Dual(args...) = Dual{Void}(args...)
 #####################
 # Generic Functions #
 #####################
+
+macro define_binary_dual_op(f, both_body, left_body, right_body)
+    return esc(quote
+        @inline $(f)(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
+        @inline $(f){T}(x::Dual{T}, y::Dual{T}) = $both_body
+
+        # define on all these types to avoid various ambiguities
+        for R in (:AbstractFloat, :Irrational, :Integer, :Rational, :Real)
+            @eval begin
+                @inline $(f){T}(x::Dual{T}, y::$(Expr(:$, :R))) = $left_body
+                @inline $(f){T}(x::$(Expr(:$, :R)), y::Dual{T}) = $right_body
+            end
+        end
+
+        @inline $(f){T,S,X,Y,N}(x::Dual{T,Dual{S,X,N}}, y::Dual{T,Dual{S,Y,N}}) = $both_body
+        @inline $(f){T,S,V,N}(x::Dual{S,Dual{T,V,N}}, y::Dual{T}) = $left_body
+        @inline $(f){T,S,V,N}(x::Dual{T}, y::Dual{S,Dual{T,V,N}}) = $right_body
+    end)
+end
 
 Base.copy(d::Dual) = d
 
@@ -115,16 +134,12 @@ isconstant(d::Dual) = iszero(partials(d))
 
 for pred in (:isequal, :(==), :isless, :(<=), :<)
     @eval begin
-        Base.$(pred)(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-        Base.$(pred){T}(x::Dual{T}, y::Dual{T}) = $(pred)(value(x), value(y))
-        Base.$(pred){X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}}) = $(pred)(x, value(y))
-        Base.$(pred){X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = $(pred)(value(x), y)
-    end
-    for R in (:AbstractFloat, :Irrational, :Real)
-        @eval begin
-            Base.$(pred)(x::Dual, y::$R) = $(pred)(value(x), y)
-            Base.$(pred)(x::$R, y::Dual) = $(pred)(x, value(y))
-        end
+        @define_binary_dual_op(
+            Base.$(pred),
+            $(pred)(value(x), value(y)),
+            $(pred)(x, value(y)),
+            $(pred)(value(x), y)
+        )
     end
 end
 
@@ -149,11 +164,9 @@ for R in (:BigFloat, :Bool, :Irrational, :Real)
     end
 end
 
-Base.convert(::Type{Dual}, d::Dual) = d
 Base.convert{T,V<:Real,N}(::Type{Dual{T,V,N}}, d::Dual{T}) = Dual{T}(convert(V, value(d)), convert(Partials{N,V}, partials(d)))
-Base.convert{D<:Dual}(::Type{D}, n::D) = d
+Base.convert{D<:Dual}(::Type{D}, d::D) = d
 Base.convert{T,V<:Real,N}(::Type{Dual{T,V,N}}, x::Real) = Dual{T}(V(x), zero(Partials{N,V}))
-Base.convert(::Type{Dual}, x::Real) = Dual(x)
 
 Base.promote_array_type{D<:Dual, A<:AbstractFloat}(F, ::Type{D}, ::Type{A}) = promote_type(D, A)
 Base.promote_array_type{D<:Dual, A<:AbstractFloat, P}(F, ::Type{D}, ::Type{A}, ::Type{P}) = P
@@ -170,37 +183,34 @@ Base.AbstractFloat{T,V,N}(d::Dual{T,V,N}) = Dual{T,promote_type(V, Float16),N}(d
 # Addition/Subtraction #
 #----------------------#
 
-@inline Base.:+(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-@inline Base.:+{T}(x::Dual{T}, y::Dual{T}) = Dual{T}(value(x) + value(y), partials(x) + partials(y))
-@inline Base.:+{T}(x::Dual{T}, y::Real) = Dual{T}(value(x) + y, partials(x))
-@inline Base.:+{X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = Dual{X}(value(x) + y, partials(x))
-@inline Base.:+{T}(x::Real, y::Dual{T}) = Dual{T}(x + value(y), partials(y))
-@inline Base.:+{X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}}) = Dual{Y}(x + value(y), partials(y))
+@define_binary_dual_op(
+    Base.:+,
+    Dual{T}(value(x) + value(y), partials(x) + partials(y)),
+    Dual{T}(value(x) + y, partials(x)),
+    Dual{T}(x + value(y), partials(y))
+)
 
-@inline Base.:-(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-@inline Base.:-{T}(x::Dual{T}, y::Dual{T}) = Dual{T}(value(x) - value(y), partials(x) - partials(y))
-@inline Base.:-{T}(x::Dual{T}, y::Real) = Dual{T}(value(x) - y, partials(x))
-@inline Base.:-{X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = Dual{X}(value(x) - y, partials(x))
-@inline Base.:-{T}(x::Real, y::Dual{T}) = Dual{T}(x - value(y), -partials(y))
-@inline Base.:-{X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}}) = Dual{Y}(x - value(y), -partials(y))
+@define_binary_dual_op(
+    Base.:-,
+    Dual{T}(value(x) - value(y), partials(x) - partials(y)),
+    Dual{T}(value(x) - y, partials(x)),
+    Dual{T}(x - value(y), -partials(y))
+)
 
 @inline Base.:-(d::Dual) = Dual(-value(d), -partials(d))
 
 # Multiplication #
 #----------------#
 
-@inline Base.:*(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-
-@inline function Base.:*{T}(x::Dual{T}, y::Dual{T})
-    vx, vy = value(x), value(y)
-    return Dual{T}(vx * vy, _mul_partials(partials(x), partials(y), vy, vx))
-end
-
-@inline Base.:*{T}(x::Dual{T}, y::Real) = Dual{T}(value(x) * y, partials(x) * y)
-@inline Base.:*{X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = Dual{X}(value(x) * y, partials(x) * y)
-
-@inline Base.:*{T}(x::Real, y::Dual{T}) = Dual{T}(x * value(y), x * partials(y))
-@inline Base.:*{X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}}) = Dual{Y}(x * value(y), x * partials(y))
+@define_binary_dual_op(
+    Base.:*,
+    begin
+        vx, vy = value(x), value(y)
+        Dual{T}(vx * vy, _mul_partials(partials(x), partials(y), vy, vx))
+    end,
+    Dual{T}(value(x) * y, partials(x) * y),
+    Dual{T}(x * value(y), x * partials(y))
+)
 
 @inline Base.:*(d::Dual, x::Bool) = x ? d : (signbit(value(d))==0 ? zero(d) : -zero(d))
 @inline Base.:*(x::Bool, d::Dual) = d * x
@@ -208,77 +218,48 @@ end
 # Division #
 #----------#
 
-@inline Base.:/(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-
-@inline function Base.:/{T}(x::Dual{T}, y::Dual{T})
-    vx, vy = value(x), value(y)
-    return Dual{T}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
-end
-
-@inline Base.:/{T}(x::Dual{T}, y::Real) = Dual{T}(value(x) / y, partials(x) / y)
-@inline Base.:/{X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = Dual{X}(value(x) / y, partials(x) / y)
-
-@inline function Base.:/{T}(x::Real, y::Dual{T})
-    v = value(y)
-    divv = x / v
-    return Dual{T}(divv, -(divv / v) * partials(y))
-end
-
-@inline function Base.:/{X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}})
-    v = value(y)
-    divv = x / v
-    return Dual{Y}(divv, -(divv / v) * partials(y))
-end
+@define_binary_dual_op(
+    Base.:/,
+    begin
+        vx, vy = value(x), value(y)
+        Dual{T}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
+    end,
+    Dual{T}(value(x) / y, partials(x) / y),
+    begin
+        v = value(y)
+        divv = x / v
+        Dual{T}(divv, -(divv / v) * partials(y))
+    end
+)
 
 # Exponentiation #
 #----------------#
 
 for f in (:(Base.:^), :(NaNMath.pow))
     @eval begin
-        @inline ($f)(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-
-        @inline function ($f){T}(x::Dual{T}, y::Dual{T})
-            vx, vy = value(x), value(y)
-            expv = ($f)(vx, vy)
-            powval = vy * ($f)(vx, vy - 1)
-            logval = isconstant(y) ? one(expv) : expv * log(vx)
-            new_partials = _mul_partials(partials(x), partials(y), powval, logval)
-            return Dual{T}(expv, new_partials)
-        end
-
-        @inline function ($f){X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y})
-            v = value(x)
-            expv = ($f)(v, y)
-            deriv = y * ($f)(v, y - 1)
-            return Dual{X}(expv, deriv * partials(x))
-        end
-
-        @inline function ($f){X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}})
-            v = value(y)
-            expv = ($f)(x, v)
-            deriv = expv*log(x)
-            return Dual{Y}(expv, deriv * partials(y))
-        end
-
-        @inline ($f)(::Base.Irrational{:e}, d::Dual) = exp(d)
-    end
-
-    for R in (:Integer, :Rational, :Real)
-        @eval begin
-            @inline function ($f){T}(x::Dual{T}, y::$R)
+        @define_binary_dual_op(
+            $f,
+            begin
+                vx, vy = value(x), value(y)
+                expv = ($f)(vx, vy)
+                powval = vy * ($f)(vx, vy - 1)
+                logval = isconstant(y) ? one(expv) : expv * log(vx)
+                new_partials = _mul_partials(partials(x), partials(y), powval, logval)
+                return Dual{T}(expv, new_partials)
+            end,
+            begin
                 v = value(x)
                 expv = ($f)(v, y)
                 deriv = y * ($f)(v, y - 1)
                 return Dual{T}(expv, deriv * partials(x))
-            end
-
-            @inline function ($f){T}(x::$R, y::Dual{T})
+            end,
+            begin
                 v = value(y)
                 expv = ($f)(x, v)
                 deriv = expv*log(x)
                 return Dual{T}(expv, deriv * partials(y))
             end
-        end
+        )
     end
 end
 
@@ -361,12 +342,12 @@ end
     return Dual{T}(h, (vx/h) * partials(x) + (vy/h) * partials(y))
 end
 
-@inline Base.hypot(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-@inline Base.hypot{T}(x::Dual{T}, y::Dual{T}) = calc_hypot(x, y, T)
-@inline Base.hypot{T}(x::Dual{T}, y::Real) = calc_hypot(x, y, T)
-@inline Base.hypot{X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = calc_hypot(x, y, X)
-@inline Base.hypot{T}(x::Real, y::Dual{T}) = calc_hypot(x, y, T)
-@inline Base.hypot{X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}}) = calc_hypot(x, y, Y)
+@define_binary_dual_op(
+    Base.hypot,
+    calc_hypot(x, y, T),
+    calc_hypot(x, y, T),
+    calc_hypot(x, y, T)
+)
 
 @inline sincos(x) = (sin(x), cos(x))
 
@@ -383,12 +364,12 @@ end
     return Dual{T}(atan2v, deriv * partials(z))
 end
 
-@inline Base.atan2(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-@inline Base.atan2{T}(x::Dual{T}, y::Dual{T}) = calc_atan2(x, y, T)
-@inline Base.atan2{T}(x::Dual{T}, y::Real) = calc_atan2(x, y, T)
-@inline Base.atan2{X,Y,V,N}(x::Dual{X,Dual{Y,V,N}}, y::Dual{Y}) = calc_atan2(x, y, X)
-@inline Base.atan2{T}(x::Real, y::Dual{T}) = calc_atan2(x, y, T)
-@inline Base.atan2{X,Y,V,N}(x::Dual{X}, y::Dual{Y,Dual{X,V,N}}) = calc_atan2(x, y, Y)
+@define_binary_dual_op(
+    Base.atan2,
+    calc_atan2(x, y, T),
+    calc_atan2(x, y, T),
+    calc_atan2(x, y, T)
+)
 
 @generated function Base.fma{N}(x::Dual{N}, y::Dual{N}, z::Dual{N})
     ex = Expr(:tuple, [:(fma(value(x), partials(y)[$i], fma(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)

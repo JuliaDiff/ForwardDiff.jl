@@ -58,13 +58,13 @@ const CHUNK_THRESHOLD = 10
 
 include("partials.jl")
 include("dual.jl")
-include("config.jl")
-include("api_utils.jl")
-include("derivative.jl")
-include("gradient.jl")
-include("jacobian.jl")
-include("hessian.jl")
-include("deprecated.jl")
+# include("config.jl")
+# include("api_utils.jl")
+# include("derivative.jl")
+# include("gradient.jl")
+# include("jacobian.jl")
+# include("hessian.jl")
+# include("deprecated.jl")
 
 export DiffBase
 
