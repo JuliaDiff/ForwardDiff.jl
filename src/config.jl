@@ -1,40 +1,49 @@
 @compat abstract type AbstractConfig end
 
-###########
-# Config #
-###########
-
 @inline chunksize(::Tuple{}) = error("empty tuple passed to `chunksize`")
 
-# Define a few different AbstractConfig types. All these types share the same structure,
-# but feature different constructors and dispatch restrictions in downstream code.
-for Config in (:GradientConfig, :JacobianConfig)
-    @eval begin
-        @compat immutable $Config{N,T,D} <: AbstractConfig
-            seeds::NTuple{N,Partials{N,T}}
-            duals::D
-            # disable default outer constructor
-            (::Type{$Config{N,T,D}}){N,T,D}(seeds, duals) = new{N,T,D}(seeds, duals)
-        end
+##################
+# GradientConfig #
+##################
 
-        # This is type-unstable, which is why our docs advise users to manually enter a chunk size
-        # when possible. The type instability here doesn't really hurt performance, since most of
-        # the heavy lifting happens behind a function barrier, but it can cause inference to give up
-        # when predicting the final output type of API functions.
-        $Config(x::AbstractArray) = $Config{pickchunksize(length(x))}(x)
+@compat immutable GradientConfig{N,V,D} <: AbstractConfig
+    seeds::NTuple{N,Partials{N,V}}
+    duals::D
+    # disable default outer constructor
+    (::Type{GradientConfig{N,V,D}}){N,V,D}(seeds, duals) = new{N,V,D}(seeds, duals)
+end
 
-        function (::Type{$Config{N}}){N,T}(x::AbstractArray{T})
-            seeds = construct_seeds(Partials{N,T})
-            duals = similar(x, Dual{N,T})
-            return $Config{N,T,typeof(duals)}(seeds, duals)
-        end
+GradientConfig(x::AbstractArray) = GradientConfig{pickchunksize(length(x))}(x)
 
-        Base.copy{N,T,D}(cfg::$Config{N,T,D}) = $Config{N,T,D}(cfg.seeds, copy(cfg.duals))
-        Base.copy{N,T,D<:Tuple}(cfg::$Config{N,T,D}) = $Config{N,T,D}(cfg.seeds, map(copy, cfg.duals))
+function (::Type{GradientConfig{N}}){N,V}(x::AbstractArray{V})
+    seeds = construct_seeds(Partials{N,V})
+    duals = similar(x, Dual{N,V})
+    return GradientConfig{N,V,typeof(duals)}(seeds, duals)
+end
 
-        @inline chunksize{N}(::$Config{N}) = N
-        @inline chunksize{N}(::Tuple{Vararg{$Config{N}}}) = N
-    end
+Base.copy{N,V,D}(cfg::GradientConfig{N,V,D}) = GradientConfig{N,V,D}(cfg.seeds, copy(cfg.duals))
+Base.copy{N,V,D<:Tuple}(cfg::GradientConfig{N,V,D}) = GradientConfig{N,V,D}(cfg.seeds, map(copy, cfg.duals))
+
+@inline chunksize{N}(::GradientConfig{N}) = N
+@inline chunksize{N}(::Tuple{Vararg{GradientConfig{N}}}) = N
+
+##################
+# JacobianConfig #
+##################
+
+@compat immutable JacobianConfig{N,V,D} <: AbstractConfig
+    seeds::NTuple{N,Partials{N,V}}
+    duals::D
+    # disable default outer constructor
+    (::Type{JacobianConfig{N,V,D}}){N,V,D}(seeds, duals) = new{N,V,D}(seeds, duals)
+end
+
+JacobianConfig(x::AbstractArray) = JacobianConfig{pickchunksize(length(x))}(x)
+
+function (::Type{JacobianConfig{N}}){N,V}(x::AbstractArray{V})
+    seeds = construct_seeds(Partials{N,V})
+    duals = similar(x, Dual{N,V})
+    return JacobianConfig{N,V,typeof(duals)}(seeds, duals)
 end
 
 JacobianConfig(y::AbstractArray, x::AbstractArray) = JacobianConfig{pickchunksize(length(x))}(y, x)
@@ -47,9 +56,15 @@ function (::Type{JacobianConfig{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArra
     return JacobianConfig{N,X,typeof(duals)}(seeds, duals)
 end
 
-##################
+Base.copy{N,T,D}(cfg::JacobianConfig{N,T,D}) = JacobianConfig{N,T,D}(cfg.seeds, copy(cfg.duals))
+Base.copy{N,T,D<:Tuple}(cfg::JacobianConfig{N,T,D}) = JacobianConfig{N,T,D}(cfg.seeds, map(copy, cfg.duals))
+
+@inline chunksize{N}(::JacobianConfig{N}) = N
+@inline chunksize{N}(::Tuple{Vararg{JacobianConfig{N}}}) = N
+
+#################
 # HessianConfig #
-##################
+#################
 
 immutable HessianConfig{N,J,JD,G,GD} <: AbstractConfig
     gradient_config::GradientConfig{N,G,GD}
@@ -73,7 +88,7 @@ function (::Type{HessianConfig{N}}){N}(out::DiffResult, x::AbstractArray)
 end
 
 Base.copy(cfg::HessianConfig) = HessianConfig(copy(cfg.gradient_config),
-                                                 copy(cfg.jacobian_config))
+                                              copy(cfg.jacobian_config))
 
 @inline chunksize{N}(::HessianConfig{N}) = N
 @inline chunksize{N}(::Tuple{Vararg{HessianConfig{N}}}) = N

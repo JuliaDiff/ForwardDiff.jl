@@ -301,8 +301,6 @@ to_nanmath(x) = x
 @inline Base.ctranspose(d::Dual) = d
 @inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
 
-
-
 for fsym in AUTO_DEFINED_UNARY_FUNCS
     v = :v
     deriv = Calculus.differentiate(:($(fsym)($v)), v)
