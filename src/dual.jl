@@ -137,8 +137,8 @@ for pred in (:isequal, :(==), :isless, :(<=), :<)
         @define_binary_dual_op(
             Base.$(pred),
             $(pred)(value(x), value(y)),
-            $(pred)(x, value(y)),
-            $(pred)(value(x), y)
+            $(pred)(value(x), y),
+            $(pred)(x, value(y))
         )
     end
 end
