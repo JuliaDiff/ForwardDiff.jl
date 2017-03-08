@@ -410,6 +410,38 @@ end
 @ambiguous @inline Base.atan2(y::Real, x::Dual) = calc_atan2(y, x)
 @ambiguous @inline Base.atan2(y::Dual, x::Real) = calc_atan2(y, x)
 
+@inline function Base.fma(x::Dual, y::Dual, z::Dual)
+    vx, vy = value(x), value(y)
+    result = fma(vx, vy, value(z))
+    return Dual(result,
+                _mul_partials(partials(x), partials(y), vx, vy) + partials(z))
+end
+
+@inline function Base.fma(x::Dual, y::Dual, z::Real)
+    vx, vy = value(x), value(y)
+    result = fma(vx, vy, z)
+    return Dual(result, _mul_partials(partials(x), partials(y), vx, vy))
+end
+
+@inline function Base.fma(x::Dual, y::Real, z::Dual)
+    vx = value(x)
+    result = fma(vx, y, value(z))
+    return Dual(result, partials(x) * y + partials(z))
+end
+
+@inline Base.fma(x::Real, y::Dual, z::Dual) = fma(y, x, z)
+
+@inline function Base.fma(x::Dual, y::Real, z::Real)
+    vx = value(x)
+    return Dual(fma(vx, y, value(z)), partials(x) * y)
+end
+
+@inline Base.fma(x::Real, y::Dual, z::Real) = fma(y, x, z)
+
+@inline function Base.fma(x::Real, y::Real, z::Dual)
+    Dual(fma(x, y, value(z)), partials(z))
+end
+
 ###################
 # Pretty Printing #
 ###################

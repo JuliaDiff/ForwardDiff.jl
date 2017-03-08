@@ -48,6 +48,10 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     PRIMAL2 = intrand(T)
     FDNUM2 = Dual(PRIMAL2, PARTIALS2)
 
+    PARTIALS3 = Partials{N,T}(ntuple(n -> intrand(T), Val{N}))
+    PRIMAL3 = intrand(T)
+    FDNUM3 = Dual(PRIMAL3, PARTIALS3)
+
     M_PARTIALS = Partials{M,T}(ntuple(m -> intrand(T), Val{M}))
     NESTED_PARTIALS = convert(Partials{N,Dual{M,T}}, PARTIALS)
     NESTED_FDNUM = Dual(Dual(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
@@ -382,6 +386,21 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
     test_approx_diffnums(PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
 
     @test partials(NaNMath.pow(Dual(-2.0, 1.0), Dual(2.0, 0.0)), 1) == -4.0
+
+    @test fma(FDNUM, FDNUM2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                             PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS +
+                                             PARTIALS3)
+    @test fma(FDNUM, FDNUM2, PRIMAL3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                              PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS)
+    @test fma(PRIMAL, FDNUM2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                              PRIMAL*PARTIALS2 + PARTIALS3)
+    @test fma(PRIMAL, FDNUM2, PRIMAL3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                               PRIMAL*PARTIALS2)
+    @test fma(FDNUM, PRIMAL2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                              PRIMAL2*PARTIALS + PARTIALS3)
+    @test fma(FDNUM, PRIMAL2, PRIMAL3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                               PRIMAL2*PARTIALS)
+    @test fma(PRIMAL, PRIMAL2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3)
 
     # Unary Functions #
     #-----------------#
