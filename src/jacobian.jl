@@ -125,18 +125,18 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
         # do first chunk manually to calculate output type
         seed!(xdual, x, 1, seeds)
         $(compute_ydual)
-        seed!(xdual, x, 1)
         $(out_definition)
         out_reshaped = reshape_jacobian(out, ydual, xdual)
         extract_jacobian_chunk!(out_reshaped, ydual, 1, N)
+        seed!(xdual, x, 1)
 
         # do middle chunks
         for c in middlechunks
             i = ((c - 1) * N + 1)
             seed!(xdual, x, i, seeds)
             $(compute_ydual)
-            seed!(xdual, x, i)
             extract_jacobian_chunk!(out_reshaped, ydual, i, N)
+            seed!(xdual, x, i)
         end
 
         # do final chunk
