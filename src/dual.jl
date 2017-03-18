@@ -420,7 +420,7 @@ end
 @inline function Base.fma(x::Dual, y::Dual, z::Real)
     vx, vy = value(x), value(y)
     result = fma(vx, vy, z)
-    return Dual(result, _mul_partials(partials(x), partials(y), vx, vy))
+    return Dual(result, _mul_partials(partials(x), partials(y), vy, vx))
 end
 
 @inline function Base.fma(x::Dual, y::Real, z::Dual)
