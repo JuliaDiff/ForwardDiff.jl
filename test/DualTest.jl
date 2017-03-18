@@ -15,6 +15,8 @@ samerng() = MersenneTwister(1)
 # exponent by one
 intrand(T) = T == Int ? rand(2:10) : rand(T)
 
+dualapprox(A, B) = value(A) ≈ value(B) && partials(A) ≈ partials(B)
+
 # fix testing issue with Base.hypot(::Int...) undefined in 0.4
 if v"0.4" <= VERSION < v"0.5"
     Base.hypot(x::Int, y::Int) = Base.hypot(Float64(x), Float64(y))
@@ -387,20 +389,20 @@ for N in (0,3), M in (0,4), T in (Int, Float32)
 
     @test partials(NaNMath.pow(Dual(-2.0, 1.0), Dual(2.0, 0.0)), 1) == -4.0
 
-    @test fma(FDNUM, FDNUM2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+    @test dualapprox(fma(FDNUM, FDNUM2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
                                              PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS +
-                                             PARTIALS3)
-    @test fma(FDNUM, FDNUM2, PRIMAL3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                              PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS)
-    @test fma(PRIMAL, FDNUM2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                              PRIMAL*PARTIALS2 + PARTIALS3)
-    @test fma(PRIMAL, FDNUM2, PRIMAL3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                               PRIMAL*PARTIALS2)
-    @test fma(FDNUM, PRIMAL2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                              PRIMAL2*PARTIALS + PARTIALS3)
-    @test fma(FDNUM, PRIMAL2, PRIMAL3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                               PRIMAL2*PARTIALS)
-    @test fma(PRIMAL, PRIMAL2, FDNUM3) == Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3)
+                                             PARTIALS3))
+    @test dualapprox(fma(FDNUM, FDNUM2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                              PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS))
+    @test dualapprox(fma(PRIMAL, FDNUM2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                              PRIMAL*PARTIALS2 + PARTIALS3))
+    @test dualapprox(fma(PRIMAL, FDNUM2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                               PRIMAL*PARTIALS2))
+    @test dualapprox(fma(FDNUM, PRIMAL2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                              PRIMAL2*PARTIALS + PARTIALS3))
+    @test dualapprox(fma(FDNUM, PRIMAL2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
+                                               PRIMAL2*PARTIALS))
+    @test dualapprox(fma(PRIMAL, PRIMAL2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
 
     # Unary Functions #
     #-----------------#
