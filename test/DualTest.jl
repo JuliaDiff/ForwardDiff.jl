@@ -15,6 +15,8 @@ samerng() = MersenneTwister(1)
 # exponent by one
 intrand(T) = T == Int ? rand(2:10) : rand(T)
 
+dualapprox(A, B) = value(A) ≈ value(B) && partials(A) ≈ partials(B)
+
 # fix testing issue with Base.hypot(::Int...) undefined in 0.4
 if v"0.4" <= VERSION < v"0.5"
     Base.hypot(x::Int, y::Int) = Base.hypot(Float64(x), Float64(y))
