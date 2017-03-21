@@ -94,17 +94,17 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         # do first chunk manually to calculate output type
         seed!(xdual, x, 1, seeds)
         ydual = f(xdual)
-        seed!(xdual, x, 1)
         $(out_definition)
         extract_gradient_chunk!(out, ydual, 1, N)
+        seed!(xdual, x, 1)
 
         # do middle chunks
         for c in middlechunks
             i = ((c - 1) * N + 1)
             seed!(xdual, x, i, seeds)
             ydual = f(xdual)
-            seed!(xdual, x, i)
             extract_gradient_chunk!(out, ydual, i, N)
+            seed!(xdual, x, i)
         end
 
         # do final chunk
@@ -156,9 +156,9 @@ if IS_MULTITHREADED_JULIA
             # do first chunk manually to calculate output type
             seed!(current_xdual, x, 1, current_seeds)
             current_ydual = f(current_xdual)
-            seed!(current_xdual, x, 1)
             $(out_definition)
             extract_gradient_chunk!(out, current_ydual, 1, N)
+            seed!(current_xdual, x, 1)
 
             # do middle chunks
             Base.Threads.@threads for c in middlechunks
@@ -169,8 +169,8 @@ if IS_MULTITHREADED_JULIA
                 local chunk_index = ((c - 1) * N + 1)
                 seed!(chunk_xdual, x, chunk_index, chunk_seeds)
                 local chunk_dual = f(chunk_xdual)
-                seed!(chunk_xdual, x, chunk_index)
                 extract_gradient_chunk!(out, chunk_dual, chunk_index, N)
+                seed!(chunk_xdual, x, chunk_index)
             end
 
             # do final chunk
