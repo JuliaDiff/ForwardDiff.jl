@@ -1,122 +1,135 @@
-@compat abstract type AbstractConfig end
+#########
+# Chunk #
+#########
 
-@inline chunksize(::Tuple{}) = error("empty tuple passed to `chunksize`")
+@compat immutable Chunk{N} end
+
+function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
+    N = pickchunksize(input_length, threshold)
+    return Chunk{N}()
+end
+
+function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
+    return Chunk(length(x), threshold)
+end
+
+# Constrained to `N <= threshold`, minimize (in order of priority):
+#   1. the number of chunks that need to be computed
+#   2. the number of "left over" perturbations in the final chunk
+function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
+    if input_length <= threshold
+        return input_length
+    else
+        nchunks = round(Int, input_length / DEFAULT_CHUNK_THRESHOLD, RoundUp)
+        return round(Int, input_length / nchunks, RoundUp)
+    end
+end
+
+#######
+# Tag #
+#######
+
+@compat immutable Tag{F,M} end
+
+Base.@pure order{V}(::Type{V}) = 0
+Base.@pure order{T,V,N}(::Type{Dual{T,V,N}}) = 1 + order(V)
+
+##################
+# AbstractConfig #
+##################
+
+@compat abstract type AbstractConfig{T<:Tag,N} end
+
+@compat immutable ConfigMismatchError{F,G,M} <: Exception
+    f::F
+    cfg::AbstractConfig{Tag{G,M}}
+end
+
+function Base.showerror{F,G}(io::IO, e::ConfigMismatchError{F,G})
+    print(io, "The provided configuration (of type $(typeof(e.cfg))) was constructed for a",
+              " function ($G), not the current target function ($F). ForwardDiff cannot safely",
+              " perform differentiation in this context; see the following issue for details:",
+              " https://github.com/JuliaDiff/ForwardDiff.jl/issues/83. You can resolve this",
+              " problem by constructing and using a configuration with the appropriate target",
+              " function, e.g. `ForwardDiff.GradientConfig($f, x)`")
+end
+
+Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
+
+@inline chunksize(::AbstractConfig{T,N}) = N
 
 ##################
 # GradientConfig #
 ##################
 
-@compat immutable GradientConfig{N,V,D} <: AbstractConfig
+@compat immutable GradientConfig{T,V,N,D} <: AbstractConfig{T,N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
-    # disable default outer constructor
-    (::Type{GradientConfig{N,V,D}}){N,V,D}(seeds, duals) = new{N,V,D}(seeds, duals)
 end
 
-GradientConfig(x::AbstractArray) = GradientConfig{pickchunksize(length(x))}(x)
-
-function (::Type{GradientConfig{N}}){N,V}(x::AbstractArray{V})
+function GradientConfig{V,N,F,T}(::F,
+                                 x::AbstractArray{V},
+                                 ::Chunk{N} = Chunk(x),
+                                 ::T = Tag{F,order(V)}())
     seeds = construct_seeds(Partials{N,V})
-    duals = similar(x, Dual{N,V})
-    return GradientConfig{N,V,typeof(duals)}(seeds, duals)
+    duals = similar(x, Dual{T,V,N})
+    return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
-
-Base.copy{N,V,D}(cfg::GradientConfig{N,V,D}) = GradientConfig{N,V,D}(cfg.seeds, copy(cfg.duals))
-Base.copy{N,V,D<:Tuple}(cfg::GradientConfig{N,V,D}) = GradientConfig{N,V,D}(cfg.seeds, map(copy, cfg.duals))
-
-@inline chunksize{N}(::GradientConfig{N}) = N
-@inline chunksize{N}(::Tuple{Vararg{GradientConfig{N}}}) = N
 
 ##################
 # JacobianConfig #
 ##################
 
-@compat immutable JacobianConfig{N,V,D} <: AbstractConfig
+@compat immutable JacobianConfig{T,V,N,D} <: AbstractConfig{T,N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
-    # disable default outer constructor
-    (::Type{JacobianConfig{N,V,D}}){N,V,D}(seeds, duals) = new{N,V,D}(seeds, duals)
 end
 
-JacobianConfig(x::AbstractArray) = JacobianConfig{pickchunksize(length(x))}(x)
-
-function (::Type{JacobianConfig{N}}){N,V}(x::AbstractArray{V})
+function JacobianConfig{V,N,F,T}(::F,
+                                 x::AbstractArray{V},
+                                 ::Chunk{N} = Chunk(x),
+                                 ::T = Tag{F,order(V)}())
     seeds = construct_seeds(Partials{N,V})
-    duals = similar(x, Dual{N,V})
-    return JacobianConfig{N,V,typeof(duals)}(seeds, duals)
+    duals = similar(x, Dual{T,V,N})
+    return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
-JacobianConfig(y::AbstractArray, x::AbstractArray) = JacobianConfig{pickchunksize(length(x))}(y, x)
-
-function (::Type{JacobianConfig{N}}){N,Y,X}(y::AbstractArray{Y}, x::AbstractArray{X})
+function JacobianConfig{Y,X,N,F,T}(::F,
+                                   y::AbstractArray{Y},
+                                   x::AbstractArray{X},
+                                   ::Chunk{N} = Chunk(x),
+                                   ::T = Tag{F,order(X)}())
     seeds = construct_seeds(Partials{N,X})
-    yduals = similar(y, Dual{N,Y})
-    xduals = similar(x, Dual{N,X})
+    yduals = similar(y, Dual{T,Y,N})
+    xduals = similar(x, Dual{T,X,N})
     duals = (yduals, xduals)
-    return JacobianConfig{N,X,typeof(duals)}(seeds, duals)
+    return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
 end
-
-Base.copy{N,T,D}(cfg::JacobianConfig{N,T,D}) = JacobianConfig{N,T,D}(cfg.seeds, copy(cfg.duals))
-Base.copy{N,T,D<:Tuple}(cfg::JacobianConfig{N,T,D}) = JacobianConfig{N,T,D}(cfg.seeds, map(copy, cfg.duals))
-
-@inline chunksize{N}(::JacobianConfig{N}) = N
-@inline chunksize{N}(::Tuple{Vararg{JacobianConfig{N}}}) = N
 
 #################
 # HessianConfig #
 #################
 
-immutable HessianConfig{N,J,JD,G,GD} <: AbstractConfig
-    gradient_config::GradientConfig{N,G,GD}
-    jacobian_config::JacobianConfig{N,J,JD}
+@compat immutable HessianConfig{T,V,N,D,TJ,DJ} <: AbstractConfig{T,N}
+    jacobian_config::JacobianConfig{TJ,V,N,DJ}
+    gradient_config::GradientConfig{T,Dual{T,V,N},D}
 end
 
-HessianConfig(x::AbstractArray) = HessianConfig{pickchunksize(length(x))}(x)
-HessianConfig(out, x::AbstractArray) = HessianConfig{pickchunksize(length(x))}(out, x)
-
-function (::Type{HessianConfig{N}}){N}(x::AbstractArray)
-    jacobian_config = JacobianConfig{N}(x)
-    gradient_config = GradientConfig{N}(jacobian_config.duals)
-    return HessianConfig(gradient_config, jacobian_config)
+function HessianConfig{F,V}(f::F,
+                            x::AbstractArray{V},
+                            chunk::Chunk = Chunk(x),
+                            tag::Tag = Tag{F,order(V)}())
+    jacobian_config = JacobianConfig(f, x, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals, chunk)
+    return HessianConfig(jacobian_config, gradient_config)
 end
 
-function (::Type{HessianConfig{N}}){N}(out::DiffResult, x::AbstractArray)
-    jacobian_config = JacobianConfig{N}(DiffBase.gradient(out), x)
-    yduals, xduals = jacobian_config.duals
-    gradient_config = GradientConfig{N}(xduals)
-    return HessianConfig(gradient_config, jacobian_config)
+function HessianConfig{F,V}(result::DiffResult,
+                            f::F,
+                            x::AbstractArray{V},
+                            chunk::Chunk = Chunk(x),
+                            tag::Tag = Tag{F,order(V)}())
+    jacobian_config = JacobianConfig(f, DiffBase.gradient(result), x, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk)
+    return HessianConfig(jacobian_config, gradient_config)
 end
-
-Base.copy(cfg::HessianConfig) = HessianConfig(copy(cfg.gradient_config),
-                                              copy(cfg.jacobian_config))
-
-@inline chunksize{N}(::HessianConfig{N}) = N
-@inline chunksize{N}(::Tuple{Vararg{HessianConfig{N}}}) = N
-
-gradient_config(cfg::HessianConfig) = cfg.gradient_config
-jacobian_config(cfg::HessianConfig) = cfg.jacobian_config
-
-#####################
-# MultithreadConfig #
-#####################
-
-immutable MultithreadConfig{A,B} <: AbstractConfig
-    config1::A
-    config2::B
-end
-
-@eval function MultithreadConfig(cfg::Union{GradientConfig,JacobianConfig})
-    config1 = ntuple(n -> copy(cfg), Val{$NTHREADS})
-    return MultithreadConfig(config1, nothing)
-end
-
-function MultithreadConfig(cfg::HessianConfig)
-    config1 = MultithreadConfig(gradient_config(cfg))
-    config2 = copy(jacobian_config(cfg))
-    return MultithreadConfig(config1, config2)
-end
-
-gradient_config(cfg::MultithreadConfig) = cfg.config1
-jacobian_config(cfg::MultithreadConfig) = cfg.config2
-
-@inline chunksize(cfg::MultithreadConfig) = chunksize(gradient_config(cfg))

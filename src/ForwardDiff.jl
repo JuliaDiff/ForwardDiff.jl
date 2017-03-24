@@ -9,6 +9,7 @@ using DiffBase: DiffResult
 import Calculus
 import NaNMath
 import SpecialFunctions
+import Base.Threads
 
 #############################
 # types/functions/constants #
@@ -18,19 +19,6 @@ import SpecialFunctions
 #----------------------#
 
 const NANSAFE_MODE_ENABLED = false
-
-# multithreading #
-#----------------#
-
-const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923"
-
-if IS_MULTITHREADED_JULIA
-    const NTHREADS = Base.Threads.nthreads()
-    @inline compat_threadid() = Base.Threads.threadid()
-else
-    const NTHREADS = 1
-    @inline compat_threadid() = 1
-end
 
 # function generation #
 #---------------------#
@@ -50,7 +38,7 @@ const SPECIAL_FUNCS = (:erf, :erfc, :erfinv, :erfcinv, :erfi, :erfcx,
 # chunk settings #
 #----------------#
 
-const CHUNK_THRESHOLD = 10
+const DEFAULT_CHUNK_THRESHOLD = 10
 
 ############
 # includes #
@@ -58,13 +46,13 @@ const CHUNK_THRESHOLD = 10
 
 include("partials.jl")
 include("dual.jl")
-# include("config.jl")
-# include("api_utils.jl")
-# include("derivative.jl")
-# include("gradient.jl")
-# include("jacobian.jl")
-# include("hessian.jl")
-# include("deprecated.jl")
+include("config.jl")
+include("utils.jl")
+include("derivative.jl")
+include("gradient.jl")
+include("jacobian.jl")
+include("hessian.jl")
+include("deprecated.jl")
 
 export DiffBase
 

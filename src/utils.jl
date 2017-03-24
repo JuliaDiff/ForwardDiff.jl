@@ -1,19 +1,3 @@
-##########################
-# picking the chunk size #
-##########################
-
-# Constrained to chunk <= CHUNK_THRESHOLD, minimize (in order of priority):
-#   1. the number of chunks that need to be computed
-#   2. the number of "left over" perturbations in the final chunk
-function pickchunksize(k)
-    if k <= CHUNK_THRESHOLD
-        return k
-    else
-        nchunks = round(Int, k / CHUNK_THRESHOLD, RoundUp)
-        return round(Int, k / nchunks, RoundUp)
-    end
-end
-
 ####################
 # value extraction #
 ####################
@@ -33,16 +17,13 @@ end
 # vector mode function evaluation #
 ###################################
 
-vector_mode_dual_eval{F}(f::F, x, cfg::MultithreadConfig) = vector_mode_dual_eval(f, x, gradient_config(cfg))
-vector_mode_dual_eval{F}(f::F, x, cfg::Tuple) = vector_mode_dual_eval(f, x, first(cfg))
-
-function vector_mode_dual_eval{F}(f::F, x, cfg)
+function vector_mode_dual_eval{F}(f::F, x, cfg::Union{JacobianConfig,GradientConfig})
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     return f(xdual)
 end
 
-function vector_mode_dual_eval{F}(f!::F, y, x, cfg)
+function vector_mode_dual_eval{F}(f!::F, y, x, cfg::JacobianConfig)
     ydual, xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     seed!(ydual, y)
