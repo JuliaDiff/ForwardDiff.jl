@@ -31,8 +31,8 @@ end
 
 @compat immutable Tag{F,M} end
 
-Base.@pure order{V}(::Type{V}) = 0
-Base.@pure order{T,V,N}(::Type{Dual{T,V,N}}) = 1 + order(V)
+@inline order{V}(::Type{V}) = 0
+@inline order{T,V,N}(::Type{Dual{T,V,N}}) = 1 + order(V)
 
 ##################
 # AbstractConfig #
@@ -47,16 +47,16 @@ end
 
 function Base.showerror{F,G}(io::IO, e::ConfigMismatchError{F,G})
     print(io, "The provided configuration (of type $(typeof(e.cfg))) was constructed for a",
-              " function ($G), not the current target function ($F). ForwardDiff cannot safely",
+              " function other than the current target function. ForwardDiff cannot safely",
               " perform differentiation in this context; see the following issue for details:",
               " https://github.com/JuliaDiff/ForwardDiff.jl/issues/83. You can resolve this",
               " problem by constructing and using a configuration with the appropriate target",
-              " function, e.g. `ForwardDiff.GradientConfig($f, x)`")
+              " function, e.g. `ForwardDiff.GradientConfig($(e.f), x)`")
 end
 
 Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 
-@inline chunksize(::AbstractConfig{T,N}) = N
+@inline chunksize{T,N}(::AbstractConfig{T,N}) = N
 
 ##################
 # GradientConfig #
@@ -110,17 +110,17 @@ end
 # HessianConfig #
 #################
 
-@compat immutable HessianConfig{T,V,N,D,TJ,DJ} <: AbstractConfig{T,N}
-    jacobian_config::JacobianConfig{TJ,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},D}
+@compat immutable HessianConfig{T,V,N,D,MJ,DJ} <: AbstractConfig{T,N}
+    jacobian_config::JacobianConfig{Tag{Void,MJ},V,N,DJ}
+    gradient_config::GradientConfig{T,Dual{Tag{Void,MJ},V,N},D}
 end
 
 function HessianConfig{F,V}(f::F,
                             x::AbstractArray{V},
                             chunk::Chunk = Chunk(x),
-                            tag::Tag = Tag{F,order(V)}())
-    jacobian_config = JacobianConfig(f, x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals, chunk)
+                            tag::Tag = Tag{F,order(Dual{Void,V,0})}())
+    jacobian_config = JacobianConfig(nothing, x, chunk)
+    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
@@ -128,8 +128,8 @@ function HessianConfig{F,V}(result::DiffResult,
                             f::F,
                             x::AbstractArray{V},
                             chunk::Chunk = Chunk(x),
-                            tag::Tag = Tag{F,order(V)}())
-    jacobian_config = JacobianConfig(f, DiffBase.gradient(result), x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk)
+                            tag::Tag = Tag{F,order(Dual{Void,V,0})}())
+    jacobian_config = JacobianConfig(nothing, DiffBase.gradient(result), x, chunk)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end

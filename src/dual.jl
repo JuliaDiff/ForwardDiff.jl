@@ -18,9 +18,9 @@ end
 
 function Base.showerror{X,Y}(io::IO, e::TagMismatchError{X,Y})
     print(io, "potential perturbation confusion detected when computing binary operation ",
-              "on $(e.x) and $(e.y) (tag $X != tag $Y). ForwardDiff cannot safely perform ",
-              "differentiation in this context; see the following issue for details: ",
-              "https://github.com/JuliaDiff/ForwardDiff.jl/issues/83")
+              "on $(e.x) and $(e.y) (tag mismatch: $X != $Y). ForwardDiff cannot safely ",
+              "perform differentiation in this context; see the following issue for ",
+              "details: https://github.com/JuliaDiff/ForwardDiff.jl/issues/83")
 end
 
 ################
@@ -200,7 +200,7 @@ Base.AbstractFloat{T,V,N}(d::Dual{T,V,N}) = Dual{T,promote_type(V, Float16),N}(d
     Dual{T}(x - value(y), -partials(y))
 )
 
-@inline Base.:-(d::Dual) = Dual(-value(d), -partials(d))
+@inline Base.:-{T}(d::Dual{T}) = Dual{T}(-value(d), -partials(d))
 
 # Multiplication #
 #----------------#
@@ -338,6 +338,8 @@ end
 # Other Functions #
 #-----------------#
 
+# hypot
+
 @inline function calc_hypot{T}(x, y, ::Type{T})
     vx = value(x)
     vy = value(y)
@@ -352,12 +354,7 @@ end
     calc_hypot(x, y, T)
 )
 
-@inline sincos(x) = (sin(x), cos(x))
-
-@inline function sincos{T}(d::Dual{T})
-    sd, cd = sincos(value(d))
-    return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
-end
+# atan2
 
 @inline function calc_atan2{T}(y, x, ::Type{T})
     z = y / x
@@ -407,8 +404,13 @@ end
 
 @inline Base.fma(x::Real, y::Dual, z::Real) = fma(y, x, z)
 
-@inline function Base.fma(x::Real, y::Real, z::Dual)
-    Dual(fma(x, y, value(z)), partials(z))
+# sincos
+
+@inline sincos(x) = (sin(x), cos(x))
+
+@inline function sincos{T}(d::Dual{T})
+    sd, cd = sincos(value(d))
+    return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
 end
 
 ###################

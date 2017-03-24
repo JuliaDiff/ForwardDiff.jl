@@ -35,42 +35,42 @@ end
 # seed construction/manipulation #
 ##################################
 
-@generated function construct_seeds{N,T}(::Type{Partials{N,T}})
-    return Expr(:tuple, [:(single_seed(Partials{N,T}, Val{$i})) for i in 1:N]...)
+@generated function construct_seeds{N,V}(::Type{Partials{N,V}})
+    return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i})) for i in 1:N]...)
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x,
-                    seed::Partials{N,T} = zero(Partials{N,T}))
+function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x,
+                      seed::Partials{N,V} = zero(Partials{N,V}))
     for i in eachindex(duals)
-        duals[i] = Dual{N,T}(x[i], seed)
+        duals[i] = Dual{T,V,N}(x[i], seed)
     end
     return duals
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x,
-                    seeds::NTuple{N,Partials{N,T}})
+function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x,
+                      seeds::NTuple{N,Partials{N,V}})
     for i in 1:N
-        duals[i] = Dual{N,T}(x[i], seeds[i])
+        duals[i] = Dual{T,V,N}(x[i], seeds[i])
     end
     return duals
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x, index,
-                    seed::Partials{N,T} = zero(Partials{N,T}))
+function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x, index,
+                      seed::Partials{N,V} = zero(Partials{N,V}))
     offset = index - 1
     for i in 1:N
         j = i + offset
-        duals[j] = Dual{N,T}(x[j], seed)
+        duals[j] = Dual{T,V,N}(x[j], seed)
     end
     return duals
 end
 
-function seed!{N,T}(duals::AbstractArray{Dual{N,T}}, x, index,
-                    seeds::NTuple{N,Partials{N,T}}, chunksize = N)
+function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x, index,
+                      seeds::NTuple{N,Partials{N,V}}, chunksize = N)
     offset = index - 1
     for i in 1:chunksize
         j = i + offset
-        duals[j] = Dual{N,T}(x[j], seeds[i])
+        duals[j] = Dual{T,V,N}(x[j], seeds[i])
     end
     return duals
 end

@@ -2,7 +2,12 @@
 # API methods #
 ###############
 
-function gradient{F}(f::F, x, cfg::AbstractConfig = GradientConfig(x))
+@compat const AllowedGradientConfig{F,M} = Union{GradientConfig{Tag{F,M}}, GradientConfig{Tag{Void,M}}}
+
+gradient(f, x, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
+gradient!(out, f, x, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
+
+function gradient{F,M}(f::F, x, cfg::AllowedGradientConfig{F,M} = GradientConfig(f, x))
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -10,7 +15,7 @@ function gradient{F}(f::F, x, cfg::AbstractConfig = GradientConfig(x))
     end
 end
 
-function gradient!{F}(out, f::F, x, cfg::AbstractConfig = GradientConfig(x))
+function gradient!{F,M}(out, f::F, x, cfg::AllowedGradientConfig{F,M} = GradientConfig(f, x))
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(out, f, x, cfg)
     else
@@ -72,9 +77,6 @@ end
 # chunk mode #
 ##############
 
-# single threaded #
-#-----------------#
-
 function chunk_mode_gradient_expr(out_definition::Expr)
     return quote
         @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
@@ -119,80 +121,10 @@ function chunk_mode_gradient_expr(out_definition::Expr)
     end
 end
 
-@eval function chunk_mode_gradient{F,N}(f::F, x, cfg::GradientConfig{N})
+@eval function chunk_mode_gradient{F,T,V,N}(f::F, x, cfg::GradientConfig{T,V,N})
     $(chunk_mode_gradient_expr(:(out = similar(x, valtype(ydual)))))
 end
 
-@eval function chunk_mode_gradient!{F,N}(out, f::F, x, cfg::GradientConfig{N})
+@eval function chunk_mode_gradient!{F,T,V,N}(out, f::F, x, cfg::GradientConfig{T,V,N})
     $(chunk_mode_gradient_expr(:()))
-end
-
-# multithreaded #
-#---------------#
-
-if IS_MULTITHREADED_JULIA
-    function multithread_chunk_mode_expr(out_definition::Expr)
-        return quote
-            cfg = gradient_config(multi_cfg)
-            N = chunksize(cfg)
-            @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
-
-            # precalculate loop bounds
-            xlen = length(x)
-            remainder = xlen % N
-            lastchunksize = ifelse(remainder == 0, N, remainder)
-            lastchunkindex = xlen - lastchunksize + 1
-            middlechunks = 2:div(xlen - lastchunksize, N)
-
-            # fetch and seed work vectors
-            current_cfg = cfg[compat_threadid()]
-            current_xdual = current_cfg.duals
-            current_seeds = current_cfg.seeds
-
-            Base.Threads.@threads for t in 1:length(cfg)
-                seed!(cfg[t].duals, x)
-            end
-
-            # do first chunk manually to calculate output type
-            seed!(current_xdual, x, 1, current_seeds)
-            current_ydual = f(current_xdual)
-            $(out_definition)
-            extract_gradient_chunk!(out, current_ydual, 1, N)
-            seed!(current_xdual, x, 1)
-
-            # do middle chunks
-            Base.Threads.@threads for c in middlechunks
-                # see https://github.com/JuliaLang/julia/issues/14948
-                local chunk_cfg = cfg[compat_threadid()]
-                local chunk_xdual = chunk_cfg.duals
-                local chunk_seeds = chunk_cfg.seeds
-                local chunk_index = ((c - 1) * N + 1)
-                seed!(chunk_xdual, x, chunk_index, chunk_seeds)
-                local chunk_dual = f(chunk_xdual)
-                extract_gradient_chunk!(out, chunk_dual, chunk_index, N)
-                seed!(chunk_xdual, x, chunk_index)
-            end
-
-            # do final chunk
-            seed!(current_xdual, x, lastchunkindex, current_seeds, lastchunksize)
-            current_ydual = f(current_xdual)
-            extract_gradient_chunk!(out, current_ydual, lastchunkindex, lastchunksize)
-
-            # load value, this is a no-op unless `out` is a DiffResult
-            extract_value!(out, current_ydual)
-
-            return out
-        end
-    end
-
-    @eval function chunk_mode_gradient{F}(f::F, x, multi_cfg::MultithreadConfig)
-        $(multithread_chunk_mode_expr(:(out = similar(x, valtype(current_ydual)))))
-    end
-
-    @eval function chunk_mode_gradient!{F}(out, f::F, x, multi_cfg::MultithreadConfig)
-        $(multithread_chunk_mode_expr(:()))
-    end
-else
-    chunk_mode_gradient(f, x, cfg::Tuple) = error("Multithreading is not enabled for this Julia installation.")
-    chunk_mode_gradient!(out, f, x, cfg::Tuple) = chunk_mode_gradient!(f, x, cfg)
 end
