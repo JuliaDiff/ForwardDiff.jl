@@ -2,7 +2,7 @@
 # Dual #
 ########
 
-immutable Dual{T,V<:Real,N} <: Real
+@compat immutable Dual{T,V<:Real,N} <: Real
     value::V
     partials::Partials{N,V}
 end
@@ -11,7 +11,7 @@ end
 # TagMismatchError #
 ####################
 
-immutable TagMismatchError{X,Y} <: Exception
+@compat immutable TagMismatchError{X,Y} <: Exception
     x::Dual{X}
     y::Dual{Y}
 end
@@ -55,6 +55,9 @@ end
 @inline partials(d::Dual, i, j) = partials(d, i).partials[j]
 @inline partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
 
+@inline npartials{T,V,N}(::Dual{T,V,N}) = N
+@inline npartials{T,V,N}(::Type{Dual{T,V,N}}) = N
+
 @inline valtype{V}(::V) = V
 @inline valtype{V}(::Type{V}) = V
 @inline valtype{T,V,N}(::Dual{T,V,N}) = V
@@ -78,8 +81,8 @@ macro define_binary_dual_op(f, both_body, left_body, right_body)
         end
 
         @inline $(f){T,S,X,Y,N}(x::Dual{T,Dual{S,X,N}}, y::Dual{T,Dual{S,Y,N}}) = $both_body
-        @inline $(f){T,S,V,N}(x::Dual{S,Dual{T,V,N}}, y::Dual{T}) = $left_body
-        @inline $(f){T,S,V,N}(x::Dual{T}, y::Dual{S,Dual{T,V,N}}) = $right_body
+        @inline $(f){T,S,V,N}(x::Dual{T,Dual{S,V,N}}, y::Dual{S}) = $left_body
+        @inline $(f){T,S,V,N}(x::Dual{S}, y::Dual{T,Dual{S,V,N}}) = $right_body
     end)
 end
 
@@ -108,7 +111,7 @@ Base.hash(d::Dual, hsh::UInt64) = hash(value(d), hsh)
 function Base.read{T,V,N}(io::IO, ::Type{Dual{T,V,N}})
     value = read(io, V)
     partials = read(io, Partials{N,V})
-    return Dual{T,N,V}(value, partials)
+    return Dual{T,V,N}(value, partials)
 end
 
 function Base.write(io::IO, d::Dual)
