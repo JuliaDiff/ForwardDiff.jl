@@ -49,19 +49,13 @@ julia> ForwardDiff.hessian(f, x)
 
 ## News
 
-- 12/2/2016: [ForwardDiff v0.3.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/7177). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
+- 3/2016: [ForwardDiff v0.4.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/8209). There are no API changes, but [support for Julia v0.4 has been dropped](https://github.com/JuliaDiff/ForwardDiff.jl/pull/195) moving forward.
 
-- 6/16/2016: [ForwardDiff v0.2.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/5389). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
+- 12/2016: [ForwardDiff v0.3.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/7177). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
 
-- 12/29/2015: [ForwardDiff v0.1.4 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/4293).
+- 6/2016: [ForwardDiff v0.2.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/5389). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
 
-- 12/09/2015: [ForwardDiff v0.1.3 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/4182).
-
-- 10/21/2015: [ForwardDiff v0.1.2 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3835).
-
-- 9/29/2015: [ForwardDiff v0.1.1 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3580).
-
-- 9/3/2015: We're releasing ForwardDiff v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
+- 9/2015: We're releasing ForwardDiff v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
 
 ## Publications
 
