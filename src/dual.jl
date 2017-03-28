@@ -447,9 +447,8 @@ end
 ###################
 
 function Base.show{N}(io::IO, n::Dual{N})
-    print(io, "Dual(", value(n))
-    for i in 1:N
-        print(io, ",", partials(n, i))
-    end
-    print(io, ")")
+    parts, val = partials(n), value(n)
+    compact = get(io, :compact, false)
+    show(io, val)
+    show(io, parts, true)
 end
