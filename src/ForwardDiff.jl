@@ -35,6 +35,8 @@ const SPECIAL_FUNCS = (:erf, :erfc, :erfinv, :erfcinv, :erfi, :erfcx,
                        :besselyx, :besselh, :hankelh1, :hankelh1x, :hankelh2,
                        :hankelh2x, :besseli, :besselix, :besselk, :besselkx)
 
+const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real)
+
 # chunk settings #
 #----------------#
 

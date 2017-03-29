@@ -1,3 +1,9 @@
+#######
+# Tag #
+#######
+
+@compat immutable Tag{F,M} end
+
 #########
 # Chunk #
 #########
@@ -24,15 +30,6 @@ function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
         return round(Int, input_length / nchunks, RoundUp)
     end
 end
-
-#######
-# Tag #
-#######
-
-@compat immutable Tag{F,M} end
-
-@inline order{V}(::Type{V}) = 0
-@inline order{T,V,N}(::Type{Dual{T,V,N}}) = 1 + order(V)
 
 ##################
 # AbstractConfig #
