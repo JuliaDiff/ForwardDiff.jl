@@ -50,6 +50,16 @@ function vector_mode_dual_eval{F}(f!::F, y, x, cfg)
     return ydual
 end
 
+# add option for user to pass arguments to f()
+vector_mode_dual_eval{F}(f::F, x, cfg::MultithreadConfig, args...) = vector_mode_dual_eval(f, x, gradient_config(cfg), args...)
+vector_mode_dual_eval{F}(f::F, x, cfg::Tuple, args...) = vector_mode_dual_eval(f, x, first(cfg), args...)
+
+function vector_mode_dual_eval{F}(f::F, x, cfg, args...)
+    xdual = cfg.duals
+    seed!(xdual, x, cfg.seeds)
+    return f(xdual, args...)
+end
+
 ##################################
 # seed construction/manipulation #
 ##################################
