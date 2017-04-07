@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-@compat const AllowedGradientConfig{F,M} = Union{GradientConfig{Tag{F,M}}, GradientConfig{Tag{Void,M}}}
+const AllowedGradientConfig{F,M} = Union{GradientConfig{Tag{F,M}}, GradientConfig{Tag{Void,M}}}
 
 gradient(f, x, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
 gradient!(out, f, x, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))

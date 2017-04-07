@@ -2,7 +2,7 @@
 # Dual #
 ########
 
-@compat immutable Dual{T,V<:Real,N} <: Real
+struct Dual{T,V<:Real,N} <: Real
     value::V
     partials::Partials{N,V}
 end
@@ -29,7 +29,7 @@ end
 # TagMismatchError #
 ####################
 
-@compat immutable TagMismatchError{X,Y} <: Exception
+struct TagMismatchError{X,Y} <: Exception
     x::Dual{X}
     y::Dual{Y}
 end
@@ -67,21 +67,21 @@ end
 @inline partials(d::Dual, i, j) = partials(d, i).partials[j]
 @inline partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
 
-@inline npartials{T,V,N}(::Dual{T,V,N}) = N
-@inline npartials{T,V,N}(::Type{Dual{T,V,N}}) = N
+@inline npartials(::Dual{T,V,N}) where {T,V,N} = N
+@inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
 
-@inline order{V}(::Type{V}) = 0
-@inline order{T,V,N}(::Type{Dual{T,V,N}}) = 1 + order(V)
+@inline order(::Type{V}) where {V} = 0
+@inline order(::Type{Dual{T,V,N}}) where {T,V,N} = 1 + order(V)
 
-@inline valtype{V}(::V) = V
-@inline valtype{V}(::Type{V}) = V
-@inline valtype{T,V,N}(::Dual{T,V,N}) = V
-@inline valtype{T,V,N}(::Type{Dual{T,V,N}}) = V
+@inline valtype(::V) where {V} = V
+@inline valtype(::Type{V}) where {V} = V
+@inline valtype(::Dual{T,V,N}) where {T,V,N} = V
+@inline valtype(::Type{Dual{T,V,N}}) where {T,V,N} = V
 
-@inline tagtype{V}(::V) = Void
-@inline tagtype{V}(::Type{V}) = Void
-@inline tagtype{T,V,N}(::Dual{T,V,N}) = T
-@inline tagtype{T,V,N}(::Type{Dual{T,V,N}}) = T
+@inline tagtype(::V) where {V} = Void
+@inline tagtype(::Type{V}) where {V} = Void
+@inline tagtype(::Dual{T,V,N}) where {T,V,N} = T
+@inline tagtype(::Type{Dual{T,V,N}}) where {T,V,N} = T
 
 #####################################
 # N-ary Operation Definition Macros #
@@ -94,19 +94,15 @@ macro define_binary_dual_op(f, xy_body, x_body, y_body)
     end
     for R in REAL_TYPES
         real_defs = quote
-            @inline $(f){T}(x::Dual{T}, y::$R) = $x_body
-            @inline $(f){T}(x::$R, y::Dual{T}) = $y_body
+            @inline $(f)(x::Dual{T}, y::$R) where {T} = $x_body
+            @inline $(f)(x::$R, y::Dual{T}) where {T} = $y_body
         end
         append!(expr.args, real_defs.args)
     end
     nested_defs = quote
-        @inline $(f){T,X<:Real,Y<:Real,N,M}(x::Dual{T,Dual{T,X,N},M}, y::Dual{T,Dual{T,Y,N},M}) = $xy_body
-        @inline $(f){T,X<:Real,Y<:Real,N,M}(x::Dual{T,Dual{T,X,N},M}, y::Dual{T,Y,N}) = $x_body
-        @inline $(f){T,X<:Real,Y<:Real,N,M}(x::Dual{T,X,N}, y::Dual{T,Dual{T,Y,N},M}) = $y_body
-
-        @inline $(f){T,S,X<:Real,Y<:Real,N,M}(x::Dual{T,Dual{S,X,N},M}, y::Dual{T,Dual{S,Y,N},M}) = $xy_body
-        @inline $(f){T,S,X<:Real,Y<:Real,N,M}(x::Dual{T,Dual{S,X,N},M}, y::Dual{S,Y,N}) = $x_body
-        @inline $(f){T,S,X<:Real,Y<:Real,N,M}(x::Dual{S,X,N}, y::Dual{T,Dual{S,Y,N},M}) = $y_body
+        @inline $(f)(x::Dual{T,Dual{S,<:Real,N},M}, y::Dual{T,Dual{S,<:Real,N},M}) where {T,S,N,M} = $xy_body
+        @inline $(f)(x::Dual{T,Dual{S,<:Real,N},M}, y::Dual{S,<:Real,N}) where {T,S,N,M} = $x_body
+        @inline $(f)(x::Dual{S,<:Real,N}, y::Dual{T,Dual{S,<:Real,N},M}) where {T,S,N,M} = $y_body
     end
     append!(expr.args, nested_defs.args)
     return esc(expr)

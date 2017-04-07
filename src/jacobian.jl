@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-@compat const AllowedJacobianConfig{F,M} = Union{JacobianConfig{Tag{F,M}}, JacobianConfig{Tag{Void,M}}}
+const AllowedJacobianConfig{F,M} = Union{JacobianConfig{Tag{F,M}}, JacobianConfig{Tag{Void,M}}}
 
 jacobian(f, x, cfg::JacobianConfig) = throw(ConfigMismatchError(f, cfg))
 jacobian(f!, y, x, cfg::JacobianConfig) = throw(ConfigMismatchError(f!, cfg))

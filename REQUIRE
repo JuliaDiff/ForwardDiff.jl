@@ -1,6 +1,5 @@
-julia 0.5
+julia 0.6-
 DiffBase 0.0.3
-Compat 0.19.0
 Calculus 0.2.0
 NaNMath 0.2.2
 SpecialFunctions 0.1.0

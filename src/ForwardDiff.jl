@@ -2,7 +2,6 @@ __precompile__()
 
 module ForwardDiff
 
-using Compat
 using DiffBase
 using DiffBase: DiffResult
 

@@ -26,7 +26,7 @@ Base.start(partials::Partials) = start(partials.values)
 Base.next(partials::Partials, i) = next(partials.values, i)
 Base.done(partials::Partials, i) = done(partials.values, i)
 
-@compat Base.IndexStyle(::Type{<:Partials}) = IndexLinear()
+Base.IndexStyle(::Type{<:Partials}) = IndexLinear()
 
 #####################
 # Generic Functions #

@@ -14,7 +14,7 @@ Base.@deprecate JacobianResult(x) DiffBase.JacobianResult(x)
 Base.@deprecate HessianResult(x, y, z) DiffBase.DiffResult(x, y, z)
 Base.@deprecate HessianResult(x) DiffBase.HessianResult(x)
 
-@compat immutable Chunk{N}
+struct Chunk{N}
     function (::Type{Chunk{N}}){N}()
         Base.depwarn("Chunk{N}() is deprecated, use the ForwardDiff.AbstractConfig API instead.", :Chunk)
         return new{N}()

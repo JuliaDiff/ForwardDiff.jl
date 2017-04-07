@@ -2,13 +2,13 @@
 # Tag #
 #######
 
-@compat immutable Tag{F,M} end
+struct Tag{F,M} end
 
 #########
 # Chunk #
 #########
 
-@compat immutable Chunk{N} end
+struct Chunk{N} end
 
 function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     N = pickchunksize(input_length, threshold)
@@ -35,9 +35,9 @@ end
 # AbstractConfig #
 ##################
 
-@compat abstract type AbstractConfig{T<:Tag,N} end
+abstract type AbstractConfig{T<:Tag,N} end
 
-@compat immutable ConfigMismatchError{F,G,M} <: Exception
+struct ConfigMismatchError{F,G,M} <: Exception
     f::F
     cfg::AbstractConfig{Tag{G,M}}
 end
@@ -59,7 +59,7 @@ Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 # GradientConfig #
 ##################
 
-@compat immutable GradientConfig{T,V,N,D} <: AbstractConfig{T,N}
+struct GradientConfig{T,V,N,D} <: AbstractConfig{T,N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
 end
@@ -77,7 +77,7 @@ end
 # JacobianConfig #
 ##################
 
-@compat immutable JacobianConfig{T,V,N,D} <: AbstractConfig{T,N}
+struct JacobianConfig{T,V,N,D} <: AbstractConfig{T,N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
 end
@@ -107,7 +107,7 @@ end
 # HessianConfig #
 #################
 
-@compat immutable HessianConfig{T,V,N,D,MJ,DJ} <: AbstractConfig{T,N}
+struct HessianConfig{T,V,N,D,MJ,DJ} <: AbstractConfig{T,N}
     jacobian_config::JacobianConfig{Tag{Void,MJ},V,N,DJ}
     gradient_config::GradientConfig{T,Dual{Tag{Void,MJ},V,N},D}
 end

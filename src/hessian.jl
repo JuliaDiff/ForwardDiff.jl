@@ -2,7 +2,7 @@
 # API methods #
 ###############
 
-@compat const AllowedHessianConfig{F,M} = Union{HessianConfig{Tag{F,M}}, HessianConfig{Tag{Void,M}}}
+const AllowedHessianConfig{F,M} = Union{HessianConfig{Tag{F,M}}, HessianConfig{Tag{Void,M}}}
 
 hessian(f, x, cfg::HessianConfig) = throw(ConfigMismatchError(f, cfg))
 hessian!(out, f, x, cfg::HessianConfig) = throw(ConfigMismatchError(f, cfg))
