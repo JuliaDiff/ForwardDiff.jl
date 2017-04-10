@@ -417,11 +417,11 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                     @eval begin
                         fdnum = $(is_domain_err_func ? FDNUM + 1 : FDNUM)
                         $(v) = ForwardDiff.value(fdnum)
-                        @test duals_isapprox($(func)(fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(fdnum)))
+                        @test dual_isapprox($(func)(fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(fdnum)))
                         if $(!(is_unsupported_nested_func))
                             nested_fdnum = $(is_domain_err_func ? NESTED_FDNUM + 1 : NESTED_FDNUM)
                             $(v) = ForwardDiff.value(nested_fdnum)
-                            @test duals_isapprox($(func)(nested_fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
+                            @test dual_isapprox($(func)(nested_fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
                         end
                     end
                 end
