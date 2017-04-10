@@ -15,27 +15,8 @@ samerng() = MersenneTwister(1)
 # exponent by one
 intrand(V) = V == Int ? rand(2:10) : rand(V)
 
-# fix testing issue with Base.hypot(::Int...) undefined in 0.4
-if v"0.4" <= VERSION < v"0.5"
-    Base.hypot(x::Int, y::Int) = Base.hypot(Float64(x), Float64(y))
-    Base.hypot(x, y, z) = hypot(hypot(x, y), z)
-end
-
-if VERSION < v"0.5"
-    # isapprox on v0.4 doesn't properly set the tolerance
-    # for mixed-precision inputs, while @test_approx_eq does
-    # Use @eval to avoid expanding @test_approx_eq on 0.6 where it's deprecated
-    @eval test_approx_duals(a::Real, b::Real) = @test_approx_eq a b
-else
-    test_approx_duals(a::Real, b::Real) = @test isapprox(a, b)
-end
-
-function test_approx_duals{T,A,B,N}(a::Dual{T,A,N}, b::Dual{T,B,N})
-    test_approx_duals(value(a), value(b))
-    for i in 1:N
-        test_approx_duals(partials(a)[i], partials(b)[i])
-    end
-end
+dual_isapprox(a, b) = isapprox(a, b)
+dual_isapprox(a::Dual, b::Dual) = isapprox(value(a), value(b)) && isapprox(partials(a), partials(b))
 
 for N in (0,3), M in (0,4), V in (Int, Float32)
     println("  ...testing Dual{Void,$V,$N} and Dual{Void,Dual{Void,$V,$M},$N}")
@@ -368,21 +349,21 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test Dual{1}(FDNUM / PRIMAL, FDNUM2 / PRIMAL) === Dual{1}(FDNUM, FDNUM2) / PRIMAL
     end
 
-    test_approx_duals(FDNUM / FDNUM2, Dual(value(FDNUM) / value(FDNUM2), ForwardDiff._div_partials(partials(FDNUM), partials(FDNUM2), value(FDNUM), value(FDNUM2))))
-    test_approx_duals(FDNUM / PRIMAL, Dual(value(FDNUM) / PRIMAL, partials(FDNUM) / PRIMAL))
-    test_approx_duals(PRIMAL / FDNUM, Dual(PRIMAL / value(FDNUM), (-(PRIMAL) / value(FDNUM)^2) * partials(FDNUM)))
+    @test dual_isapprox(FDNUM / FDNUM2, Dual(value(FDNUM) / value(FDNUM2), ForwardDiff._div_partials(partials(FDNUM), partials(FDNUM2), value(FDNUM), value(FDNUM2))))
+    @test dual_isapprox(FDNUM / PRIMAL, Dual(value(FDNUM) / PRIMAL, partials(FDNUM) / PRIMAL))
+    @test dual_isapprox(PRIMAL / FDNUM, Dual(PRIMAL / value(FDNUM), (-(PRIMAL) / value(FDNUM)^2) * partials(FDNUM)))
 
-    test_approx_duals(NESTED_FDNUM / NESTED_FDNUM2, Dual(value(NESTED_FDNUM) / value(NESTED_FDNUM2), ForwardDiff._div_partials(partials(NESTED_FDNUM), partials(NESTED_FDNUM2), value(NESTED_FDNUM), value(NESTED_FDNUM2))))
-    test_approx_duals(NESTED_FDNUM / PRIMAL, Dual(value(NESTED_FDNUM) / PRIMAL, partials(NESTED_FDNUM) / PRIMAL))
-    test_approx_duals(PRIMAL / NESTED_FDNUM, Dual(PRIMAL / value(NESTED_FDNUM), (-(PRIMAL) / value(NESTED_FDNUM)^2) * partials(NESTED_FDNUM)))
+    @test dual_isapprox(NESTED_FDNUM / NESTED_FDNUM2, Dual(value(NESTED_FDNUM) / value(NESTED_FDNUM2), ForwardDiff._div_partials(partials(NESTED_FDNUM), partials(NESTED_FDNUM2), value(NESTED_FDNUM), value(NESTED_FDNUM2))))
+    @test dual_isapprox(NESTED_FDNUM / PRIMAL, Dual(value(NESTED_FDNUM) / PRIMAL, partials(NESTED_FDNUM) / PRIMAL))
+    @test dual_isapprox(PRIMAL / NESTED_FDNUM, Dual(PRIMAL / value(NESTED_FDNUM), (-(PRIMAL) / value(NESTED_FDNUM)^2) * partials(NESTED_FDNUM)))
 
-    test_approx_duals(FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
-    test_approx_duals(FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
-    test_approx_duals(PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
+    @test dual_isapprox(FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
+    @test dual_isapprox(FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
+    @test dual_isapprox(PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
 
-    test_approx_duals(NESTED_FDNUM^NESTED_FDNUM2, exp(NESTED_FDNUM2 * log(NESTED_FDNUM)))
-    test_approx_duals(NESTED_FDNUM^PRIMAL, exp(PRIMAL * log(NESTED_FDNUM)))
-    test_approx_duals(PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
+    @test dual_isapprox(NESTED_FDNUM^NESTED_FDNUM2, exp(NESTED_FDNUM2 * log(NESTED_FDNUM)))
+    @test dual_isapprox(NESTED_FDNUM^PRIMAL, exp(PRIMAL * log(NESTED_FDNUM)))
+    @test dual_isapprox(PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
 
     @test partials(NaNMath.pow(Dual(-2.0, 1.0), Dual(2.0, 0.0)), 1) == -4.0
 
@@ -436,11 +417,11 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                     @eval begin
                         fdnum = $(is_domain_err_func ? FDNUM + 1 : FDNUM)
                         $(v) = ForwardDiff.value(fdnum)
-                        $(test_approx_duals)($(func)(fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(fdnum)))
+                        @test duals_isapprox($(func)(fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(fdnum)))
                         if $(!(is_unsupported_nested_func))
                             nested_fdnum = $(is_domain_err_func ? NESTED_FDNUM + 1 : NESTED_FDNUM)
                             $(v) = ForwardDiff.value(nested_fdnum)
-                            $(test_approx_duals)($(func)(nested_fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
+                            @test duals_isapprox($(func)(nested_fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
                         end
                     end
                 end
@@ -454,9 +435,9 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     # Special Cases #
     #---------------#
 
-    test_approx_duals(hypot(FDNUM, FDNUM2), sqrt(FDNUM^2 + FDNUM2^2))
-    test_approx_duals(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
-    map(test_approx_duals, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM)))
+    @test dual_isapprox(hypot(FDNUM, FDNUM2), sqrt(FDNUM^2 + FDNUM2^2))
+    @test dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
+    @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
     if V === Float32
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
