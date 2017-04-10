@@ -2,29 +2,32 @@
 # API methods #
 ###############
 
-@generated function derivative{F,R<:Real}(f::F, x::R)
-    T = Tag{F,order(R)}
-    return quote
-        $(Expr(:meta, :inline))
-        return extract_derivative(f(Dual{$T}(x, one(x))))
-    end
+@inline function derivative(f::F, x::R) where {F,R<:Real}
+    T = Tag(F, R)
+    return extract_derivative(f(Dual{T}(x, one(x))))
 end
 
-@generated function derivative{F,N}(f::F, x::NTuple{N,Real})
-    T = Tag{F,maximum(order(R) for R in x.parameters)}
-    args = [:(Dual{$T}(x[$i], Val{N}, Val{$i})) for i in 1:N]
+@generated function derivative(f::F, x::NTuple{N,Real}) where {F,N}
+    args = [:(Dual{T}(x[$i], Val{N}, Val{$i})) for i in 1:N]
     return quote
         $(Expr(:meta, :inline))
+        T = Tag(F, typeof(x))
         extract_derivative(f($(args...)))
     end
 end
 
-@generated function derivative!{F,R<:Real}(out, f::F, x::R)
-    T = Tag{F,order(R)}
+@inline function derivative!(out, f::F, x::R) where {F,R<:Real}
+    T = Tag(F, typeof(x))
+    extract_derivative!(out, f(Dual{T}(x, one(x))))
+    return out
+end
+
+@generated function derivative!(out::NTuple{N,Any}, f::F, x::NTuple{N,Real}) where {F,N}
+    args = [:(Dual{T}(x[$i], Val{N}, Val{$i})) for i in 1:N]
     return quote
         $(Expr(:meta, :inline))
-        extract_derivative!(out, f(Dual{$T}(x, one(x))))
-        return out
+        T = Tag(F, typeof(x))
+        extract_derivative!(out, f($(args...)))
     end
 end
 
@@ -32,7 +35,10 @@ end
 # result extraction #
 #####################
 
-@generated function extract_derivative{T,V,N}(y::Dual{T,V,N})
+# non-mutating #
+#--------------#
+
+@generated function extract_derivative(y::Dual{T,V,N}) where {T,V,N}
     return quote
         $(Expr(:meta, :inline))
         $(Expr(:tuple, [:(partials(y, $i)) for i in 1:N]...))
@@ -43,10 +49,36 @@ end
 @inline extract_derivative(y::Real) = zero(y)
 @inline extract_derivative(y::AbstractArray) = extract_derivative!(similar(y, valtype(eltype(y))), y)
 
+# mutating #
+#----------#
+
+@generated function extract_derivative!(out::NTuple{N,Any}, y::Dual{T,V,N}) where {T,V,N}
+    return quote
+        $(Expr(:meta, :inline))
+        $(Expr(:block, [:(out[$i][] = partials(y, $i)) for i in 1:N]...))
+        return out
+    end
+end
+
+@generated function extract_derivative!(out::NTuple{N,Any}, y::AbstractArray) where {N}
+    return quote
+        $(Expr(:meta, :inline))
+        $(Expr(:block, [:(extract_derivative!(out[$i], y, $i)) for i in 1:N]...))
+        return out
+    end
+end
+
 extract_derivative!(out::AbstractArray, y::AbstractArray) = map!(extract_derivative, out, y)
+extract_derivative!(out::AbstractArray, y::AbstractArray, p) = map!(x -> partials(x, p), out, y)
 
 function extract_derivative!(out::DiffResult, y)
     DiffBase.value!(value, out, y)
     DiffBase.derivative!(extract_derivative, out, y)
+    return out
+end
+
+function extract_derivative!(out::DiffResult, y::AbstractArray, p)
+    DiffBase.value!(value, out, y)
+    DiffBase.derivative!(x -> partials(x, p), out, y)
     return out
 end
