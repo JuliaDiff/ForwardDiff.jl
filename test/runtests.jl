@@ -30,18 +30,18 @@ tic()
 include("HessianTest.jl")
 println("done (took $(toq()) seconds).")
 
-# println("Testing miscellaneous functionality...")
-# tic()
-# include("MiscTest.jl")
-# println("done (took $(toq()) seconds).")
-#
-# if Base.JLOptions().opt_level >= 3 && VERSION >= v"0.5"
-#     println("Testing SIMD vectorization...")
-#     tic()
-#     include("SIMDTest.jl")
-#     println("done (took $(toq()) seconds).")
-# end
-#
+println("Testing miscellaneous functionality...")
+tic()
+include("MiscTest.jl")
+println("done (took $(toq()) seconds).")
+
+if Base.JLOptions().opt_level >= 3
+    println("Testing SIMD vectorization...")
+    tic()
+    include("SIMDTest.jl")
+    println("done (took $(toq()) seconds).")
+end
+
 # println("Testing deprecations...")
 # tic()
 # include("DeprecatedTest.jl")
