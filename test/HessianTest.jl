@@ -22,7 +22,7 @@ h = [-66.0  -40.0    0.0;
 for c in (1, 2, 3), tag in (nothing, f)
     println("  ...running hardcoded test with chunk size = $c and tag = $tag")
     cfg = ForwardDiff.HessianConfig(tag, x, ForwardDiff.Chunk{c}())
-    resultcfg = ForwardDiff.HessianConfig(DiffBase.HessianResult(x), tag, x, ForwardDiff.Chunk{c}())
+    resultcfg = ForwardDiff.HessianConfig(tag, DiffBase.HessianResult(x), x, ForwardDiff.Chunk{c}())
 
     @test isapprox(h, ForwardDiff.hessian(f, x))
     @test isapprox(h, ForwardDiff.hessian(f, x, cfg))
@@ -61,7 +61,7 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
     for c in CHUNK_SIZES, tag in (nothing, f)
         println("  ...testing $f with chunk size = $c and tag = $tag")
         cfg = ForwardDiff.HessianConfig(tag, X, ForwardDiff.Chunk{c}())
-        resultcfg = ForwardDiff.HessianConfig(DiffBase.HessianResult(X), tag, X, ForwardDiff.Chunk{c}())
+        resultcfg = ForwardDiff.HessianConfig(tag, DiffBase.HessianResult(X), X, ForwardDiff.Chunk{c}())
 
         out = ForwardDiff.hessian(f, X, cfg)
         @test isapprox(out, h)

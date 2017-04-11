@@ -49,7 +49,7 @@ end
 # AbstractConfig #
 ##################
 
-abstract type AbstractConfig{T<:Tag,N} end
+abstract type AbstractConfig{T,N} end
 
 struct ConfigMismatchError{F,G,H} <: Exception
     f::F
@@ -135,8 +135,8 @@ function HessianConfig(f::F,
     return HessianConfig(jacobian_config, gradient_config)
 end
 
-function HessianConfig(result::DiffResult,
-                       f::F,
+function HessianConfig(f::F,
+                       result::DiffResult,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
                        tag::Tag = Tag(F, Dual{Void,V,0})) where {F,V}

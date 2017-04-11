@@ -19,7 +19,7 @@ function hessian!(out, f::F, x, cfg::AllowedHessianConfig{F,H} = HessianConfig(f
     return out
 end
 
-function hessian!(out::DiffResult, f::F, x, cfg::AllowedHessianConfig{F,H} = HessianConfig(out, f, x)) where {F,H}
+function hessian!(out::DiffResult, f::F, x, cfg::AllowedHessianConfig{F,H} = HessianConfig(f, out, x)) where {F,H}
     ∇f! = (y, z) -> begin
         result = DiffResult(zero(eltype(y)), y)
         gradient!(result, f, z, cfg.gradient_config)
