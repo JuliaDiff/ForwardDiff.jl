@@ -148,6 +148,12 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
             end
             append!(defs.args, expr.args)
         end
+        expr = quote
+            @inline $(f)(x::Dual{T}, y::$R, z::$R) where {T} = $x_body
+            @inline $(f)(x::$R, y::Dual{T}, z::$R) where {T} = $y_body
+            @inline $(f)(x::$R, y::$R, z::Dual{T}) where {T} = $z_body
+        end
+        append!(defs.args, expr.args)
     end
     return esc(defs)
 end
@@ -391,22 +397,20 @@ end
 # Special Cases #
 #################
 
-# Manually Optimized Functions #
-#------------------------------#
+# exp
 
 @inline function Base.exp{T}(d::Dual{T})
     expv = exp(value(d))
     return Dual{T}(expv, expv * partials(d))
 end
 
+# sqrt
+
 @inline function Base.sqrt{T}(d::Dual{T})
     sqrtv = sqrt(value(d))
     deriv = inv(sqrtv + sqrtv)
     return Dual{T}(sqrtv, deriv * partials(d))
 end
-
-# Other Functions #
-#-----------------#
 
 # hypot
 
@@ -461,22 +465,28 @@ end
     calc_atan2(x, y, T)
 )
 
-@generated function Base.fma{N}(x::Dual{N}, y::Dual{N}, z::Dual{N})
+# fma
+
+@generated function calc_fma_xyz(x::Dual{T,<:Real,N},
+                                 y::Dual{T,<:Real,N},
+                                 z::Dual{T,<:Real,N}) where {T,N}
     ex = Expr(:tuple, [:(fma(value(x), partials(y)[$i], fma(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         v = fma(value(x), value(y), value(z))
-        Dual(v, $ex)
+        return Dual{T}(v, $ex)
     end
 end
 
-@inline function Base.fma(x::Dual, y::Dual, z::Real)
+@inline function calc_fma_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
     vx, vy = value(x), value(y)
     result = fma(vx, vy, z)
-    return Dual(result, _mul_partials(partials(x), partials(y), vy, vx))
+    return Dual{T}(result, _mul_partials(partials(x), partials(y), vy, vx))
 end
 
-@generated function Base.fma{N}(x::Dual{N}, y::Real, z::Dual{N})
+@generated function calc_fma_xz(x::Dual{T,<:Real,N},
+                                y::Real,
+                                z::Dual{T,<:Real,N}) where {T,N}
     ex = Expr(:tuple, [:(fma(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
@@ -485,14 +495,16 @@ end
     end
 end
 
-@inline Base.fma(x::Real, y::Dual, z::Dual) = fma(y, x, z)
-
-@inline function Base.fma(x::Dual, y::Real, z::Real)
-    vx = value(x)
-    return Dual(fma(vx, y, value(z)), partials(x) * y)
-end
-
-@inline Base.fma(x::Real, y::Dual, z::Real) = fma(y, x, z)
+@define_ternary_dual_op(
+    Base.fma,
+    calc_fma_xyz(x, y, z),                         # xyz_body
+    calc_fma_xy(x, y, z),                          # xy_body
+    calc_fma_xz(x, y, z),                          # xz_body
+    Base.fma(y, x, z),                             # yz_body
+    Dual{T}(fma(value(x), y, z), partials(x) * y), # x_body
+    Base.fma(y, x, z),                             # y_body
+    Dual{T}(fma(x, y, value(z)), partials(z))      # z_body
+)
 
 # sincos
 

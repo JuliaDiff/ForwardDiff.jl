@@ -367,21 +367,6 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test partials(NaNMath.pow(Dual(-2.0, 1.0), Dual(2.0, 0.0)), 1) == -4.0
 
-    test_approx_diffnums(fma(FDNUM, FDNUM2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                             PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS +
-                                             PARTIALS3))
-    test_approx_diffnums(fma(FDNUM, FDNUM2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                              PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS))
-    test_approx_diffnums(fma(PRIMAL, FDNUM2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                              PRIMAL*PARTIALS2 + PARTIALS3))
-    test_approx_diffnums(fma(PRIMAL, FDNUM2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                               PRIMAL*PARTIALS2))
-    test_approx_diffnums(fma(FDNUM, PRIMAL2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                              PRIMAL2*PARTIALS + PARTIALS3))
-    test_approx_diffnums(fma(FDNUM, PRIMAL2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3),
-                                               PRIMAL2*PARTIALS))
-    test_approx_diffnums(fma(PRIMAL, PRIMAL2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
-
     # Unary Functions #
     #-----------------#
 
@@ -437,12 +422,21 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test dual_isapprox(hypot(FDNUM, FDNUM2), sqrt(FDNUM^2 + FDNUM2^2))
     @test dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
+
     @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
     if V === Float32
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
         @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
     end
+
+    @test dual_isapprox(fma(FDNUM, FDNUM2, FDNUM3),   Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS + PARTIALS3))
+    @test dual_isapprox(fma(FDNUM, FDNUM2, PRIMAL3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS))
+    @test dual_isapprox(fma(PRIMAL, FDNUM2, FDNUM3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PARTIALS3))
+    @test dual_isapprox(fma(PRIMAL, FDNUM2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2))
+    @test dual_isapprox(fma(FDNUM, PRIMAL2, FDNUM3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS + PARTIALS3))
+    @test dual_isapprox(fma(FDNUM, PRIMAL2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS))
+    @test dual_isapprox(fma(PRIMAL, PRIMAL2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
 end
 
 end # module
