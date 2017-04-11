@@ -2,12 +2,12 @@
 # API methods #
 ###############
 
-const AllowedGradientConfig{F,M} = Union{GradientConfig{Tag{F,M}}, GradientConfig{Tag{Void,M}}}
+const AllowedGradientConfig{F,H} = Union{GradientConfig{Tag{F,H}}, GradientConfig{Tag{Void,H}}}
 
-gradient(f, x, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
-gradient!(out, f, x, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
+gradient(f, x, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
+gradient!(out, f, x, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
 
-function gradient{F,M}(f::F, x, cfg::AllowedGradientConfig{F,M} = GradientConfig(f, x))
+function gradient(f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -15,7 +15,7 @@ function gradient{F,M}(f::F, x, cfg::AllowedGradientConfig{F,M} = GradientConfig
     end
 end
 
-function gradient!{F,M}(out, f::F, x, cfg::AllowedGradientConfig{F,M} = GradientConfig(f, x))
+function gradient!(out, f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(out, f, x, cfg)
     else
@@ -61,13 +61,13 @@ end
 # vector mode #
 ###############
 
-function vector_mode_gradient{F}(f::F, x, cfg)
+function vector_mode_gradient(f::F, x, cfg) where {F}
     ydual = vector_mode_dual_eval(f, x, cfg)
     out = similar(x, valtype(ydual))
     return extract_gradient!(out, ydual)
 end
 
-function vector_mode_gradient!{F}(out, f::F, x, cfg)
+function vector_mode_gradient!(out, f::F, x, cfg) where {F}
     ydual = vector_mode_dual_eval(f, x, cfg)
     extract_gradient!(out, ydual)
     return out
@@ -121,10 +121,10 @@ function chunk_mode_gradient_expr(out_definition::Expr)
     end
 end
 
-@eval function chunk_mode_gradient{F,T,V,N}(f::F, x, cfg::GradientConfig{T,V,N})
+@eval function chunk_mode_gradient(f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}
     $(chunk_mode_gradient_expr(:(out = similar(x, valtype(ydual)))))
 end
 
-@eval function chunk_mode_gradient!{F,T,V,N}(out, f::F, x, cfg::GradientConfig{T,V,N})
+@eval function chunk_mode_gradient!(out, f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}
     $(chunk_mode_gradient_expr(:()))
 end

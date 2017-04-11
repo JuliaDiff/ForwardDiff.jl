@@ -17,13 +17,13 @@ end
 # vector mode function evaluation #
 ###################################
 
-function vector_mode_dual_eval{F}(f::F, x, cfg::Union{JacobianConfig,GradientConfig})
+function vector_mode_dual_eval(f::F, x, cfg::Union{JacobianConfig,GradientConfig}) where F
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     return f(xdual)
 end
 
-function vector_mode_dual_eval{F}(f!::F, y, x, cfg::JacobianConfig)
+function vector_mode_dual_eval(f!::F, y, x, cfg::JacobianConfig) where F
     ydual, xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     seed!(ydual, y)
@@ -35,28 +35,28 @@ end
 # seed construction/manipulation #
 ##################################
 
-@generated function construct_seeds{N,V}(::Type{Partials{N,V}})
+@generated function construct_seeds(::Type{Partials{N,V}}) where {N,V}
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i})) for i in 1:N]...)
 end
 
-function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x,
-                      seed::Partials{N,V} = zero(Partials{N,V}))
+function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
+               seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     for i in eachindex(duals)
         duals[i] = Dual{T,V,N}(x[i], seed)
     end
     return duals
 end
 
-function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x,
-                      seeds::NTuple{N,Partials{N,V}})
+function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
+               seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
     for i in 1:N
         duals[i] = Dual{T,V,N}(x[i], seeds[i])
     end
     return duals
 end
 
-function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x, index,
-                      seed::Partials{N,V} = zero(Partials{N,V}))
+function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
+               seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     offset = index - 1
     for i in 1:N
         j = i + offset
@@ -65,8 +65,8 @@ function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x, index,
     return duals
 end
 
-function seed!{T,V,N}(duals::AbstractArray{Dual{T,V,N}}, x, index,
-                      seeds::NTuple{N,Partials{N,V}}, chunksize = N)
+function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
+               seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
     offset = index - 1
     for i in 1:chunksize
         j = i + offset

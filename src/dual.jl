@@ -234,26 +234,29 @@ Base.isodd(d::Dual) = isodd(value(d))
 # Promotion/Conversion #
 ########################
 
-Base.promote_rule{T,A<:Real,B<:Real,N}(::Type{Dual{T,A,N}}, ::Type{Dual{T,B,N}}) = Dual{T,promote_type(A, B),N}
+function Base.promote_rule(::Type{Dual{T,A,N}},
+                           ::Type{Dual{T,B,N}}) where {T,A<:Real,B<:Real,N}
+    return Dual{T,promote_type(A, B),N}
+end
 
 for R in (:BigFloat, :Bool, :Irrational, :Real)
     @eval begin
-        Base.promote_rule{R<:$R,T,V<:Real,N}(::Type{R}, ::Type{Dual{T,V,N}}) = Dual{T,promote_type(R, V),N}
-        Base.promote_rule{T,V<:Real,N,R<:$R}(::Type{Dual{T,V,N}}, ::Type{R}) = Dual{T,promote_type(V, R),N}
+        Base.promote_rule(::Type{R}, ::Type{Dual{T,V,N}}) where {R<:$R,T,V<:Real,N} = Dual{T,promote_type(R, V),N}
+        Base.promote_rule(::Type{Dual{T,V,N}}, ::Type{R}) where {T,V<:Real,N,R<:$R} = Dual{T,promote_type(V, R),N}
     end
 end
 
-Base.convert{T,V<:Real,N}(::Type{Dual{T,V,N}}, d::Dual{T}) = Dual{T}(convert(V, value(d)), convert(Partials{N,V}, partials(d)))
-Base.convert{T,V<:Real,N}(::Type{Dual{T,V,N}}, x::Real) = Dual{T}(V(x), zero(Partials{N,V}))
-Base.convert{D<:Dual}(::Type{D}, d::D) = d
+Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V<:Real,N} = Dual{T}(convert(V, value(d)), convert(Partials{N,V}, partials(d)))
+Base.convert(::Type{Dual{T,V,N}}, x::Real) where {T,V<:Real,N} = Dual{T}(V(x), zero(Partials{N,V}))
+Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
-Base.promote_array_type{D<:Dual, A<:AbstractFloat}(F, ::Type{D}, ::Type{A}) = promote_type(D, A)
-Base.promote_array_type{D<:Dual, A<:AbstractFloat, P}(F, ::Type{D}, ::Type{A}, ::Type{P}) = P
-Base.promote_array_type{A<:AbstractFloat, D<:Dual}(F, ::Type{A}, ::Type{D}) = promote_type(D, A)
-Base.promote_array_type{A<:AbstractFloat, D<:Dual, P}(F, ::Type{A}, ::Type{D}, ::Type{P}) = P
+Base.promote_array_type(F, ::Type{D}, ::Type{A}) where {D<:Dual,A<:AbstractFloat} = promote_type(D, A)
+Base.promote_array_type(F, ::Type{<:Dual}, ::Type{<:AbstractFloat}, ::Type{P}) where {P} = P
+Base.promote_array_type(F, ::Type{A}, ::Type{D}) where {D<:Dual,A<:AbstractFloat} = promote_type(D, A)
+Base.promote_array_type(F, ::Type{<:AbstractFloat}, ::Type{<:Dual}, ::Type{P}) where {P} = P
 
-Base.float{T,V,N}(d::Dual{T,V,N}) = Dual{T,promote_type(V, Float16),N}(d)
-Base.AbstractFloat{T,V,N}(d::Dual{T,V,N}) = Dual{T,promote_type(V, Float16),N}(d)
+Base.float(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
+Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
 
 ########
 # Math #
@@ -276,7 +279,7 @@ Base.AbstractFloat{T,V,N}(d::Dual{T,V,N}) = Dual{T,promote_type(V, Float16),N}(d
     Dual{T}(x - value(y), -partials(y))
 )
 
-@inline Base.:-{T}(d::Dual{T}) = Dual{T}(-value(d), -partials(d))
+@inline Base.:-(d::Dual{T}) where {T} = Dual{T}(-value(d), -partials(d))
 
 # Multiplication #
 #----------------#
@@ -373,7 +376,7 @@ for fsym in AUTO_DEFINED_UNARY_FUNCS
         (!(is_special_function) || VERSION < v"0.6.0-dev.2767") && push!(funcs, :(Base.$(fsym)))
         for func in funcs
             @eval begin
-                @inline function $(func){T}(d::Dual{T})
+                @inline function $(func)(d::Dual{T}) where T
                     $(v) = value(d)
                     return Dual{T}($(func)($v), $(deriv) * partials(d))
                 end
@@ -385,7 +388,7 @@ for fsym in AUTO_DEFINED_UNARY_FUNCS
     if fsym in NANMATH_FUNCS
         nan_deriv = to_nanmath(deriv)
         @eval begin
-            @inline function NaNMath.$(fsym){T}(d::Dual{T})
+            @inline function NaNMath.$(fsym)(d::Dual{T}) where T
                 v = value(d)
                 return Dual{T}(NaNMath.$(fsym)($v), $(nan_deriv) * partials(d))
             end
@@ -399,14 +402,14 @@ end
 
 # exp
 
-@inline function Base.exp{T}(d::Dual{T})
+@inline function Base.exp(d::Dual{T}) where T
     expv = exp(value(d))
     return Dual{T}(expv, expv * partials(d))
 end
 
 # sqrt
 
-@inline function Base.sqrt{T}(d::Dual{T})
+@inline function Base.sqrt(d::Dual{T}) where T
     sqrtv = sqrt(value(d))
     deriv = inv(sqrtv + sqrtv)
     return Dual{T}(sqrtv, deriv * partials(d))
@@ -414,7 +417,7 @@ end
 
 # hypot
 
-@inline function calc_hypot{T}(x, y, ::Type{T})
+@inline function calc_hypot(x, y, ::Type{T}) where T
     vx = value(x)
     vy = value(y)
     h = hypot(vx, vy)
@@ -428,7 +431,7 @@ end
     calc_hypot(x, y, T)
 )
 
-@inline function calc_hypot{T}(x, y, z, ::Type{T})
+@inline function calc_hypot(x, y, z, ::Type{T}) where T
     vx = value(x)
     vy = value(y)
     vz = value(z)
@@ -450,7 +453,7 @@ end
 
 # atan2
 
-@inline function calc_atan2{T}(y, x, ::Type{T})
+@inline function calc_atan2(y, x, ::Type{T}) where T
     z = y / x
     v = value(z)
     atan2v = atan2(value(y), value(x))
@@ -510,7 +513,7 @@ end
 
 @inline sincos(x) = (sin(x), cos(x))
 
-@inline function sincos{T}(d::Dual{T})
+@inline function sincos(d::Dual{T}) where T
     sd, cd = sincos(value(d))
     return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
 end
@@ -519,7 +522,7 @@ end
 # Pretty Printing #
 ###################
 
-function Base.show{T,V,N}(io::IO, d::Dual{T,V,N})
+function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
     print(io, "Dual{$T}(", value(d))
     for i in 1:N
         print(io, ",", partials(d, i))

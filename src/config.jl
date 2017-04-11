@@ -56,7 +56,7 @@ struct ConfigMismatchError{F,G,H} <: Exception
     cfg::AbstractConfig{Tag{G,H}}
 end
 
-function Base.showerror{F,G}(io::IO, e::ConfigMismatchError{F,G})
+function Base.showerror(io::IO, e::ConfigMismatchError{F,G}) where {F,G}
     print(io, "The provided configuration (of type $(typeof(e.cfg))) was constructed for a",
               " function other than the current target function. ForwardDiff cannot safely",
               " perform differentiation in this context; see the following issue for details:",
@@ -67,7 +67,7 @@ end
 
 Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 
-@inline chunksize{T,N}(::AbstractConfig{T,N}) = N
+@inline chunksize(::AbstractConfig{T,N}) where {T,N} = N
 
 ##################
 # GradientConfig #
@@ -78,10 +78,10 @@ struct GradientConfig{T,V,N,D} <: AbstractConfig{T,N}
     duals::D
 end
 
-function GradientConfig{V,N,F,T}(::F,
-                                 x::AbstractArray{V},
-                                 ::Chunk{N} = Chunk(x),
-                                 ::T = Tag(F, V))
+function GradientConfig(::F,
+                        x::AbstractArray{V},
+                        ::Chunk{N} = Chunk(x),
+                        ::T = Tag(F, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
@@ -96,20 +96,20 @@ struct JacobianConfig{T,V,N,D} <: AbstractConfig{T,N}
     duals::D
 end
 
-function JacobianConfig{V,N,F,T}(::F,
-                                 x::AbstractArray{V},
-                                 ::Chunk{N} = Chunk(x),
-                                 ::T = Tag(F, V))
+function JacobianConfig(::F,
+                        x::AbstractArray{V},
+                        ::Chunk{N} = Chunk(x),
+                        ::T = Tag(F, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
-function JacobianConfig{Y,X,N,F,T}(::F,
-                                   y::AbstractArray{Y},
-                                   x::AbstractArray{X},
-                                   ::Chunk{N} = Chunk(x),
-                                   ::T = Tag(F, X))
+function JacobianConfig(::F,
+                        y::AbstractArray{Y},
+                        x::AbstractArray{X},
+                        ::Chunk{N} = Chunk(x),
+                        ::T = Tag(F, X)) where {F,Y,X,N,T}
     seeds = construct_seeds(Partials{N,X})
     yduals = similar(y, Dual{T,Y,N})
     xduals = similar(x, Dual{T,X,N})
@@ -126,20 +126,20 @@ struct HessianConfig{T,V,N,D,H,DJ} <: AbstractConfig{T,N}
     gradient_config::GradientConfig{T,Dual{Tag{Void,H},V,N},D}
 end
 
-function HessianConfig{F,V}(f::F,
-                            x::AbstractArray{V},
-                            chunk::Chunk = Chunk(x),
-                            tag::Tag = Tag(F, Dual{Void,V,0}))
+function HessianConfig(f::F,
+                       x::AbstractArray{V},
+                       chunk::Chunk = Chunk(x),
+                       tag::Tag = Tag(F, Dual{Void,V,0})) where {F,V}
     jacobian_config = JacobianConfig(nothing, x, chunk)
     gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
-function HessianConfig{F,V}(result::DiffResult,
-                            f::F,
-                            x::AbstractArray{V},
-                            chunk::Chunk = Chunk(x),
-                            tag::Tag = Tag(F, Dual{Void,V,0}))
+function HessianConfig(result::DiffResult,
+                       f::F,
+                       x::AbstractArray{V},
+                       chunk::Chunk = Chunk(x),
+                       tag::Tag = Tag(F, Dual{Void,V,0})) where {F,V}
     jacobian_config = JacobianConfig(nothing, DiffBase.gradient(result), x, chunk)
     gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)

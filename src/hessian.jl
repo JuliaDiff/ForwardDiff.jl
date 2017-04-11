@@ -2,24 +2,24 @@
 # API methods #
 ###############
 
-const AllowedHessianConfig{F,M} = Union{HessianConfig{Tag{F,M}}, HessianConfig{Tag{Void,M}}}
+const AllowedHessianConfig{F,H} = Union{HessianConfig{Tag{F,H}}, HessianConfig{Tag{Void,H}}}
 
 hessian(f, x, cfg::HessianConfig) = throw(ConfigMismatchError(f, cfg))
 hessian!(out, f, x, cfg::HessianConfig) = throw(ConfigMismatchError(f, cfg))
 hessian!(out::DiffResult, f, x, cfg::HessianConfig) = throw(ConfigMismatchError(f, cfg))
 
-function hessian{F,M}(f::F, x, cfg::AllowedHessianConfig{F,M} = HessianConfig(f, x))
+function hessian(f::F, x, cfg::AllowedHessianConfig{F,H} = HessianConfig(f, x)) where {F,H}
     ∇f = y -> gradient(f, y, cfg.gradient_config)
     return jacobian(∇f, x, cfg.jacobian_config)
 end
 
-function hessian!{F,M}(out, f::F, x, cfg::AllowedHessianConfig{F,M} = HessianConfig(f, x))
+function hessian!(out, f::F, x, cfg::AllowedHessianConfig{F,H} = HessianConfig(f, x)) where {F,H}
     ∇f = y -> gradient(f, y, cfg.gradient_config)
     jacobian!(out, ∇f, x, cfg.jacobian_config)
     return out
 end
 
-function hessian!{F,M}(out::DiffResult, f::F, x, cfg::AllowedHessianConfig{F,M} = HessianConfig(out, f, x))
+function hessian!(out::DiffResult, f::F, x, cfg::AllowedHessianConfig{F,H} = HessianConfig(out, f, x)) where {F,H}
     ∇f! = (y, z) -> begin
         result = DiffResult(zero(eltype(y)), y)
         gradient!(result, f, z, cfg.gradient_config)
