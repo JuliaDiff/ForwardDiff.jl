@@ -40,9 +40,7 @@ To see a list of functions to pick from, look at ``ForwardDiff.AUTO_DEFINED_UNAR
      ⋮
 
 Some of these functions may have already been manually optimized. To see what functions have
-already been done, go to ``src/dual.jl``, scroll down to the ``Special Cases`` section, and
-look at the functions under ``Manually Optimized`` (further optimizations to these functions
-are always welcome, if you can come up with something clever).
+already been done, go to ``src/dual.jl`` and scroll down to the ``Special Cases`` section.
 
 The functions in ``ForwardDiff.AUTO_DEFINED_UNARY_FUNCS`` are automatically tested as part
 of ForwardDiff's test suite, so you don't need to write tests yourself. You can test your

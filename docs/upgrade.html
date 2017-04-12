@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Upgrading from Older Versions of ForwardDiff &mdash; ForwardDiff.jl 0.2.3 documentation</title>
+  <title>Upgrading from Older Versions of ForwardDiff &mdash; ForwardDiff.jl 0.5.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="ForwardDiff.jl 0.2.3 documentation" href="index.html"/>
+    <link rel="top" title="ForwardDiff.jl 0.5.0 documentation" href="index.html"/>
         <link rel="next" title="How ForwardDiff Works" href="how_it_works.html"/>
         <link rel="prev" title="Advanced Usage Guide" href="advanced_usage.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.2
+                0.5
               </div>
             
           
@@ -154,11 +154,11 @@ into new ForwardDiff code.</p>
 <h2>Unexported API Functions<a class="headerlink" href="#unexported-api-functions" title="Permalink to this headline">¶</a></h2>
 <p>In order to avoid namespace conflicts with other packages, <a class="reference external" href="basic_api.html">ForwardDiff&#8217;s API functions</a> are no longer exported by default. Thus, you must now fully qualify the
 functions to reference them:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="k">using</span> <span class="n">ForwardDiff</span>
 <span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 
-<span class="c"># current v0.3 style (since v0.2)</span>
+<span class="c"># ForwardDiff v0.2 &amp; above</span>
 <span class="k">using</span> <span class="n">ForwardDiff</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 </pre></div>
@@ -166,44 +166,50 @@ functions to reference them:</p>
 </div>
 <div class="section" id="setting-chunk-size">
 <h2>Setting Chunk Size<a class="headerlink" href="#setting-chunk-size" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">;</span> <span class="n">chunk_size</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span>
 
-<span class="c"># old v0.2 style</span>
+<span class="c"># ForwardDiff v0.2</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">Chunk</span><span class="p">{</span><span class="mi">10</span><span class="p">}())</span>
 
-<span class="c"># current v0.3 style</span>
+<span class="c"># ForwardDiff v0.3 &amp; v0.4</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">{</span><span class="mi">10</span><span class="p">}(</span><span class="n">x</span><span class="p">))</span>
+
+<span class="c"># ForwardDiff v0.5 &amp; above</span>
+<span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">Chunk</span><span class="p">{</span><span class="n">N</span><span class="p">}()))</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="enabling-multithreading">
 <h2>Enabling Multithreading<a class="headerlink" href="#enabling-multithreading" title="Permalink to this headline">¶</a></h2>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1/v0.2 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1 &amp; v0.2</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">;</span> <span class="n">multithread</span> <span class="o">=</span> <span class="n">true</span><span class="p">)</span>
 
-<span class="c"># current v0.3 style</span>
+<span class="c"># ForwardDiff v0.3 &amp; v0.4</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">MultithreadConfig</span><span class="p">(</span><span class="n">ForwardDiff</span><span class="o">.</span><span class="n">GradientConfig</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+
+<span class="c"># ForwardDiff v0.5 &amp; above</span>
+<span class="nb">error</span><span class="p">(</span><span class="s">&quot;ForwardDiff no longer supports internal multithreading.&quot;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="retrieving-lower-order-results">
 <h2>Retrieving Lower-Order Results<a class="headerlink" href="#retrieving-lower-order-results" title="Permalink to this headline">¶</a></h2>
 <p>For more detail, see our documentation on <a class="reference external" href="advanced_usage.html#accessing-lower-order-results">retrieving lower-order results</a>.</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="n">answer</span><span class="p">,</span> <span class="n">results</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">AllResults</span><span class="p">)</span>
 <span class="n">v</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 <span class="n">g</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
 <span class="n">h</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="c"># == answer</span>
 
-<span class="c"># old v0.2 style</span>
+<span class="c"># ForwardDiff v0.2</span>
 <span class="n">out</span> <span class="o">=</span> <span class="n">HessianResult</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 <span class="n">v</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 <span class="n">g</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 <span class="n">h</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
 
-<span class="c"># current v0.3 style</span>
+<span class="c"># ForwardDiff v0.3 &amp; above</span>
 <span class="k">using</span> <span class="n">DiffBase</span>
 <span class="n">out</span> <span class="o">=</span> <span class="n">DiffBase</span><span class="o">.</span><span class="n">HessianResult</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
@@ -219,10 +225,10 @@ functions to reference them:</p>
 provides the <code class="docutils literal"><span class="pre">tensor</span></code> function. Instead, users can take higher-order/higher-dimensional
 derivatives by composing existing API functions. For example, here&#8217;s how to reimplement
 <code class="docutils literal"><span class="pre">tensor</span></code>:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 
-<span class="c"># current v0.3 style (since v0.2)</span>
+<span class="c"># ForwardDiff v0.2 &amp; above</span>
 <span class="k">function</span><span class="nf"> tensor</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="n">length</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
     <span class="n">out</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">y</span> <span class="o">-&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">hessian</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">y</span><span class="p">),</span> <span class="n">x</span><span class="p">)</span>
@@ -239,26 +245,26 @@ derivatives by composing existing API functions. For example, here&#8217;s how t
 functions. Instead, users explicitly define their own functions using ForwardDiff&#8217;s API.
 This leads to clearer code, less &#8220;magic&#8221;, and more flexibility. To learn how about
 ForwardDiff&#8217;s API functions, see <a class="reference external" href="basic_api.html">our API documentation</a>.</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
 
-<span class="c"># current v0.3 style (since v0.2)</span>
+<span class="c"># ForwardDiff v0.2 &amp; above</span>
 <span class="n">df</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">derivative</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="c"># in-place gradient function of f</span>
 <span class="n">gf!</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">mutates</span> <span class="o">=</span> <span class="n">true</span><span class="p">)</span>
 
-<span class="c"># current v0.3 style (since v0.2)</span>
+<span class="c"># ForwardDiff v0.2 &amp; above</span>
 <span class="n">gf!</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">gradient!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 </pre></div>
 </div>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># old v0.1 style</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="c"># ForwardDiff v0.1</span>
 <span class="c"># in-place Jacobian function of f!(y, x):</span>
 <span class="n">jf!</span> <span class="o">=</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian</span><span class="p">(</span><span class="n">f!</span><span class="p">,</span> <span class="n">mutates</span> <span class="o">=</span> <span class="n">true</span><span class="p">,</span> <span class="n">output_length</span> <span class="o">=</span> <span class="n">length</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
 
-<span class="c"># current v0.3 style (since v0.2)</span>
+<span class="c"># ForwardDiff v0.2 &amp; above</span>
 <span class="n">jf!</span> <span class="o">=</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">jacobian!</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">f!</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -306,7 +312,7 @@ ForwardDiff&#8217;s API functions, see <a class="reference external" href="basic
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.3',
+            VERSION:'0.5.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

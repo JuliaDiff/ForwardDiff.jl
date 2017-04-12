@@ -14,11 +14,11 @@ functions to reference them:
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     using ForwardDiff
     hessian(f, x)
 
-    # current v0.3 style (since v0.2)
+    # ForwardDiff v0.2 & above
     using ForwardDiff
     ForwardDiff.hessian(f, x)
 
@@ -27,25 +27,31 @@ Setting Chunk Size
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     ForwardDiff.gradient(f, x; chunk_size = 10)
 
-    # old v0.2 style
+    # ForwardDiff v0.2
     ForwardDiff.gradient(f, x, Chunk{10}())
 
-    # current v0.3 style
+    # ForwardDiff v0.3 & v0.4
     ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{10}(x))
+
+    # ForwardDiff v0.5 & above
+    ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x ForwardDiff.Chunk{N}()))
 
 Enabling Multithreading
 -----------------------
 
 .. code-block:: julia
 
-    # old v0.1/v0.2 style
+    # ForwardDiff v0.1 & v0.2
     ForwardDiff.gradient(f, x; multithread = true)
 
-    # current v0.3 style
+    # ForwardDiff v0.3 & v0.4
     ForwardDiff.gradient(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.GradientConfig(x)))
+
+    # ForwardDiff v0.5 & above
+    error("ForwardDiff no longer supports internal multithreading.")
 
 Retrieving Lower-Order Results
 ------------------------------
@@ -55,20 +61,20 @@ For more detail, see our documentation on `retrieving lower-order results
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     answer, results = ForwardDiff.hessian(f, x, AllResults)
     v = ForwardDiff.value(results)
     g = ForwardDiff.gradient(results)
     h = ForwardDiff.hessian(results) # == answer
 
-    # old v0.2 style
+    # ForwardDiff v0.2
     out = HessianResult(x)
     ForwardDiff.hessian!(out, f, x)
     v = ForwardDiff.value(out)
     g = ForwardDiff.gradient(out)
     h = ForwardDiff.hessian(out)
 
-    # current v0.3 style
+    # ForwardDiff v0.3 & above
     using DiffBase
     out = DiffBase.HessianResult(x)
     ForwardDiff.hessian!(out, f, x)
@@ -86,10 +92,10 @@ derivatives by composing existing API functions. For example, here's how to reim
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     ForwardDiff.tensor(f, x)
 
-    # current v0.3 style (since v0.2)
+    # ForwardDiff v0.2 & above
     function tensor(f, x)
         n = length(x)
         out = ForwardDiff.jacobian(y -> ForwardDiff.hessian(f, y), x)
@@ -108,26 +114,26 @@ ForwardDiff's API functions, see `our API documentation <basic_api.html>`_.
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     df = ForwardDiff.derivative(f)
 
-    # current v0.3 style (since v0.2)
+    # ForwardDiff v0.2 & above
     df = x -> ForwardDiff.derivative(f, x)
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     # in-place gradient function of f
     gf! = ForwardDiff.gradient(f, mutates = true)
 
-    # current v0.3 style (since v0.2)
+    # ForwardDiff v0.2 & above
     gf! = (out, x) -> ForwardDiff.gradient!(out, f, x)
 
 .. code-block:: julia
 
-    # old v0.1 style
+    # ForwardDiff v0.1
     # in-place Jacobian function of f!(y, x):
     jf! = ForwardDiff.jacobian(f!, mutates = true, output_length = length(y))
 
-    # current v0.3 style (since v0.2)
+    # ForwardDiff v0.2 & above
     jf! = (out, y, x) -> ForwardDiff.jacobian!(out, f!, y, x)

@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Limitations of ForwardDiff &mdash; ForwardDiff.jl 0.2.3 documentation</title>
+  <title>Limitations of ForwardDiff &mdash; ForwardDiff.jl 0.5.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="ForwardDiff.jl 0.2.3 documentation" href="index.html"/>
+    <link rel="top" title="ForwardDiff.jl 0.5.0 documentation" href="index.html"/>
         <link rel="next" title="Basic ForwardDiff API" href="basic_api.html"/>
         <link rel="prev" title="Installation and Version Requirements" href="install.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.2
+                0.5
               </div>
             
           
@@ -147,7 +147,6 @@ function being differentiated):</p>
 <li><strong>The target function can only be composed of generic Julia functions.</strong> ForwardDiff cannot propagate derivative information through non-Julia code. Thus, your function may not work if it makes calls to external, non-Julia programs, e.g. uses explicit BLAS calls instead of <code class="docutils literal"><span class="pre">Ax_mul_Bx</span></code>-style functions.</li>
 <li><strong>The target function must be unary (i.e., only accept a single argument).</strong> There is an exception to this rule for ForwardDiff&#8217;s <code class="docutils literal"><span class="pre">jacobian</span></code> API; see <a class="reference external" href="basic_api.html">the API documentation</a> for details.</li>
 <li><strong>The target function must be written generically enough to accept numbers of type ``T&lt;:Real`` as input  (or arrays of these numbers).</strong> The function doesn&#8217;t require a specific type signature, as long as the type signature is generic enough to avoid breaking this rule. This also means that any storage assigned used within the function must be generic as well (see <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/136#issuecomment-237941790">this comment</a> for an example).</li>
-<li><strong>Nested differentiation of closures is dangerous.</strong> Differentiating closures is safe, and nested differentation is safe, but you might be vulnerable to a subtle bug if you try to do both. See <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/83">the relevant issue</a> for details.</li>
 <li><strong>The types of array inputs must be subtypes of</strong> <code class="docutils literal"><span class="pre">AbstractArray</span></code> <strong>.</strong> Non-<code class="docutils literal"><span class="pre">AbstractArray</span></code> array-like types are not officially supported.</li>
 </ul>
 </div>
@@ -193,7 +192,7 @@ function being differentiated):</p>
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.3',
+            VERSION:'0.5.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true
