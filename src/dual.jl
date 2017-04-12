@@ -523,7 +523,7 @@ end
 ###################
 
 function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
-    print(io, "Dual{$T}(", value(d))
+    print(io, "Dual{$(repr(T))}(", value(d))
     for i in 1:N
         print(io, ",", partials(d, i))
     end
