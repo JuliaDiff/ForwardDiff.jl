@@ -55,6 +55,6 @@ for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
 
         out = DiffBase.JacobianResult(y, x)
         cfg = ForwardDiff.JacobianConfig(nothing, y, x)
-        fjac[length(x)] = @benchmarkable ForwardDiff.jacobian!($out, $f, $x, $cfg)
+        fjac[length(x)] = @benchmarkable ForwardDiff.jacobian!($out, $f, $y, $x, $cfg)
     end
 end
