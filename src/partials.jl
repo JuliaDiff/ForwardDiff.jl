@@ -1,28 +1,32 @@
-immutable Partials{N,T} <: AbstractVector{T}
-    values::NTuple{N,T}
+immutable Partials{N,V} <: AbstractVector{V}
+    values::NTuple{N,V}
 end
 
 ##############################
 # Utility/Accessor Functions #
 ##############################
 
-@inline valtype{N,T}(::Partials{N,T}) = T
-@inline valtype{N,T}(::Type{Partials{N,T}}) = T
+@generated function single_seed(::Type{Partials{N,V}}, ::Type{Val{i}}) where {N,V,i}
+    ex = Expr(:tuple, [ifelse(i === j, :(one(V)), :(zero(V))) for j in 1:N]...)
+    return :(Partials($(ex)))
+end
 
-@inline npartials{N}(::Partials{N}) = N
-@inline npartials{N,T}(::Type{Partials{N,T}}) = N
+@inline valtype(::Partials{N,V}) where {N,V} = V
+@inline valtype(::Type{Partials{N,V}}) where {N,V} = V
 
-@inline Base.length{N}(::Partials{N}) = N
-@inline Base.size{N}(::Partials{N}) = (N,)
+@inline npartials(::Partials{N}) where {N} = N
+@inline npartials(::Type{Partials{N,V}}) where {N,V} = N
+
+@inline Base.length(::Partials{N}) where {N} = N
+@inline Base.size(::Partials{N}) where {N} = (N,)
 
 @inline Base.getindex(partials::Partials, i::Int) = partials.values[i]
-setindex{N,T}(partials::Partials{N,T}, v, i) = Partials{N,T}((partials[1:i-1]..., v, partials[i+1:N]...))
 
 Base.start(partials::Partials) = start(partials.values)
 Base.next(partials::Partials, i) = next(partials.values, i)
 Base.done(partials::Partials, i) = done(partials.values, i)
 
-@compat Base.IndexStyle(::Type{<:Partials}) = IndexLinear()
+Base.IndexStyle(::Type{<:Partials}) = IndexLinear()
 
 #####################
 # Generic Functions #
@@ -31,18 +35,18 @@ Base.done(partials::Partials, i) = done(partials.values, i)
 @inline iszero(partials::Partials) = iszero_tuple(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
-@inline Base.zero{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(zero_tuple(NTuple{N,T}))
+@inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
 
 @inline Base.one(partials::Partials) = one(typeof(partials))
-@inline Base.one{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(one_tuple(NTuple{N,T}))
+@inline Base.one(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(one_tuple(NTuple{N,V}))
 
 @inline Base.rand(partials::Partials) = rand(typeof(partials))
-@inline Base.rand{N,T}(::Type{Partials{N,T}}) = Partials{N,T}(rand_tuple(NTuple{N,T}))
+@inline Base.rand(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(NTuple{N,V}))
 @inline Base.rand(rng::AbstractRNG, partials::Partials) = rand(rng, typeof(partials))
-@inline Base.rand{N,T}(rng::AbstractRNG, ::Type{Partials{N,T}}) = Partials{N,T}(rand_tuple(rng, NTuple{N,T}))
+@inline Base.rand(rng::AbstractRNG, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(rand_tuple(rng, NTuple{N,V}))
 
-Base.isequal{N}(a::Partials{N}, b::Partials{N}) = isequal(a.values, b.values)
-Base.:(==){N}(a::Partials{N}, b::Partials{N}) = a.values == b.values
+Base.isequal(a::Partials{N}, b::Partials{N}) where {N} = isequal(a.values, b.values)
+Base.:(==)(a::Partials{N}, b::Partials{N}) where {N} = a.values == b.values
 
 const PARTIALS_HASH = hash(Partials)
 
@@ -51,7 +55,7 @@ Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 
 @inline Base.copy(partials::Partials) = partials
 
-Base.read{N,T}(io::IO, ::Type{Partials{N,T}}) = Partials{N,T}(ntuple(i->read(io, T), Val{N}))
+Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), Val{N}))
 
 function Base.write(io::IO, partials::Partials)
     for p in partials
@@ -63,17 +67,17 @@ end
 # Conversion/Promotion #
 ########################
 
-Base.promote_rule{N,A,B}(::Type{Partials{N,A}}, ::Type{Partials{N,B}}) = Partials{N,promote_type(A, B)}
+Base.promote_rule(::Type{Partials{N,A}}, ::Type{Partials{N,B}}) where {N,A,B} = Partials{N,promote_type(A, B)}
 
-Base.convert{N,T}(::Type{Partials{N,T}}, partials::Partials) = Partials{N,T}(partials.values)
-Base.convert{N,T}(::Type{Partials{N,T}}, partials::Partials{N,T}) = partials
+Base.convert(::Type{Partials{N,V}}, partials::Partials) where {N,V} = Partials{N,V}(partials.values)
+Base.convert(::Type{Partials{N,V}}, partials::Partials{N,V}) where {N,V} = partials
 
 ########################
 # Arithmetic Functions #
 ########################
 
-@inline Base.:+{N}(a::Partials{N}, b::Partials{N}) = Partials(add_tuples(a.values, b.values))
-@inline Base.:-{N}(a::Partials{N}, b::Partials{N}) = Partials(sub_tuples(a.values, b.values))
+@inline Base.:+(a::Partials{N}, b::Partials{N}) where {N} = Partials(add_tuples(a.values, b.values))
+@inline Base.:-(a::Partials{N}, b::Partials{N}) where {N} = Partials(sub_tuples(a.values, b.values))
 @inline Base.:-(partials::Partials) = Partials(minus_tuple(partials.values))
 @inline Base.:*(x::Real, partials::Partials) = partials*x
 
@@ -95,7 +99,7 @@ if NANSAFE_MODE_ENABLED
         return Partials(div_tuple_by_scalar(partials.values, x))
     end
 
-    @inline function _mul_partials{N}(a::Partials{N}, b::Partials{N}, x_a, x_b)
+    @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
         x_a = ifelse(!isfinite(x_a) && iszero(a), one(x_a), x_a)
         x_b = ifelse(!isfinite(x_b) && iszero(b), one(x_b), x_b)
         return Partials(mul_tuples(a.values, b.values, x_a, x_b))
@@ -109,7 +113,7 @@ else
         return Partials(div_tuple_by_scalar(partials.values, x))
     end
 
-    @inline function _mul_partials{N}(a::Partials{N}, b::Partials{N}, x_a, x_b)
+    @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
         return Partials(mul_tuples(a.values, b.values, x_a, x_b))
     end
 end
@@ -117,15 +121,15 @@ end
 # edge cases where N == 0 #
 #-------------------------#
 
-@inline Base.:+{A,B}(a::Partials{0,A}, b::Partials{0,B}) = Partials{0,promote_type(A,B)}(tuple())
-@inline Base.:-{A,B}(a::Partials{0,A}, b::Partials{0,B}) = Partials{0,promote_type(A,B)}(tuple())
-@inline Base.:-{T}(partials::Partials{0,T}) = partials
-@inline Base.:*{T}(partials::Partials{0,T}, x::Real) = Partials{0,promote_type(T,typeof(x))}(tuple())
-@inline Base.:*{T}(x::Real, partials::Partials{0,T}) = Partials{0,promote_type(T,typeof(x))}(tuple())
-@inline Base.:/{T}(partials::Partials{0,T}, x::Real) = Partials{0,promote_type(T,typeof(x))}(tuple())
+@inline Base.:+(a::Partials{0,A}, b::Partials{0,B}) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
+@inline Base.:-(a::Partials{0,A}, b::Partials{0,B}) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
+@inline Base.:-(partials::Partials{0,V}) where {V} = partials
+@inline Base.:*(partials::Partials{0,V}, x::Real) where {V} = Partials{0,promote_type(V,typeof(x))}(tuple())
+@inline Base.:*(x::Real, partials::Partials{0,V}) where {V} = Partials{0,promote_type(V,typeof(x))}(tuple())
+@inline Base.:/(partials::Partials{0,V}, x::Real) where {V} = Partials{0,promote_type(V,typeof(x))}(tuple())
 
-@inline _mul_partials{A,B}(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) = Partials{0,promote_type(A,B)}(tuple())
-@inline _div_partials{A,B}(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) = Partials{0,promote_type(A,B)}(tuple())
+@inline _mul_partials(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
+@inline _div_partials(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
 
 ##################################
 # Generated Functions on NTuples #
@@ -150,60 +154,60 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
-@generated function iszero_tuple{N,T}(tup::NTuple{N,T})
+@generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     return quote
-        z = zero(T)
+        z = zero(V)
         $(Expr(:meta, :inline))
         @inbounds return $ex
     end
 end
 
-@generated function zero_tuple{N,T}(::Type{NTuple{N,T}})
+@generated function zero_tuple(::Type{NTuple{N,V}}) where {N,V}
     ex = tupexpr(i -> :(z), N)
     return quote
-        z = zero(T)
+        z = zero(V)
         return $ex
     end
 end
 
-@generated function one_tuple{N,T}(::Type{NTuple{N,T}})
+@generated function one_tuple(::Type{NTuple{N,V}}) where {N,V}
     ex = tupexpr(i -> :(z), N)
     return quote
-        z = one(T)
+        z = one(V)
         return $ex
     end
 end
 
-@generated function rand_tuple{N,T}(rng::AbstractRNG, ::Type{NTuple{N,T}})
-    return tupexpr(i -> :(rand(rng, T)), N)
+@generated function rand_tuple(rng::AbstractRNG, ::Type{NTuple{N,V}}) where {N,V}
+    return tupexpr(i -> :(rand(rng, V)), N)
 end
 
-@generated function rand_tuple{N,T}(::Type{NTuple{N,T}})
-    return tupexpr(i -> :(rand(T)), N)
+@generated function rand_tuple(::Type{NTuple{N,V}}) where {N,V}
+    return tupexpr(i -> :(rand(V)), N)
 end
 
-@generated function scale_tuple{N}(tup::NTuple{N}, x)
+@generated function scale_tuple(tup::NTuple{N}, x) where N
     return tupexpr(i -> :(tup[$i] * x), N)
 end
 
-@generated function div_tuple_by_scalar{N}(tup::NTuple{N}, x)
+@generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
     return tupexpr(i -> :(tup[$i] / x), N)
 end
 
-@generated function add_tuples{N}(a::NTuple{N}, b::NTuple{N})
+@generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
     return tupexpr(i -> :(a[$i] + b[$i]), N)
 end
 
-@generated function sub_tuples{N}(a::NTuple{N}, b::NTuple{N})
+@generated function sub_tuples(a::NTuple{N}, b::NTuple{N})  where N
     return tupexpr(i -> :(a[$i] - b[$i]), N)
 end
 
-@generated function minus_tuple{N}(tup::NTuple{N})
+@generated function minus_tuple(tup::NTuple{N}) where N
     return tupexpr(i -> :(-tup[$i]), N)
 end
 
-@generated function mul_tuples{N}(a::NTuple{N}, b::NTuple{N}, afactor, bfactor)
+@generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
     return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
 end
 
@@ -211,4 +215,4 @@ end
 # Pretty Printing #
 ###################
 
-Base.show{N}(io::IO, p::Partials{N}) = print(io, "Partials", p.values)
+Base.show(io::IO, p::Partials{N}) where {N} = print(io, "Partials", p.values)

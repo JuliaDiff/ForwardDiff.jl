@@ -35,7 +35,7 @@ tic()
 include("MiscTest.jl")
 println("done (took $(toq()) seconds).")
 
-if Base.JLOptions().opt_level >= 3 && VERSION >= v"0.5"
+if Base.JLOptions().opt_level >= 3
     println("Testing SIMD vectorization...")
     tic()
     include("SIMDTest.jl")

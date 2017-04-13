@@ -2,7 +2,14 @@
 # API methods #
 ###############
 
-function jacobian{F}(f::F, x, cfg::JacobianConfig = JacobianConfig(x))
+const AllowedJacobianConfig{F,H} = Union{JacobianConfig{Tag{F,H}}, JacobianConfig{Tag{Void,H}}}
+
+jacobian(f, x, cfg::JacobianConfig) = throw(ConfigMismatchError(f, cfg))
+jacobian(f!, y, x, cfg::JacobianConfig) = throw(ConfigMismatchError(f!, cfg))
+jacobian!(out, f, x, cfg::JacobianConfig) = throw(ConfigMismatchError(f, cfg))
+jacobian!(out, f!, y, x, cfg::JacobianConfig) = throw(ConfigMismatchError(f!, cfg))
+
+function jacobian(f::F, x, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f, x)) where {F,H}
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f, x, cfg)
     else
@@ -10,7 +17,7 @@ function jacobian{F}(f::F, x, cfg::JacobianConfig = JacobianConfig(x))
     end
 end
 
-function jacobian{F}(f!::F, y, x, cfg::JacobianConfig = JacobianConfig(y, x))
+function jacobian(f!::F, y, x, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f!, y, x)) where {F,H}
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
@@ -18,7 +25,7 @@ function jacobian{F}(f!::F, y, x, cfg::JacobianConfig = JacobianConfig(y, x))
     end
 end
 
-function jacobian!{F}(out, f::F, x, cfg::JacobianConfig = JacobianConfig(x))
+function jacobian!(out, f::F, x, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f, x)) where {F,H}
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(out, f, x, cfg)
     else
@@ -27,7 +34,7 @@ function jacobian!{F}(out, f::F, x, cfg::JacobianConfig = JacobianConfig(x))
     return out
 end
 
-function jacobian!{F}(out, f!::F, y, x, cfg::JacobianConfig = JacobianConfig(y, x))
+function jacobian!(out, f!::F, y, x, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f!, y, x)) where {F,H}
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(out, f!, y, x, cfg)
     else
@@ -71,7 +78,7 @@ reshape_jacobian(out::DiffResult, ydual, xdual) = reshape_jacobian(DiffBase.jaco
 # vector mode #
 ###############
 
-function vector_mode_jacobian{F,N}(f::F, x, cfg::JacobianConfig{N})
+function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     ydual = vector_mode_dual_eval(f, x, cfg)
     out = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     extract_jacobian!(out, ydual, N)
@@ -79,7 +86,7 @@ function vector_mode_jacobian{F,N}(f::F, x, cfg::JacobianConfig{N})
     return out
 end
 
-function vector_mode_jacobian{F,N}(f!::F, y, x, cfg::JacobianConfig{N})
+function vector_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     ydual = vector_mode_dual_eval(f!, y, x, cfg)
     map!(value, y, ydual)
     out = similar(y, length(y), N)
@@ -88,14 +95,14 @@ function vector_mode_jacobian{F,N}(f!::F, y, x, cfg::JacobianConfig{N})
     return out
 end
 
-function vector_mode_jacobian!{F,N}(out, f::F, x, cfg::JacobianConfig{N})
+function vector_mode_jacobian!(out, f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     ydual = vector_mode_dual_eval(f, x, cfg)
     extract_jacobian!(out, ydual, N)
     extract_value!(out, ydual)
     return out
 end
 
-function vector_mode_jacobian!{F,N}(out, f!::F, y, x, cfg::JacobianConfig{N})
+function vector_mode_jacobian!(out, f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     ydual = vector_mode_dual_eval(f!, y, x, cfg)
     map!(value, y, ydual)
     extract_jacobian!(out, ydual, N)
@@ -150,7 +157,7 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
     end
 end
 
-@eval function chunk_mode_jacobian{F,N}(f::F, x, cfg::JacobianConfig{N})
+@eval function chunk_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    xdual = cfg.duals
                                    seed!(xdual, x)
@@ -160,7 +167,7 @@ end
                                :()))
 end
 
-@eval function chunk_mode_jacobian{F,N}(f!::F, y, x, cfg::JacobianConfig{N})
+@eval function chunk_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    ydual, xdual = cfg.duals
                                    seed!(xdual, x)
@@ -170,7 +177,7 @@ end
                                :(map!(value, y, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{F,N}(out, f::F, x, cfg::JacobianConfig{N})
+@eval function chunk_mode_jacobian!(out, f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    xdual = cfg.duals
                                    seed!(xdual, x)
@@ -180,7 +187,7 @@ end
                                :(extract_value!(out, ydual))))
 end
 
-@eval function chunk_mode_jacobian!{F,N}(out, f!::F, y, x, cfg::JacobianConfig{N})
+@eval function chunk_mode_jacobian!(out, f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    ydual, xdual = cfg.duals
                                    seed!(xdual, x)

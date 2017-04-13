@@ -2,13 +2,13 @@ __precompile__()
 
 module ForwardDiff
 
-using Compat
 using DiffBase
 using DiffBase: DiffResult
 
 import Calculus
 import NaNMath
 import SpecialFunctions
+import Base.Threads
 
 #############################
 # types/functions/constants #
@@ -18,19 +18,6 @@ import SpecialFunctions
 #----------------------#
 
 const NANSAFE_MODE_ENABLED = false
-
-# multithreading #
-#----------------#
-
-const IS_MULTITHREADED_JULIA = VERSION >= v"0.5.0-dev+923"
-
-if IS_MULTITHREADED_JULIA
-    const NTHREADS = Base.Threads.nthreads()
-    @inline compat_threadid() = Base.Threads.threadid()
-else
-    const NTHREADS = 1
-    @inline compat_threadid() = 1
-end
 
 # function generation #
 #---------------------#
@@ -47,10 +34,12 @@ const SPECIAL_FUNCS = (:erf, :erfc, :erfinv, :erfcinv, :erfi, :erfcx,
                        :besselyx, :besselh, :hankelh1, :hankelh1x, :hankelh2,
                        :hankelh2x, :besseli, :besselix, :besselk, :besselkx)
 
+const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real)
+
 # chunk settings #
 #----------------#
 
-const CHUNK_THRESHOLD = 10
+const DEFAULT_CHUNK_THRESHOLD = 10
 
 ############
 # includes #
@@ -59,7 +48,7 @@ const CHUNK_THRESHOLD = 10
 include("partials.jl")
 include("dual.jl")
 include("config.jl")
-include("api_utils.jl")
+include("utils.jl")
 include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")

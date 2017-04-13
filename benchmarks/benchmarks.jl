@@ -1,5 +1,3 @@
-module ForwardDiffBenchmarks
-
 using ForwardDiff, DiffBase
 using BenchmarkTools
 
@@ -39,11 +37,11 @@ for f in (DiffBase.VECTOR_TO_NUMBER_FUNCS..., DiffBase.MATRIX_TO_NUMBER_FUNCS...
         fval[length(x)] = @benchmarkable $(f)($x)
 
         gout = DiffBase.DiffResult(y, similar(x, typeof(y)))
-        gcfg = ForwardDiff.Config(x)
+        gcfg = ForwardDiff.GradientConfig(nothing, x)
         fgrad[length(x)] = @benchmarkable ForwardDiff.gradient!($gout, $f, $x, $gcfg)
 
         hout = DiffBase.DiffResult(y, similar(x, typeof(y)), similar(x, typeof(y), length(x), length(x)))
-        hcfg = ForwardDiff.HessianConfig(hout, x)
+        hcfg = ForwardDiff.HessianConfig(nothing, hout, x)
         fhess[length(x)] = @benchmarkable ForwardDiff.hessian!($hout, $f, $x, $hcfg)
     end
 end
@@ -56,9 +54,7 @@ for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
         fval[length(x)] = @benchmarkable $(f)($x)
 
         out = DiffBase.JacobianResult(y, x)
-        cfg = ForwardDiff.Config(x)
-        fjac[length(x)] = @benchmarkable ForwardDiff.jacobian!($out, $f, $x, $cfg)
+        cfg = ForwardDiff.JacobianConfig(nothing, y, x)
+        fjac[length(x)] = @benchmarkable ForwardDiff.jacobian!($out, $f, $y, $x, $cfg)
     end
 end
-
-end # module

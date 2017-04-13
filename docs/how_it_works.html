@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>How ForwardDiff Works &mdash; ForwardDiff.jl 0.2.3 documentation</title>
+  <title>How ForwardDiff Works &mdash; ForwardDiff.jl 0.5.0 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="ForwardDiff.jl 0.2.3 documentation" href="index.html"/>
+    <link rel="top" title="ForwardDiff.jl 0.5.0 documentation" href="index.html"/>
         <link rel="next" title="How to Contribute" href="contributing.html"/>
         <link rel="prev" title="Upgrading from Older Versions of ForwardDiff" href="upgrade.html"/> 
 
@@ -60,7 +60,7 @@
             
             
               <div class="version">
-                0.2
+                0.5
               </div>
             
           
@@ -147,21 +147,22 @@
 Julia. There are two key components of this implementation: the <code class="docutils literal"><span class="pre">Dual</span></code> type, and the API.</p>
 <div class="section" id="dual-number-implementation">
 <h2>Dual Number Implementation<a class="headerlink" href="#dual-number-implementation" title="Permalink to this headline">¶</a></h2>
-<p>Partial derivatives are stored in the <code class="docutils literal"><span class="pre">Partials{N,T}</span></code> type:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="k">immutable</span> <span class="n">Partials</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">T</span><span class="p">}</span>
-    <span class="n">values</span><span class="p">::</span><span class="n">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">T</span><span class="p">}</span>
+<p>Partial derivatives are stored in the <code class="docutils literal"><span class="pre">Partials{N,V}</span></code> type:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">Partials</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">V</span><span class="p">}</span> <span class="o">&lt;:</span> <span class="n">AbstractVector</span><span class="p">{</span><span class="n">V</span><span class="p">}</span>
+    <span class="n">values</span><span class="p">::</span><span class="n">NTuple</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">V</span><span class="p">}</span>
 <span class="k">end</span>
 </pre></div>
 </div>
-<p>Overtop of this container type, ForwardDiff implements the <code class="docutils literal"><span class="pre">Dual{N,T}</span></code> type:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="k">immutable</span> <span class="n">Dual</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">T</span><span class="o">&lt;:</span><span class="n">Real</span><span class="p">}</span> <span class="o">&lt;:</span> <span class="n">Real</span>
-    <span class="n">value</span><span class="p">::</span><span class="n">T</span>
-    <span class="n">partials</span><span class="p">::</span><span class="n">Partials</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">T</span><span class="p">}</span>
+<p>Overtop of this container type, ForwardDiff implements the <code class="docutils literal"><span class="pre">Dual{T,V,N}</span></code> type:</p>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">struct</span> <span class="n">Dual</span><span class="p">{</span><span class="n">T</span><span class="p">,</span><span class="n">V</span><span class="o">&lt;:</span><span class="n">Real</span><span class="p">,</span><span class="n">N</span><span class="p">}</span> <span class="o">&lt;:</span> <span class="n">Real</span>
+    <span class="n">value</span><span class="p">::</span><span class="n">V</span>
+    <span class="n">partials</span><span class="p">::</span><span class="n">Partials</span><span class="p">{</span><span class="n">N</span><span class="p">,</span><span class="n">V</span><span class="p">}</span>
 <span class="k">end</span>
 </pre></div>
 </div>
-<p>This type represents an <code class="docutils literal"><span class="pre">N</span></code>-dimensional <a class="reference external" href="https://en.wikipedia.org/wiki/Dual_number">dual number</a> with the following mathematical
-behavior:</p>
+<p>This type represents an <code class="docutils literal"><span class="pre">N</span></code>-dimensional <a class="reference external" href="https://en.wikipedia.org/wiki/Dual_number">dual number</a> coupled with a tag
+parameter <cite>T</cite> in order to prevent <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/83">perturbation confusion</a>. This dual number
+type is implemented to have the following mathematical behavior:</p>
 <div class="math">
 \[f(a + \sum_{i=1}^N b_i \epsilon_i) = f(a) + f'(a) \sum_{i=1}^N b_i \epsilon_i\]</div>
 <p>where the <span class="math">\(a\)</span> component is stored in the <code class="docutils literal"><span class="pre">value</span></code> field and the <span class="math">\(b\)</span>
@@ -171,20 +172,20 @@ central feature that allows ForwardDiff to take derivatives.</p>
 number are overloaded to evaluate both the original function, <em>and</em> evaluate the derivative
 of the function, propogating the derivative via multiplication. For example, <code class="docutils literal"><span class="pre">Base.sin</span></code>
 can be overloaded on <code class="docutils literal"><span class="pre">Dual</span></code> like so:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">Base</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">d</span><span class="p">::</span><span class="n">Dual</span><span class="p">)</span> <span class="o">=</span> <span class="n">Dual</span><span class="p">(</span><span class="n">sin</span><span class="p">(</span><span class="n">value</span><span class="p">(</span><span class="n">d</span><span class="p">)),</span> <span class="n">cos</span><span class="p">(</span><span class="n">value</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="o">*</span> <span class="n">partials</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
+<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">Base</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">d</span><span class="p">::</span><span class="n">Dual</span><span class="p">{</span><span class="n">T</span><span class="p">})</span> <span class="n">where</span> <span class="p">{</span><span class="n">T</span><span class="p">}</span> <span class="o">=</span> <span class="n">Dual</span><span class="p">{</span><span class="n">T</span><span class="p">}(</span><span class="n">sin</span><span class="p">(</span><span class="n">value</span><span class="p">(</span><span class="n">d</span><span class="p">)),</span> <span class="n">cos</span><span class="p">(</span><span class="n">value</span><span class="p">(</span><span class="n">d</span><span class="p">))</span> <span class="o">*</span> <span class="n">partials</span><span class="p">(</span><span class="n">d</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>If we assume that a general function <code class="docutils literal"><span class="pre">f</span></code> is composed of entirely of these elementary
 functions, then the chain rule enables our derivatives to compose as well. Thus, by
 overloading a plethora of elementary functions, we can differentiate generic functions
 composed of them by passing in a <code class="docutils literal"><span class="pre">Dual</span></code> number and looking at the output.</p>
-<p>We won&#8217;t dicuss higher-order differentiation in detail, but the reader is encouraged to
+<p>We won&#8217;t discuss higher-order differentiation in detail, but the reader is encouraged to
 learn about <a class="reference external" href="https://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf">hyper-dual numbers</a>, which extend dual numbers to higher orders by introducing
 extra <span class="math">\(\epsilon\)</span> terms that can cross-multiply. ForwardDiff&#8217;s <code class="docutils literal"><span class="pre">Dual</span></code> number
 implementation naturally supports hyper-dual numbers without additional code by allowing
 instances of the <code class="docutils literal"><span class="pre">Dual</span></code> type to nest within each other. For example, a second-order
-hyper-dual number has the type <code class="docutils literal"><span class="pre">Dual{N,Dual{N,T}}</span></code>, a third-order hyper-dual number has
-the type <code class="docutils literal"><span class="pre">Dual{N,Dual{N,Dual{N,T}}}</span></code>, and so on.</p>
+hyper-dual number has the type <code class="docutils literal"><span class="pre">Dual{T,Dual{S,V,M},N}</span></code>, a third-order hyper-dual number has
+the type <code class="docutils literal"><span class="pre">Dual{T,Dual{S,Dual{R,V,K},M},N}</span></code>, and so on.</p>
 </div>
 <div class="section" id="forwarddiff-s-api">
 <h2>ForwardDiff&#8217;s API<a class="headerlink" href="#forwarddiff-s-api" title="Permalink to this headline">¶</a></h2>
@@ -282,7 +283,7 @@ f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_3} \epsil
     <script type="text/javascript">
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'./',
-            VERSION:'0.2.3',
+            VERSION:'0.5.0',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
             HAS_SOURCE:  true

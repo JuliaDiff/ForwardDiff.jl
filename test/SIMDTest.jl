@@ -8,7 +8,7 @@ const DUALS = (Dual(1., 2., 3., 4.),
                Dual(Dual(1., 2.), Dual(3., 4.)))
 
 
-function simd_sum{T}(x::Vector{T})
+function simd_sum(x::Vector{T}) where T
     s = zero(T)
     @simd for i in eachindex(x)
         @inbounds s = s + x[i]

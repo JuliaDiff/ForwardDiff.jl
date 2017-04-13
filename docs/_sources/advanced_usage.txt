@@ -9,7 +9,7 @@ Accessing Lower-Order Results
 
 Let's say you want to calculate the value, gradient, and Hessian of some function ``f`` at
 an input ``x``. You could execute ``f(x)``, ``ForwardDiff.gradient(f, x)`` and
-``ForwardDiff.hessian(f, x)``, but that would be a **horribly redundant way to  accomplish
+``ForwardDiff.hessian(f, x)``, but that would be a **horribly redundant way to accomplish
 this task!**
 
 In the course of calculating higher-order derivatives, ForwardDiff ends up calculating all
@@ -37,7 +37,7 @@ For example:
 
 .. code-block:: julia
 
-    julia> import ForwardDiff
+    julia> using ForwardDiff: GradientConfig, Chunk, gradient!
 
     # let's use a Rosenbrock function as our target function
     julia> function rosenbrock(x)
@@ -58,25 +58,25 @@ For example:
     julia> out = similar(x);
 
     # construct GradientConfig with chunk size of 1
-    julia> cfg1 = ForwardDiff.GradientConfig{1}(x);
+    julia> cfg1 = GradientConfig(rosenbrock, x, Chunk{1}());
 
     # construct GradientConfig with chunk size of 4
-    julia> cfg4 = ForwardDiff.GradientConfig{4}(x);
+    julia> cfg4 = GradientConfig(rosenbrock, x, Chunk{4}());
 
     # construct GradientConfig with chunk size of 10
-    julia> cfg10 = ForwardDiff.GradientConfig{10}(x);
+    julia> cfg10 = GradientConfig(rosenbrock, x, Chunk{10}());
 
     # (input length of 10000) / (chunk size of 1) = (10000 1-element chunks)
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg1);
-      0.408305 seconds (4 allocations: 160 bytes)
+    julia> @time gradient!(out, rosenbrock, x, cfg1);
+      0.775139 seconds (4 allocations: 160 bytes)
 
     # (input length of 10000) / (chunk size of 4) = (2500 4-element chunks)
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg4);
-      0.295764 seconds (4 allocations: 160 bytes)
+    julia> @time gradient!(out, rosenbrock, x, cfg4);
+      0.386459 seconds (4 allocations: 160 bytes)
 
     # (input length of 10000) / (chunk size of 10) = (1000 10-element chunks)
-    julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg10);
-      0.267396 seconds (4 allocations: 160 bytes)
+    julia> @time gradient!(out, rosenbrock, x, cfg10);
+      0.282529 seconds (4 allocations: 160 bytes)
 
 If you do not explicity provide a chunk size, ForwardDiff will try to guess one for you
 based on your input vector:
@@ -85,10 +85,10 @@ based on your input vector:
 
     # The GradientConfig constructor will automatically select a
     # chunk size in one is not explicitly provided
-    julia> cfg = ForwardDiff.GradientConfig(x);
+    julia> cfg = ForwardDiff.GradientConfig(rosenbrock, x);
 
     julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg);
-    0.266920 seconds (4 allocations: 160 bytes)
+      0.281853 seconds (4 allocations: 160 bytes)
 
 If your input dimension is a constant, you should explicitly select a chunk size rather than
 relying on ForwardDiff's heuristic. There are two reasons for this. The first is that
@@ -130,8 +130,8 @@ aren't sensitive to the input and thus cause ForwardDiff to incorrectly return `
 
     # the dual number's perturbation component is zero, so this
     # variable should not propagate derivative information
-    julia> log(ForwardDiff.Dual(0.0, 0.0))
-    Dual(-Inf,NaN) # oops, this NaN should be 0.0
+    julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
+    Dual{:tag}(-Inf,NaN) # oops, this NaN should be 0.0
 
 Here, ForwardDiff computes the derivative of ``log(0.0)`` as ``NaN`` and then propagates
 this derivative by multiplying it by the perturbation component. Usually, ForwardDiff can
@@ -153,7 +153,6 @@ In the future, we plan on allowing users and downstream library authors to dynam
 enable ``NaN``-safe mode via the ``AbstractConfig`` API (see `the relevant issue
 <https://github.com/JuliaDiff/ForwardDiff.jl/issues/181>`_).
 
-
 Hessian of a vector-valued function
 -----------------------------------
 
@@ -163,17 +162,17 @@ For example:
 
 .. code-block:: julia
 
-    julia> ForwardDiff.jacobian(x -> ForwardDiff.jacobian(sin, x), [1,2,3])
-    9×3 Array{Float64,2}:
-     -0.841471   0.0        0.0
-     -0.0       -0.0       -0.0
-     -0.0       -0.0       -0.0
-     0.0        0.0        0.0
-     -0.0       -0.909297  -0.0
-     -0.0       -0.0       -0.0
-     0.0        0.0        0.0
-     -0.0       -0.0       -0.0
-     -0.0       -0.0       -0.14112
+    julia> ForwardDiff.jacobian(x -> ForwardDiff.jacobian(cumprod, x), [1,2,3])
+    9×3 Array{Int64,2}:
+     0  0  0
+     0  1  0
+     0  3  2
+     0  0  0
+     1  0  0
+     3  0  1
+     0  0  0
+     0  0  0
+     2  1  0
 
 Since this functionality is composed from ForwardDiff's existing API rather than built into
 it, you're free to construct a ``vector_hessian`` function which suits your needs. For
@@ -190,22 +189,22 @@ expensive operation):
        end
     vector_hessian (generic function with 1 method)
 
-    julia> vector_hessian(sin, [1, 2, 3])
-    3×3×3 Array{Float64,3}:
+    julia> vector_hessian(cumprod, [1, 2, 3])
+    3×3×3 Array{Int64,3}:
     [:, :, 1] =
-     -0.841471   0.0   0.0
-     -0.0       -0.0  -0.0
-     -0.0       -0.0  -0.0
+     0  0  0
+     0  1  0
+     0  3  2
 
     [:, :, 2] =
-      0.0   0.0        0.0
-     -0.0  -0.909297  -0.0
-     -0.0  -0.0       -0.0
+     0  0  0
+     1  0  0
+     3  0  1
 
     [:, :, 3] =
-      0.0   0.0   0.0
-     -0.0  -0.0  -0.0
-     -0.0  -0.0  -0.14112
+     0  0  0
+     0  0  0
+     2  1  0
 
 Likewise, you could write a version of ``vector_hessian`` which supports functions of the
 form ``f!(y, x)``, or perhaps an in-place Jacobian with ``ForwardDiff.jacobian!``.
@@ -232,10 +231,10 @@ SIMD instructions (i.e. not starting Julia with ``-O3``):
     julia> using ForwardDiff: Dual
 
     julia> a = Dual(1., 2., 3., 4.)
-    Dual(1.0,2.0,3.0,4.0)
+    Dual{Void}(1.0,2.0,3.0,4.0)
 
     julia> b = Dual(5., 6., 7., 8.)
-    Dual(5.0,6.0,7.0,8.0)
+    Dual{Void}(5.0,6.0,7.0,8.0)
 
     julia> @code_llvm a + b
 

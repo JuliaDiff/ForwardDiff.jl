@@ -9,25 +9,26 @@ Julia. There are two key components of this implementation: the ``Dual`` type, a
 Dual Number Implementation
 --------------------------
 
-Partial derivatives are stored in the ``Partials{N,T}`` type:
+Partial derivatives are stored in the ``Partials{N,V}`` type:
 
 .. code-block:: julia
 
-    immutable Partials{N,T}
-        values::NTuple{N,T}
+    struct Partials{N,V} <: AbstractVector{V}
+        values::NTuple{N,V}
     end
 
-Overtop of this container type, ForwardDiff implements the ``Dual{N,T}`` type:
+Overtop of this container type, ForwardDiff implements the ``Dual{T,V,N}`` type:
 
 .. code-block:: julia
 
-    immutable Dual{N,T<:Real} <: Real
-        value::T
-        partials::Partials{N,T}
+    struct Dual{T,V<:Real,N} <: Real
+        value::V
+        partials::Partials{N,V}
     end
 
-This type represents an ``N``-dimensional `dual number`_ with the following mathematical
-behavior:
+This type represents an ``N``-dimensional `dual number`_ coupled with a tag
+parameter `T` in order to prevent `perturbation confusion`_. This dual number
+type is implemented to have the following mathematical behavior:
 
 .. math::
 
@@ -44,22 +45,23 @@ can be overloaded on ``Dual`` like so:
 
 .. code-block:: julia
 
-    Base.sin(d::Dual) = Dual(sin(value(d)), cos(value(d)) * partials(d))
+    Base.sin(d::Dual{T}) where {T} = Dual{T}(sin(value(d)), cos(value(d)) * partials(d))
 
 If we assume that a general function ``f`` is composed of entirely of these elementary
 functions, then the chain rule enables our derivatives to compose as well. Thus, by
 overloading a plethora of elementary functions, we can differentiate generic functions
 composed of them by passing in a ``Dual`` number and looking at the output.
 
-We won't dicuss higher-order differentiation in detail, but the reader is encouraged to
+We won't discuss higher-order differentiation in detail, but the reader is encouraged to
 learn about `hyper-dual numbers`_, which extend dual numbers to higher orders by introducing
 extra :math:`\epsilon` terms that can cross-multiply. ForwardDiff's ``Dual`` number
 implementation naturally supports hyper-dual numbers without additional code by allowing
 instances of the ``Dual`` type to nest within each other. For example, a second-order
-hyper-dual number has the type ``Dual{N,Dual{N,T}}``, a third-order hyper-dual number has
-the type ``Dual{N,Dual{N,Dual{N,T}}}``, and so on.
+hyper-dual number has the type ``Dual{T,Dual{S,V,M},N}``, a third-order hyper-dual number has
+the type ``Dual{T,Dual{S,Dual{R,V,K},M},N}``, and so on.
 
 .. _`dual number`: https://en.wikipedia.org/wiki/Dual_number
+.. _`perturbation confusion`: https://github.com/JuliaDiff/ForwardDiff.jl/issues/83
 .. _`hyper-dual numbers`: https://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf
 
 ForwardDiff's API
