@@ -21,7 +21,7 @@ end
 @inline (::Type{Dual{T}})(value::Real, partials::Tuple) where {T} = Dual{T}(value, Partials(partials))
 @inline (::Type{Dual{T}})(value::Real, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
 @inline (::Type{Dual{T}})(value::Real, partials::Real...) where {T} = Dual{T}(value, partials)
-@inline (::Type{Dual{T}})(value::V, ::Type{Val{N}}, ::Type{Val{i}}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, Val{i}))
+@inline (::Type{Dual{T}})(value::V, ::Chunk{N}, p::Val{i}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
 
 @inline Dual(args...) = Dual{Void}(args...)
 
