@@ -43,13 +43,9 @@ function jacobian!(out, f!::F, y, x, cfg::AllowedJacobianConfig{F,H} = JacobianC
     return out
 end
 
-@inline function jacobian(f::F, x::SArray) where F
-    return extract_jacobian(vector_mode_dual_eval(f, x), x)
-end
+@inline jacobian(f::F, x::SArray) where {F} = vector_mode_jacobian(f, x)
 
-@inline function jacobian!(out, f::F, x::SArray) where F
-    return extract_jacobian!(out, vector_mode_dual_eval(f, x))
-end
+@inline jacobian!(out, f::F, x::SArray) where {F} = vector_mode_jacobian!(out, f, x)
 
 #####################
 # result extraction #
@@ -57,11 +53,7 @@ end
 
 @generated function extract_jacobian(ydual::SArray{SY,VY,DY,M},
                                      x::SArray{SX,VX,DX,N}) where {SY,VY,DY,M,SX,VX,DX,N}
-    elements = Vector{Any}(0)
-    for i in 1:M, j in 1:N
-        push!(elements, :(partials(ydual[$i], $j)))
-    end
-    result = Expr(:tuple, elements...)
+    result = Expr(:tuple, [:(partials(ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         return SArray{Tuple{M,N}}($result)
@@ -133,6 +125,17 @@ function vector_mode_jacobian!(out, f!::F, y, x, cfg::JacobianConfig{T,V,N}) whe
     map!(value, y, ydual)
     extract_jacobian!(out, ydual, N)
     extract_value!(out, y, ydual)
+    return out
+end
+
+@inline function vector_mode_jacobian(f::F, x::SArray) where F
+    return extract_jacobian(vector_mode_dual_eval(f, x), x)
+end
+
+@inline function vector_mode_jacobian!(out, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+    ydual = vector_mode_dual_eval(f, x)
+    extract_jacobian!(out, ydual, N)
+    extract_value!(out, ydual)
     return out
 end
 
