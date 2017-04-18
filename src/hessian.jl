@@ -29,3 +29,9 @@ function hessian!(out::DiffResult, f::F, x, cfg::AllowedHessianConfig{F,H} = Hes
     jacobian!(DiffBase.hessian(out), ∇f!, DiffBase.gradient(out), x, cfg.jacobian_config)
     return out
 end
+
+hessian(f::F, x::SArray) where {F} = jacobian(y -> gradient(f, y), x)
+
+hessian!(out, f::F, x::SArray) where {F} = jacobian!(out, y -> gradient(f, y), x)
+
+hessian!(out::DiffResult, f::F, x::SArray) where {F} = hessian!(out, f, x, HessianConfig(f, out, x))
