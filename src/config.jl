@@ -44,6 +44,22 @@ Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
 
 @inline chunksize(::AbstractConfig{T,N}) where {T,N} = N
 
+####################
+# DerivativeConfig #
+####################
+
+struct DerivativeConfig{T,D} <: AbstractConfig{T,1}
+    duals::D
+end
+
+function DerivativeConfig(::F,
+                          y::AbstractArray{Y},
+                          x::X,
+                          ::T = Tag(F, X)) where {F,X<:Real,Y,T}
+    duals = similar(y, Dual{Y,1})
+    return DerivativeConfig{T,typeof(duals)}(duals)
+end
+
 ##################
 # GradientConfig #
 ##################
