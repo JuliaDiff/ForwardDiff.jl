@@ -182,7 +182,7 @@ Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
 Base.round(d::Dual) = round(value(d))
 
 Base.hash(d::Dual) = hash(value(d))
-Base.hash(d::Dual, hsh::UInt64) = hash(value(d), hsh)
+Base.hash(d::Dual, hsh::UInt) = hash(value(d), hsh)
 
 function Base.read(io::IO, ::Type{Dual{T,V,N}}) where {T,V,N}
     value = read(io, V)
