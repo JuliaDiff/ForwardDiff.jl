@@ -83,9 +83,9 @@ end
 @inline tagtype(::Dual{T,V,N}) where {T,V,N} = T
 @inline tagtype(::Type{Dual{T,V,N}}) where {T,V,N} = T
 
-#####################################
-# N-ary Operation Definition Macros #
-#####################################
+####################################
+# N-ary Operation Definition Tools #
+####################################
 
 macro define_binary_dual_op(f, xy_body, x_body, y_body)
     defs = quote
@@ -158,6 +158,57 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
     return esc(defs)
 end
 
+function unary_dual_definition(M, f)
+    work = CommonSubexpressions.cse(quote
+        val = $(f)(x)
+        deriv = $(DiffBase.diffrule(f, :x))
+    end)
+    return quote
+        @inline function ($M).$(f)(d::Dual{T}) where T
+            x = value(d)
+            $work
+            return Dual{T}(val, deriv * partials(d))
+        end
+    end
+end
+
+function binary_dual_definition(M, f)
+    dvx, dvy = DiffBase.diffrule(f, :vx, :vy)
+    xy_work = CommonSubexpressions.cse(quote
+        val = $(f)(vx, vy)
+        dvx = $dvx
+        dvy = $dvy
+    end)
+    x_work = CommonSubexpressions.cse(quote
+        val = $(f)(vx, vy)
+        dvx = $dvx
+    end)
+    y_work = CommonSubexpressions.cse(quote
+        val = $(f)(vx, vy)
+        dvy = $dvy
+    end)
+    return quote
+        @define_binary_dual_op(
+            ($M).$(f),
+            begin
+                vx, vy = value(x), value(y)
+                $xy_work
+                return Dual{T}(val, _mul_partials(partials(x), partials(y), dvx, dvy))
+            end,
+            begin
+                vx, vy = value(x), value(y)
+                $x_work
+                return Dual{T}(val, dvx * partials(x))
+            end,
+            begin
+                vx, vy = value(x), value(y)
+                $y_work
+                return Dual{T}(val, dvy * partials(y))
+            end
+        )
+    end
+end
+
 #####################
 # Generic Functions #
 #####################
@@ -211,7 +262,11 @@ end
 
 isconstant(d::Dual) = iszero(partials(d))
 
-for pred in (:isequal, :(==), :isless, :(<=), :<)
+for pred in RealInterface.UNARY_PREDICATES
+    @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
+end
+
+for pred in RealInterface.BINARY_PREDICATES
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
@@ -221,14 +276,6 @@ for pred in (:isequal, :(==), :isless, :(<=), :<)
         )
     end
 end
-
-Base.isnan(d::Dual) = isnan(value(d))
-Base.isfinite(d::Dual) = isfinite(value(d))
-Base.isinf(d::Dual) = isinf(value(d))
-Base.isreal(d::Dual) = isreal(value(d))
-Base.isinteger(d::Dual) = isinteger(value(d))
-Base.iseven(d::Dual) = iseven(value(d))
-Base.isodd(d::Dual) = isodd(value(d))
 
 ########################
 # Promotion/Conversion #
@@ -258,9 +305,9 @@ Base.promote_array_type(F, ::Type{<:AbstractFloat}, ::Type{<:Dual}, ::Type{P}) w
 Base.float(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
 Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
 
-########
-# Math #
-########
+##############
+# Arithmetic #
+##############
 
 # Addition/Subtraction #
 #----------------------#
@@ -345,77 +392,55 @@ for f in (:(Base.:^), :(NaNMath.pow))
     end
 end
 
-# Unary Math Functions #
-#--------------------- #
-
-function to_nanmath(x::Expr)
-    if x.head == :call
-        funsym = Expr(:., :NaNMath, Base.Meta.quot(x.args[1]))
-        return Expr(:call, funsym, [to_nanmath(z) for z in x.args[2:end]]...)
-    else
-        return Expr(:call, [to_nanmath(z) for z in x.args]...)
-    end
-end
-
-to_nanmath(x) = x
+###################################
+# General Mathematical Operations #
+###################################
 
 @inline Base.conj(d::Dual) = d
+
 @inline Base.transpose(d::Dual) = d
+
 @inline Base.ctranspose(d::Dual) = d
+
 @inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
 
-for fsym in AUTO_DEFINED_UNARY_FUNCS
-    v = :v
-    deriv = Calculus.differentiate(:($(fsym)($v)), v)
+for f in RealInterface.UNARY_MATH
+    DiffBase.hasdiffrule(f, 1) && eval(unary_dual_definition(Base, f))
+end
 
-    # exp and sqrt are manually defined below
-    if !(in(fsym, (:exp, :sqrt)))
-        funcs = Vector{Expr}(0)
-        is_special_function = in(fsym, SPECIAL_FUNCS)
-        is_special_function && push!(funcs, :(SpecialFunctions.$(fsym)))
-        (!(is_special_function) || VERSION < v"0.6.0-dev.2767") && push!(funcs, :(Base.$(fsym)))
-        for func in funcs
-            @eval begin
-                @inline function $(func)(d::Dual{T}) where T
-                    $(v) = value(d)
-                    return Dual{T}($(func)($v), $(deriv) * partials(d))
-                end
+for f in RealInterface.UNARY_SPECIAL_MATH
+    DiffBase.hasdiffrule(f, 1) && eval(unary_dual_definition(SpecialFunctions, f))
+end
+
+for f in RealInterface.BINARY_SPECIAL_MATH
+    DiffBase.hasdiffrule(f, 2) && eval(binary_dual_definition(SpecialFunctions, f))
+end
+
+function to_nanmath!(x)
+    if isa(x, Expr)
+        if x.head == :call
+            f = x.args[1]
+            if in(f, RealInterface.UNARY_NAN_MATH) || in(f, RealInterface.BINARY_NAN_MATH)
+                x.args[1] = :(NaNMath.$f)
             end
+            foreach(to_nanmath!, x.args[2:end])
+        else
+            foreach(to_nanmath!, x.args)
         end
     end
+    return x
+end
 
-    # extend corresponding NaNMath methods
-    if fsym in NANMATH_FUNCS
-        nan_deriv = to_nanmath(deriv)
-        @eval begin
-            @inline function NaNMath.$(fsym)(d::Dual{T}) where T
-                v = value(d)
-                return Dual{T}(NaNMath.$(fsym)($v), $(nan_deriv) * partials(d))
-            end
-        end
-    end
+for f in RealInterface.UNARY_NAN_MATH
+    DiffBase.hasdiffrule(f, 1) && eval(to_nanmath!(unary_dual_definition(NaNMath, f)))
 end
 
 #################
 # Special Cases #
 #################
 
-# exp
-
-@inline function Base.exp(d::Dual{T}) where T
-    expv = exp(value(d))
-    return Dual{T}(expv, expv * partials(d))
-end
-
-# sqrt
-
-@inline function Base.sqrt(d::Dual{T}) where T
-    sqrtv = sqrt(value(d))
-    deriv = inv(sqrtv + sqrtv)
-    return Dual{T}(sqrtv, deriv * partials(d))
-end
-
-# hypot
+# hypot #
+#-------#
 
 @inline function calc_hypot(x, y, ::Type{T}) where T
     vx = value(x)
@@ -451,7 +476,8 @@ end
     calc_hypot(x, y, z, T),
 )
 
-# atan2
+# atan2 #
+#-------#
 
 @inline function calc_atan2(y, x, ::Type{T}) where T
     z = y / x
@@ -468,7 +494,8 @@ end
     calc_atan2(x, y, T)
 )
 
-# fma
+# fma #
+#-----#
 
 @generated function calc_fma_xyz(x::Dual{T,<:Real,N},
                                  y::Dual{T,<:Real,N},
@@ -509,7 +536,8 @@ end
     Dual{T}(fma(x, y, value(z)), partials(z))      # z_body
 )
 
-# sincos
+# sincos #
+#--------#
 
 @inline sincos(x) = (sin(x), cos(x))
 
