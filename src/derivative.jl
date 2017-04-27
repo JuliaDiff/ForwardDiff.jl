@@ -22,7 +22,7 @@ end
 
 @inline extract_derivative(y::Dual{T,V,1}) where {T,V} = partials(y, 1)
 @inline extract_derivative(y::Real) = zero(y)
-@inline extract_derivative(y::AbstractArray) = extract_derivative!(similar(y, valtype(eltype(y))), y)
+@inline extract_derivative(y::AbstractArray) = map(extract_derivative, y)
 
 # mutating #
 #----------#

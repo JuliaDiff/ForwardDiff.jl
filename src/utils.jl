@@ -17,6 +17,19 @@ end
 # vector mode function evaluation #
 ###################################
 
+@generated function dualize(::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+    tag = Tag(F, x)
+    dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
+    return quote
+        chunk = Chunk{N}()
+        T = typeof($tag)
+        $(Expr(:meta, :inline))
+        return SArray{S}($(dx))
+    end
+end
+
+@inline vector_mode_dual_eval(f::F, x::SArray) where {F} = f(dualize(f, x))
+
 function vector_mode_dual_eval(f::F, x, cfg::Union{JacobianConfig,GradientConfig}) where F
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
@@ -36,7 +49,7 @@ end
 ##################################
 
 @generated function construct_seeds(::Type{Partials{N,V}}) where {N,V}
-    return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i})) for i in 1:N]...)
+    return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,

@@ -5,6 +5,7 @@ import Calculus
 using Base.Test
 using ForwardDiff
 using ForwardDiff: JacobianConfig
+using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -145,5 +146,29 @@ for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
         @test isapprox(DiffBase.jacobian(out), j)
     end
 end
+
+##########################################
+# test specialized StaticArray codepaths #
+##########################################
+
+x = rand(3, 3)
+sx = StaticArrays.SArray{Tuple{3,3}}(x)
+out = similar(x, 6, 9)
+actual = ForwardDiff.jacobian(diff, x)
+
+@test ForwardDiff.jacobian(diff, sx) == actual
+
+ForwardDiff.jacobian!(out, diff, sx)
+
+@test out == actual
+
+result = DiffBase.JacobianResult(similar(x, 6), x)
+sresult = DiffBase.JacobianResult(similar(sx, 6), sx)
+
+ForwardDiff.jacobian!(result, diff, x)
+ForwardDiff.jacobian!(sresult, diff, sx)
+
+@test DiffBase.value(sresult) == DiffBase.value(result)
+@test DiffBase.jacobian(sresult) == DiffBase.jacobian(result)
 
 end # module

@@ -4,6 +4,7 @@ import Calculus
 
 using Base.Test
 using ForwardDiff
+using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -77,5 +78,30 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         @test isapprox(DiffBase.hessian(out), h)
     end
 end
+
+##########################################
+# test specialized StaticArray codepaths #
+##########################################
+
+x = rand(3, 3)
+sx = StaticArrays.SArray{Tuple{3,3}}(x)
+out = similar(x, 9, 9)
+actual = ForwardDiff.hessian(prod, x)
+
+@test ForwardDiff.hessian(prod, sx) == actual
+
+ForwardDiff.hessian!(out, prod, sx)
+
+@test out == actual
+
+result = DiffBase.HessianResult(x)
+sresult = DiffBase.HessianResult(sx)
+
+ForwardDiff.hessian!(result, prod, x)
+ForwardDiff.hessian!(sresult, prod, sx)
+
+@test DiffBase.value(sresult) == DiffBase.value(result)
+@test DiffBase.gradient(sresult) == DiffBase.gradient(result)
+@test DiffBase.hessian(sresult) == DiffBase.hessian(result)
 
 end # module

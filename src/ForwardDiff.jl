@@ -4,6 +4,7 @@ module ForwardDiff
 
 using DiffBase
 using DiffBase: DiffResult
+using StaticArrays
 
 import Calculus
 import NaNMath
@@ -40,6 +41,29 @@ const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real)
 #----------------#
 
 const DEFAULT_CHUNK_THRESHOLD = 10
+
+struct Chunk{N} end
+
+function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
+    N = pickchunksize(input_length, threshold)
+    return Chunk{N}()
+end
+
+function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
+    return Chunk(length(x), threshold)
+end
+
+# Constrained to `N <= threshold`, minimize (in order of priority):
+#   1. the number of chunks that need to be computed
+#   2. the number of "left over" perturbations in the final chunk
+function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
+    if input_length <= threshold
+        return input_length
+    else
+        nchunks = round(Int, input_length / DEFAULT_CHUNK_THRESHOLD, RoundUp)
+        return round(Int, input_length / nchunks, RoundUp)
+    end
+end
 
 ############
 # includes #
