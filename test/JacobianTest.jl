@@ -4,7 +4,7 @@ import Calculus
 
 using Base.Test
 using ForwardDiff
-using ForwardDiff: JacobianConfig
+using ForwardDiff: Dual, Tag, JacobianConfig
 using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
@@ -33,6 +33,9 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
     println("  ...running hardcoded test with chunk size = $c and tag = $tags")
     cfg = JacobianConfig(tags[1], x, ForwardDiff.Chunk{c}())
     ycfg = JacobianConfig(tags[2], zeros(4), x, ForwardDiff.Chunk{c}())
+
+    @test eltype(cfg)  == Dual{typeof(Tag(typeof(tags[1]), eltype(x))), eltype(x), c}
+    @test eltype(ycfg) == Dual{typeof(Tag(typeof(tags[2]), eltype(x))), eltype(x), c}
 
     # testing f(x)
     @test isapprox(j, ForwardDiff.jacobian(f, x, cfg))

@@ -40,6 +40,8 @@ end
 
 Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 
+Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
+
 @inline chunksize(::AbstractConfig{T,N}) where {T,N} = N
 
 ##################
@@ -59,6 +61,8 @@ function GradientConfig(::F,
     duals = similar(x, Dual{T,V,N})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
+
+Base.eltype(::Type{GradientConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 
 ##################
 # JacobianConfig #
@@ -90,13 +94,15 @@ function JacobianConfig(::F,
     return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
 end
 
+Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
+
 #################
 # HessianConfig #
 #################
 
 struct HessianConfig{T,V,N,D,H,DJ} <: AbstractConfig{T,N}
     jacobian_config::JacobianConfig{Tag{Void,H},V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{Tag{Void,H},V,N},D}
+    gradient_config::GradientConfig{T,Dual{Tag{Void,H},V,N},N,D}
 end
 
 function HessianConfig(f::F,
@@ -117,3 +123,5 @@ function HessianConfig(f::F,
     gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end
+
+Base.eltype(::Type{HessianConfig{T,V,N,D,H,DJ}}) where {T,V,N,D,H,DJ} = Dual{T,Dual{Tag{Void,H},V,N},N}
