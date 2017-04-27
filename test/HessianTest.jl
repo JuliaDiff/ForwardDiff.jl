@@ -26,8 +26,8 @@ for c in (1, 2, 3), tag in (nothing, f)
     cfg = ForwardDiff.HessianConfig(tag, x, ForwardDiff.Chunk{c}())
     resultcfg = ForwardDiff.HessianConfig(tag, DiffBase.HessianResult(x), x, ForwardDiff.Chunk{c}())
 
-    D = Dual{Tag(tag, eltype(x)), eltype(x), c}
-    @test eltype(cfg) == Dual{Tag(tag, D), D, c}
+    D = Dual{Tag(typeof(tag), eltype(x)), eltype(x), c}
+    @test eltype(cfg) == Dual{Tag(typeof(tag), D), D, c}
     @test eltype(resultcfg) == eltype(cfg)
 
     @test isapprox(h, ForwardDiff.hessian(f, x))

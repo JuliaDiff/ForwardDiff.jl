@@ -34,8 +34,8 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
     cfg = JacobianConfig(tags[1], x, ForwardDiff.Chunk{c}())
     ycfg = JacobianConfig(tags[2], zeros(4), x, ForwardDiff.Chunk{c}())
 
-    @test eltype(cfg)  == Dual{Tag(tags[1], eltype(x)), eltype(x), c}
-    @test eltype(ycfg) == Dual{Tag(tags[2], eltype(x)), eltype(x), c}
+    @test eltype(cfg)  == Dual{Tag(typeof(tags[1]), eltype(x)), eltype(x), c}
+    @test eltype(ycfg) == Dual{Tag(typeof(tags[2]), eltype(x)), eltype(x), c}
 
     # testing f(x)
     @test isapprox(j, ForwardDiff.jacobian(f, x, cfg))
