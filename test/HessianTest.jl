@@ -4,6 +4,7 @@ import Calculus
 
 using Base.Test
 using ForwardDiff
+using ForwardDiff: Dual, Tag
 using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
@@ -24,6 +25,10 @@ for c in (1, 2, 3), tag in (nothing, f)
     println("  ...running hardcoded test with chunk size = $c and tag = $tag")
     cfg = ForwardDiff.HessianConfig(tag, x, ForwardDiff.Chunk{c}())
     resultcfg = ForwardDiff.HessianConfig(tag, DiffBase.HessianResult(x), x, ForwardDiff.Chunk{c}())
+
+    D = Dual{Tag(tag, eltype(x)), eltype(x), c}
+    @test eltype(cfg) == Dual{Tag(tag, D), D, c}
+    @test eltype(resultcfg) == eltype(cfg)
 
     @test isapprox(h, ForwardDiff.hessian(f, x))
     @test isapprox(h, ForwardDiff.hessian(f, x, cfg))

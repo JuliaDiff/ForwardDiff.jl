@@ -4,6 +4,7 @@ import Calculus
 
 using Base.Test
 using ForwardDiff
+using ForwardDiff: Dual, Tag
 using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
@@ -20,6 +21,8 @@ g = [-9.4, 15.6, 52.0]
 for c in (1, 2, 3), tag in (nothing, f)
     println("  ...running hardcoded test with chunk size = $c and tag = $tag")
     cfg = ForwardDiff.GradientConfig(tag, x, ForwardDiff.Chunk{c}())
+
+    @test eltype(cfg) == Dual{Tag(tag, eltype(x)), eltype(x), c}
 
     @test isapprox(g, ForwardDiff.gradient(f, x, cfg))
     @test isapprox(g, ForwardDiff.gradient(f, x))
