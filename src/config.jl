@@ -55,8 +55,8 @@ end
 function DerivativeConfig(::F,
                           y::AbstractArray{Y},
                           x::X,
-                          ::T = Tag(F, X)) where {F,X<:Real,Y,T}
-    duals = similar(y, Dual{Y,1})
+                          ::T = Tag(F, X)) where {F,X<:Real,Y<:Real,T}
+    duals = similar(y, Dual{T,Y,1})
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
