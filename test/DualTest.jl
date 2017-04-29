@@ -308,12 +308,12 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test Base.promote_array_type(+, V, Dual{Void,Int,N}) == Dual{Void,V,N}
     end
 
-    ########
-    # Math #
-    ########
-
+    ##############
     # Arithmetic #
-    #------------#
+    ##############
+
+    # Addition/Subtraction #
+    #----------------------#
 
     @test FDNUM + FDNUM2 === Dual(value(FDNUM) + value(FDNUM2), partials(FDNUM) + partials(FDNUM2))
     @test FDNUM + PRIMAL === Dual(value(FDNUM) + PRIMAL, partials(FDNUM))
@@ -333,6 +333,9 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test PRIMAL - NESTED_FDNUM === Dual(PRIMAL - value(NESTED_FDNUM), -(partials(NESTED_FDNUM)))
     @test -(NESTED_FDNUM) === Dual(-(value(NESTED_FDNUM)), -(partials(NESTED_FDNUM)))
 
+    # Multiplication #
+    #----------------#
+
     @test FDNUM * FDNUM2 === Dual(value(FDNUM) * value(FDNUM2), ForwardDiff._mul_partials(partials(FDNUM), partials(FDNUM2), value(FDNUM2), value(FDNUM)))
     @test FDNUM * PRIMAL === Dual(value(FDNUM) * PRIMAL, partials(FDNUM) * PRIMAL)
     @test PRIMAL * FDNUM === Dual(value(FDNUM) * PRIMAL, partials(FDNUM) * PRIMAL)
@@ -340,6 +343,9 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test NESTED_FDNUM * NESTED_FDNUM2 === Dual(value(NESTED_FDNUM) * value(NESTED_FDNUM2), ForwardDiff._mul_partials(partials(NESTED_FDNUM), partials(NESTED_FDNUM2), value(NESTED_FDNUM2), value(NESTED_FDNUM)))
     @test NESTED_FDNUM * PRIMAL === Dual(value(NESTED_FDNUM) * PRIMAL, partials(NESTED_FDNUM) * PRIMAL)
     @test PRIMAL * NESTED_FDNUM === Dual(value(NESTED_FDNUM) * PRIMAL, partials(NESTED_FDNUM) * PRIMAL)
+
+    # Division #
+    #----------#
 
     if M > 0 && N > 0
         @test Dual{1}(FDNUM) / Dual{1}(PRIMAL) === Dual{1}(FDNUM / PRIMAL)
@@ -357,6 +363,9 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test dual_isapprox(NESTED_FDNUM / PRIMAL, Dual(value(NESTED_FDNUM) / PRIMAL, partials(NESTED_FDNUM) / PRIMAL))
     @test dual_isapprox(PRIMAL / NESTED_FDNUM, Dual(PRIMAL / value(NESTED_FDNUM), (-(PRIMAL) / value(NESTED_FDNUM)^2) * partials(NESTED_FDNUM)))
 
+    # Exponentiation #
+    #----------------#
+
     @test dual_isapprox(FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
     @test dual_isapprox(FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
     @test dual_isapprox(PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
@@ -367,13 +376,16 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test partials(NaNMath.pow(Dual(-2.0, 1.0), Dual(2.0, 0.0)), 1) == -4.0
 
-    # Unary Functions #
-    #-----------------#
+    ###################################
+    # General Mathematical Operations #
+    ###################################
 
     @test conj(FDNUM) === FDNUM
     @test conj(NESTED_FDNUM) === NESTED_FDNUM
+
     @test transpose(FDNUM) === FDNUM
     @test transpose(NESTED_FDNUM) === NESTED_FDNUM
+
     @test ctranspose(FDNUM) === FDNUM
     @test ctranspose(NESTED_FDNUM) === NESTED_FDNUM
 
@@ -383,36 +395,40 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        UNSUPPORTED_NESTED_FUNCS = (:trigamma, :airyprime, :besselj1, :bessely1)
-        DOMAIN_ERR_FUNCS = (:asec, :acsc, :asecd, :acscd, :acoth, :acosh)
-
-        for fsym in ForwardDiff.AUTO_DEFINED_UNARY_FUNCS
-            try
-                v = :v
-                deriv = Calculus.differentiate(:($(fsym)($v)), v)
-                is_nanmath_func = in(fsym, ForwardDiff.NANMATH_FUNCS)
-                is_special_func = in(fsym, ForwardDiff.SPECIAL_FUNCS)
-                is_domain_err_func = in(fsym, DOMAIN_ERR_FUNCS)
-                is_unsupported_nested_func = in(fsym, UNSUPPORTED_NESTED_FUNCS)
-                tested_funcs = Vector{Expr}(0)
-                is_nanmath_func && push!(tested_funcs, :(NaNMath.$(fsym)))
-                is_special_func && push!(tested_funcs, :(SpecialFunctions.$(fsym)))
-                (!(is_special_func) || VERSION < v"0.6.0-dev.2767") && push!(tested_funcs, :(Base.$(fsym)))
-                for func in tested_funcs
-                    @eval begin
-                        fdnum = $(is_domain_err_func ? FDNUM + 1 : FDNUM)
-                        $(v) = ForwardDiff.value(fdnum)
-                        @test dual_isapprox($(func)(fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(fdnum)))
-                        if $(!(is_unsupported_nested_func))
-                            nested_fdnum = $(is_domain_err_func ? NESTED_FDNUM + 1 : NESTED_FDNUM)
-                            $(v) = ForwardDiff.value(nested_fdnum)
-                            @test dual_isapprox($(func)(nested_fdnum), ForwardDiff.Dual($(func)($v), $(deriv) * ForwardDiff.partials(nested_fdnum)))
-                        end
+        for f in vcat(RealInterface.UNARY_MATH, RealInterface.UNARY_SPECIAL_MATH)
+            if DiffBase.hasdiffrule(f, 1)
+                deriv = DiffBase.diffrule(f, :x)
+                modifier = in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth)) ? one(V) : zero(V)
+                @eval begin
+                    x = rand() + $modifier
+                    dx = $f(Dual(x, one(x)))
+                    @test value(dx) == $f(x)
+                    @test partials(dx, 1) == $deriv
+                end
+            end
+        end
+        for f in RealInterface.BINARY_SPECIAL_MATH
+            if DiffBase.hasdiffrule(f, 2)
+                derivs = DiffBase.diffrule(f, :x, :y)
+                @eval begin
+                    x, y = rand(1:10), rand()
+                    dx = $f(Dual(x, one(x)), y)
+                    dy = $f(x, Dual(y, one(y)))
+                    actualdx = $(derivs[1])
+                    actualdy = $(derivs[2])
+                    @test value(dx) == $f(x, y)
+                    @test value(dy) == value(dx)
+                    if isnan(actualdx)
+                        @test isnan(partials(dx, 1))
+                    else
+                        @test partials(dx, 1) == actualdx
+                    end
+                    if isnan(actualdy)
+                        @test isnan(partials(dy, 1))
+                    else
+                        @test partials(dy, 1) == actualdy
                     end
                 end
-            catch err
-                warn("Encountered error when testing $(fsym)(::Dual):")
-                rethrow(err)
             end
         end
     end
