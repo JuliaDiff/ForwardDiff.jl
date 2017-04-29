@@ -8,15 +8,22 @@ Use ``ForwardDiff.derivative`` to differentiate functions of the form ``f(::Real
 
 .. function:: ForwardDiff.derivative!(out, f, x)
 
-    Compute :math:`f'(x)`, storing the output in ``out``. If ``x`` is a ``Tuple``,
-    then ``f`` will be called as ``f(x...)`` and the derivatives with respect to
-    each element in `x` will be stored in the respective element of ``out`` (which
-    should also be a ``Tuple``).
+    Compute :math:`f'(x)`, storing the output in ``out``.
+
+.. function:: ForwardDiff.derivative!(out, f!, y, x, cfg = ForwardDiff.DerivativeConfig(f!, y, x))
+
+    Compute and return :math:`f'(x)`, storing the output in ```out``. This form assumes that
+    :math:`f'(x)` can be called as ``f!(y, x)`` such that the value result is stored in
+    ``y``.
 
 .. function:: ForwardDiff.derivative(f, x)
 
-    Compute and return :math:`f'(x)`. If ``x`` is a ``Tuple``, ``f`` will be
-    called as ``f(x...)``, and a ``Tuple`` of derivatives will be returned.
+    Compute and return :math:`f'(x)`.
+
+.. function:: ForwardDiff.derivative(f!, y, x, cfg = ForwardDiff.DerivativeConfig(f!, y, x))
+
+    Compute and return :math:`f'(x)`. This form assumes that :math:`f'(x)` can be called as
+    ``f!(y, x)`` such that the value result is stored in ``y``.
 
 Gradients of :math:`f(x) : \mathbb{R}^{n_1} \times \dots \times \mathbb{R}^{n_k} \to \mathbb{R}`
 ------------------------------------------------------------------------------------------------

@@ -152,17 +152,28 @@
 <dl class="function">
 <dt>
 <code class="descname">ForwardDiff.derivative!(out, f, x)</code></dt>
-<dd><p>Compute <span class="math">\(f'(x)\)</span>, storing the output in <code class="docutils literal"><span class="pre">out</span></code>. If <code class="docutils literal"><span class="pre">x</span></code> is a <code class="docutils literal"><span class="pre">Tuple</span></code>,
-then <code class="docutils literal"><span class="pre">f</span></code> will be called as <code class="docutils literal"><span class="pre">f(x...)</span></code> and the derivatives with respect to
-each element in <cite>x</cite> will be stored in the respective element of <code class="docutils literal"><span class="pre">out</span></code> (which
-should also be a <code class="docutils literal"><span class="pre">Tuple</span></code>).</p>
+<dd><p>Compute <span class="math">\(f'(x)\)</span>, storing the output in <code class="docutils literal"><span class="pre">out</span></code>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descname">ForwardDiff.derivative!(out, f!, y, x, cfg = ForwardDiff.DerivativeConfig(f!, y, x))</code></dt>
+<dd><p>Compute and return <span class="math">\(f'(x)\)</span>, storing the output in <code class="docutils literal"><span class="pre">`out</span></code>. This form assumes that
+<span class="math">\(f'(x)\)</span> can be called as <code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code> such that the value result is stored in
+<code class="docutils literal"><span class="pre">y</span></code>.</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="ForwardDiff.derivative">
 <code class="descclassname">ForwardDiff.</code><code class="descname">derivative</code><span class="sig-paren">(</span><em>f</em>, <em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#ForwardDiff.derivative" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute and return <span class="math">\(f'(x)\)</span>. If <code class="docutils literal"><span class="pre">x</span></code> is a <code class="docutils literal"><span class="pre">Tuple</span></code>, <code class="docutils literal"><span class="pre">f</span></code> will be
-called as <code class="docutils literal"><span class="pre">f(x...)</span></code>, and a <code class="docutils literal"><span class="pre">Tuple</span></code> of derivatives will be returned.</p>
+<dd><p>Compute and return <span class="math">\(f'(x)\)</span>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt>
+<code class="descclassname">ForwardDiff.</code><code class="descname">derivative</code><span class="sig-paren">(</span><em>f!</em>, <em>y</em>, <em>x</em>, <em>cfg = ForwardDiff.DerivativeConfig(f!</em>, <em>y</em>, <em>x)</em><span class="sig-paren">)</span></dt>
+<dd><p>Compute and return <span class="math">\(f'(x)\)</span>. This form assumes that <span class="math">\(f'(x)\)</span> can be called as
+<code class="docutils literal"><span class="pre">f!(y,</span> <span class="pre">x)</span></code> such that the value result is stored in <code class="docutils literal"><span class="pre">y</span></code>.</p>
 </dd></dl>
 
 </div>
