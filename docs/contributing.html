@@ -92,12 +92,7 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="how_it_works.html">How ForwardDiff Works</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">How to Contribute</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#manually-optimizing-unary-functions">Manually Optimizing Unary Functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#implementing-new-functions">Implementing New Functions</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unary-functions-via-calculus-jl">Unary Functions Via Calculus.jl</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#manually-adding-functions-to-forwarddiff">Manually Adding Functions to ForwardDiff</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-new-derivative-definitions">Adding New Derivative Definitions</a></li>
 </ul>
 </li>
 </ul>
@@ -156,60 +151,24 @@ provides brief tutorials on how to make these contributions.</p>
 <li>Apply your code changes to the branch on your fork</li>
 <li>When you&#8217;re done, submit a PR to ForwardDiff to merge your fork into ForwardDiff&#8217;s master branch.</li>
 </ol>
-<div class="section" id="manually-optimizing-unary-functions">
-<h2>Manually Optimizing Unary Functions<a class="headerlink" href="#manually-optimizing-unary-functions" title="Permalink to this headline">¶</a></h2>
-<p>To see a list of functions to pick from, look at <code class="docutils literal"><span class="pre">ForwardDiff.AUTO_DEFINED_UNARY_FUNCS</span></code>:</p>
-<div class="highlight-julia"><div class="highlight"><pre><span></span><span class="n">julia</span><span class="o">&gt;</span> <span class="k">import</span> <span class="n">ForwardDiff</span>
-
-<span class="n">julia</span><span class="o">&gt;</span> <span class="n">ForwardDiff</span><span class="o">.</span><span class="n">AUTO_DEFINED_UNARY_FUNCS</span>
-<span class="mi">57</span><span class="o">-</span><span class="n">element</span> <span class="n">Array</span><span class="p">{</span><span class="n">Symbol</span><span class="p">,</span><span class="mi">1</span><span class="p">}:</span>
- <span class="p">:</span><span class="n">sqrt</span>
- <span class="p">:</span><span class="n">cbrt</span>
- <span class="p">:</span><span class="n">abs2</span>
- <span class="p">:</span><span class="n">inv</span>
- <span class="p">:</span><span class="n">log</span>
- <span class="p">:</span><span class="n">log10</span>
- <span class="p">:</span><span class="n">log2</span>
- <span class="p">:</span><span class="n">log1p</span>
- <span class="p">:</span><span class="n">exp</span>
- <span class="p">:</span><span class="n">exp2</span>
- <span class="p">:</span><span class="n">expm1</span>
- <span class="p">:</span><span class="n">sin</span>
- <span class="p">:</span><span class="n">cos</span>
- <span class="p">:</span><span class="n">tan</span>
- <span class="n">⋮</span>
-</pre></div>
-</div>
-<p>Some of these functions may have already been manually optimized. To see what functions have
-already been done, go to <code class="docutils literal"><span class="pre">src/dual.jl</span></code> and scroll down to the <code class="docutils literal"><span class="pre">Special</span> <span class="pre">Cases</span></code> section.</p>
-<p>The functions in <code class="docutils literal"><span class="pre">ForwardDiff.AUTO_DEFINED_UNARY_FUNCS</span></code> are automatically tested as part
-of ForwardDiff&#8217;s test suite, so you don&#8217;t need to write tests yourself. You can test your
-changes by running <code class="docutils literal"><span class="pre">Pkg.test(&quot;ForwardDiff&quot;)</span></code>.</p>
-<p>If everything passes, you can submit a PR to the ForwardDiff repository to share your work!</p>
-</div>
-<div class="section" id="implementing-new-functions">
-<h2>Implementing New Functions<a class="headerlink" href="#implementing-new-functions" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="unary-functions-via-calculus-jl">
-<h3>Unary Functions Via Calculus.jl<a class="headerlink" href="#unary-functions-via-calculus-jl" title="Permalink to this headline">¶</a></h3>
-<p>The easiest way to add support for a new function is actually to define a derivative rule
-for the function in Calculus&#8217;s <a class="reference external" href="https://github.com/johnmyleswhite/Calculus.jl/blob/master/src/differentiate.jl#L115">symbolic differentiation code</a>, which ForwardDiff then uses
-to generate the function&#8217;s definition on <code class="docutils literal"><span class="pre">Dual</span></code> numbers. To accomplish this:</p>
+<div class="section" id="adding-new-derivative-definitions">
+<h2>Adding New Derivative Definitions<a class="headerlink" href="#adding-new-derivative-definitions" title="Permalink to this headline">¶</a></h2>
+<p>In general, new derivative implementations for <code class="docutils literal"><span class="pre">Dual</span></code> are automatically defined via
+simple symbolic rules. ForwardDiff accomplishes this by looping over the <a class="reference external" href="https://github.com/jrevels/RealInterface.jl">the function names
+listed in the RealInterface package</a>, and for every function (and relevant arity), it
+attempts to generate a <code class="docutils literal"><span class="pre">Dual</span></code> definition by applying the <a class="reference external" href="https://github.com/JuliaDiff/DiffBase.jl/blob/master/src/rules.jl">symbolic rules provided by the
+DiffBase package</a>. Conveniently, these auto-generated definitions are also automatically
+tested.</p>
+<p>Thus, in order to add a new derivative implementation for <code class="docutils literal"><span class="pre">Dual</span></code>, you should do the
+following:</p>
 <ol class="arabic simple">
-<li>Open an issue in ForwardDiff with the title &#8220;Supporting f(x)&#8221; (obviously replacing &#8220;f(x)&#8221;&#8221; with the function you wish to support).</li>
-<li>Open a PR to Calculus that adds the relevant differentiation rule(s) and tests. In the PR&#8217;s description, be sure to mention the relevant ForwardDiff issue such that GitHub links the two.</li>
-<li>Once the PR to Calculus is accepted, we can check to make sure that the function works appropriately in ForwardDiff. If it does, then you&#8217;re done, and the issue in ForwardDiff can be considered resolved!</li>
+<li>Make sure the name of the function is appropriately listed in the RealInterface package</li>
+<li>Define the appropriate derivative rule(s) in DiffBase</li>
+<li>Check that calling the function on <code class="docutils literal"><span class="pre">Dual</span></code> instances delivers the desired result.</li>
 </ol>
-</div>
-<div class="section" id="manually-adding-functions-to-forwarddiff">
-<h3>Manually Adding Functions to ForwardDiff<a class="headerlink" href="#manually-adding-functions-to-forwarddiff" title="Permalink to this headline">¶</a></h3>
-<p>Some functions aren&#8217;t suitable for auto-definition via the Calculus package. An example of
-such a function is the non-unary function <code class="docutils literal"><span class="pre">atan2</span></code>, which is defined manually in
-<code class="docutils literal"><span class="pre">ForwardDiff/src/dual.jl</span></code>.</p>
-<p>The process for manually adding functions to ForwardDiff without going through Calculus.jl
-is essentially the same as the process for manually optimizing existing functions, with the
-additional requirement that you&#8217;ll have to write the tests yourself. New tests for <code class="docutils literal"><span class="pre">Dual</span></code>
-numbers can be placed in <a class="reference external" href="https://github.com/JuliaDiff/ForwardDiff.jl/tree/master/test/DualTest.jl">DualTest.jl</a>.</p>
-</div>
+<p>Depending on which the arity of your function and its category in RealInterface,
+ForwardDiff&#8217;s auto-definition mechanism might need to be expanded to include it.
+If this is the case, ForwardDiff&#8217;s maintainers can help you out.</p>
 </div>
 </div>
 
