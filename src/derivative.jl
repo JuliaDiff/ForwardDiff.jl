@@ -2,14 +2,38 @@
 # API methods #
 ###############
 
+const AllowedDerivativeConfig{F,H} = Union{DerivativeConfig{Tag{F,H}}, DerivativeConfig{Tag{Void,H}}}
+
+derivative(f!, y, x, cfg::DerivativeConfig) = throw(ConfigHismatchError(f, cfg))
+derivative!(out, f!, y, x, cfg::DerivativeConfig) = throw(ConfigHismatchError(f, cfg))
+
 @inline function derivative(f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(F, R))
     return extract_derivative(f(Dual{T}(x, one(x))))
 end
 
+@inline function derivative(f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+    ydual = cfg.duals
+    seed!(ydual, y)
+    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
+    map!(value, y, ydual)
+    return extract_derivative(ydual)
+end
+
 @inline function derivative!(out, f::F, x::R) where {F,R<:Real}
-    T = typeof(Tag(F, typeof(x)))
-    extract_derivative!(out, f(Dual{T}(x, one(x))))
+    T = typeof(Tag(F, R))
+    ydual = f(Dual{T}(x, one(x)))
+    extract_value!(out, ydual)
+    extract_derivative!(out, ydual)
+    return out
+end
+
+@inline function derivative!(out, f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+    ydual = cfg.duals
+    seed!(ydual, y)
+    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
+    extract_value!(out, y, ydual)
+    extract_derivative!(out, ydual)
     return out
 end
 
@@ -28,9 +52,4 @@ end
 #----------#
 
 extract_derivative!(out::AbstractArray, y::AbstractArray) = map!(extract_derivative, out, y)
-
-function extract_derivative!(out::DiffResult, y)
-    DiffBase.value!(value, out, y)
-    DiffBase.derivative!(extract_derivative, out, y)
-    return out
-end
+extract_derivative!(out::DiffResult, y) = DiffBase.derivative!(extract_derivative, out, y)
