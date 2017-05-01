@@ -7,6 +7,7 @@ using ForwardDiff: Partials, Dual, value, partials
 import NaNMath
 import Calculus
 import SpecialFunctions
+import RealInterface
 
 samerng() = MersenneTwister(1)
 
@@ -408,6 +409,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
             end
         end
         for f in RealInterface.BINARY_SPECIAL_MATH
+            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x)) && continue
             if DiffBase.hasdiffrule(f, 2)
                 derivs = DiffBase.diffrule(f, :x, :y)
                 @eval begin
