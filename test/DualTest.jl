@@ -448,6 +448,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
     end
 
+    @test dual_isapprox(atan2(abs(FDNUM), abs(FDNUM2)), atan(abs(FDNUM) / abs(FDNUM2)))
+
     @test dual_isapprox(fma(FDNUM, FDNUM2, FDNUM3),   Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS + PARTIALS3))
     @test dual_isapprox(fma(FDNUM, FDNUM2, PRIMAL3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS))
     @test dual_isapprox(fma(PRIMAL, FDNUM2, FDNUM3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PARTIALS3))
