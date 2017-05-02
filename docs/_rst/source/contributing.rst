@@ -29,7 +29,7 @@ following:
 2. Define the appropriate derivative rule(s) in DiffBase
 3. Check that calling the function on ``Dual`` instances delivers the desired result.
 
-Depending on which the arity of your function and its category in RealInterface,
+Depending on the arity of your function and its category in RealInterface,
 ForwardDiff's auto-definition mechanism might need to be expanded to include it.
 If this is the case, ForwardDiff's maintainers can help you out.
 
