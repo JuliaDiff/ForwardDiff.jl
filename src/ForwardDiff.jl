@@ -6,39 +6,18 @@ using DiffBase
 using DiffBase: DiffResult
 using StaticArrays
 
-import Calculus
 import NaNMath
 import SpecialFunctions
-import Base.Threads
+import RealInterface
+import CommonSubexpressions
 
 #############################
 # types/functions/constants #
 #############################
 
-# NaN-safe mode switch #
-#----------------------#
-
 const NANSAFE_MODE_ENABLED = false
 
-# function generation #
-#---------------------#
-
-const AUTO_DEFINED_UNARY_FUNCS = map(first, Calculus.symbolic_derivatives_1arg())
-
-const NANMATH_FUNCS = (:sin, :cos, :tan, :asin, :acos, :acosh,
-                       :atanh, :log, :log2, :log10, :lgamma, :log1p)
-
-const SPECIAL_FUNCS = (:erf, :erfc, :erfinv, :erfcinv, :erfi, :erfcx,
-                       :dawson, :digamma, :eta, :zeta, :airyai, :airyaiprime,
-                       :airybi, :airybiprime, :airyaix, :besselj, :besselj0,
-                       :besselj1, :besseljx, :bessely, :bessely0, :bessely1,
-                       :besselyx, :besselh, :hankelh1, :hankelh1x, :hankelh2,
-                       :hankelh2x, :besseli, :besselix, :besselk, :besselkx)
-
 const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real)
-
-# chunk settings #
-#----------------#
 
 const DEFAULT_CHUNK_THRESHOLD = 10
 
