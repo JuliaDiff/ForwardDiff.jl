@@ -145,7 +145,7 @@ end
 
 @inline function vector_mode_jacobian_vals(f::F, x::SArray) where F
     a = vector_mode_dual_eval(f, x)
-    return (extract_jacobian(a, x), a.val)
+    return (extract_jacobian(a, x), extract_value(a,x))
 end
 
 @inline function vector_mode_jacobian!(out, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
