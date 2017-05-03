@@ -44,6 +44,8 @@ function jacobian!(out, f!::F, y, x, cfg::AllowedJacobianConfig{F,H} = JacobianC
 end
 
 @inline jacobian(f::F, x::SArray) where {F} = vector_mode_jacobian(f, x)
+@inline jacobian_vals(f::F, x::SArray) where {F} = vector_mode_jacobian_vals(f, x)
+
 
 @inline jacobian!(out, f::F, x::SArray) where {F} = vector_mode_jacobian!(out, f, x)
 
