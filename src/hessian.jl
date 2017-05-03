@@ -31,7 +31,7 @@ function hessian!(out::DiffResult, f::F, x, cfg::AllowedHessianConfig{F,H} = Hes
 end
 
 hessian(f::F, x::SArray) where {F} = jacobian(y -> gradient(f, y), x)
-hessian_vals(f::F, x::SArray) where {F} = jacobian_vals(y -> gradient(f, y), x)
+hessian_grad(f::F, x::SArray) where {F} = jacobian_vals(y -> gradient(f, y), x)
 
 hessian!(out, f::F, x::SArray) where {F} = jacobian!(out, y -> gradient(f, y), x)
 
