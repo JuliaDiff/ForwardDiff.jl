@@ -62,6 +62,15 @@ end
     end
 end
 
+@generated function extract_value(ydual::SArray{SY,VY,DY,M},
+                                     x::SArray{SX,VX,DX,N}) where {SY,VY,DY,M,SX,VX,DX,N}
+    result = Expr(:tuple, [:(value(ydual[$i])) for i in 1:M]...)
+    return quote
+        $(Expr(:meta, :inline))
+        return SArray{Tuple{M}}($result)
+    end
+end
+
 function extract_jacobian(ydual::AbstractArray, x::SArray{S,V,D,N}) where {S,V,D,N}
     out = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     return extract_jacobian!(out, ydual, N)
