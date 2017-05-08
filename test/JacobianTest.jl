@@ -158,8 +158,10 @@ x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
 out = similar(x, 6, 9)
 actual = ForwardDiff.jacobian(diff, x)
+actual_vals = diff(x)
 
 @test ForwardDiff.jacobian(diff, sx) == actual
+@test ForwardDiff.jacobian_vals(diff, sx) == (actual, actual_vals)
 
 ForwardDiff.jacobian!(out, diff, sx)
 
