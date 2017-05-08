@@ -51,7 +51,7 @@ julia> ForwardDiff.hessian(f, x)
 
 ## News
 
-- 3/2016: [ForwardDiff v0.4.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/8209). There are no API changes, but [support for Julia v0.4 has been dropped](https://github.com/JuliaDiff/ForwardDiff.jl/pull/195) moving forward.
+- 3/2017: [ForwardDiff v0.4.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/8209). There are no API changes, but [support for Julia v0.4 has been dropped](https://github.com/JuliaDiff/ForwardDiff.jl/pull/195) moving forward.
 
 - 12/2016: [ForwardDiff v0.3.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/7177). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
 
