@@ -67,7 +67,7 @@ end
     result = Expr(:tuple, [:(value(ydual[$i])) for i in 1:M]...)
     return quote
         $(Expr(:meta, :inline))
-        return SArray{SX}($result)
+        return SArray{SY}($result)
     end
 end
 
