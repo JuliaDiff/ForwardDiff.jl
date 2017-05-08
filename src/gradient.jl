@@ -40,8 +40,12 @@ end
         return SArray{S}($result)
     end
 end
-function extract_value(y::Real, ::SArray{S,X,D,N}) where {S,X,D,N}
-   a.value
+@generated function extract_value(y::Real, ::SArray{S,X,D,N}) where {S,X,D,N}
+    result = Expr(:tuple, [:(value(y, $i)) for i in 1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        return SArray{S}($result)
+    end
 end
 
 function extract_gradient!(out::DiffResult, y::Real)
