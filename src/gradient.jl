@@ -25,6 +25,7 @@ function gradient!(out, f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfi
 end
 
 @inline gradient(f::F, x::SArray) where {F} = vector_mode_gradient(f, x)
+@inline gradient_val(f::F, x::SArray) where {F} = vector_mode_gradient_val(f, x)
 
 @inline gradient!(out, f::F, x::SArray) where {F} = vector_mode_gradient!(out, f, x)
 
@@ -38,6 +39,9 @@ end
         $(Expr(:meta, :inline))
         return SArray{S}($result)
     end
+end
+function extract_value(y::Real, ::SArray{S,X,D,N}) where {S,X,D,N}
+   a.value
 end
 
 function extract_gradient!(out::DiffResult, y::Real)
@@ -87,6 +91,11 @@ end
 
 @inline function vector_mode_gradient(f::F, x::SArray) where F
     return extract_gradient(vector_mode_dual_eval(f, x), x)
+end
+
+@inline function vector_mode_gradient_val(f::F, x::SArray) where F
+    a = vector_mode_dual_eval(f, x)
+    return (extract_gradient(a, x), extract_value(a, x))
 end
 
 @inline function vector_mode_gradient!(out, f::F, x::SArray) where F
