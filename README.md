@@ -7,8 +7,6 @@
 
 **[Go To ForwardDiff's Documentation](http://www.juliadiff.org/ForwardDiff.jl/)**
 
-**Warning**: Please read [this issue](https://github.com/JuliaDiff/ForwardDiff.jl/issues/83) before attempting nested differentiation with ForwardDiff.
-
 # ForwardDiff.jl
 
 ForwardDiff implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
