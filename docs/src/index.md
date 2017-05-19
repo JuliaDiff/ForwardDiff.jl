@@ -12,4 +12,4 @@ ForwardDiff is a registered Julia package, so it can be installed by running:
 julia> Pkg.add("ForwardDiff")
 ```
 
-If you find ForwardDiff useful in your work, we kindly request that you cite [our paper](https://arxiv.org/abs/1607.07892). The relevant [BibLaTex is available in ForwardDiff's README](https://github.com/JuliaDiff/ForwardDiff.jl) (not included here because BibLaTex doesn't play nice with Documenter/Jekyll).
+If you find ForwardDiff useful in your work, we kindly request that you cite [our paper](https://arxiv.org/abs/1607.07892). The relevant [BibLaTex is available in ForwardDiff's README](https://github.com/JuliaDiff/ForwardDiff.jl#publications) (not included here because BibLaTex doesn't play nice with Documenter/Jekyll).
