@@ -1,7 +1,7 @@
 var documenterSearchIndex = {"docs": [
 
 {
-    "location": "user/index.html#",
+    "location": "index.html#",
     "page": "Introduction",
     "title": "Introduction",
     "category": "page",
@@ -9,7 +9,7 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "user/index.html#ForwardDiff-1",
+    "location": "index.html#ForwardDiff-1",
     "page": "Introduction",
     "title": "ForwardDiff",
     "category": "section",
