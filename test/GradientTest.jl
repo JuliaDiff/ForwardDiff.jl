@@ -79,8 +79,10 @@ x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
 out = similar(x)
 actual = ForwardDiff.gradient(prod, x)
+actual_val = prod(x)
 
 @test ForwardDiff.gradient(prod, sx) == actual
+@test ForwardDiff.gradient_val(prod, sx) == (actual, actual_val)
 
 ForwardDiff.gradient!(out, prod, sx)
 

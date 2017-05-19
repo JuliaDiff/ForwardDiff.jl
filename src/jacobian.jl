@@ -44,6 +44,8 @@ function jacobian!(out, f!::F, y, x, cfg::AllowedJacobianConfig{F,H} = JacobianC
 end
 
 @inline jacobian(f::F, x::SArray) where {F} = vector_mode_jacobian(f, x)
+@inline jacobian_vals(f::F, x::SArray) where {F} = vector_mode_jacobian_vals(f, x)
+
 
 @inline jacobian!(out, f::F, x::SArray) where {F} = vector_mode_jacobian!(out, f, x)
 
@@ -57,6 +59,15 @@ end
     return quote
         $(Expr(:meta, :inline))
         return SArray{Tuple{M,N}}($result)
+    end
+end
+
+@generated function extract_value(ydual::SArray{SY,VY,DY,M},
+                                     x::SArray{SX,VX,DX,N}) where {SY,VY,DY,M,SX,VX,DX,N}
+    result = Expr(:tuple, [:(value(ydual[$i])) for i in 1:M]...)
+    return quote
+        $(Expr(:meta, :inline))
+        return SArray{SY}($result)
     end
 end
 
@@ -130,6 +141,11 @@ end
 
 @inline function vector_mode_jacobian(f::F, x::SArray) where F
     return extract_jacobian(vector_mode_dual_eval(f, x), x)
+end
+
+@inline function vector_mode_jacobian_vals(f::F, x::SArray) where F
+    a = vector_mode_dual_eval(f, x)
+    return (extract_jacobian(a, x), extract_value(a,x))
 end
 
 @inline function vector_mode_jacobian!(out, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
