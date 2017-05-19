@@ -12,14 +12,4 @@ ForwardDiff is a registered Julia package, so it can be installed by running:
 julia> Pkg.add("ForwardDiff")
 ```
 
-If you find ForwardDiff useful in your work, we kindly request that you cite [the following paper](https://arxiv.org/abs/1607.07892):
-
-```
-@article{RevelsLubinPapamarkou2016,
-   title = {Forward-Mode Automatic Differentiation in Julia},
-  author = {{Revels}, J. and {Lubin}, M. and {Papamarkou}, T.},
- journal = {arXiv:1607.07892 [cs.MS]},
-    year = {2016},
-    url = {https://arxiv.org/abs/1607.07892}
-}
-```
+If you find ForwardDiff useful in your work, we kindly request that you cite [our paper](https://arxiv.org/abs/1607.07892). The relevant [BibLaTex is available in ForwardDiff's README](https://github.com/JuliaDiff/ForwardDiff.jl) (not included here because BibLaTex doesn't play nice with Documenter/Jekyll).
