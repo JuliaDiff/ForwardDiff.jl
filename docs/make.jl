@@ -4,8 +4,8 @@ makedocs(modules=[ForwardDiff],
          doctest = false,
          format = :html,
          sitename = "ForwardDiff",
-         pages = ["User Documentation" => [
-                    "Introduction" => "user/index.md",
+         pages = ["Introduction" => "index.md",
+                  "User Documentation" => [
                     "Limitations of ForwardDiff" => "user/limitations.md",
                     "Differentiation API" => "user/api.md",
                     "Advanced Usage Guide" => "user/advanced.md",
