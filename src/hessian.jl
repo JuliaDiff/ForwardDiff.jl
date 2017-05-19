@@ -43,9 +43,9 @@ because `isa(result, DiffResult)`, `cfg` is constructed as `HessianConfig(f, res
 """
 function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::AllowedHessianConfig{F,H} = HessianConfig(f, result, x)) where {F,H}
     ∇f! = (y, z) -> begin
-        result = DiffResult(zero(eltype(y)), y)
-        gradient!(result, f, z, cfg.gradient_config)
-        DiffBase.value!(result, value(DiffBase.value(result)))
+        inner_result = DiffResult(zero(eltype(y)), y)
+        gradient!(inner_result, f, z, cfg.gradient_config)
+        DiffBase.value!(result, value(DiffBase.value(inner_result)))
         return y
     end
     jacobian!(DiffBase.hessian(result), ∇f!, DiffBase.gradient(result), x, cfg.jacobian_config)
