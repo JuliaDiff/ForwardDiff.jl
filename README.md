@@ -5,7 +5,8 @@
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.5.svg)](http://pkg.julialang.org/?pkg=ForwardDiff)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.6.svg)](http://pkg.julialang.org/?pkg=ForwardDiff)
 
-**[Go To ForwardDiff's Documentation](http://www.juliadiff.org/ForwardDiff.jl/)**
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](http://www.juliadiff.org/ForwardDiff.jl/stable)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](http://www.juliadiff.org/ForwardDiff.jl/latest)
 
 # ForwardDiff.jl
 
