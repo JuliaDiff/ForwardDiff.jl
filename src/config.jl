@@ -62,6 +62,10 @@ The returned `DerivativeConfig` instance contains all the work buffers required 
 `ForwardDiff.derivative` and `ForwardDiff.derivative!` when the target function takes the form
 `f!(y, x)`.
 
+If `f!` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
 This constructor does not store/modify `y` or `x`.
 """
 function DerivativeConfig(::F,
@@ -89,6 +93,10 @@ vector `x`.
 
 The returned `GradientConfig` instance contains all the work buffers required by
 `ForwardDiff.gradient` and `ForwardDiff.gradient!`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `x`.
 """
@@ -122,6 +130,10 @@ The returned `JacobianConfig` instance contains all the work buffers required by
 `ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
 `f(x)`.
 
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
 This constructor does not store/modify `x`.
 """
 function JacobianConfig(::F,
@@ -142,6 +154,10 @@ output vector `y` and the input vector `x`.
 The returned `JacobianConfig` instance contains all the work buffers required by
 `ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
 `f!(y, x)`.
+
+If `f!` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `y` or `x`.
 """
@@ -180,6 +196,10 @@ configured for the case where the `result` argument is an `AbstractArray`. If
 it is a `DiffResult`, the `HessianConfig` should instead be constructed via
 `ForwardDiff.HessianConfig(f, result, x, chunk)`.
 
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
 This constructor does not store/modify `x`.
 """
 function HessianConfig(f::F,
@@ -199,6 +219,10 @@ type/shape of the input vector `x`.
 
 The returned `HessianConfig` instance contains all the work buffers required by
 `ForwardDiff.hessian!` for the case where the `result` argument is an `DiffResult`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `x`.
 """
