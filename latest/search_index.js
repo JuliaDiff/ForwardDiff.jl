@@ -149,7 +149,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.DerivativeConfig",
     "category": "Type",
-    "text": "ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::AbstractArray)\n\nReturn a DerivativeConfig instance based on the type of f!, and the types/shapes of the output vector y and the input vector x.\n\nThe returned DerivativeConfig instance contains all the work buffers required by ForwardDiff.derivative and ForwardDiff.derivative! when the target function takes the form f!(y, x).\n\nThis constructor does not store/modify y or x.\n\n\n\n"
+    "text": "ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::AbstractArray)\n\nReturn a DerivativeConfig instance based on the type of f!, and the types/shapes of the output vector y and the input vector x.\n\nThe returned DerivativeConfig instance contains all the work buffers required by ForwardDiff.derivative and ForwardDiff.derivative! when the target function takes the form f!(y, x).\n\nIf f! is nothing instead of the actual target function, then the returned instance can be used with any target function. However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).\n\nThis constructor does not store/modify y or x.\n\n\n\n"
 },
 
 {
@@ -157,7 +157,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.GradientConfig",
     "category": "Type",
-    "text": "ForwardDiff.GradientConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a GradientConfig instance based on the type of f and type/shape of the input vector x.\n\nThe returned GradientConfig instance contains all the work buffers required by ForwardDiff.gradient and ForwardDiff.gradient!.\n\nThis constructor does not store/modify x.\n\n\n\n"
+    "text": "ForwardDiff.GradientConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a GradientConfig instance based on the type of f and type/shape of the input vector x.\n\nThe returned GradientConfig instance contains all the work buffers required by ForwardDiff.gradient and ForwardDiff.gradient!.\n\nIf f is nothing instead of the actual target function, then the returned instance can be used with any target function. However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).\n\nThis constructor does not store/modify x.\n\n\n\n"
 },
 
 {
@@ -165,7 +165,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.JacobianConfig",
     "category": "Type",
-    "text": "ForwardDiff.JacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a JacobianConfig instance based on the type of f and type/shape of the input vector x.\n\nThe returned JacobianConfig instance contains all the work buffers required by ForwardDiff.jacobian and ForwardDiff.jacobian! when the target function takes the form f(x).\n\nThis constructor does not store/modify x.\n\n\n\nForwardDiff.JacobianConfig(f!, y::AbstractArray, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a JacobianConfig instance based on the type of f!, and the types/shapes of the output vector y and the input vector x.\n\nThe returned JacobianConfig instance contains all the work buffers required by ForwardDiff.jacobian and ForwardDiff.jacobian! when the target function takes the form f!(y, x).\n\nThis constructor does not store/modify y or x.\n\n\n\n"
+    "text": "ForwardDiff.JacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a JacobianConfig instance based on the type of f and type/shape of the input vector x.\n\nThe returned JacobianConfig instance contains all the work buffers required by ForwardDiff.jacobian and ForwardDiff.jacobian! when the target function takes the form f(x).\n\nIf f is nothing instead of the actual target function, then the returned instance can be used with any target function. However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).\n\nThis constructor does not store/modify x.\n\n\n\nForwardDiff.JacobianConfig(f!, y::AbstractArray, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a JacobianConfig instance based on the type of f!, and the types/shapes of the output vector y and the input vector x.\n\nThe returned JacobianConfig instance contains all the work buffers required by ForwardDiff.jacobian and ForwardDiff.jacobian! when the target function takes the form f!(y, x).\n\nIf f! is nothing instead of the actual target function, then the returned instance can be used with any target function. However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).\n\nThis constructor does not store/modify y or x.\n\n\n\n"
 },
 
 {
@@ -173,7 +173,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.HessianConfig",
     "category": "Type",
-    "text": "ForwardDiff.HessianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a HessianConfig instance based on the type of f and type/shape of the input vector x.\n\nThe returned HessianConfig instance contains all the work buffers required by ForwardDiff.hessian and ForwardDiff.hessian!. For the latter, the buffers are configured for the case where the result argument is an AbstractArray. If it is a DiffResult, the HessianConfig should instead be constructed via ForwardDiff.HessianConfig(f, result, x, chunk).\n\nThis constructor does not store/modify x.\n\n\n\nForwardDiff.HessianConfig(f, result::DiffResult, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a HessianConfig instance based on the type of f, types/storage in result, and type/shape of the input vector x.\n\nThe returned HessianConfig instance contains all the work buffers required by ForwardDiff.hessian! for the case where the result argument is an DiffResult.\n\nThis constructor does not store/modify x.\n\n\n\n"
+    "text": "ForwardDiff.HessianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a HessianConfig instance based on the type of f and type/shape of the input vector x.\n\nThe returned HessianConfig instance contains all the work buffers required by ForwardDiff.hessian and ForwardDiff.hessian!. For the latter, the buffers are configured for the case where the result argument is an AbstractArray. If it is a DiffResult, the HessianConfig should instead be constructed via ForwardDiff.HessianConfig(f, result, x, chunk).\n\nIf f is nothing instead of the actual target function, then the returned instance can be used with any target function. However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).\n\nThis constructor does not store/modify x.\n\n\n\nForwardDiff.HessianConfig(f, result::DiffResult, x::AbstractArray, chunk::Chunk = Chunk(x))\n\nReturn a HessianConfig instance based on the type of f, types/storage in result, and type/shape of the input vector x.\n\nThe returned HessianConfig instance contains all the work buffers required by ForwardDiff.hessian! for the case where the result argument is an DiffResult.\n\nIf f is nothing instead of the actual target function, then the returned instance can be used with any target function. However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).\n\nThis constructor does not store/modify x.\n\n\n\n"
 },
 
 {
@@ -265,11 +265,11 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
-    "location": "user/upgrade.html#Setting-Chunk-Size-1",
+    "location": "user/upgrade.html#Using-The-AbstractConfig-API-1",
     "page": "Upgrading from Older Versions",
-    "title": "Setting Chunk Size",
+    "title": "Using The AbstractConfig API",
     "category": "section",
-    "text": "# ForwardDiff v0.1\nForwardDiff.gradient(f, x; chunk_size = 10)\n\n# ForwardDiff v0.2\nForwardDiff.gradient(f, x, Chunk{10}())\n\n# ForwardDiff v0.3 & v0.4\nForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{10}(x))\n\n# ForwardDiff v0.5 & above\nForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x ForwardDiff.Chunk{N}()))"
+    "text": "# ForwardDiff v0.1\nForwardDiff.gradient(f, x; chunk_size = 10)\n\n# ForwardDiff v0.2\nForwardDiff.gradient(f, x, Chunk{10}())\n\n# ForwardDiff v0.3 & v0.4\nForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{10}(x))\n\n# ForwardDiff v0.5 & above\nForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x ForwardDiff.Chunk{10}()))"
 },
 
 {
