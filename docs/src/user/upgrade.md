@@ -20,7 +20,7 @@ using ForwardDiff
 ForwardDiff.hessian(f, x)
 ```
 
-# Setting Chunk Size
+# Using The `AbstractConfig` API
 
 ```julia
 # ForwardDiff v0.1
@@ -33,7 +33,7 @@ ForwardDiff.gradient(f, x, Chunk{10}())
 ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{10}(x))
 
 # ForwardDiff v0.5 & above
-ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x ForwardDiff.Chunk{N}()))
+ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x ForwardDiff.Chunk{10}()))
 ```
 
 # Enabling Multithreading
