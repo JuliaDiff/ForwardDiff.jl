@@ -76,6 +76,8 @@ function DerivativeConfig(::F,
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
+Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
+
 ##################
 # GradientConfig #
 ##################
