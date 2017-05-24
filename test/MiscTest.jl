@@ -2,7 +2,6 @@ module MiscTest
 
 import NaNMath
 
-using Compat
 using Base.Test
 using ForwardDiff
 
@@ -100,7 +99,7 @@ gfx = ForwardDiff.gradient(f, x)
 
 # Views
 jinvx = ForwardDiff.jacobian(inv, x)
-@test isapprox(jinvx, ForwardDiff.jacobian(inv, Compat.view(x, 1:5, 1:5)))
+@test isapprox(jinvx, ForwardDiff.jacobian(inv, view(x, 1:5, 1:5)))
 
 ########################
 # Conversion/Promotion #
