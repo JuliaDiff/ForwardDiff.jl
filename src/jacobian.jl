@@ -155,6 +155,12 @@ end
     return out
 end
 
+@inline function vector_mode_jacobian!(out::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+    ydual = vector_mode_dual_eval(f, x)
+    out = DiffResult(value(ydual), extract_jacobian(ydual, DiffBase.jacobian(out)))
+    return out
+end
+
 # chunk mode #
 #------------#
 
