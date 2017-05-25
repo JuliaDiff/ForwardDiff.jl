@@ -450,13 +450,15 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test dual_isapprox(atan2(abs(FDNUM), abs(FDNUM2)), atan(abs(FDNUM) / abs(FDNUM2)))
 
-    @test dual_isapprox(fma(FDNUM, FDNUM2, FDNUM3),   Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS + PARTIALS3))
-    @test dual_isapprox(fma(FDNUM, FDNUM2, PRIMAL3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS))
-    @test dual_isapprox(fma(PRIMAL, FDNUM2, FDNUM3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PARTIALS3))
-    @test dual_isapprox(fma(PRIMAL, FDNUM2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2))
-    @test dual_isapprox(fma(FDNUM, PRIMAL2, FDNUM3),  Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS + PARTIALS3))
-    @test dual_isapprox(fma(FDNUM, PRIMAL2, PRIMAL3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS))
-    @test dual_isapprox(fma(PRIMAL, PRIMAL2, FDNUM3), Dual(fma(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
+    for f in (fma, muladd)
+        @test dual_isapprox(f(FDNUM, FDNUM2, FDNUM3),   Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS + PARTIALS3))
+        @test dual_isapprox(f(FDNUM, FDNUM2, PRIMAL3),  Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS))
+        @test dual_isapprox(f(PRIMAL, FDNUM2, FDNUM3),  Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PARTIALS3))
+        @test dual_isapprox(f(PRIMAL, FDNUM2, PRIMAL3), Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2))
+        @test dual_isapprox(f(FDNUM, PRIMAL2, FDNUM3),  Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS + PARTIALS3))
+        @test dual_isapprox(f(FDNUM, PRIMAL2, PRIMAL3), Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS))
+        @test dual_isapprox(f(PRIMAL, PRIMAL2, FDNUM3), Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
+    end
 end
 
 end # module
