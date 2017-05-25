@@ -36,3 +36,4 @@ hessian_grad(f::F, x::SArray) where {F} = jacobian_vals(y -> gradient(f, y), x)
 hessian!(out, f::F, x::SArray) where {F} = jacobian!(out, y -> gradient(f, y), x)
 
 hessian!(out::DiffResult, f::F, x::SArray) where {F} = hessian!(out, f, x, HessianConfig(f, out, x))
+hessian!(out::ImmutableDiffResult, f::F, x::SArray) where {F} = jacobian!(out, y -> gradient(f, y), x)
