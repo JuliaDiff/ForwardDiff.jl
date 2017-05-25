@@ -57,6 +57,11 @@ function extract_gradient!(out::DiffResult, dual::Dual)
     return out
 end
 
+function extract_gradient!(out::ImmutableDiffResult, dual::Dual)
+    out = DiffResult(value(dual), extract_gradient(dual, DiffBase.gradient(out)))
+    return out
+end
+
 extract_gradient!(out::AbstractArray, y::Real) = fill!(out, zero(y))
 extract_gradient!(out::AbstractArray, dual::Dual) = copy!(out, partials(dual))
 
