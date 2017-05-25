@@ -37,6 +37,13 @@ end
     return out
 end
 
+@inline function derivative!(out::ImmutableDiffResult, f::F, x::R) where {F,R<:Real}
+    T = typeof(Tag(F, R))
+    ydual = f(Dual{T}(x, one(x)))
+    out = DiffBase.DiffResult(value(ydual), ForwardDiff.partials(ydual, 1))
+    return out
+end
+
 #####################
 # result extraction #
 #####################
