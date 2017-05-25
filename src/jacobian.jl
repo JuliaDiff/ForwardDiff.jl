@@ -105,7 +105,7 @@ function extract_jacobian!(result::AbstractArray, ydual::AbstractArray, n)
     return result
 end
 
-function extract_jacobian!(result::DiffResult, ydual::AbstractArray, n)
+function extract_jacobian!(result::MutableDiffResult, ydual::AbstractArray, n)
     extract_jacobian!(DiffBase.jacobian(result), ydual, n)
     return result
 end
@@ -164,11 +164,18 @@ end
     return extract_jacobian(vector_mode_dual_eval(f, x), x)
 end
 
-@inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+@inline function vector_mode_jacobian!(result::MutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
     ydual = vector_mode_dual_eval(f, x)
     extract_jacobian!(result, ydual, N)
     extract_value!(result, ydual)
     return result
+end
+
+@inline function vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+    ydual = vector_mode_dual_eval(f, x)
+    result = DiffBase.jacobian!(result, extract_jacobian(ydual, x))
+    result = DiffBase.value!(value, result, ydual)
+    return out
 end
 
 # chunk mode #

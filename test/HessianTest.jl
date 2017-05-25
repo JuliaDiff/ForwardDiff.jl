@@ -114,15 +114,30 @@ ForwardDiff.hessian!(out, prod, sx, scfg)
 @test out == actual
 
 result = DiffBase.HessianResult(x)
+result = ForwardDiff.hessian!(result, prod, x)
+
+result1 = DiffBase.HessianResult(x)
+result2 = DiffBase.HessianResult(x)
+result3 = DiffBase.HessianResult(x)
+result1 = ForwardDiff.hessian!(result1, prod, sx)
+result2 = ForwardDiff.hessian!(result2, prod, sx, ForwardDiff.HessianConfig(nothing, result2, x))
+result3 = ForwardDiff.hessian!(result3, prod, sx, ForwardDiff.HessianConfig(nothing, result3, x))
+@test DiffBase.value(result1) == DiffBase.value(result)
+@test DiffBase.value(result2) == DiffBase.value(result)
+@test DiffBase.value(result3) == DiffBase.value(result)
+@test DiffBase.gradient(result1) == DiffBase.gradient(result)
+@test DiffBase.gradient(result2) == DiffBase.gradient(result)
+@test DiffBase.gradient(result3) == DiffBase.gradient(result)
+@test DiffBase.hessian(result1) == DiffBase.hessian(result)
+@test DiffBase.hessian(result2) == DiffBase.hessian(result)
+@test DiffBase.hessian(result3) == DiffBase.hessian(result)
+
 sresult1 = DiffBase.HessianResult(sx)
 sresult2 = DiffBase.HessianResult(sx)
 sresult3 = DiffBase.HessianResult(sx)
-
-result = ForwardDiff.hessian!(result, prod, x)
 sresult1 = ForwardDiff.hessian!(sresult1, prod, sx)
 sresult2 = ForwardDiff.hessian!(sresult2, prod, sx, ForwardDiff.HessianConfig(nothing, sresult2, x))
 sresult3 = ForwardDiff.hessian!(sresult3, prod, sx, ForwardDiff.HessianConfig(nothing, sresult3, x))
-
 @test DiffBase.value(sresult1) == DiffBase.value(result)
 @test DiffBase.value(sresult2) == DiffBase.value(result)
 @test DiffBase.value(sresult3) == DiffBase.value(result)

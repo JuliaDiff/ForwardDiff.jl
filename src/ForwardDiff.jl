@@ -3,7 +3,7 @@ __precompile__()
 module ForwardDiff
 
 using DiffBase
-using DiffBase: DiffResult
+using DiffBase: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
 
 import NaNMath
