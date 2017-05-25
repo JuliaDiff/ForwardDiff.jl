@@ -4,6 +4,7 @@ module ForwardDiff
 
 using DiffBase
 using DiffBase: DiffResult
+using DiffBase: ImmutableDiffResult
 using StaticArrays
 
 import NaNMath
