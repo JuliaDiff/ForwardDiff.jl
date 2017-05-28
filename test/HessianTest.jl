@@ -34,21 +34,21 @@ for c in (1, 2, 3), tag in (nothing, f)
     @test isapprox(h, ForwardDiff.hessian(f, x, cfg))
 
     out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, f, x)
+    out = ForwardDiff.hessian!(out, f, x)
     @test isapprox(out, h)
 
     out = similar(x, 3, 3)
-    ForwardDiff.hessian!(out, f, x, cfg)
+    out = ForwardDiff.hessian!(out, f, x, cfg)
     @test isapprox(out, h)
 
     out = DiffBase.HessianResult(x)
-    ForwardDiff.hessian!(out, f, x)
+    out = ForwardDiff.hessian!(out, f, x)
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.gradient(out), g)
     @test isapprox(DiffBase.hessian(out), h)
 
     out = DiffBase.HessianResult(x)
-    ForwardDiff.hessian!(out, f, x, resultcfg)
+    out = ForwardDiff.hessian!(out, f, x, resultcfg)
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.gradient(out), g)
     @test isapprox(DiffBase.hessian(out), h)
@@ -73,11 +73,11 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         @test isapprox(out, h)
 
         out = similar(X, length(X), length(X))
-        ForwardDiff.hessian!(out, f, X, cfg)
+        out = ForwardDiff.hessian!(out, f, X, cfg)
         @test isapprox(out, h)
 
         out = DiffBase.HessianResult(X)
-        ForwardDiff.hessian!(out, f, X, resultcfg)
+        out = ForwardDiff.hessian!(out, f, X, resultcfg)
         @test isapprox(DiffBase.value(out), v)
         @test isapprox(DiffBase.gradient(out), g)
         @test isapprox(DiffBase.hessian(out), h)
@@ -97,15 +97,15 @@ actual_grad = ForwardDiff.gradient(prod, x)
 @test ForwardDiff.hessian(prod, sx) == actual
 @test ForwardDiff.hessian_grad(prod, sx) == (actual, actual_grad)
 
-ForwardDiff.hessian!(out, prod, sx)
+out = ForwardDiff.hessian!(out, prod, sx)
 
 @test out == actual
 
 result = DiffBase.HessianResult(x)
 sresult = DiffBase.HessianResult(sx)
 
-ForwardDiff.hessian!(result, prod, x)
-ForwardDiff.hessian!(sresult, prod, sx)
+result = ForwardDiff.hessian!(result, prod, x)
+sresult = ForwardDiff.hessian!(sresult, prod, sx)
 
 @test DiffBase.value(sresult) == DiffBase.value(result)
 @test DiffBase.gradient(sresult) == DiffBase.gradient(result)
