@@ -44,6 +44,15 @@ end
     return out
 end
 
+@inline function derivative!(out::ImmutableDiffResult, f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+    ydual = cfg.duals
+    seed!(ydual, y)
+    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
+    map!(value, y, ydual)
+    out = DiffResult(map(value, ydual), extract_derivative(ydual))
+    return out
+end
+
 #####################
 # result extraction #
 #####################
