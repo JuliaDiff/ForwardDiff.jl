@@ -91,8 +91,8 @@ ForwardDiff.gradient!(out, prod, sx)
 result = DiffBase.GradientResult(x)
 sresult = DiffBase.GradientResult(sx)
 
-ForwardDiff.gradient!(result, prod, x)
-ForwardDiff.gradient!(sresult, prod, sx)
+result = ForwardDiff.gradient!(result, prod, x)
+sresult = ForwardDiff.gradient!(sresult, prod, sx)
 
 @test DiffBase.value(sresult) == DiffBase.value(result)
 @test DiffBase.gradient(sresult) == DiffBase.gradient(result)
