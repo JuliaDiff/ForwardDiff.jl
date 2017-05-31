@@ -25,7 +25,6 @@ function gradient!(out, f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfi
 end
 
 @inline gradient(f::F, x::SArray) where {F} = vector_mode_gradient(f, x)
-@inline gradient_val(f::F, x::SArray) where {F} = vector_mode_gradient_val(f, x)
 
 @inline gradient!(out, f::F, x::SArray) where {F} = vector_mode_gradient!(out, f, x)
 
