@@ -92,10 +92,8 @@ x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
 out = similar(x, 9, 9)
 actual = ForwardDiff.hessian(prod, x)
-actual_grad = ForwardDiff.gradient(prod, x)
 
 @test ForwardDiff.hessian(prod, sx) == actual
-@test ForwardDiff.hessian_grad(prod, sx) == (actual, actual_grad)
 
 out = ForwardDiff.hessian!(out, prod, sx)
 
