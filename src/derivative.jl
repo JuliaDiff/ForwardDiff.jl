@@ -37,14 +37,14 @@ end
     return out
 end
 
-@inline function derivative!(out::ImmutableDiffResult, f::F, x::R) where {F,R<:Real}
+@inline function derivative!(::ImmutableDiffResult, f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(F, R))
     ydual = f(Dual{T}(x, one(x)))
     out = DiffBase.DiffResult(value(ydual), ForwardDiff.partials(ydual, 1))
     return out
 end
 
-@inline function derivative!(out::ImmutableDiffResult, f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+@inline function derivative!(::ImmutableDiffResult, f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{Tag{F,H}}(x, one(x)))
