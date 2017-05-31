@@ -97,11 +97,6 @@ end
     return extract_gradient(vector_mode_dual_eval(f, x), x)
 end
 
-@inline function vector_mode_gradient_val(f::F, x::SArray) where F
-    a = vector_mode_dual_eval(f, x)
-    return (extract_gradient(a, x), extract_value(a, x))
-end
-
 @inline function vector_mode_gradient!(out, f::F, x::SArray) where F
     return extract_gradient!(out, vector_mode_dual_eval(f, x))
 end
