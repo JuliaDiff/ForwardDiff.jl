@@ -50,7 +50,7 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
     @test isapprox(out, j)
 
     out = DiffBase.JacobianResult(zeros(4), zeros(3))
-    out = ForwardDiff.jacobian!(out, f, x, JacobianConfig(tags[1], x))
+    ForwardDiff.jacobian!(out, f, x, JacobianConfig(tags[1], x))
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.jacobian(out), j)
 
@@ -75,14 +75,14 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
 
     out = DiffBase.JacobianResult(zeros(4), zeros(3))
     y = zeros(4)
-    out = ForwardDiff.jacobian!(out, f!, y, x, ycfg)
+    ForwardDiff.jacobian!(out, f!, y, x, ycfg)
     @test DiffBase.value(out) == y
     @test isapprox(y, v)
     @test isapprox(DiffBase.jacobian(out), j)
 
     out = DiffBase.JacobianResult(zeros(4), zeros(3))
     y = zeros(4)
-    out = ForwardDiff.jacobian!(out, f!, y, x)
+    ForwardDiff.jacobian!(out, f!, y, x)
     @test DiffBase.value(out) == y
     @test isapprox(y, v)
     @test isapprox(DiffBase.jacobian(out), j)
@@ -104,11 +104,11 @@ for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
         @test isapprox(out, j)
 
         out = similar(X, length(v), length(X))
-        out = ForwardDiff.jacobian!(out, f, X, cfg)
+        ForwardDiff.jacobian!(out, f, X, cfg)
         @test isapprox(out, j)
 
         out = DiffBase.DiffResult(similar(v, length(v)), similar(v, length(v), length(X)))
-        out = ForwardDiff.jacobian!(out, f, X, cfg)
+        ForwardDiff.jacobian!(out, f, X, cfg)
         @test isapprox(DiffBase.value(out), v)
         @test isapprox(DiffBase.jacobian(out), j)
     end
@@ -124,26 +124,26 @@ for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
         ycfg = JacobianConfig(tag, zeros(Y), X, ForwardDiff.Chunk{c}())
 
         y = zeros(Y)
-        out = ForwardDiff.jacobian(f!, y, X, ycfg)
+        ForwardDiff.jacobian(f!, y, X, ycfg)
         @test isapprox(y, v)
         @test isapprox(out, j)
 
         y = zeros(Y)
         out = similar(Y, length(Y), length(X))
-        out = ForwardDiff.jacobian!(out, f!, y, X)
+        ForwardDiff.jacobian!(out, f!, y, X)
         @test isapprox(y, v)
         @test isapprox(out, j)
 
         y = zeros(Y)
         out = DiffBase.JacobianResult(y, X)
-        out = ForwardDiff.jacobian!(out, f!, y, X)
+        ForwardDiff.jacobian!(out, f!, y, X)
         @test DiffBase.value(out) == y
         @test isapprox(y, v)
         @test isapprox(DiffBase.jacobian(out), j)
 
         y = zeros(Y)
         out = DiffBase.JacobianResult(y, X)
-        out = ForwardDiff.jacobian!(out, f!, y, X, ycfg)
+        ForwardDiff.jacobian!(out, f!, y, X, ycfg)
         @test DiffBase.value(out) == y
         @test isapprox(y, v)
         @test isapprox(DiffBase.jacobian(out), j)
