@@ -28,6 +28,11 @@ end
 
 @inline gradient!(out, f::F, x::SArray) where {F} = vector_mode_gradient!(out, f, x)
 
+function gradient!(out::ImmutableDiffResult, f::F, x::SArray)
+    dual = vector_mode_dual_eval(f, x)
+    out = DiffResult(value(dual), extract_gradient(dual, x))
+end
+
 #####################
 # result extraction #
 #####################
@@ -53,11 +58,6 @@ end
 function extract_gradient!(out::DiffResult, dual::Dual)
     DiffBase.value!(out, value(dual))
     DiffBase.gradient!(out, partials(dual))
-    return out
-end
-
-function extract_gradient!(out::ImmutableDiffResult, dual::Dual)
-    out = DiffResult(value(dual), extract_gradient(dual, DiffBase.gradient(out)))
     return out
 end
 
