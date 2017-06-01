@@ -44,9 +44,6 @@ end
         return SArray{S}($result)
     end
 end
-function extract_value(y::Real, ::SArray{S,X,D,N}) where {S,X,D,N}
-    y.value
-end
 
 function extract_gradient!(out::DiffResult, y::Real)
     DiffBase.value!(out, y)
