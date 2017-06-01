@@ -124,7 +124,7 @@ for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
         ycfg = JacobianConfig(tag, zeros(Y), X, ForwardDiff.Chunk{c}())
 
         y = zeros(Y)
-        ForwardDiff.jacobian(f!, y, X, ycfg)
+        out = ForwardDiff.jacobian(f!, y, X, ycfg)
         @test isapprox(y, v)
         @test isapprox(out, j)
 
