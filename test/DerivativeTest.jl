@@ -36,11 +36,11 @@ for f in DiffBase.NUMBER_TO_ARRAY_FUNCS
     @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
 
     out = similar(v)
-    out = ForwardDiff.derivative!(out, f, x)
+    ForwardDiff.derivative!(out, f, x)
     @test isapprox(out, d)
 
     out = DiffBase.DiffResult(similar(v), similar(d))
-    out = ForwardDiff.derivative!(out, f, x)
+    ForwardDiff.derivative!(out, f, x)
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.derivative(out), d)
 end
@@ -64,24 +64,24 @@ for f! in DiffBase.INPLACE_NUMBER_TO_ARRAY_FUNCS
 
     out = similar(v)
     fill!(y, 0.0)
-    out = ForwardDiff.derivative!(out, f!, y, x)
+    ForwardDiff.derivative!(out, f!, y, x)
     @test isapprox(out, d)
     @test isapprox(v, y)
 
     out = similar(v)
     fill!(y, 0.0)
-    out = ForwardDiff.derivative!(out, f!, y, x, cfg)
+    ForwardDiff.derivative!(out, f!, y, x, cfg)
     @test isapprox(out, d)
     @test isapprox(v, y)
 
     out = DiffBase.DiffResult(similar(v), similar(d))
-    out = ForwardDiff.derivative!(out, f!, y, x)
+    ForwardDiff.derivative!(out, f!, y, x)
     @test isapprox(v, y)
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.derivative(out), d)
 
     out = DiffBase.DiffResult(similar(v), similar(d))
-    out = ForwardDiff.derivative!(out, f!, y, x, cfg)
+    ForwardDiff.derivative!(out, f!, y, x, cfg)
     @test isapprox(v, y)
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.derivative(out), d)
