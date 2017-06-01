@@ -28,7 +28,7 @@ end
 
 @inline gradient!(out, f::F, x::SArray) where {F} = vector_mode_gradient!(out, f, x)
 
-function gradient!(out::ImmutableDiffResult, f, x::SArray)
+@inline function gradient!(out::ImmutableDiffResult, f, x::SArray)
     dual = vector_mode_dual_eval(f, x)
     out = DiffResult(value(dual), extract_gradient(dual, x))
 end
