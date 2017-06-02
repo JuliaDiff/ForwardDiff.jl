@@ -56,7 +56,7 @@ hessian(f::F, x::SArray) where {F} = jacobian(y -> gradient(f, y), x)
 hessian(f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian(f, x)
 
 hessian!(result::AbstractArray, f::F, x::SArray) where {F} = jacobian!(result, y -> gradient(f, y), x)
-hessian!(result::AbstractArray, f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = hessian!(result, f, x)
+hessian!(result::AbstractArray, f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian!(result, f, x)
 
 hessian!(result::DiffResult, f::F, x::SArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
-hessian!(result::DiffResult, f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = hessian!(result, f, x)
+hessian!(result::DiffResult, f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian!(result, f, x)

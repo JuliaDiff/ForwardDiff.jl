@@ -74,10 +74,10 @@ function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractAr
 end
 
 @inline jacobian(f::F, x::SArray) where {F} = vector_mode_jacobian(f, x)
-@inline jacobian(f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = jacobian(f, x)
+@inline jacobian(f::F, x::SArray, cfg::AllowedJacobianConfig{F,H}) where {F,H} = jacobian(f, x)
 
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray) where {F} = vector_mode_jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray, cfg::AllowedJacobianConfig{F,H}) where {F,H} = jacobian!(result, f, x)
 
 #####################
 # result extraction #
