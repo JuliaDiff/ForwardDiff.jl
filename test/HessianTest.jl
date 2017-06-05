@@ -90,23 +90,45 @@ end
 
 x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
-out = similar(x, 9, 9)
+
+cfg = ForwardDiff.HessianConfig(nothing, x)
+scfg = ForwardDiff.HessianConfig(nothing, sx)
+
 actual = ForwardDiff.hessian(prod, x)
-
 @test ForwardDiff.hessian(prod, sx) == actual
+@test ForwardDiff.hessian(prod, sx, cfg) == actual
+@test ForwardDiff.hessian(prod, sx, scfg) == actual
 
+out = similar(x, 9, 9)
 ForwardDiff.hessian!(out, prod, sx)
+@test out == actual
 
+out = similar(x, 9, 9)
+ForwardDiff.hessian!(out, prod, sx, cfg)
+@test out == actual
+
+out = similar(x, 9, 9)
+ForwardDiff.hessian!(out, prod, sx, scfg)
 @test out == actual
 
 result = DiffBase.HessianResult(x)
-sresult = DiffBase.HessianResult(sx)
+sresult1 = DiffBase.HessianResult(sx)
+sresult2 = DiffBase.HessianResult(sx)
+sresult3 = DiffBase.HessianResult(sx)
 
 ForwardDiff.hessian!(result, prod, x)
-ForwardDiff.hessian!(sresult, prod, sx)
+ForwardDiff.hessian!(sresult1, prod, sx)
+ForwardDiff.hessian!(sresult2, prod, sx, cfg)
+ForwardDiff.hessian!(sresult3, prod, sx, scfg)
 
-@test DiffBase.value(sresult) == DiffBase.value(result)
-@test DiffBase.gradient(sresult) == DiffBase.gradient(result)
-@test DiffBase.hessian(sresult) == DiffBase.hessian(result)
+@test DiffBase.value(sresult1) == DiffBase.value(result)
+@test DiffBase.value(sresult2) == DiffBase.value(result)
+@test DiffBase.value(sresult3) == DiffBase.value(result)
+@test DiffBase.gradient(sresult1) == DiffBase.gradient(result)
+@test DiffBase.gradient(sresult2) == DiffBase.gradient(result)
+@test DiffBase.gradient(sresult3) == DiffBase.gradient(result)
+@test DiffBase.hessian(sresult1) == DiffBase.hessian(result)
+@test DiffBase.hessian(sresult2) == DiffBase.hessian(result)
+@test DiffBase.hessian(sresult3) == DiffBase.hessian(result)
 
 end # module
