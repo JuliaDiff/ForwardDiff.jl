@@ -3,7 +3,7 @@
 ####################
 
 @inline extract_value!(out::DiffResult, ydual) = DiffBase.value!(value, out, ydual)
-@inline extract_value!(out, ydual) = nothing
+@inline extract_value!(out, ydual) = out
 
 @inline function extract_value!(out, y, ydual)
     map!(value, y, ydual)
@@ -11,7 +11,7 @@
 end
 
 @inline copy_value!(out::DiffResult, y) = DiffBase.value!(out, y)
-@inline copy_value!(out, y) = nothing
+@inline copy_value!(out, y) = out
 
 ###################################
 # vector mode function evaluation #
