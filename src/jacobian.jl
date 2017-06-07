@@ -65,7 +65,7 @@ end
     result = Expr(:tuple, [:(value(ydual[$i])) for i in 1:M]...)
     return quote
         $(Expr(:meta, :inline))
-        return SArray{SY}($result)
+        return SArray{SX}($result)
     end
 end
 
@@ -152,7 +152,7 @@ end
 @inline function vector_mode_jacobian!(out::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
     ydual = vector_mode_dual_eval(f, x)
     jout = extract_jacobian(ydual, x)
-    vout = extract_value(ydual, x)
+    vout = extract_value(ydual, DiffBase.value(out))
     out = DiffBase.jacobian!(out, jout)
     out = DiffBase.value!(out, vout)
     return out
