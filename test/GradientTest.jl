@@ -75,6 +75,8 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
+println("  ...testing specialized StaticArray codepaths")
+
 x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
 

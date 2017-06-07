@@ -88,6 +88,8 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
+println("  ...testing specialized StaticArray codepaths")
+
 x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
 
@@ -118,8 +120,8 @@ sresult3 = DiffBase.HessianResult(sx)
 
 ForwardDiff.hessian!(result, prod, x)
 ForwardDiff.hessian!(sresult1, prod, sx)
-ForwardDiff.hessian!(sresult2, prod, sx, cfg)
-ForwardDiff.hessian!(sresult3, prod, sx, scfg)
+ForwardDiff.hessian!(sresult2, prod, sx, ForwardDiff.HessianConfig(nothing, sresult2, x))
+ForwardDiff.hessian!(sresult3, prod, sx, ForwardDiff.HessianConfig(nothing, sresult3, x))
 
 @test DiffBase.value(sresult1) == DiffBase.value(result)
 @test DiffBase.value(sresult2) == DiffBase.value(result)
