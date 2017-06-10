@@ -75,24 +75,43 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
+println("  ...testing specialized StaticArray codepaths")
+
 x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
-out = similar(x)
+
+cfg = ForwardDiff.GradientConfig(nothing, x)
+scfg = ForwardDiff.GradientConfig(nothing, sx)
+
 actual = ForwardDiff.gradient(prod, x)
-
 @test ForwardDiff.gradient(prod, sx) == actual
+@test ForwardDiff.gradient(prod, sx, cfg) == actual
+@test ForwardDiff.gradient(prod, sx, scfg) == actual
 
+out = similar(x)
 ForwardDiff.gradient!(out, prod, sx)
+@test out == actual
 
+out = similar(x)
+ForwardDiff.gradient!(out, prod, sx, cfg)
+@test out == actual
+
+out = similar(x)
+ForwardDiff.gradient!(out, prod, sx, scfg)
 @test out == actual
 
 result = DiffBase.GradientResult(x)
-sresult = DiffBase.GradientResult(sx)
-
-result = ForwardDiff.gradient!(result, prod, x)
-sresult = ForwardDiff.gradient!(sresult, prod, sx)
-
-@test DiffBase.value(sresult) == DiffBase.value(result)
-@test DiffBase.gradient(sresult) == DiffBase.gradient(result)
-
+sresult1 = DiffBase.GradientResult(sx)
+sresult2 = DiffBase.GradientResult(sx)
+sresult3 = DiffBase.GradientResult(sx)
+ForwardDiff.gradient!(result, prod, x)
+sresult1 = ForwardDiff.gradient!(sresult1, prod, sx)
+sresult2 = ForwardDiff.gradient!(sresult2, prod, sx, cfg)
+sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
+@test DiffBase.value(sresult1) == DiffBase.value(result)
+@test DiffBase.value(sresult2) == DiffBase.value(result)
+@test DiffBase.value(sresult3) == DiffBase.value(result)
+@test DiffBase.gradient(sresult1) == DiffBase.gradient(result)
+@test DiffBase.gradient(sresult2) == DiffBase.gradient(result)
+@test DiffBase.gradient(sresult3) == DiffBase.gradient(result)
 end # module

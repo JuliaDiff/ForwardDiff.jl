@@ -4,10 +4,17 @@
 
 const AllowedGradientConfig{F,H} = Union{GradientConfig{Tag{F,H}}, GradientConfig{Tag{Void,H}}}
 
-gradient(f, x, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
-gradient!(out, f, x, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
+gradient(f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
+gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
 
-function gradient(f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
+"""
+    ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
+
+Return `∇f` evaluated at `x`, assuming `f` is called as `f(x)`.
+
+This method assumes that `isa(f(x), Real)`.
+"""
+function gradient(f::F, x::AbstractArray, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -15,18 +22,28 @@ function gradient(f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x
     end
 end
 
-function gradient!(out, f::F, x, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
+"""
+    ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
+
+Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f` is called as
+`f(x)`.
+
+This method assumes that `isa(f(x), Real)`.
+"""
+function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
     if chunksize(cfg) == length(x)
-        vector_mode_gradient!(out, f, x, cfg)
+        vector_mode_gradient!(result, f, x, cfg)
     else
-        chunk_mode_gradient!(out, f, x, cfg)
+        chunk_mode_gradient!(result, f, x, cfg)
     end
-    return out
+    return result
 end
 
 @inline gradient(f::F, x::SArray) where {F} = vector_mode_gradient(f, x)
+@inline gradient(f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = gradient(f, x)
 
-@inline gradient!(out, f::F, x::SArray) where {F} = vector_mode_gradient!(out, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray) where {F} = vector_mode_gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = gradient!(result, f, x)
 
 #####################
 # result extraction #
@@ -40,11 +57,11 @@ end
     end
 end
 
-function extract_gradient!(out::DiffResult, y::Real)
-    DiffBase.value!(out, y)
-    grad = DiffBase.gradient(out)
+function extract_gradient!(result::DiffResult, y::Real)
+    DiffBase.value!(result, y)
+    grad = DiffBase.gradient(result)
     fill!(grad, zero(y))
-    return out
+    return result
 end
 
 function extract_gradient!(out::DiffResult, dual::Dual)
@@ -53,20 +70,20 @@ function extract_gradient!(out::DiffResult, dual::Dual)
     return out
 end
 
-extract_gradient!(out::AbstractArray, y::Real) = fill!(out, zero(y))
-extract_gradient!(out::AbstractArray, dual::Dual) = copy!(out, partials(dual))
+extract_gradient!(result::AbstractArray, y::Real) = fill!(result, zero(y))
+extract_gradient!(result::AbstractArray, dual::Dual) = copy!(result, partials(dual))
 
-function extract_gradient_chunk!(out, dual, index, chunksize)
+function extract_gradient_chunk!(result, dual, index, chunksize)
     offset = index - 1
     for i in 1:chunksize
-        out[i + offset] = partials(dual, i)
+        result[i + offset] = partials(dual, i)
     end
-    return out
+    return result
 end
 
-function extract_gradient_chunk!(out::DiffResult, dual, index, chunksize)
-    extract_gradient_chunk!(DiffBase.gradient(out), dual, index, chunksize)
-    return out
+function extract_gradient_chunk!(result::DiffResult, dual, index, chunksize)
+    extract_gradient_chunk!(DiffBase.gradient(result), dual, index, chunksize)
+    return result
 end
 
 ###############
@@ -75,29 +92,29 @@ end
 
 function vector_mode_gradient(f::F, x, cfg) where {F}
     ydual = vector_mode_dual_eval(f, x, cfg)
-    out = similar(x, valtype(ydual))
-    return extract_gradient!(out, ydual)
+    result = similar(x, valtype(ydual))
+    return extract_gradient!(result, ydual)
 end
 
-function vector_mode_gradient!(out, f::F, x, cfg) where {F}
+function vector_mode_gradient!(result, f::F, x, cfg) where {F}
     ydual = vector_mode_dual_eval(f, x, cfg)
-    extract_gradient!(out, ydual)
-    return out
+    extract_gradient!(result, ydual)
+    return result
 end
 
 @inline function vector_mode_gradient(f::F, x::SArray) where F
     return extract_gradient(vector_mode_dual_eval(f, x), x)
 end
 
-@inline function vector_mode_gradient!(out, f::F, x::SArray) where F
-    return extract_gradient!(out, vector_mode_dual_eval(f, x))
+@inline function vector_mode_gradient!(result, f::F, x::SArray) where F
+    return extract_gradient!(result, vector_mode_dual_eval(f, x))
 end
 
 ##############
 # chunk mode #
 ##############
 
-function chunk_mode_gradient_expr(out_definition::Expr)
+function chunk_mode_gradient_expr(result_definition::Expr)
     return quote
         @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
 
@@ -116,8 +133,8 @@ function chunk_mode_gradient_expr(out_definition::Expr)
         # do first chunk manually to calculate output type
         seed!(xdual, x, 1, seeds)
         ydual = f(xdual)
-        $(out_definition)
-        extract_gradient_chunk!(out, ydual, 1, N)
+        $(result_definition)
+        extract_gradient_chunk!(result, ydual, 1, N)
         seed!(xdual, x, 1)
 
         # do middle chunks
@@ -125,26 +142,26 @@ function chunk_mode_gradient_expr(out_definition::Expr)
             i = ((c - 1) * N + 1)
             seed!(xdual, x, i, seeds)
             ydual = f(xdual)
-            extract_gradient_chunk!(out, ydual, i, N)
+            extract_gradient_chunk!(result, ydual, i, N)
             seed!(xdual, x, i)
         end
 
         # do final chunk
         seed!(xdual, x, lastchunkindex, seeds, lastchunksize)
         ydual = f(xdual)
-        extract_gradient_chunk!(out, ydual, lastchunkindex, lastchunksize)
+        extract_gradient_chunk!(result, ydual, lastchunkindex, lastchunksize)
 
-        # get the value, this is a no-op unless out is a DiffResult
-        extract_value!(out, ydual)
+        # get the value, this is a no-op unless result is a DiffResult
+        extract_value!(result, ydual)
 
-        return out
+        return result
     end
 end
 
 @eval function chunk_mode_gradient(f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}
-    $(chunk_mode_gradient_expr(:(out = similar(x, valtype(ydual)))))
+    $(chunk_mode_gradient_expr(:(result = similar(x, valtype(ydual)))))
 end
 
-@eval function chunk_mode_gradient!(out, f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}
+@eval function chunk_mode_gradient!(result, f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}
     $(chunk_mode_gradient_expr(:()))
 end

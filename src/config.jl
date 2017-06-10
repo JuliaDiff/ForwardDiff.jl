@@ -52,6 +52,22 @@ struct DerivativeConfig{T,D} <: AbstractConfig{T,1}
     duals::D
 end
 
+"""
+    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::AbstractArray)
+
+Return a `DerivativeConfig` instance based on the type of `f!`, and the types/shapes of the
+output vector `y` and the input vector `x`.
+
+The returned `DerivativeConfig` instance contains all the work buffers required by
+`ForwardDiff.derivative` and `ForwardDiff.derivative!` when the target function takes the form
+`f!(y, x)`.
+
+If `f!` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `y` or `x`.
+"""
 function DerivativeConfig(::F,
                           y::AbstractArray{Y},
                           x::X,
@@ -59,6 +75,8 @@ function DerivativeConfig(::F,
     duals = similar(y, Dual{T,Y,1})
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
+
+Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
 
 ##################
 # GradientConfig #
@@ -69,6 +87,21 @@ struct GradientConfig{T,V,N,D} <: AbstractConfig{T,N}
     duals::D
 end
 
+"""
+    ForwardDiff.GradientConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `GradientConfig` instance based on the type of `f` and type/shape of the input
+vector `x`.
+
+The returned `GradientConfig` instance contains all the work buffers required by
+`ForwardDiff.gradient` and `ForwardDiff.gradient!`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `x`.
+"""
 function GradientConfig(::F,
                         x::AbstractArray{V},
                         ::Chunk{N} = Chunk(x),
@@ -89,6 +122,22 @@ struct JacobianConfig{T,V,N,D} <: AbstractConfig{T,N}
     duals::D
 end
 
+"""
+    ForwardDiff.JacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `JacobianConfig` instance based on the type of `f` and type/shape of the input
+vector `x`.
+
+The returned `JacobianConfig` instance contains all the work buffers required by
+`ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
+`f(x)`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `x`.
+"""
 function JacobianConfig(::F,
                         x::AbstractArray{V},
                         ::Chunk{N} = Chunk(x),
@@ -98,6 +147,22 @@ function JacobianConfig(::F,
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
+"""
+    ForwardDiff.JacobianConfig(f!, y::AbstractArray, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `JacobianConfig` instance based on the type of `f!`, and the types/shapes of the
+output vector `y` and the input vector `x`.
+
+The returned `JacobianConfig` instance contains all the work buffers required by
+`ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
+`f!(y, x)`.
+
+If `f!` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `y` or `x`.
+"""
 function JacobianConfig(::F,
                         y::AbstractArray{Y},
                         x::AbstractArray{X},
@@ -121,6 +186,24 @@ struct HessianConfig{T,V,N,D,H,DJ} <: AbstractConfig{T,N}
     gradient_config::GradientConfig{T,Dual{Tag{Void,H},V,N},N,D}
 end
 
+"""
+    ForwardDiff.HessianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `HessianConfig` instance based on the type of `f` and type/shape of the input
+vector `x`.
+
+The returned `HessianConfig` instance contains all the work buffers required by
+`ForwardDiff.hessian` and `ForwardDiff.hessian!`. For the latter, the buffers are
+configured for the case where the `result` argument is an `AbstractArray`. If
+it is a `DiffResult`, the `HessianConfig` should instead be constructed via
+`ForwardDiff.HessianConfig(f, result, x, chunk)`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `x`.
+"""
 function HessianConfig(f::F,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
@@ -130,6 +213,21 @@ function HessianConfig(f::F,
     return HessianConfig(jacobian_config, gradient_config)
 end
 
+"""
+    ForwardDiff.HessianConfig(f, result::DiffResult, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `HessianConfig` instance based on the type of `f`, types/storage in `result`, and
+type/shape of the input vector `x`.
+
+The returned `HessianConfig` instance contains all the work buffers required by
+`ForwardDiff.hessian!` for the case where the `result` argument is an `DiffResult`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `x`.
+"""
 function HessianConfig(f::F,
                        result::DiffResult,
                        x::AbstractArray{V},

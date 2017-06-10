@@ -154,15 +154,25 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
+println("  ...testing specialized StaticArray codepaths")
+
 x = rand(3, 3)
 sx = StaticArrays.SArray{Tuple{3,3}}(x)
-out = similar(x, 6, 9)
+
+cfg = ForwardDiff.JacobianConfig(nothing, x)
+scfg = ForwardDiff.JacobianConfig(nothing, sx)
+
 actual = ForwardDiff.jacobian(diff, x)
-
 @test ForwardDiff.jacobian(diff, sx) == actual
+@test ForwardDiff.jacobian(diff, sx, cfg) == actual
+@test ForwardDiff.jacobian(diff, sx, scfg) == actual
 
-out = ForwardDiff.jacobian!(out, diff, sx)
+out = similar(x, 6, 9)
+ForwardDiff.jacobian!(out, diff, sx)
+@test out == actual
 
+out = similar(x, 6, 9)
+ForwardDiff.jacobian!(out, diff, sx, cfg)
 @test out == actual
 
 #test MutableDiffResult
@@ -184,5 +194,20 @@ sresult = ForwardDiff.jacobian!(sresult, diff, sx)
 
 @test DiffBase.value(sresult) == DiffBase.value(result)
 @test DiffBase.jacobian(sresult) == DiffBase.jacobian(result)
+
+result = DiffBase.JacobianResult(similar(x, 6), x)
+sresult1 = DiffBase.JacobianResult(similar(sx, 6), sx)
+sresult2 = DiffBase.JacobianResult(similar(sx, 6), sx)
+sresult3 = DiffBase.JacobianResult(similar(sx, 6), sx)
+ForwardDiff.jacobian!(result, diff, x)
+ForwardDiff.jacobian!(sresult1, diff, sx)
+ForwardDiff.jacobian!(sresult2, diff, sx, cfg)
+ForwardDiff.jacobian!(sresult3, diff, sx, scfg)
+@test DiffBase.value(sresult1) == DiffBase.value(result)
+@test DiffBase.value(sresult2) == DiffBase.value(result)
+@test DiffBase.value(sresult3) == DiffBase.value(result)
+@test DiffBase.jacobian(sresult1) == DiffBase.jacobian(result)
+@test DiffBase.jacobian(sresult2) == DiffBase.jacobian(result)
+@test DiffBase.jacobian(sresult3) == DiffBase.jacobian(result)
 
 end # module

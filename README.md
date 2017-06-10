@@ -5,9 +5,8 @@
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.5.svg)](http://pkg.julialang.org/?pkg=ForwardDiff)
 [![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.6.svg)](http://pkg.julialang.org/?pkg=ForwardDiff)
 
-**[Go To ForwardDiff's Documentation](http://www.juliadiff.org/ForwardDiff.jl/)**
-
-**Warning**: Please read [this issue](https://github.com/JuliaDiff/ForwardDiff.jl/issues/83) before attempting nested differentiation with ForwardDiff.
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](http://www.juliadiff.org/ForwardDiff.jl/stable)
+[![](https://img.shields.io/badge/docs-latest-blue.svg)](http://www.juliadiff.org/ForwardDiff.jl/latest)
 
 # ForwardDiff.jl
 
@@ -51,13 +50,17 @@ julia> ForwardDiff.hessian(f, x)
 
 ## News
 
-- 3/2016: [ForwardDiff v0.4.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/8209). There are no API changes, but [support for Julia v0.4 has been dropped](https://github.com/JuliaDiff/ForwardDiff.jl/pull/195) moving forward.
+Trying to switch to the latest version of ForwardDiff? See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/stable/user/upgrade.html) for details regarding user-facing changes between releases.
 
-- 12/2016: [ForwardDiff v0.3.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/7177). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
+- 5/2017: [ForwardDiff v0.5.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/8209). Notably, this release [introduces an internal tagging mechanism](https://github.com/JuliaDiff/ForwardDiff.jl/pull/213) to protect against [perturbation confusion](https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
-- 6/2016: [ForwardDiff v0.2.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/5389). See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/upgrade.html) for details regarding user-facing changes.
+- 3/2017: [ForwardDiff v0.4.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/8209). There are no API changes, but [support for Julia v0.4 has been dropped](https://github.com/JuliaDiff/ForwardDiff.jl/pull/195) moving forward.
 
-- 9/2015: We're releasing ForwardDiff v.0.1.0. A *lot* has changed since the previous version of the package. The best way to get yourself acquainted with the new API is to read our new [documentation](http://www.juliadiff.org/ForwardDiff.jl/).
+- 12/2016: [ForwardDiff v0.3.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/7177).
+
+- 6/2016: [ForwardDiff v0.2.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/5389).
+
+- 9/2015: [ForwardDiff v0.1.0 has been tagged](https://github.com/JuliaLang/METADATA.jl/pull/3272).
 
 ## Publications
 

@@ -536,6 +536,48 @@ end
     Dual{T}(fma(x, y, value(z)), partials(z))      # z_body
 )
 
+# muladd #
+#-----#
+
+@generated function calc_muladd_xyz(x::Dual{T,<:Real,N},
+                                 y::Dual{T,<:Real,N},
+                                 z::Dual{T,<:Real,N}) where {T,N}
+    ex = Expr(:tuple, [:(muladd(value(x), partials(y)[$i], muladd(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        v = muladd(value(x), value(y), value(z))
+        return Dual{T}(v, $ex)
+    end
+end
+
+@inline function calc_muladd_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
+    vx, vy = value(x), value(y)
+    result = muladd(vx, vy, z)
+    return Dual{T}(result, _mul_partials(partials(x), partials(y), vy, vx))
+end
+
+@generated function calc_muladd_xz(x::Dual{T,<:Real,N},
+                                y::Real,
+                                z::Dual{T,<:Real,N}) where {T,N}
+    ex = Expr(:tuple, [:(muladd(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        v = muladd(value(x), y, value(z))
+        Dual(v, $ex)
+    end
+end
+
+@define_ternary_dual_op(
+    Base.muladd,
+    calc_muladd_xyz(x, y, z),                         # xyz_body
+    calc_muladd_xy(x, y, z),                          # xy_body
+    calc_muladd_xz(x, y, z),                          # xz_body
+    Base.muladd(y, x, z),                             # yz_body
+    Dual{T}(muladd(value(x), y, z), partials(x) * y), # x_body
+    Base.muladd(y, x, z),                             # y_body
+    Dual{T}(muladd(x, y, value(z)), partials(z))      # z_body
+)
+
 # sincos #
 #--------#
 

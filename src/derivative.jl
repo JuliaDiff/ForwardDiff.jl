@@ -7,12 +7,26 @@ const AllowedDerivativeConfig{F,H} = Union{DerivativeConfig{Tag{F,H}}, Derivativ
 derivative(f!, y, x, cfg::DerivativeConfig) = throw(ConfigHismatchError(f, cfg))
 derivative!(out, f!, y, x, cfg::DerivativeConfig) = throw(ConfigHismatchError(f, cfg))
 
+"""
+    ForwardDiff.derivative(f, x::Real)
+
+Return `df/dx` evaluated at `x`, assuming `f` is called as `f(x)`.
+
+This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
+"""
 @inline function derivative(f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(F, R))
     return extract_derivative(f(Dual{T}(x, one(x))))
 end
 
-@inline function derivative(f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+"""
+    ForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))
+
+Return `df!/dx` evaluated at `x`, assuming `f!` is called as `f!(y, x)` where the result is
+stored in `y`.
+"""
+@inline function derivative(f!::F, y::AbstractArray, x::R,
+                            cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{Tag{F,H}}(x, one(x)))
@@ -20,7 +34,16 @@ end
     return extract_derivative(ydual)
 end
 
-@inline function derivative!(out, f::F, x::R) where {F,R<:Real}
+"""
+    ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f, x::Real)
+
+Compute `df/dx` evaluated at `x` and store the result(s) in `result`, assuming `f` is called
+as `f(x)`.
+
+This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
+"""
+@inline function derivative!(result::Union{AbstractArray,DiffResult},
+                             f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(F, R))
     ydual = f(Dual{T}(x, one(x)))
     out = extract_value!(out, ydual)
@@ -28,7 +51,15 @@ end
     return out
 end
 
-@inline function derivative!(out, f!::F, y, x::R, cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+"""
+    ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))
+
+Compute `df!/dx` evaluated at `x` and store the result(s) in `result`, assuming `f!` is
+called as `f!(y, x)` where the result is stored in `y`.
+"""
+@inline function derivative!(result::Union{AbstractArray,DiffResult},
+                             f!::F, y::AbstractArray, x::R,
+                             cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{Tag{F,H}}(x, one(x)))
@@ -51,5 +82,5 @@ end
 # mutating #
 #----------#
 
-extract_derivative!(out::AbstractArray, y::AbstractArray) = map!(extract_derivative, out, y)
-extract_derivative!(out::DiffResult, y) = DiffBase.derivative!(extract_derivative, out, y)
+extract_derivative!(result::AbstractArray, y::AbstractArray) = map!(extract_derivative, result, y)
+extract_derivative!(result::DiffResult, y) = DiffBase.derivative!(extract_derivative, result, y)
