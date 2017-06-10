@@ -175,6 +175,10 @@ out = similar(x, 6, 9)
 ForwardDiff.jacobian!(out, diff, sx, cfg)
 @test out == actual
 
+out = similar(x, 6, 9)
+ForwardDiff.jacobian!(out, diff, sx, scfg)
+@test out == actual
+
 #test MutableDiffResult
 result = DiffBase.JacobianResult(similar(x, 6), x)
 sresult = DiffBase.JacobianResult(similar(sx, 6), sx)
