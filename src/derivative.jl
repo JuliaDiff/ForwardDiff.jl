@@ -46,9 +46,9 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
                              f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(F, R))
     ydual = f(Dual{T}(x, one(x)))
-    out = extract_value!(out, ydual)
-    out = extract_derivative!(out, ydual)
-    return out
+    result = extract_value!(result, ydual)
+    result = extract_derivative!(result, ydual)
+    return result
 end
 
 """
