@@ -111,7 +111,7 @@ function extract_jacobian!(result::AbstractArray, ydual::AbstractArray, n)
     for col in 1:size(out_reshaped, 2), row in 1:size(out_reshaped, 1)
         out_reshaped[row, col] = partials(ydual[row], col)
     end
-    return out 
+    return result 
 end
 
 function extract_jacobian!(out::DiffResult, ydual::AbstractArray, n)
@@ -176,9 +176,9 @@ end
 
 @inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
     ydual = vector_mode_dual_eval(f, x)
-    out = extract_jacobian!(out, ydual, N)
-    out = extract_value!(out, ydual)
-    return out
+    result = extract_jacobian!(result, ydual, N)
+    result = extract_value!(result, ydual)
+    return result
 end
 
 @inline function vector_mode_jacobian!(out::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
