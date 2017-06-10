@@ -64,10 +64,10 @@ function extract_gradient!(result::DiffResult, y::Real)
     return result
 end
 
-function extract_gradient!(out::DiffResult, dual::Dual)
-    out = DiffBase.value!(out, value(dual))
-    out = DiffBase.gradient!(out, partials(dual))
-    return out
+function extract_gradient!(result::DiffResult, dual::Dual)
+    result = DiffBase.value!(result, value(dual))
+    result = DiffBase.gradient!(result, partials(dual))
+    return result
 end
 
 extract_gradient!(result::AbstractArray, y::Real) = fill!(result, zero(y))
