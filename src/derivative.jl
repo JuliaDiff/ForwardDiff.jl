@@ -63,9 +63,9 @@ called as `f!(y, x)` where the result is stored in `y`.
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{Tag{F,H}}(x, one(x)))
-    out = extract_value!(out, y, ydual)
-    out = extract_derivative!(out, ydual)
-    return out
+    result = extract_value!(result, y, ydual)
+    result = extract_derivative!(result, ydual)
+    return result
 end
 
 #####################
