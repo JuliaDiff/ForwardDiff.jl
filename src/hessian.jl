@@ -71,4 +71,5 @@ function hessian!(result::ImmutableDiffResult, f::F, x::SArray) where {F}
     result = DiffBase.gradient!(result, grad)
     result = DiffBase.value!(result, val)
 end
-hessian!(result::ImmutableDiffResult, f::F, x::AbstractArray, cfg::AllowedHessianConfig{F,H} = HessianConfig(f, result, x)) where {F,H} = hessian!(result, f, x)
+hessian!(result::ImmutableDiffResult, f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian!(result, f, x)
+  
