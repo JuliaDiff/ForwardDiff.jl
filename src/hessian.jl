@@ -58,7 +58,7 @@ hessian(f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian(f
 
 hessian!(result::AbstractArray, f::F, x::SArray) where {F} = jacobian!(result, y -> gradient(f, y), x)
 
-hessian!(out::DiffResult, f::F, x::SArray) where {F} = hessian!(out, f, x, HessianConfig(f, out, x))
+hessian!(result::DiffResult, f::F, x::SArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
 
 function hessian!(result::ImmutableDiffResult, f::F, x::SArray) where {F} 
     d1 = dualize(f, x)
