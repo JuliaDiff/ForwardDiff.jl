@@ -131,4 +131,16 @@ end
 
 @test ForwardDiff.partials(NaNMath.pow(ForwardDiff.Dual(-2.0,1.0),ForwardDiff.Dual(2.0,0.0)),1) == -4.0
 
+# Partials{0} #
+#-------------#
+
+x, y = rand(3), rand(3)
+h = ForwardDiff.hessian(y -> sum(hypot.(x, y)), y)
+@test h[1, 1] ≈ (x[1]^2) / (x[1]^2 + y[1]^2)^(3/2)
+@test h[2, 2] ≈ (x[2]^2) / (x[2]^2 + y[2]^2)^(3/2)
+@test h[3, 3] ≈ (x[3]^2) / (x[3]^2 + y[3]^2)^(3/2)
+for i in 1:3, j in 1:3
+    i != j && (@test h[i, j] ≈ 0.0)
+end
+
 end
