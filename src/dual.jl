@@ -50,7 +50,7 @@ function Base.showerror(io::IO, e::TagMismatchError{X,Y}) where {X,Y}
     print(io, "potential perturbation confusion detected when computing binary operation ",
               "on $(e.x) and $(e.y) (tag mismatch: $X != $Y). ForwardDiff cannot safely ",
               "perform differentiation in this context; see the following issue for ",
-              "details: https://github.com/JuliaDiff/jl/issues/83")
+              "details: https://github.com/JuliaDiff/ForwardDiff.jl/issues/83")
 end
 
 ##############################
