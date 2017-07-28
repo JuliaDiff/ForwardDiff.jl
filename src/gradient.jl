@@ -58,15 +58,15 @@ end
 end
 
 function extract_gradient!(result::DiffResult, y::Real)
-    DiffBase.value!(result, y)
+    result = DiffBase.value!(result, y)
     grad = DiffBase.gradient(result)
     fill!(grad, zero(y))
     return result
 end
 
 function extract_gradient!(result::DiffResult, dual::Dual)
-    DiffBase.value!(result, value(dual))
-    DiffBase.gradient!(result, partials(dual))
+    result = DiffBase.value!(result, value(dual))
+    result = DiffBase.gradient!(result, partials(dual))
     return result
 end
 
