@@ -46,8 +46,8 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
                              f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(F, R))
     ydual = f(Dual{T}(x, one(x)))
-    extract_value!(result, ydual)
-    extract_derivative!(result, ydual)
+    result = extract_value!(result, ydual)
+    result = extract_derivative!(result, ydual)
     return result
 end
 
@@ -63,8 +63,8 @@ called as `f!(y, x)` where the result is stored in `y`.
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{Tag{F,H}}(x, one(x)))
-    extract_value!(result, y, ydual)
-    extract_derivative!(result, ydual)
+    result = extract_value!(result, y, ydual)
+    result = extract_derivative!(result, ydual)
     return result
 end
 

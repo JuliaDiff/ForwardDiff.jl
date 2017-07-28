@@ -98,7 +98,7 @@ end
 
 function vector_mode_gradient!(result, f::F, x, cfg) where {F}
     ydual = vector_mode_dual_eval(f, x, cfg)
-    extract_gradient!(result, ydual)
+    result = extract_gradient!(result, ydual)
     return result
 end
 
