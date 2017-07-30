@@ -65,8 +65,8 @@ function extract_gradient!(result::DiffResult, y::Real)
 end
 
 function extract_gradient!(result::DiffResult, dual::Dual)
-    DiffBase.value!(result, value(dual))
-    DiffBase.gradient!(result, partials(dual))
+    result = DiffBase.value!(result, value(dual))
+    result = DiffBase.gradient!(result, partials(dual))
     return result
 end
 

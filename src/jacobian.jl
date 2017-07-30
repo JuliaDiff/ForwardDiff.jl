@@ -92,6 +92,15 @@ end
     end
 end
 
+@generated function extract_value(ydual::SArray{SY,VY,DY,M},
+                                     x::SArray{SX,VX,DX,N}) where {SY,VY,DY,M,SX,VX,DX,N}
+    result = Expr(:tuple, [:(value(ydual[$i])) for i in 1:M]...)
+    return quote
+        $(Expr(:meta, :inline))
+        return SArray{SX}($result)
+    end
+end
+
 function extract_jacobian(ydual::AbstractArray, x::SArray{S,V,D,N}) where {S,V,D,N}
     result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     return extract_jacobian!(result, ydual, N)
@@ -105,9 +114,10 @@ function extract_jacobian!(result::AbstractArray, ydual::AbstractArray, n)
     return result
 end
 
-function extract_jacobian!(result::DiffResult, ydual::AbstractArray, n)
-    extract_jacobian!(DiffBase.jacobian(result), ydual, n)
-    return result
+function extract_jacobian!(out::DiffResult, ydual::AbstractArray, n)
+    jout = extract_jacobian!(DiffBase.jacobian(out), ydual, n)
+    out = DiffBase.jacobian!(out, jout)
+    return out
 end
 
 function extract_jacobian_chunk!(result, ydual, index, chunksize)
@@ -166,9 +176,18 @@ end
 
 @inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
     ydual = vector_mode_dual_eval(f, x)
-    extract_jacobian!(result, ydual, N)
-    extract_value!(result, ydual)
+    result = extract_jacobian!(result, ydual, N)
+    result = extract_value!(result, ydual)
     return result
+end
+
+@inline function vector_mode_jacobian!(out::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+    ydual = vector_mode_dual_eval(f, x)
+    jout = extract_jacobian(ydual, x)
+    vout = extract_value(ydual, DiffBase.value(out))
+    out = DiffBase.jacobian!(out, jout)
+    out = DiffBase.value!(out, vout)
+    return out
 end
 
 # chunk mode #

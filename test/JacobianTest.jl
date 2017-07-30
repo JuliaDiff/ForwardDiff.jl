@@ -179,6 +179,26 @@ out = similar(x, 6, 9)
 ForwardDiff.jacobian!(out, diff, sx, scfg)
 @test out == actual
 
+#test MutableDiffResult
+result = DiffBase.JacobianResult(similar(x, 6), x)
+sresult = DiffBase.JacobianResult(similar(sx, 6), sx)
+
+result = ForwardDiff.jacobian!(result, diff, x)
+sresult = ForwardDiff.jacobian!(sresult, diff, sx)
+
+@test DiffBase.value(sresult) == DiffBase.value(result)
+@test DiffBase.jacobian(sresult) == DiffBase.jacobian(result)
+
+#test ImmutableDiffResult
+result = DiffBase.JacobianResult(similar(x, 6), x)
+sresult = DiffBase.JacobianResult(SVector{6}(zeros(6)), sx)
+
+result = ForwardDiff.jacobian!(result, diff, x)
+sresult = ForwardDiff.jacobian!(sresult, diff, sx)
+
+@test DiffBase.value(sresult) == DiffBase.value(result)
+@test DiffBase.jacobian(sresult) == DiffBase.jacobian(result)
+
 result = DiffBase.JacobianResult(similar(x, 6), x)
 sresult1 = DiffBase.JacobianResult(similar(sx, 6), sx)
 sresult2 = DiffBase.JacobianResult(similar(sx, 6), sx)

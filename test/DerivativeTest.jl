@@ -22,7 +22,7 @@ for f in DiffBase.NUMBER_TO_NUMBER_FUNCS
     @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
 
     out = DiffBase.DiffResult(zero(v), zero(v))
-    ForwardDiff.derivative!(out, f, x)
+    out = ForwardDiff.derivative!(out, f, x)
     @test isapprox(DiffBase.value(out), v)
     @test isapprox(DiffBase.derivative(out), d)
 end
