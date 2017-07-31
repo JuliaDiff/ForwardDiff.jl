@@ -175,7 +175,7 @@ end
     ydual = vector_mode_dual_eval(f, x)
     result = DiffBase.jacobian!(result, extract_jacobian(ydual, x))
     result = DiffBase.value!(value, result, ydual)
-    return out
+    return result
 end
 
 # chunk mode #
