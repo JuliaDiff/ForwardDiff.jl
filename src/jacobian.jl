@@ -164,10 +164,10 @@ end
     return extract_jacobian(vector_mode_dual_eval(f, x), x)
 end
 
-@inline function vector_mode_jacobian!(result::MutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+@inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
     ydual = vector_mode_dual_eval(f, x)
-    extract_jacobian!(result, ydual, N)
-    extract_value!(result, ydual)
+    result = extract_jacobian!(result, ydual, N)
+    result = extract_value!(result, ydual)
     return result
 end
 
