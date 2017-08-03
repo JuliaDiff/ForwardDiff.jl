@@ -89,7 +89,15 @@ end
 
 macro define_binary_dual_op(f, xy_body, x_body, y_body)
     defs = quote
-        @inline $(f)(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
+        @inline function $(f)(x::Dual{T1}, y::Dual{T2}) where {T1,T2}
+            if T2 ≺ T1
+                T = T1
+                $x_body
+            else
+                T = T2
+                $y_body
+            end
+        end
         @inline $(f)(x::Dual{T}, y::Dual{T}) where {T} = $xy_body
         @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{T,Dual{S,Y,N},M}) where {T,S,X<:Real,Y<:Real,N,M} = $xy_body
         @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{S,Y,N})           where {T,S,X<:Real,Y<:Real,N,M} = $x_body

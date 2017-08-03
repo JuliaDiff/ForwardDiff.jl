@@ -71,14 +71,6 @@ testf2 = x -> testdf(x[1]) * f(x[2])
 
 @test isapprox(ForwardDiff.gradient(f2, x), ForwardDiff.gradient(testf2, x))
 
-# Perturbation Confusion (Issue #83) #
-#------------------------------------#
-
-D = ForwardDiff.derivative
-
-@test_throws ForwardDiff.TagMismatchError D(x -> x * D(y -> x + y, 1), 1)
-@test_throws ForwardDiff.TagMismatchError ForwardDiff.gradient(v -> sum(v) * D(y -> y * norm(v), 1), [1])
-
 ######################################
 # Higher-Dimensional Differentiation #
 ######################################

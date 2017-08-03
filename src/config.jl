@@ -4,19 +4,31 @@
 
 struct Tag{F,H} end
 
-# Here, we could've just as easily used `hash`; however, this
-# is unsafe/undefined behavior if `hash(::Type{V})` is overloaded
-# in a module loaded after ForwardDiff. Thus, we instead use
-# `hash(Symbol(V))`, which is somewhat safer since it's far less
-# likely that somebody would overwrite the Base definition for
-# `Symbol(::DataType)` or `hash(::Symbol)`.
+const TAGCOUNT = Threads.Atomic{UInt}(0)
+
+# each tag is assigned a unique number
+# there is a potential for error if Duals are shared across processes
+# e.g. by saving/loading or parallel computations
 @generated function Tag(::Type{F}, ::Type{V}) where {F,V}
-    H = hash(Symbol(V))
+    n = Threads.atomic_add!(TAGCOUNT, UInt(1))
     return quote
         $(Expr(:meta, :inline))
-        Tag{F,$H}()
+        Tag{F,$n}()
     end
 end
+
+@inline ≺(::Type{Tag{F1,n1}}, ::Type{Tag{F2,n2}}) where {F1,n1,F2,n2} = n1 < n2
+
+Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
+                                      ::Type{Dual{T2,V2,N2}}) where {T1,V1<:Real,N1,T2,V2<:Real,N2}
+    V = promote_type(V1,V2)
+    if T2 ≺ T1
+        Dual{T1,Dual{T2,V,N2},N1}
+    else
+        Dual{T2,Dual{T1,V,N1},N2}
+    end
+end
+
 
 ##################
 # AbstractConfig #

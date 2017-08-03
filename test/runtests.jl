@@ -30,6 +30,11 @@ tic()
 include("HessianTest.jl")
 println("done (took $(toq()) seconds).")
 
+println("Testing perturbation confusion functionality...")
+tic()
+include("ConfusionTest.jl")
+println("done (took $(toq()) seconds).")
+
 println("Testing miscellaneous functionality...")
 tic()
 include("MiscTest.jl")
