@@ -60,6 +60,8 @@ hessian!(result::AbstractArray, f::F, x::SArray) where {F} = jacobian!(result, y
 
 hessian!(result::MutableDiffResult, f::F, x::SArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
 
+hessian!(result::ImmutableDiffResult, f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian!(result, f, x)
+
 function hessian!(result::ImmutableDiffResult, f::F, x::SArray) where {F}
     d1 = dualize(f, x)
     d2 = dualize(f, d1)
