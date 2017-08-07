@@ -45,7 +45,7 @@ function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::AllowedHessia
     ∇f! = (y, z) -> begin
         inner_result = DiffResult(zero(eltype(y)), y)
         gradient!(inner_result, f, z, cfg.gradient_config)
-        DiffBase.value!(result, value(DiffBase.value(inner_result)))
+        result = DiffBase.value!(result, value(DiffBase.value(inner_result)))
         return y
     end
     jacobian!(DiffBase.hessian(result), ∇f!, DiffBase.gradient(result), x, cfg.jacobian_config)
@@ -58,5 +58,19 @@ hessian(f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian(f
 
 hessian!(result::AbstractArray, f::F, x::SArray) where {F} = jacobian!(result, y -> gradient(f, y), x)
 
-# TODO: Actually implement an optimized version of this. Currently, it just punts to the fallback method.
-hessian!(result::DiffResult, f::F, x::SArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
+hessian!(result::MutableDiffResult, f::F, x::SArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
+
+hessian!(result::ImmutableDiffResult, f::F, x::SArray, cfg::AllowedHessianConfig{F,H}) where {F,H} = hessian!(result, f, x)
+
+function hessian!(result::ImmutableDiffResult, f::F, x::SArray) where {F}
+    d1 = dualize(f, x)
+    d2 = dualize(f, d1)
+    fd2 = f(d2)
+    val = value(value(fd2))
+    grad = extract_gradient(value(fd2), x)
+    hess = extract_jacobian(partials(fd2), x)
+    result = DiffBase.hessian!(result, hess)
+    result = DiffBase.gradient!(result, grad)
+    result = DiffBase.value!(result, val)
+    return result
+end
