@@ -408,6 +408,10 @@ for f in RealInterface.UNARY_MATH
     DiffBase.hasdiffrule(f, 1) && eval(unary_dual_definition(Base, f))
 end
 
+for f in RealInterface.BINARY_MATH
+    DiffBase.hasdiffrule(f, 2) && eval(binary_dual_definition(Base, f))
+end
+
 for f in RealInterface.UNARY_SPECIAL_MATH
     DiffBase.hasdiffrule(f, 1) && eval(unary_dual_definition(SpecialFunctions, f))
 end
@@ -442,20 +446,6 @@ end
 # hypot #
 #-------#
 
-@inline function calc_hypot(x, y, ::Type{T}) where T
-    vx = value(x)
-    vy = value(y)
-    h = hypot(vx, vy)
-    return Dual{T}(h, (vx/h) * partials(x) + (vy/h) * partials(y))
-end
-
-@define_binary_dual_op(
-    Base.hypot,
-    calc_hypot(x, y, T),
-    calc_hypot(x, y, T),
-    calc_hypot(x, y, T)
-)
-
 @inline function calc_hypot(x, y, z, ::Type{T}) where T
     vx = value(x)
     vy = value(y)
@@ -474,24 +464,6 @@ end
     calc_hypot(x, y, z, T),
     calc_hypot(x, y, z, T),
     calc_hypot(x, y, z, T),
-)
-
-# atan2 #
-#-------#
-
-@inline function calc_atan2(y, x, ::Type{T}) where T
-    z = y / x
-    v = value(z)
-    atan2v = atan2(value(y), value(x))
-    deriv = inv(one(v) + v*v)
-    return Dual{T}(atan2v, deriv * partials(z))
-end
-
-@define_binary_dual_op(
-    Base.atan2,
-    calc_atan2(x, y, T),
-    calc_atan2(x, y, T),
-    calc_atan2(x, y, T)
 )
 
 # fma #
