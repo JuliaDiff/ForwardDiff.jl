@@ -408,7 +408,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                 end
             end
         end
-        for f in RealInterface.BINARY_SPECIAL_MATH
+        for f in vcat(RealInterface.BINARY_MATH, RealInterface.BINARY_SPECIAL_MATH)
             in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x)) && continue
             if DiffBase.hasdiffrule(f, 2)
                 derivs = DiffBase.diffrule(f, :x, :y)
@@ -438,8 +438,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     # Special Cases #
     #---------------#
 
-    @test dual_isapprox(hypot(FDNUM, FDNUM2), sqrt(FDNUM^2 + FDNUM2^2))
     @test dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
+    @test dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM3), sqrt(FDNUM^2 + FDNUM2^2 + FDNUM3^2))
 
     @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
@@ -447,8 +447,6 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
         @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
     end
-
-    @test dual_isapprox(atan2(abs(FDNUM), abs(FDNUM2)), atan(abs(FDNUM) / abs(FDNUM2)))
 
     for f in (fma, muladd)
         @test dual_isapprox(f(FDNUM, FDNUM2, FDNUM3),   Dual(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL*PARTIALS2 + PRIMAL2*PARTIALS + PARTIALS3))
