@@ -4,8 +4,8 @@
 
 const AllowedDerivativeConfig{F,H} = Union{DerivativeConfig{Tag{F,H}}, DerivativeConfig{Tag{Void,H}}}
 
-derivative(f!, y, x, cfg::DerivativeConfig) = throw(ConfigHismatchError(f, cfg))
-derivative!(out, f!, y, x, cfg::DerivativeConfig) = throw(ConfigHismatchError(f, cfg))
+derivative(f!, y, x, cfg::DerivativeConfig) = throw(ConfigMismatchError(f, cfg))
+derivative!(out, f!, y, x, cfg::DerivativeConfig) = throw(ConfigMismatchError(f, cfg))
 
 """
     ForwardDiff.derivative(f, x::Real)

@@ -4,8 +4,8 @@
 
 const AllowedGradientConfig{F,H} = Union{GradientConfig{Tag{F,H}}, GradientConfig{Tag{Void,H}}}
 
-gradient(f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
-gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigHismatchError(f, cfg))
+gradient(f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
+gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
 
 """
     ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
