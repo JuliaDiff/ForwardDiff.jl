@@ -1,4 +1,4 @@
-julia 0.6.0-pre
+julia 0.6.0
 StaticArrays 0.5.0
 DiffBase 0.3.2 0.4.0
 NaNMath 0.2.2
