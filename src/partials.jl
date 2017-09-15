@@ -55,7 +55,7 @@ Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
 
 @inline Base.copy(partials::Partials) = partials
 
-Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), Val{N}))
+Base.read(io::IO, ::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(ntuple(i->read(io, V), Val(N)))
 
 function Base.write(io::IO, partials::Partials)
     for p in partials

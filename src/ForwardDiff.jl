@@ -5,6 +5,7 @@ module ForwardDiff
 using DiffBase
 using DiffBase: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
+using Compat
 
 import NaNMath
 import SpecialFunctions
