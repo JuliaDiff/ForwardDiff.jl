@@ -22,23 +22,23 @@ dual_isapprox(a::Dual, b::Dual) = isapprox(value(a), value(b)) && isapprox(parti
 for N in (0,3), M in (0,4), V in (Int, Float32)
     println("  ...testing Dual{Void,$V,$N} and Dual{Void,Dual{Void,$V,$M},$N}")
 
-    PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), Val{N}))
+    PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), Val(N)))
     PRIMAL = intrand(V)
     FDNUM = Dual(PRIMAL, PARTIALS)
 
-    PARTIALS2 = Partials{N,V}(ntuple(n -> intrand(V), Val{N}))
+    PARTIALS2 = Partials{N,V}(ntuple(n -> intrand(V), Val(N)))
     PRIMAL2 = intrand(V)
     FDNUM2 = Dual(PRIMAL2, PARTIALS2)
 
-    PARTIALS3 = Partials{N,V}(ntuple(n -> intrand(V), Val{N}))
+    PARTIALS3 = Partials{N,V}(ntuple(n -> intrand(V), Val(N)))
     PRIMAL3 = intrand(V)
     FDNUM3 = Dual(PRIMAL3, PARTIALS3)
 
-    M_PARTIALS = Partials{M,V}(ntuple(m -> intrand(V), Val{M}))
+    M_PARTIALS = Partials{M,V}(ntuple(m -> intrand(V), Val(M)))
     NESTED_PARTIALS = convert(Partials{N,Dual{Void,V,M}}, PARTIALS)
     NESTED_FDNUM = Dual(Dual(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
-    M_PARTIALS2 = Partials{M,V}(ntuple(m -> intrand(V), Val{M}))
+    M_PARTIALS2 = Partials{M,V}(ntuple(m -> intrand(V), Val(M)))
     NESTED_PARTIALS2 = convert(Partials{N,Dual{Void,V,M}}, PARTIALS2)
     NESTED_FDNUM2 = Dual(Dual(PRIMAL2, M_PARTIALS2), NESTED_PARTIALS2)
 
@@ -136,7 +136,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test hash(NESTED_FDNUM) === hash(PRIMAL)
     @test hash(NESTED_FDNUM, hash(PRIMAL)) === hash(PRIMAL, hash(PRIMAL))
 
-    const TMPIO = IOBuffer()
+    TMPIO = IOBuffer()
     write(TMPIO, FDNUM)
     seekstart(TMPIO)
     @test read(TMPIO, typeof(FDNUM)) === FDNUM
