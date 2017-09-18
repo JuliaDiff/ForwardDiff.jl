@@ -1,8 +1,8 @@
 julia 0.6.0
 Compat 0.31.0
 StaticArrays 0.5.0
-DiffBase 0.3.2 0.4.0
+DiffResults 0.0.1
+DiffRules 0.0.1
 NaNMath 0.2.2
 SpecialFunctions 0.1.0
-RealInterface 0.0.2
 CommonSubexpressions 0.0.1

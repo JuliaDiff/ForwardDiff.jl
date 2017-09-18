@@ -14,19 +14,15 @@ If you're new GitHub, here's an outline of the workflow you should use:
 ## Adding New Derivative Definitions
 
 In general, new derivative implementations for `Dual` are automatically defined via simple
-symbolic rules. ForwardDiff accomplishes this by looping over the [the function names listed
-in the RealInterface package](https://github.com/jrevels/RealInterface.jl), and for every
-function (and relevant arity), it attempts to generate a `Dual` definition by applying the
-[symbolic rules provided by the DiffBase package](https://github.com/JuliaDiff/DiffBase.jl/blob/master/src/rules.jl).
-Conveniently, these auto-generated definitions are also automatically tested.
+symbolic rules. ForwardDiff accomplishes this by looping over the rules provided by
+[the DiffRules package](https://github.com/JuliaDiff/DiffRules.jl) and using them
+auto-generate `Dual` definitions. Conveniently, these auto-generated definitions are also
+automatically tested.
 
-Thus, in order to add a new derivative implementation for `Dual`, you should do the
-following:
+Thus, in order to add a new derivative implementation for `Dual`, you should define the
+appropriate derivative rule(s) in DiffRules, and then check that calling the function on
+`Dual` instances delivers the desired result.
 
-1. Make sure the name of the function is appropriately listed in the RealInterface package
-2. Define the appropriate derivative rule(s) in DiffBase
-3. Check that calling the function on `Dual` instances delivers the desired result.
-
-Depending on the arity of your function and its category in RealInterface, ForwardDiff's
-auto-definition mechanism might need to be expanded to include it. If this is the case,
-ForwardDiff's maintainers can help you out.
+Depending on your function, ForwardDiff's auto-definition mechanism might need to be
+expanded to support it. If this is the case, file an issue/PR so that ForwardDiff's
+maintainers can help you out.

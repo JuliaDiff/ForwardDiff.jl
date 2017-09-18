@@ -83,4 +83,4 @@ end
 #----------#
 
 extract_derivative!(result::AbstractArray, y::AbstractArray) = map!(extract_derivative, result, y)
-extract_derivative!(result::DiffResult, y) = DiffBase.derivative!(extract_derivative, result, y)
+extract_derivative!(result::DiffResult, y) = DiffResults.derivative!(extract_derivative, result, y)

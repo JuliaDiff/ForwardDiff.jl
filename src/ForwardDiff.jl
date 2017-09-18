@@ -2,14 +2,13 @@ __precompile__()
 
 module ForwardDiff
 
-using DiffBase
-using DiffBase: DiffResult, MutableDiffResult, ImmutableDiffResult
+using DiffRules
+using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
 using Compat
 
 import NaNMath
 import SpecialFunctions
-import RealInterface
 import CommonSubexpressions
 
 #############################
@@ -19,6 +18,10 @@ import CommonSubexpressions
 const NANSAFE_MODE_ENABLED = false
 
 const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, Irrational{:e}, Irrational{:π})
+
+const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isreal, :isinteger]
+
+const BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 
 const DEFAULT_CHUNK_THRESHOLD = 10
 
@@ -59,6 +62,9 @@ include("jacobian.jl")
 include("hessian.jl")
 include("deprecated.jl")
 
-export DiffBase
+# This is a deprecation binding and should be removed in the next minor release.
+const DiffBase = DiffResults
+
+export DiffBase, DiffResults
 
 end # module

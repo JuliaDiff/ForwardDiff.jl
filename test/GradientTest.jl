@@ -6,6 +6,7 @@ using Base.Test
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
+using DiffTests
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -13,7 +14,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 # hardcoded test #
 ##################
 
-f = DiffBase.rosenbrock_1
+f = DiffTests.rosenbrock_1
 x = [0.1, 0.2, 0.3]
 v = f(x)
 g = [-9.4, 15.6, 52.0]
@@ -35,21 +36,21 @@ for c in (1, 2, 3), tag in (nothing, f)
     ForwardDiff.gradient!(out, f, x)
     @test isapprox(out, g)
 
-    out = DiffBase.GradientResult(x)
+    out = DiffResults.GradientResult(x)
     ForwardDiff.gradient!(out, f, x, cfg)
-    @test isapprox(DiffBase.value(out), v)
-    @test isapprox(DiffBase.gradient(out), g)
+    @test isapprox(DiffResults.value(out), v)
+    @test isapprox(DiffResults.gradient(out), g)
 
-    out = DiffBase.GradientResult(x)
+    out = DiffResults.GradientResult(x)
     ForwardDiff.gradient!(out, f, x)
-    @test isapprox(DiffBase.value(out), v)
+    @test isapprox(DiffResults.value(out), v)
 end
 
 ########################
 # test vs. Calculus.jl #
 ########################
 
-for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
+for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
@@ -64,10 +65,10 @@ for f in DiffBase.VECTOR_TO_NUMBER_FUNCS
         ForwardDiff.gradient!(out, f, X, cfg)
         @test isapprox(out, g)
 
-        out = DiffBase.GradientResult(X)
+        out = DiffResults.GradientResult(X)
         ForwardDiff.gradient!(out, f, X, cfg)
-        @test isapprox(DiffBase.value(out), v)
-        @test isapprox(DiffBase.gradient(out), g)
+        @test isapprox(DiffResults.value(out), v)
+        @test isapprox(DiffResults.gradient(out), g)
     end
 end
 
@@ -100,33 +101,33 @@ out = similar(x)
 ForwardDiff.gradient!(out, prod, sx, scfg)
 @test out == actual
 
-result = DiffBase.GradientResult(x)
+result = DiffResults.GradientResult(x)
 result = ForwardDiff.gradient!(result, prod, x)
 
-result1 = DiffBase.GradientResult(x)
-result2 = DiffBase.GradientResult(x)
-result3 = DiffBase.GradientResult(x)
+result1 = DiffResults.GradientResult(x)
+result2 = DiffResults.GradientResult(x)
+result3 = DiffResults.GradientResult(x)
 result1 = ForwardDiff.gradient!(result1, prod, sx)
 result2 = ForwardDiff.gradient!(result2, prod, sx, cfg)
 result3 = ForwardDiff.gradient!(result3, prod, sx, scfg)
-@test DiffBase.value(result1) == DiffBase.value(result)
-@test DiffBase.value(result2) == DiffBase.value(result)
-@test DiffBase.value(result3) == DiffBase.value(result)
-@test DiffBase.gradient(result1) == DiffBase.gradient(result)
-@test DiffBase.gradient(result2) == DiffBase.gradient(result)
-@test DiffBase.gradient(result3) == DiffBase.gradient(result)
+@test DiffResults.value(result1) == DiffResults.value(result)
+@test DiffResults.value(result2) == DiffResults.value(result)
+@test DiffResults.value(result3) == DiffResults.value(result)
+@test DiffResults.gradient(result1) == DiffResults.gradient(result)
+@test DiffResults.gradient(result2) == DiffResults.gradient(result)
+@test DiffResults.gradient(result3) == DiffResults.gradient(result)
 
-sresult1 = DiffBase.GradientResult(sx)
-sresult2 = DiffBase.GradientResult(sx)
-sresult3 = DiffBase.GradientResult(sx)
+sresult1 = DiffResults.GradientResult(sx)
+sresult2 = DiffResults.GradientResult(sx)
+sresult3 = DiffResults.GradientResult(sx)
 sresult1 = ForwardDiff.gradient!(sresult1, prod, sx)
 sresult2 = ForwardDiff.gradient!(sresult2, prod, sx, cfg)
 sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
-@test DiffBase.value(sresult1) == DiffBase.value(result)
-@test DiffBase.value(sresult2) == DiffBase.value(result)
-@test DiffBase.value(sresult3) == DiffBase.value(result)
-@test DiffBase.gradient(sresult1) == DiffBase.gradient(result)
-@test DiffBase.gradient(sresult2) == DiffBase.gradient(result)
-@test DiffBase.gradient(sresult3) == DiffBase.gradient(result)
+@test DiffResults.value(sresult1) == DiffResults.value(result)
+@test DiffResults.value(sresult2) == DiffResults.value(result)
+@test DiffResults.value(sresult3) == DiffResults.value(result)
+@test DiffResults.gradient(sresult1) == DiffResults.gradient(result)
+@test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
+@test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
 
 end # module

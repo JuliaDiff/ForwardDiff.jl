@@ -6,6 +6,7 @@ using Base.Test
 using ForwardDiff
 using ForwardDiff: Dual, Tag, JacobianConfig
 using StaticArrays
+using DiffTests
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -49,10 +50,10 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
     ForwardDiff.jacobian!(out, f, x)
     @test isapprox(out, j)
 
-    out = DiffBase.JacobianResult(zeros(4), zeros(3))
+    out = DiffResults.JacobianResult(zeros(4), zeros(3))
     ForwardDiff.jacobian!(out, f, x, JacobianConfig(tags[1], x))
-    @test isapprox(DiffBase.value(out), v)
-    @test isapprox(DiffBase.jacobian(out), j)
+    @test isapprox(DiffResults.value(out), v)
+    @test isapprox(DiffResults.jacobian(out), j)
 
     # testing f!(y, x)
     y = zeros(4)
@@ -73,26 +74,26 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
     @test isapprox(out, j)
     @test isapprox(y, v)
 
-    out = DiffBase.JacobianResult(zeros(4), zeros(3))
+    out = DiffResults.JacobianResult(zeros(4), zeros(3))
     y = zeros(4)
     ForwardDiff.jacobian!(out, f!, y, x, ycfg)
-    @test DiffBase.value(out) == y
+    @test DiffResults.value(out) == y
     @test isapprox(y, v)
-    @test isapprox(DiffBase.jacobian(out), j)
+    @test isapprox(DiffResults.jacobian(out), j)
 
-    out = DiffBase.JacobianResult(zeros(4), zeros(3))
+    out = DiffResults.JacobianResult(zeros(4), zeros(3))
     y = zeros(4)
     ForwardDiff.jacobian!(out, f!, y, x)
-    @test DiffBase.value(out) == y
+    @test DiffResults.value(out) == y
     @test isapprox(y, v)
-    @test isapprox(DiffBase.jacobian(out), j)
+    @test isapprox(DiffResults.jacobian(out), j)
 end
 
 ########################
 # test vs. Calculus.jl #
 ########################
 
-for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
+for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=FINITEDIFF_ERROR)
@@ -107,14 +108,14 @@ for f in DiffBase.ARRAY_TO_ARRAY_FUNCS
         ForwardDiff.jacobian!(out, f, X, cfg)
         @test isapprox(out, j)
 
-        out = DiffBase.DiffResult(similar(v, length(v)), similar(v, length(v), length(X)))
+        out = DiffResults.DiffResult(similar(v, length(v)), similar(v, length(v), length(X)))
         ForwardDiff.jacobian!(out, f, X, cfg)
-        @test isapprox(DiffBase.value(out), v)
-        @test isapprox(DiffBase.jacobian(out), j)
+        @test isapprox(DiffResults.value(out), v)
+        @test isapprox(DiffResults.jacobian(out), j)
     end
 end
 
-for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
+for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     v = zeros(Y)
     f!(v, X)
     j = ForwardDiff.jacobian(f!, zeros(Y), X)
@@ -135,18 +136,18 @@ for f! in DiffBase.INPLACE_ARRAY_TO_ARRAY_FUNCS
         @test isapprox(out, j)
 
         y = zeros(Y)
-        out = DiffBase.JacobianResult(y, X)
+        out = DiffResults.JacobianResult(y, X)
         ForwardDiff.jacobian!(out, f!, y, X)
-        @test DiffBase.value(out) == y
+        @test DiffResults.value(out) == y
         @test isapprox(y, v)
-        @test isapprox(DiffBase.jacobian(out), j)
+        @test isapprox(DiffResults.jacobian(out), j)
 
         y = zeros(Y)
-        out = DiffBase.JacobianResult(y, X)
+        out = DiffResults.JacobianResult(y, X)
         ForwardDiff.jacobian!(out, f!, y, X, ycfg)
-        @test DiffBase.value(out) == y
+        @test DiffResults.value(out) == y
         @test isapprox(y, v)
-        @test isapprox(DiffBase.jacobian(out), j)
+        @test isapprox(DiffResults.jacobian(out), j)
     end
 end
 
@@ -179,34 +180,34 @@ out = similar(x, 6, 9)
 ForwardDiff.jacobian!(out, diff, sx, scfg)
 @test out == actual
 
-result = DiffBase.JacobianResult(similar(x, 6), x)
+result = DiffResults.JacobianResult(similar(x, 6), x)
 result = ForwardDiff.jacobian!(result, diff, x)
 
-result1 = DiffBase.JacobianResult(similar(sx, 6), sx)
-result2 = DiffBase.JacobianResult(similar(sx, 6), sx)
-result3 = DiffBase.JacobianResult(similar(sx, 6), sx)
+result1 = DiffResults.JacobianResult(similar(sx, 6), sx)
+result2 = DiffResults.JacobianResult(similar(sx, 6), sx)
+result3 = DiffResults.JacobianResult(similar(sx, 6), sx)
 result1 = ForwardDiff.jacobian!(result1, diff, sx)
 result2 = ForwardDiff.jacobian!(result2, diff, sx, cfg)
 result3 = ForwardDiff.jacobian!(result3, diff, sx, scfg)
-@test DiffBase.value(result1) == DiffBase.value(result)
-@test DiffBase.value(result2) == DiffBase.value(result)
-@test DiffBase.value(result3) == DiffBase.value(result)
-@test DiffBase.jacobian(result1) == DiffBase.jacobian(result)
-@test DiffBase.jacobian(result2) == DiffBase.jacobian(result)
-@test DiffBase.jacobian(result3) == DiffBase.jacobian(result)
+@test DiffResults.value(result1) == DiffResults.value(result)
+@test DiffResults.value(result2) == DiffResults.value(result)
+@test DiffResults.value(result3) == DiffResults.value(result)
+@test DiffResults.jacobian(result1) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(result2) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(result3) == DiffResults.jacobian(result)
 
 sy = zeros(SVector{6,eltype(sx)})
-sresult1 = DiffBase.JacobianResult(sy, sx)
-sresult2 = DiffBase.JacobianResult(sy, sx)
-sresult3 = DiffBase.JacobianResult(sy, sx)
+sresult1 = DiffResults.JacobianResult(sy, sx)
+sresult2 = DiffResults.JacobianResult(sy, sx)
+sresult3 = DiffResults.JacobianResult(sy, sx)
 sresult1 = ForwardDiff.jacobian!(sresult1, diff, sx)
 sresult2 = ForwardDiff.jacobian!(sresult2, diff, sx, cfg)
 sresult3 = ForwardDiff.jacobian!(sresult3, diff, sx, scfg)
-@test DiffBase.value(sresult1) == DiffBase.value(result)
-@test DiffBase.value(sresult2) == DiffBase.value(result)
-@test DiffBase.value(sresult3) == DiffBase.value(result)
-@test DiffBase.jacobian(sresult1) == DiffBase.jacobian(result)
-@test DiffBase.jacobian(sresult2) == DiffBase.jacobian(result)
-@test DiffBase.jacobian(sresult3) == DiffBase.jacobian(result)
+@test DiffResults.value(sresult1) == DiffResults.value(result)
+@test DiffResults.value(sresult2) == DiffResults.value(result)
+@test DiffResults.value(sresult3) == DiffResults.value(result)
+@test DiffResults.jacobian(sresult1) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(sresult2) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(sresult3) == DiffResults.jacobian(result)
 
 end # module

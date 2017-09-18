@@ -4,10 +4,10 @@ using Base.Test
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
 
-import NaNMath
+using NaNMath, SpecialFunctions
+using DiffRules
+
 import Calculus
-import SpecialFunctions
-import RealInterface
 
 samerng() = MersenneTwister(1)
 
@@ -396,29 +396,25 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        for f in vcat(RealInterface.UNARY_MATH, RealInterface.UNARY_SPECIAL_MATH)
-            if DiffBase.hasdiffrule(f, 1)
-                deriv = DiffBase.diffrule(f, :x)
+        for (M, f, arity) in DiffRules.diffrules()
+            if arity == 1
+                deriv = DiffRules.diffrule(M, f, :x)
                 modifier = in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth)) ? one(V) : zero(V)
                 @eval begin
                     x = rand() + $modifier
-                    dx = $f(Dual(x, one(x)))
-                    @test value(dx) == $f(x)
+                    dx = $M.$f(Dual(x, one(x)))
+                    @test value(dx) == $M.$f(x)
                     @test partials(dx, 1) == $deriv
                 end
-            end
-        end
-        for f in vcat(RealInterface.BINARY_MATH, RealInterface.BINARY_SPECIAL_MATH)
-            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x)) && continue
-            if DiffBase.hasdiffrule(f, 2)
-                derivs = DiffBase.diffrule(f, :x, :y)
+            elseif arity == 2
+                derivs = DiffRules.diffrule(M, f, :x, :y)
                 @eval begin
                     x, y = rand(1:10), rand()
-                    dx = $f(Dual(x, one(x)), y)
-                    dy = $f(x, Dual(y, one(y)))
+                    dx = $M.$f(Dual(x, one(x)), y)
+                    dy = $M.$f(x, Dual(y, one(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
-                    @test value(dx) == $f(x, y)
+                    @test value(dx) == $M.$f(x, y)
                     @test value(dy) == value(dx)
                     if isnan(actualdx)
                         @test isnan(partials(dx, 1))

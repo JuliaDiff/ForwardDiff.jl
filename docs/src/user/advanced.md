@@ -12,14 +12,11 @@ this task!**
 
 In the course of calculating higher-order derivatives, ForwardDiff ends up calculating all
 the lower-order derivatives and primal value `f(x)`. To retrieve these results in one fell
-swoop, you can utilize the DiffResult API provided by the DiffBase package. To learn how to
-use this functionality, please consult the [relevant DiffBase
-documentation](http://www.juliadiff.org/DiffBase.jl/stable/diffresultapi.html).
+swoop, you can utilize the [DiffResults](https://github.com/JuliaDiff/DiffResults.jl) API.
 
-Note that running `using ForwardDiff` will automatically bring the `DiffBase` module
-into scope, and that all mutating ForwardDiff API methods support the DiffResult API.
-In other words, API methods of the form `ForwardDiff.method!(out, args...)` will
-work appropriately if `isa(out, DiffResult)`.
+All mutating ForwardDiff API methods support the DiffResults API. In other words, API
+methods of the form `ForwardDiff.method!(out, args...)` will work appropriately if
+`isa(out, DiffResults.DiffResult)`.
 
 ## Configuring Chunk Size
 

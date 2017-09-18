@@ -161,7 +161,7 @@ end
 function unary_dual_definition(M, f)
     work = CommonSubexpressions.cse(quote
         val = $(f)(x)
-        deriv = $(DiffBase.diffrule(f, :x))
+        deriv = $(DiffRules.diffrule(M, f, :x))
     end)
     return quote
         @inline function ($M).$(f)(d::Dual{T}) where T
@@ -173,7 +173,7 @@ function unary_dual_definition(M, f)
 end
 
 function binary_dual_definition(M, f)
-    dvx, dvy = DiffBase.diffrule(f, :vx, :vy)
+    dvx, dvy = DiffRules.diffrule(M, f, :vx, :vy)
     xy_work = CommonSubexpressions.cse(quote
         val = $(f)(vx, vy)
         dvx = $dvx
@@ -262,11 +262,11 @@ end
 
 isconstant(d::Dual) = iszero(partials(d))
 
-for pred in RealInterface.UNARY_PREDICATES
+for pred in UNARY_PREDICATES
     @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
 end
 
-for pred in RealInterface.BINARY_PREDICATES
+for pred in BINARY_PREDICATES
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
@@ -304,6 +304,28 @@ Base.promote_array_type(F, ::Type{<:AbstractFloat}, ::Type{<:Dual}, ::Type{P}) w
 
 Base.float(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
 Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
+
+###################################
+# General Mathematical Operations #
+###################################
+
+@inline Base.conj(d::Dual) = d
+
+@inline Base.transpose(d::Dual) = d
+
+@inline Base.ctranspose(d::Dual) = d
+
+@inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
+
+for (M, f, arity) in DiffRules.diffrules()
+    if arity == 1
+        eval(unary_dual_definition(M, f))
+    elseif arity == 2
+        eval(binary_dual_definition(M, f))
+    else
+        error("ForwardDiff currently only knows how to autogenerate Dual definitions for unary and binary functions.")
+    end
+end
 
 ##############
 # Arithmetic #
@@ -392,53 +414,6 @@ for f in (:(Base.:^), :(NaNMath.pow))
     end
 end
 
-###################################
-# General Mathematical Operations #
-###################################
-
-@inline Base.conj(d::Dual) = d
-
-@inline Base.transpose(d::Dual) = d
-
-@inline Base.ctranspose(d::Dual) = d
-
-@inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
-
-for f in RealInterface.UNARY_MATH
-    DiffBase.hasdiffrule(f, 1) && eval(unary_dual_definition(Base, f))
-end
-
-for f in RealInterface.BINARY_MATH
-    DiffBase.hasdiffrule(f, 2) && eval(binary_dual_definition(Base, f))
-end
-
-for f in RealInterface.UNARY_SPECIAL_MATH
-    DiffBase.hasdiffrule(f, 1) && eval(unary_dual_definition(SpecialFunctions, f))
-end
-
-for f in RealInterface.BINARY_SPECIAL_MATH
-    DiffBase.hasdiffrule(f, 2) && eval(binary_dual_definition(SpecialFunctions, f))
-end
-
-function to_nanmath!(x)
-    if isa(x, Expr)
-        if x.head == :call
-            f = x.args[1]
-            if in(f, RealInterface.UNARY_NAN_MATH) || in(f, RealInterface.BINARY_NAN_MATH)
-                x.args[1] = :(NaNMath.$f)
-            end
-            foreach(to_nanmath!, x.args[2:end])
-        else
-            foreach(to_nanmath!, x.args)
-        end
-    end
-    return x
-end
-
-for f in RealInterface.UNARY_NAN_MATH
-    DiffBase.hasdiffrule(f, 1) && eval(to_nanmath!(unary_dual_definition(NaNMath, f)))
-end
-
 #################
 # Special Cases #
 #################
@@ -512,8 +487,8 @@ end
 #-----#
 
 @generated function calc_muladd_xyz(x::Dual{T,<:Real,N},
-                                 y::Dual{T,<:Real,N},
-                                 z::Dual{T,<:Real,N}) where {T,N}
+                                    y::Dual{T,<:Real,N},
+                                    z::Dual{T,<:Real,N}) where {T,N}
     ex = Expr(:tuple, [:(muladd(value(x), partials(y)[$i], muladd(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
@@ -529,8 +504,8 @@ end
 end
 
 @generated function calc_muladd_xz(x::Dual{T,<:Real,N},
-                                y::Real,
-                                z::Dual{T,<:Real,N}) where {T,N}
+                                   y::Real,
+                                   z::Dual{T,<:Real,N}) where {T,N}
     ex = Expr(:tuple, [:(muladd(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
