@@ -15,7 +15,7 @@ If you're new GitHub, here's an outline of the workflow you should use:
 
 In general, new derivative implementations for `Dual` are automatically defined via simple
 symbolic rules. ForwardDiff accomplishes this by looping over the rules provided by
-[the DiffRules package](https://github.com/JuliaDiff/DiffRules.jl) and using them
+[the DiffRules package](https://github.com/JuliaDiff/DiffRules.jl) and using them to
 auto-generate `Dual` definitions. Conveniently, these auto-generated definitions are also
 automatically tested.
 
