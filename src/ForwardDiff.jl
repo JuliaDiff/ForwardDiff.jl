@@ -17,7 +17,7 @@ import CommonSubexpressions
 
 const NANSAFE_MODE_ENABLED = false
 
-const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real)
+const REAL_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, Irrational{:e}, Irrational{:π})
 
 const DEFAULT_CHUNK_THRESHOLD = 10
 
