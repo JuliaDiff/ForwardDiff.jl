@@ -179,15 +179,17 @@ function binary_dual_definition(M, f)
         dvx = $dvx
         dvy = $dvy
     end)
+    dvx, _ = DiffRules.diffrule(M, f, :vx, :y)
     x_work = qualified_cse!(quote
-        val = $M.$f(vx, vy)
+        val = $M.$f(vx, y)
         dvx = $dvx
     end)
+    _, dvy = DiffRules.diffrule(M, f, :x, :vy)
     y_work = qualified_cse!(quote
-        val = $M.$f(vx, vy)
+        val = $M.$f(x, vy)
         dvy = $dvy
     end)
-    return quote
+    expr = quote
         @define_binary_dual_op(
             $M.$f,
             begin
@@ -196,17 +198,18 @@ function binary_dual_definition(M, f)
                 return Dual{T}(val, _mul_partials(partials(x), partials(y), dvx, dvy))
             end,
             begin
-                vx, vy = value(x), value(y)
+                vx = value(x)
                 $x_work
                 return Dual{T}(val, dvx * partials(x))
             end,
             begin
-                vx, vy = value(x), value(y)
+                vy = value(y)
                 $y_work
                 return Dual{T}(val, dvy * partials(y))
             end
         )
     end
+    return expr
 end
 
 #####################
