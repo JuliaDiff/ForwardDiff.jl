@@ -2,11 +2,6 @@
 # API methods #
 ###############
 
-const AllowedDerivativeConfig{F,H} = Union{DerivativeConfig{Tag{F,H}}, DerivativeConfig{Tag{Void,H}}}
-
-derivative(f!, y, x, cfg::DerivativeConfig) = throw(ConfigMismatchError(f, cfg))
-derivative!(out, f!, y, x, cfg::DerivativeConfig) = throw(ConfigMismatchError(f, cfg))
-
 """
     ForwardDiff.derivative(f, x::Real)
 
@@ -25,11 +20,11 @@ end
 Return `df!/dx` evaluated at `x`, assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
 """
-@inline function derivative(f!::F, y::AbstractArray, x::R,
-                            cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+@inline function derivative(f!, y::AbstractArray, x::Real,
+                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
     ydual = cfg.duals
     seed!(ydual, y)
-    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
+    f!(ydual, Dual{T}(x, one(x)))
     map!(value, y, ydual)
     return extract_derivative(ydual)
 end
@@ -58,11 +53,11 @@ Compute `df!/dx` evaluated at `x` and store the result(s) in `result`, assuming 
 called as `f!(y, x)` where the result is stored in `y`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
-                             f!::F, y::AbstractArray, x::R,
-                             cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+                             f!, y::AbstractArray, x::Real,
+                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
     ydual = cfg.duals
     seed!(ydual, y)
-    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
+    f!(ydual, Dual{T}(x, one(x)))
     result = extract_value!(result, y, ydual)
     result = extract_derivative!(result, ydual)
     return result

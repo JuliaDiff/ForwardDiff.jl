@@ -2,11 +2,6 @@
 # API methods #
 ###############
 
-const AllowedGradientConfig{F,H} = Union{GradientConfig{Tag{F,H}}, GradientConfig{Tag{Void,H}}}
-
-gradient(f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
-gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig) = throw(ConfigMismatchError(f, cfg))
-
 """
     ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
 
@@ -14,7 +9,7 @@ Return `∇f` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), Real)`.
 """
-function gradient(f::F, x::AbstractArray, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
+function gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -30,7 +25,7 @@ Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f
 
 This method assumes that `isa(f(x), Real)`.
 """
-function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::AllowedGradientConfig{F,H} = GradientConfig(f, x)) where {F,H}
+function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)
     else
@@ -39,11 +34,11 @@ function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArr
     return result
 end
 
-@inline gradient(f::F, x::SArray) where {F} = vector_mode_gradient(f, x)
-@inline gradient(f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = gradient(f, x)
+@inline gradient(f, x::SArray)                      = vector_mode_gradient(f, x)
+@inline gradient(f, x::SArray, cfg::GradientConfig) = gradient(f, x)
 
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray) where {F} = vector_mode_gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray, cfg::AllowedGradientConfig{F,H}) where {F,H} = gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::GradientConfig) = gradient!(result, f, x)
 
 #####################
 # result extraction #

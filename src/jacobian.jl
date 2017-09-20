@@ -2,13 +2,6 @@
 # API methods #
 ###############
 
-const AllowedJacobianConfig{F,H} = Union{JacobianConfig{Tag{F,H}}, JacobianConfig{Tag{Void,H}}}
-
-jacobian(f, x::AbstractArray, cfg::JacobianConfig) = throw(ConfigMismatchError(f, cfg))
-jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig) = throw(ConfigMismatchError(f!, cfg))
-jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig) = throw(ConfigMismatchError(f, cfg))
-jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig) = throw(ConfigMismatchError(f!, cfg))
-
 """
     ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
 
@@ -16,7 +9,7 @@ Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian(f::F, x::AbstractArray, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f, x)) where {F,H}
+function jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f, x, cfg)
     else
@@ -30,7 +23,7 @@ end
 Return `J(f!)` evaluated at `x`,  assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
 """
-function jacobian(f!::F, y::AbstractArray, x::AbstractArray, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f!, y, x)) where {F,H}
+function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
@@ -47,7 +40,7 @@ as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f, x)) where {F,H}
+function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f, x, cfg)
     else
@@ -64,7 +57,7 @@ called as `f!(y, x)` where the result is stored in `y`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractArray, x::AbstractArray, cfg::AllowedJacobianConfig{F,H} = JacobianConfig(f!, y, x)) where {F,H}
+function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)
     else
@@ -73,11 +66,11 @@ function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractAr
     return result
 end
 
-@inline jacobian(f::F, x::SArray) where {F} = vector_mode_jacobian(f, x)
-@inline jacobian(f::F, x::SArray, cfg::AllowedJacobianConfig{F,H}) where {F,H} = jacobian(f, x)
+@inline jacobian(f, x::SArray) = vector_mode_jacobian(f, x)
+@inline jacobian(f, x::SArray, cfg::JacobianConfig) = jacobian(f, x)
 
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray) where {F} = vector_mode_jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::SArray, cfg::AllowedJacobianConfig{F,H}) where {F,H} = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::JacobianConfig) = jacobian!(result, f, x)
 
 #####################
 # result extraction #

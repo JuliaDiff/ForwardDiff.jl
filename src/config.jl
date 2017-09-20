@@ -2,7 +2,7 @@
 # Tag #
 #######
 
-struct Tag{F,H} end
+struct Tag{P,N} end
 
 const TAGCOUNT = Threads.Atomic{UInt}(0)
 
@@ -10,23 +10,17 @@ const TAGCOUNT = Threads.Atomic{UInt}(0)
 # there is a potential for error if Duals are shared across processes
 # e.g. by saving/loading or parallel computations
 @generated function Tag(::Type{F}, ::Type{V}) where {F,V}
+    p = myid()
     n = Threads.atomic_add!(TAGCOUNT, UInt(1))
-    return quote
+    quote
         $(Expr(:meta, :inline))
-        Tag{F,$n}()
+        Tag{$p,$n}()
     end
 end
 
-@inline ≺(::Type{Tag{F1,n1}}, ::Type{Tag{F2,n2}}) where {F1,n1,F2,n2} = n1 < n2
-
-Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
-                                      ::Type{Dual{T2,V2,N2}}) where {T1,V1<:Real,N1,T2,V2<:Real,N2}
-    V = promote_type(V1,V2)
-    if T2 ≺ T1
-        Dual{T1,Dual{T2,V,N2},N1}
-    else
-        Dual{T2,Dual{T1,V,N1},N2}
-    end
+@inline function ≺(t1::Type{Tag{p1,n1}}, t2::Type{Tag{p2,n2}}) where {p1,n1,p2,n2}
+    p1 == p2 || throw(DualMismatchError(t1,t2))
+    n1 < n2
 end
 
 
@@ -34,33 +28,19 @@ end
 # AbstractConfig #
 ##################
 
-abstract type AbstractConfig{T,N} end
-
-struct ConfigMismatchError{F,G,H} <: Exception
-    f::F
-    cfg::AbstractConfig{Tag{G,H}}
-end
-
-function Base.showerror(io::IO, e::ConfigMismatchError{F,G}) where {F,G}
-    print(io, "The provided configuration (of type $(typeof(e.cfg))) was constructed for a",
-              " function other than the current target function. ForwardDiff cannot safely",
-              " perform differentiation in this context; see the following issue for details:",
-              " https://github.com/JuliaDiff/ForwardDiff.jl/issues/83. You can resolve this",
-              " problem by constructing and using a configuration with the appropriate target",
-              " function, e.g. `ForwardDiff.GradientConfig($(e.f), x)`")
-end
+abstract type AbstractConfig{N} end
 
 Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 
 Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
 
-@inline chunksize(::AbstractConfig{T,N}) where {T,N} = N
+@inline chunksize(::AbstractConfig{N}) where {N} = N
 
 ####################
 # DerivativeConfig #
 ####################
 
-struct DerivativeConfig{T,D} <: AbstractConfig{T,1}
+struct DerivativeConfig{T,D} <: AbstractConfig{1}
     duals::D
 end
 
@@ -94,7 +74,7 @@ Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
 # GradientConfig #
 ##################
 
-struct GradientConfig{T,V,N,D} <: AbstractConfig{T,N}
+struct GradientConfig{T,V,N,D} <: AbstractConfig{N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
 end
@@ -129,7 +109,7 @@ Base.eltype(::Type{GradientConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # JacobianConfig #
 ##################
 
-struct JacobianConfig{T,V,N,D} <: AbstractConfig{T,N}
+struct JacobianConfig{T,V,N,D} <: AbstractConfig{N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
 end
@@ -193,9 +173,9 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,D,H,DJ} <: AbstractConfig{T,N}
-    jacobian_config::JacobianConfig{Tag{Void,H},V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{Tag{Void,H},V,N},N,D}
+struct HessianConfig{TG,TJ,V,N,DG,DJ} <: AbstractConfig{N}
+    jacobian_config::JacobianConfig{TJ,V,N,DJ}
+    gradient_config::GradientConfig{TG,Dual{TJ,V,N},N,DG}
 end
 
 """
@@ -219,9 +199,10 @@ This constructor does not store/modify `x`.
 function HessianConfig(f::F,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tag::Tag = Tag(F, Dual{Void,V,0})) where {F,V}
-    jacobian_config = JacobianConfig(nothing, x, chunk)
-    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
+                       tagj::Tag = Tag(Tuple{F,typeof(gradient)}, V),
+                       tagg::Tag = Tag(F, Dual{tagj,V,chunksize(chunk)})) where {F,V}
+    jacobian_config = JacobianConfig((f,gradient), x, chunk, tagj)
+    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tagg)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
@@ -244,10 +225,12 @@ function HessianConfig(f::F,
                        result::DiffResult,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tag::Tag = Tag(F, Dual{Void,V,0})) where {F,V}
-    jacobian_config = JacobianConfig(nothing, DiffResults.gradient(result), x, chunk)
-    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
+                       tagj::Tag = Tag(Tuple{F,typeof(gradient)}, V),
+                       tagg::Tag = Tag(F, Dual{tagj,V,chunksize(chunk)})) where {F,V}
+    jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tagj)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tagg)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
-Base.eltype(::Type{HessianConfig{T,V,N,D,H,DJ}}) where {T,V,N,D,H,DJ} = Dual{T,Dual{Tag{Void,H},V,N},N}
+Base.eltype(::Type{HessianConfig{TG,TJ,V,N,DG,DJ}}) where {TG,TJ,V,N,DG,DJ} =
+    Dual{TG,Dual{TJ,V,N},N}
