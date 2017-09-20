@@ -58,15 +58,15 @@ end
 end
 
 function extract_gradient!(result::DiffResult, y::Real)
-    result = DiffBase.value!(result, y)
-    grad = DiffBase.gradient(result)
+    result = DiffResults.value!(result, y)
+    grad = DiffResults.gradient(result)
     fill!(grad, zero(y))
     return result
 end
 
 function extract_gradient!(result::DiffResult, dual::Dual)
-    result = DiffBase.value!(result, value(dual))
-    result = DiffBase.gradient!(result, partials(dual))
+    result = DiffResults.value!(result, value(dual))
+    result = DiffResults.gradient!(result, partials(dual))
     return result
 end
 
@@ -82,7 +82,7 @@ function extract_gradient_chunk!(result, dual, index, chunksize)
 end
 
 function extract_gradient_chunk!(result::DiffResult, dual, index, chunksize)
-    extract_gradient_chunk!(DiffBase.gradient(result), dual, index, chunksize)
+    extract_gradient_chunk!(DiffResults.gradient(result), dual, index, chunksize)
     return result
 end
 

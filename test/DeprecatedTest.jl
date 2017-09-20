@@ -1,7 +1,7 @@
 module DeprecatedTest
 
 using Base.Test
-using ForwardDiff, DiffBase
+using ForwardDiff, DiffResults
 
 using ForwardDiff: AbstractConfig, GradientConfig,
                    JacobianConfig, HessianConfig,
@@ -26,7 +26,7 @@ end
 
 x = rand(3)
 y = rand(3)
-out = DiffBase.HessianResult(x)
+out = DiffResults.HessianResult(x)
 N = 1
 chunk = ForwardDiff.Chunk{N}()
 

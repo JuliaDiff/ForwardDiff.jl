@@ -45,10 +45,10 @@ function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::AllowedHessia
     ∇f! = (y, z) -> begin
         inner_result = DiffResult(zero(eltype(y)), y)
         gradient!(inner_result, f, z, cfg.gradient_config)
-        result = DiffBase.value!(result, value(DiffBase.value(inner_result)))
+        result = DiffResults.value!(result, value(DiffResults.value(inner_result)))
         return y
     end
-    jacobian!(DiffBase.hessian(result), ∇f!, DiffBase.gradient(result), x, cfg.jacobian_config)
+    jacobian!(DiffResults.hessian(result), ∇f!, DiffResults.gradient(result), x, cfg.jacobian_config)
     return result
 end
 
@@ -69,8 +69,8 @@ function hessian!(result::ImmutableDiffResult, f::F, x::SArray) where {F}
     val = value(value(fd2))
     grad = extract_gradient(value(fd2), x)
     hess = extract_jacobian(partials(fd2), x)
-    result = DiffBase.hessian!(result, hess)
-    result = DiffBase.gradient!(result, grad)
-    result = DiffBase.value!(result, val)
+    result = DiffResults.hessian!(result, hess)
+    result = DiffResults.gradient!(result, grad)
+    result = DiffResults.value!(result, val)
     return result
 end

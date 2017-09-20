@@ -233,7 +233,7 @@ function HessianConfig(f::F,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
                        tag::Tag = Tag(F, Dual{Void,V,0})) where {F,V}
-    jacobian_config = JacobianConfig(nothing, DiffBase.gradient(result), x, chunk)
+    jacobian_config = JacobianConfig(nothing, DiffResults.gradient(result), x, chunk)
     gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end

@@ -2,7 +2,7 @@
 # value extraction #
 ####################
 
-@inline extract_value!(out::DiffResult, ydual) = DiffBase.value!(value, out, ydual)
+@inline extract_value!(out::DiffResult, ydual) = DiffResults.value!(value, out, ydual)
 @inline extract_value!(out, ydual) = out
 
 @inline function extract_value!(out, y, ydual)
@@ -10,7 +10,7 @@
     copy_value!(out, y)
 end
 
-@inline copy_value!(out::DiffResult, y) = DiffBase.value!(out, y)
+@inline copy_value!(out::DiffResult, y) = DiffResults.value!(out, y)
 @inline copy_value!(out, y) = out
 
 ###################################

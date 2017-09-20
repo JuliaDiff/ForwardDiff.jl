@@ -80,6 +80,14 @@ out = ForwardDiff.hessian!(out, f, x) # re-alias output!
 v = DiffBase.value(out)
 g = DiffBase.gradient(out)
 h = DiffBase.hessian(out)
+
+# ForwardDiff v0.7 & above
+using DiffResults
+out = DiffResults.HessianResult(x)
+out = ForwardDiff.hessian!(out, f, x) # re-alias output!
+v = DiffResults.value(out)
+g = DiffResults.gradient(out)
+h = DiffResults.hessian(out)
 ```
 
 ## Higher-Order Differentiation
