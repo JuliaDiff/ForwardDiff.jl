@@ -397,6 +397,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     if V != Int
         for (M, f, arity) in DiffRules.diffrules()
+            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x)) && continue
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
                 modifier = in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth)) ? one(V) : zero(V)
