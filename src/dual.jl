@@ -160,11 +160,11 @@ end
 
 function unary_dual_definition(M, f)
     work = CommonSubexpressions.cse(quote
-        val = $(f)(x)
+        val = $M.$f(x)
         deriv = $(DiffRules.diffrule(M, f, :x))
     end)
     return quote
-        @inline function ($M).$(f)(d::Dual{T}) where T
+        @inline function $M.$f(d::Dual{T}) where T
             x = value(d)
             $work
             return Dual{T}(val, deriv * partials(d))
@@ -175,21 +175,21 @@ end
 function binary_dual_definition(M, f)
     dvx, dvy = DiffRules.diffrule(M, f, :vx, :vy)
     xy_work = CommonSubexpressions.cse(quote
-        val = $(f)(vx, vy)
+        val = $M.$f(vx, vy)
         dvx = $dvx
         dvy = $dvy
     end)
     x_work = CommonSubexpressions.cse(quote
-        val = $(f)(vx, vy)
+        val = $M.$f(vx, vy)
         dvx = $dvx
     end)
     y_work = CommonSubexpressions.cse(quote
-        val = $(f)(vx, vy)
+        val = $M.$f(vx, vy)
         dvy = $dvy
     end)
     return quote
         @define_binary_dual_op(
-            ($M).$(f),
+            $M.$f,
             begin
                 vx, vy = value(x), value(y)
                 $xy_work
@@ -318,6 +318,7 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float1
 @inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
 
 for (M, f, arity) in DiffRules.diffrules()
+    in(f, (:^, :pow)) && continue
     if arity == 1
         eval(unary_dual_definition(M, f))
     elseif arity == 2
@@ -327,63 +328,17 @@ for (M, f, arity) in DiffRules.diffrules()
     end
 end
 
-##############
-# Arithmetic #
-##############
+#################
+# Special Cases #
+#################
 
-# Addition/Subtraction #
-#----------------------#
-
-@define_binary_dual_op(
-    Base.:+,
-    Dual{T}(value(x) + value(y), partials(x) + partials(y)),
-    Dual{T}(value(x) + y, partials(x)),
-    Dual{T}(x + value(y), partials(y))
-)
-
-@define_binary_dual_op(
-    Base.:-,
-    Dual{T}(value(x) - value(y), partials(x) - partials(y)),
-    Dual{T}(value(x) - y, partials(x)),
-    Dual{T}(x - value(y), -partials(y))
-)
-
-@inline Base.:-(d::Dual{T}) where {T} = Dual{T}(-value(d), -partials(d))
-
-# Multiplication #
-#----------------#
-
-@define_binary_dual_op(
-    Base.:*,
-    begin
-        vx, vy = value(x), value(y)
-        Dual{T}(vx * vy, _mul_partials(partials(x), partials(y), vy, vx))
-    end,
-    Dual{T}(value(x) * y, partials(x) * y),
-    Dual{T}(x * value(y), x * partials(y))
-)
+# * #
+#---#
 
 @inline Base.:*(d::Dual, x::Bool) = x ? d : (signbit(value(d))==0 ? zero(d) : -zero(d))
 @inline Base.:*(x::Bool, d::Dual) = d * x
 
-# Division #
-#----------#
-
-@define_binary_dual_op(
-    Base.:/,
-    begin
-        vx, vy = value(x), value(y)
-        Dual{T}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
-    end,
-    Dual{T}(value(x) / y, partials(x) / y),
-    begin
-        v = value(y)
-        divv = x / v
-        Dual{T}(divv, -(divv / v) * partials(y))
-    end
-)
-
-# Exponentiation #
+# exponentiation #
 #----------------#
 
 for f in (:(Base.:^), :(NaNMath.pow))
@@ -413,10 +368,6 @@ for f in (:(Base.:^), :(NaNMath.pow))
         )
     end
 end
-
-#################
-# Special Cases #
-#################
 
 # hypot #
 #-------#
@@ -484,7 +435,7 @@ end
 )
 
 # muladd #
-#-----#
+#--------#
 
 @generated function calc_muladd_xyz(x::Dual{T,<:Real,N},
                                     y::Dual{T,<:Real,N},
