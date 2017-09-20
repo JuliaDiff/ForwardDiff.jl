@@ -138,9 +138,8 @@ decrease performance (~5%-10% on our benchmarks).
 
 In order to preserve performance in the majority of use cases, ForwardDiff disables this
 check by default. If your code is affected by this `NaN` behvaior, you can enable
-ForwardDiff's `NaN`-safe mode by setting `NANSAFE_MODE_ENABLED` to `true` in
-ForwardDiff's source. This constant is located in `src/ForwardDiff.jl` in the
-package's directory.
+ForwardDiff's `NaN`-safe mode by setting the `NANSAFE_MODE_ENABLED` constant to `true` in
+ForwardDiff's source.
 
 In the future, we plan on allowing users and downstream library authors to dynamically
 enable [NaN`-safe mode via the `AbstractConfig`

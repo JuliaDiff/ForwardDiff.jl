@@ -159,7 +159,7 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
 end
 
 function unary_dual_definition(M, f)
-    work = CommonSubexpressions.cse(quote
+    work = qualified_cse!(quote
         val = $M.$f(x)
         deriv = $(DiffRules.diffrule(M, f, :x))
     end)
@@ -174,16 +174,16 @@ end
 
 function binary_dual_definition(M, f)
     dvx, dvy = DiffRules.diffrule(M, f, :vx, :vy)
-    xy_work = CommonSubexpressions.cse(quote
+    xy_work = qualified_cse!(quote
         val = $M.$f(vx, vy)
         dvx = $dvx
         dvy = $dvy
     end)
-    x_work = CommonSubexpressions.cse(quote
+    x_work = qualified_cse!(quote
         val = $M.$f(vx, vy)
         dvx = $dvx
     end)
-    y_work = CommonSubexpressions.cse(quote
+    y_work = qualified_cse!(quote
         val = $M.$f(vx, vy)
         dvy = $dvy
     end)
