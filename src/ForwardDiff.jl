@@ -2,7 +2,7 @@ __precompile__()
 
 module ForwardDiff
 
-using DiffRules
+using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
 using Compat
