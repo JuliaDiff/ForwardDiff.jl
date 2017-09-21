@@ -56,13 +56,15 @@ hessian!(result::MutableDiffResult, f, x::SArray) = hessian!(result, f, x, Hessi
 
 hessian!(result::ImmutableDiffResult, f, x::SArray, cfg::HessianConfig) = hessian!(result, f, x)
 
-function hessian!(result::ImmutableDiffResult, f::F, x::SArray) where {F}
-    d1 = dualize(f, x)
-    d2 = dualize(f, d1)
+function hessian!(result::ImmutableDiffResult, f::F, x::SArray{S,V}) where {F,S,V}
+    TJ = typeof(Tag(Tuple{F,typeof(gradient)},V))
+    d1 = dualize(TJ, x)
+    TG = typeof(Tag(F, eltype(d1)))
+    d2 = dualize(TG, d1)
     fd2 = f(d2)
-    val = value(value(fd2))
-    grad = extract_gradient(value(fd2), x)
-    hess = extract_jacobian(partials(fd2), x)
+    val = value(TJ,value(TG,fd2))
+    grad = extract_gradient(TJ,value(TG,fd2), x)
+    hess = extract_jacobian(TJ,partials(TG,fd2), x)
     result = DiffResults.hessian!(result, hess)
     result = DiffResults.gradient!(result, grad)
     result = DiffResults.value!(result, val)

@@ -28,6 +28,16 @@ will appear outside `Dual{a}` objects.
 ≺(a,b) = throw(DualMismatchError(a,b))
 
 
+
+struct DualOrderError{A,B} <: Exception
+    a::A
+    b::B
+end
+
+Base.showerror(io::IO, e::DualOrderError{A,B}) where {A,B} =
+    print(io, "Expected Dual with tag $(e.a), received dual with tag $(e.b).")
+
+
 ################
 # Constructors #
 ################
@@ -83,11 +93,11 @@ end
 
 @inline partials(::Type{T}, x::Real, i...) where T =
     partials(x, i...)
-@inline partials(::Type{T}, d::Dual{T}) where T =
-    partials(x, i...)
-function partials(::Type{T}, d::Dual{S}, i...) where {T,S}
+@inline partials(::Type{T}, d::Dual{T}, i...) where T =
+    partials(d, i...)
+partials(::Type{T}, d::Dual{S}, i...) where {T,S} =
     throw(DualMismatchError(T,S))
-end
+
 
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N

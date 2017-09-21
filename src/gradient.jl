@@ -44,40 +44,42 @@ end
 # result extraction #
 #####################
 
-@generated function extract_gradient(y::Real, ::SArray{S,X,D,N}) where {S,X,D,N}
-    result = Expr(:tuple, [:(partials(y, $i)) for i in 1:N]...)
+@generated function extract_gradient(::Type{T}, y::Real, ::SArray{S,X,D,N}) where {T,S,X,D,N}
+    result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         return SArray{S}($result)
     end
 end
 
-function extract_gradient!(result::DiffResult, y::Real)
+function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
     result = DiffResults.value!(result, y)
     grad = DiffResults.gradient(result)
     fill!(grad, zero(y))
     return result
 end
 
-function extract_gradient!(result::DiffResult, dual::Dual)
-    result = DiffResults.value!(result, value(dual))
-    result = DiffResults.gradient!(result, partials(dual))
+function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
+    result = DiffResults.value!(result, value(T, dual))
+    result = DiffResults.gradient!(result, partials(T, dual))
     return result
 end
 
-extract_gradient!(result::AbstractArray, y::Real) = fill!(result, zero(y))
-extract_gradient!(result::AbstractArray, dual::Dual) = copy!(result, partials(dual))
+extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} =
+    fill!(result, zero(y))
+extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}=
+    copy!(result, partials(T, dual))
 
-function extract_gradient_chunk!(result, dual, index, chunksize)
+function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
     offset = index - 1
     for i in 1:chunksize
-        result[i + offset] = partials(dual, i)
+        result[i + offset] = partials(T, dual, i)
     end
     return result
 end
 
-function extract_gradient_chunk!(result::DiffResult, dual, index, chunksize)
-    extract_gradient_chunk!(DiffResults.gradient(result), dual, index, chunksize)
+function extract_gradient_chunk!(::Type{T}, result::DiffResult, dual, index, chunksize) where {T}
+    extract_gradient_chunk!(T, DiffResults.gradient(result), dual, index, chunksize)
     return result
 end
 
@@ -85,24 +87,26 @@ end
 # vector mode #
 ###############
 
-function vector_mode_gradient(f::F, x, cfg) where {F}
+function vector_mode_gradient(f, x, cfg::GradientConfig{T}) where {T}
     ydual = vector_mode_dual_eval(f, x, cfg)
     result = similar(x, valtype(ydual))
-    return extract_gradient!(result, ydual)
+    return extract_gradient!(T, result, ydual)
 end
 
-function vector_mode_gradient!(result, f::F, x, cfg) where {F}
+function vector_mode_gradient!(result, f, x, cfg::GradientConfig{T}) where {T}
     ydual = vector_mode_dual_eval(f, x, cfg)
-    result = extract_gradient!(result, ydual)
+    result = extract_gradient!(T, result, ydual)
     return result
 end
 
-@inline function vector_mode_gradient(f::F, x::SArray) where F
-    return extract_gradient(vector_mode_dual_eval(f, x), x)
+@inline function vector_mode_gradient(f::F, x::SArray{S,V}) where {F,S,V}
+    T = typeof(Tag(F,V))
+    return extract_gradient(T, static_dual_eval(T, f, x), x)
 end
 
-@inline function vector_mode_gradient!(result, f::F, x::SArray) where F
-    return extract_gradient!(result, vector_mode_dual_eval(f, x))
+@inline function vector_mode_gradient!(result, f::F, x::SArray{S,V}) where {F,S,V}
+    T = typeof(Tag(F,V))
+    return extract_gradient!(T, result, static_dual_eval(T, f, x))
 end
 
 ##############
@@ -129,7 +133,7 @@ function chunk_mode_gradient_expr(result_definition::Expr)
         seed!(xdual, x, 1, seeds)
         ydual = f(xdual)
         $(result_definition)
-        extract_gradient_chunk!(result, ydual, 1, N)
+        extract_gradient_chunk!(T, result, ydual, 1, N)
         seed!(xdual, x, 1)
 
         # do middle chunks
@@ -137,17 +141,17 @@ function chunk_mode_gradient_expr(result_definition::Expr)
             i = ((c - 1) * N + 1)
             seed!(xdual, x, i, seeds)
             ydual = f(xdual)
-            extract_gradient_chunk!(result, ydual, i, N)
+            extract_gradient_chunk!(T, result, ydual, i, N)
             seed!(xdual, x, i)
         end
 
         # do final chunk
         seed!(xdual, x, lastchunkindex, seeds, lastchunksize)
         ydual = f(xdual)
-        extract_gradient_chunk!(result, ydual, lastchunkindex, lastchunksize)
+        extract_gradient_chunk!(T, result, ydual, lastchunkindex, lastchunksize)
 
         # get the value, this is a no-op unless result is a DiffResult
-        extract_value!(result, ydual)
+        extract_value!(T, result, ydual)
 
         return result
     end
