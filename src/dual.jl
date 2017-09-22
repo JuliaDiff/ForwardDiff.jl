@@ -22,21 +22,13 @@ Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
 """
     ForwardDiff.≺(a, b)::Bool
 
-Determines the order in which `Dual` objects are composed. If true, then `Dual{b}` objects
-will appear outside `Dual{a}` objects.
+Determines the order in which tagged `Dual` objects are composed. If true, then `Dual{b}`
+objects will appear outside `Dual{a}` objects.
+
+This is important when working with nested differentiation: currently, only the outermost
+tag can be extracted, so it should be used in the _innermost_ function.
 """
 ≺(a,b) = throw(DualMismatchError(a,b))
-
-
-
-struct DualOrderError{A,B} <: Exception
-    a::A
-    b::B
-end
-
-Base.showerror(io::IO, e::DualOrderError{A,B}) where {A,B} =
-    print(io, "Expected Dual with tag $(e.a), received dual with tag $(e.b).")
-
 
 ################
 # Constructors #
