@@ -9,7 +9,8 @@ Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
+function jacobian(f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x)) where {T}
+    checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f, x, cfg)
     else
@@ -23,7 +24,8 @@ end
 Return `J(f!)` evaluated at `x`,  assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
 """
-function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))
+function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x)) where {T}
+    checktag(T, f!, x)    
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
@@ -40,7 +42,8 @@ as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
+function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x)) where {T}
+    checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f, x, cfg)
     else
@@ -57,7 +60,8 @@ called as `f!(y, x)` where the result is stored in `y`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))
+function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x)) where {T}
+    checktag(T, f!, x)
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)
     else
@@ -154,12 +158,12 @@ function vector_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T,V,N}) 
 end
 
 @inline function vector_mode_jacobian(f::F, x::SArray{S,V}) where {F,S,V}
-    T = typeof(Tag(F,V))
+    T = typeof(Tag(f,V))
     return extract_jacobian(T, static_dual_eval(T, f, x), x)
 end
 
 @inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
-    T = typeof(Tag(F,V))
+    T = typeof(Tag(f,V))
     ydual = static_dual_eval(T, f, x)
     result = extract_jacobian!(T, result, ydual, N)
     result = extract_value!(T, result, ydual)
@@ -167,7 +171,7 @@ end
 end
 
 @inline function vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
-    T = typeof(Tag(F,V))
+    T = typeof(Tag(f,V))
     ydual = static_dual_eval(T, f, x)
     result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
     result = DiffResults.value!(d -> value(T,d), result, ydual)

@@ -30,13 +30,14 @@ j = [0.8242369704835132  0.4121184852417566  -10.933563142616123
      0.169076696546684   0.084538348273342   -2.299173530851733
      0.0                 0.0                 1.0]
 
-for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
+for c in (1, 2, 3), tags in ((nothing, nothing),
+                             (Tag(f, eltype(x)), Tag(f!, eltype(x))))
     println("  ...running hardcoded test with chunk size = $c and tag = $tags")
-    cfg = JacobianConfig(tags[1], x, ForwardDiff.Chunk{c}())
-    ycfg = JacobianConfig(tags[2], zeros(4), x, ForwardDiff.Chunk{c}())
+    cfg = JacobianConfig(f, x, ForwardDiff.Chunk{c}(), tags[1])
+    ycfg = JacobianConfig(f!, zeros(4), x, ForwardDiff.Chunk{c}(), tags[2])
 
-    @test eltype(cfg)  == Dual{typeof(Tag(typeof(tags[1]), eltype(x))), eltype(x), c}
-    @test eltype(ycfg) == Dual{typeof(Tag(typeof(tags[2]), eltype(x))), eltype(x), c}
+    @test eltype(cfg)  == Dual{typeof(tags[1]), eltype(x), c}
+    @test eltype(ycfg) == Dual{typeof(tags[2]), eltype(x), c}
 
     # testing f(x)
     @test isapprox(j, ForwardDiff.jacobian(f, x, cfg))
@@ -51,7 +52,7 @@ for c in (1, 2, 3), tags in ((nothing, nothing), (f, f!))
     @test isapprox(out, j)
 
     out = DiffResults.JacobianResult(zeros(4), zeros(3))
-    ForwardDiff.jacobian!(out, f, x, JacobianConfig(tags[1], x))
+    ForwardDiff.jacobian!(out, f, x, cfg)
     @test isapprox(DiffResults.value(out), v)
     @test isapprox(DiffResults.jacobian(out), j)
 
@@ -97,9 +98,12 @@ for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, f)
+    for c in CHUNK_SIZES, tag in (nothing, Tag)
+        if tag == Tag
+            tag = Tag(f, eltype(X))
+        end
         println("  ...testing $f with chunk size = $c and tag = $tag")
-        cfg = JacobianConfig(tag, X, ForwardDiff.Chunk{c}())
+        cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.jacobian(f, X, cfg)
         @test isapprox(out, j)
@@ -120,9 +124,9 @@ for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     f!(v, X)
     j = ForwardDiff.jacobian(f!, zeros(Y), X)
     @test isapprox(j, Calculus.jacobian(x -> (y = zeros(Y); f!(y, x); vec(y)), X, :forward), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, f!)
+    for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
         println("  ...testing $(f!) with chunk size = $c and tag = $tag")
-        ycfg = JacobianConfig(tag, zeros(Y), X, ForwardDiff.Chunk{c}())
+        ycfg = JacobianConfig(f!, zeros(Y), X, ForwardDiff.Chunk{c}(), tag)
 
         y = zeros(Y)
         out = ForwardDiff.jacobian(f!, y, X, ycfg)

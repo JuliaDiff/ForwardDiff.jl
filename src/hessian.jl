@@ -57,9 +57,9 @@ hessian!(result::MutableDiffResult, f, x::SArray) = hessian!(result, f, x, Hessi
 hessian!(result::ImmutableDiffResult, f, x::SArray, cfg::HessianConfig) = hessian!(result, f, x)
 
 function hessian!(result::ImmutableDiffResult, f::F, x::SArray{S,V}) where {F,S,V}
-    TJ = typeof(Tag(Tuple{F,typeof(gradient)},V))
+    TJ = typeof(Tag((f,gradient),V))
     d1 = dualize(TJ, x)
-    TG = typeof(Tag(F, eltype(d1)))
+    TG = typeof(Tag(f, eltype(d1)))
     d2 = dualize(TG, d1)
     fd2 = f(d2)
     val = value(TJ,value(TG,fd2))

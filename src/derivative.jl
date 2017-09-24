@@ -10,7 +10,7 @@ Return `df/dx` evaluated at `x`, assuming `f` is called as `f(x)`.
 This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative(f::F, x::R) where {F,R<:Real}
-    T = typeof(Tag(F, R))
+    T = typeof(Tag(f, R))
     return extract_derivative(T, f(Dual{T}(x, one(x))))
 end
 
@@ -22,6 +22,7 @@ stored in `y`.
 """
 @inline function derivative(f!, y::AbstractArray, x::Real,
                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
+    checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
@@ -39,7 +40,7 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
-    T = typeof(Tag(F, R))
+    T = typeof(Tag(f, R))
     ydual = f(Dual{T}(x, one(x)))
     result = extract_value!(T, result, ydual)
     result = extract_derivative!(T, result, ydual)
@@ -55,6 +56,7 @@ called as `f!(y, x)` where the result is stored in `y`.
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f!, y::AbstractArray, x::Real,
                              cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
+    checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))

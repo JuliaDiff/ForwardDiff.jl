@@ -2,26 +2,38 @@
 # Tag #
 #######
 
-struct Tag{P,N} end
+struct Tag{F,V}
+end
 
 const TAGCOUNT = Threads.Atomic{UInt}(0)
 
 # each tag is assigned a unique number
-# there is a potential for error if Duals are shared across processes
-# e.g. by saving/loading or parallel computations
-@generated function Tag(::Type{F}, ::Type{V}) where {F,V}
-    p = myid()
-    n = Threads.atomic_add!(TAGCOUNT, UInt(1))
-    quote
-        $(Expr(:meta, :inline))
-        Tag{$p,$n}()
-    end
+# tags which depend on other tags will be larger
+@generated function tagcount(::Type{Tag{F,V}}) where {F,V}
+    :($(Threads.atomic_add!(TAGCOUNT, UInt(1))))
 end
 
-@inline function ≺(t1::Type{Tag{p1,n1}}, t2::Type{Tag{p2,n2}}) where {p1,n1,p2,n2}
-    p1 == p2 || throw(DualMismatchError(t1,t2))
-    n1 < n2
+function Tag(f::F, ::Type{V}) where {F,V}
+    tagcount(Tag{F,V}) # trigger generated function
+    Tag{F,V}()
 end
+
+@inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
+    tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
+end
+
+
+
+checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
+    error("Invalid Tag object:\n  Expected $(Tag{F,V}),\n  Observed $(Tag{FT,VT}).")
+
+checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
+
+# no easy way to check Jacobian tag used with Hessians as multiple functions may be used
+checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
+
+# custom tag: you're on your own.
+checktag(z, f, x) = true
 
 
 ##################
@@ -60,10 +72,10 @@ and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff
 
 This constructor does not store/modify `y` or `x`.
 """
-function DerivativeConfig(::F,
+function DerivativeConfig(f::F,
                           y::AbstractArray{Y},
                           x::X,
-                          ::T = Tag(F, X)) where {F,X<:Real,Y<:Real,T}
+                          tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
     duals = similar(y, Dual{T,Y,1})
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
@@ -94,10 +106,10 @@ and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff
 
 This constructor does not store/modify `x`.
 """
-function GradientConfig(::F,
+function GradientConfig(f::F,
                         x::AbstractArray{V},
                         ::Chunk{N} = Chunk(x),
-                        ::T = Tag(F, V)) where {F,V,N,T}
+                        ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
@@ -130,10 +142,10 @@ and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff
 
 This constructor does not store/modify `x`.
 """
-function JacobianConfig(::F,
+function JacobianConfig(f::F,
                         x::AbstractArray{V},
                         ::Chunk{N} = Chunk(x),
-                        ::T = Tag(F, V)) where {F,V,N,T}
+                        ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
@@ -155,11 +167,11 @@ and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff
 
 This constructor does not store/modify `y` or `x`.
 """
-function JacobianConfig(::F,
+function JacobianConfig(f::F,
                         y::AbstractArray{Y},
                         x::AbstractArray{X},
                         ::Chunk{N} = Chunk(x),
-                        ::T = Tag(F, X)) where {F,Y,X,N,T}
+                        ::T = Tag(f, X)) where {F,Y,X,N,T}
     seeds = construct_seeds(Partials{N,X})
     yduals = similar(y, Dual{T,Y,N})
     xduals = similar(x, Dual{T,X,N})
@@ -199,8 +211,8 @@ This constructor does not store/modify `x`.
 function HessianConfig(f::F,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tagj::Tag = Tag(Tuple{F,typeof(gradient)}, V),
-                       tagg::Tag = Tag(F, Dual{tagj,V,chunksize(chunk)})) where {F,V}
+                       tagj = Tag((f,gradient), V),
+                       tagg = Tag(f, Dual{typeof(tagj),V,chunksize(chunk)})) where {F,V}
     jacobian_config = JacobianConfig((f,gradient), x, chunk, tagj)
     gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tagg)
     return HessianConfig(jacobian_config, gradient_config)
@@ -225,8 +237,8 @@ function HessianConfig(f::F,
                        result::DiffResult,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tagj::Tag = Tag(Tuple{F,typeof(gradient)}, V),
-                       tagg::Tag = Tag(F, Dual{tagj,V,chunksize(chunk)})) where {F,V}
+                       tagj = Tag((f,typeof(gradient)), V),
+                       tagg = Tag(f, Dual{typeof(tagj),V,chunksize(chunk)})) where {F,V}
     jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tagj)
     gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tagg)
     return HessianConfig(jacobian_config, gradient_config)

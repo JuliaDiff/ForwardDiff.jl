@@ -9,7 +9,8 @@ Return `∇f` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), Real)`.
 """
-function gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
+function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x)) where {T}
+    checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -25,7 +26,8 @@ Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f
 
 This method assumes that `isa(f(x), Real)`.
 """
-function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
+function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x)) where {T}
+    checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)
     else
@@ -100,12 +102,12 @@ function vector_mode_gradient!(result, f, x, cfg::GradientConfig{T}) where {T}
 end
 
 @inline function vector_mode_gradient(f::F, x::SArray{S,V}) where {F,S,V}
-    T = typeof(Tag(F,V))
+    T = typeof(Tag(f,V))
     return extract_gradient(T, static_dual_eval(T, f, x), x)
 end
 
 @inline function vector_mode_gradient!(result, f::F, x::SArray{S,V}) where {F,S,V}
-    T = typeof(Tag(F,V))
+    T = typeof(Tag(f,V))
     return extract_gradient!(T, result, static_dual_eval(T, f, x))
 end
 
