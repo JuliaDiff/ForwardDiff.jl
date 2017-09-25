@@ -74,14 +74,6 @@ g = DiffBase.gradient(out)
 h = DiffBase.hessian(out)
 
 # ForwardDiff v0.6 & above
-using DiffBase
-out = DiffBase.HessianResult(x)
-out = ForwardDiff.hessian!(out, f, x) # re-alias output!
-v = DiffBase.value(out)
-g = DiffBase.gradient(out)
-h = DiffBase.hessian(out)
-
-# ForwardDiff v0.7 & above
 using DiffResults
 out = DiffResults.HessianResult(x)
 out = ForwardDiff.hessian!(out, f, x) # re-alias output!
