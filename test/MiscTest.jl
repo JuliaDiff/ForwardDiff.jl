@@ -136,4 +136,13 @@ for i in 1:3, j in 1:3
     i != j && (@test h[i, j] ≈ 0.0)
 end
 
+# issue 267
+@noinline f267(z, x) = x[1]
+z267 = ([(1, (2), [(3, (4, 5, [1, 2, (3, (4, 5), [5])]), (5))])])
+let z = z267
+    g = x -> f267(z, x)
+    h = x -> g(x)
+    @test ForwardDiff.hessian(h, [1.]) == zeros(1, 1)
+end
+
 end
