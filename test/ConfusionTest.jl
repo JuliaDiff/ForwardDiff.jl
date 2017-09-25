@@ -26,5 +26,36 @@ x = rand(8)
     end
 end
 
+# Issue #238                         #
+#------------------------------------#
+
+m,g = 1, 9.8
+t = 1
+q = [1,2]
+q̇ = [3,4]
+L(t,q,q̇) = m/2 * dot(q̇,q̇) - m*g*q[2]
+
+∂L∂q̇(L, t, q, q̇) = ForwardDiff.gradient(a->L(t,q,a), q̇)
+Dqq̇(L, t, q, q̇) = ForwardDiff.jacobian(a->∂L∂q̇(L,t,a,q̇), q)
+@test Dqq̇(L, t, q, q̇)  == zeros(2,2)
+
+
+q = [1,2]
+p = [5,6]
+function Legendre_transformation(F, w)
+    z = zeros(w)
+    M = ForwardDiff.hessian(F, z)
+    b = ForwardDiff.gradient(F, z)
+    v = cholfact(M)\(w-b)
+    dot(w,v) - F(v)
+end
+function Lagrangian2Hamiltonian(Lagrangian, t, q, p)
+    L = q̇ -> Lagrangian(t, q, q̇)
+    Legendre_transformation(L, p)
+end
+
+Lagrangian2Hamiltonian(L, t, q, p)
+@test ForwardDiff.gradient(a->Lagrangian2Hamiltonian(L, t, a, p), q) == [0.0,g]
+
 
 end # module
