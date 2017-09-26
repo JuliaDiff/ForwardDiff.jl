@@ -7,6 +7,29 @@ struct Dual{T,V<:Real,N} <: Real
     partials::Partials{N,V}
 end
 
+
+##############
+# Exceptions #
+##############
+struct DualMismatchError{A,B} <: Exception
+    a::A
+    b::B
+end
+
+Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
+    print(io, "Cannot determine ordering of Dual tags $(e.a) and $(e.b)")
+
+"""
+    ForwardDiff.≺(a, b)::Bool
+
+Determines the order in which tagged `Dual` objects are composed. If true, then `Dual{b}`
+objects will appear outside `Dual{a}` objects.
+
+This is important when working with nested differentiation: currently, only the outermost
+tag can be extracted, so it should be used in the _innermost_ function.
+"""
+≺(a,b) = throw(DualMismatchError(a,b))
+
 ################
 # Constructors #
 ################
@@ -25,32 +48,18 @@ end
 
 @inline Dual(args...) = Dual{Void}(args...)
 
-####################
-# TagMismatchError #
-####################
+###################
+# Promotion       #
+###################
 
-struct TagMismatchError{X,Y} <: Exception
-    x::Dual{X}
-    y::Dual{Y}
-end
-
-function TagMismatchError(x, y, z)
-    if isa(x, Dual) && isa(y, Dual) && tagtype(x) !== tagtype(y)
-        return TagMismatchError(x, y)
-    elseif isa(x, Dual) && isa(z, Dual) && tagtype(x) !== tagtype(z)
-        return TagMismatchError(x, z)
-    elseif isa(y, Dual) && isa(z, Dual) && tagtype(y) !== tagtype(z)
-        return TagMismatchError(y, z)
+Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
+                                      ::Type{Dual{T2,V2,N2}}) where {T1,V1<:Real,N1,T2,V2<:Real,N2}
+    # V1 and V2 might themselves be Dual types
+    if T2 ≺ T1
+        Dual{T1,promote_type(V1,Dual{T2,V2,N2}),N1}
     else
-        error("the provided arguments have matching tags, or are not Duals")
+        Dual{T2,promote_type(V2,Dual{T1,V1,N1}),N2}
     end
-end
-
-function Base.showerror(io::IO, e::TagMismatchError{X,Y}) where {X,Y}
-    print(io, "potential perturbation confusion detected when computing binary operation ",
-              "on $(e.x) and $(e.y) (tag mismatch: $X != $Y). ForwardDiff cannot safely ",
-              "perform differentiation in this context; see the following issue for ",
-              "details: https://github.com/JuliaDiff/ForwardDiff.jl/issues/83")
 end
 
 ##############################
@@ -60,12 +69,28 @@ end
 @inline value(x::Real) = x
 @inline value(d::Dual) = d.value
 
+@inline value(::Type{T}, x::Real)    where T = x
+@inline value(::Type{T}, d::Dual{T}) where T = value(d)
+function value(::Type{T}, d::Dual{S}) where {T,S}
+    # TODO: in the case of nested Duals, it may be possible to "transpose" the Dual objects
+    throw(DualMismatchError(T,S))
+end
+
 @inline partials(x::Real) = Partials{0,typeof(x)}(tuple())
 @inline partials(d::Dual) = d.partials
 @inline partials(x::Real, i...) = zero(x)
 @inline partials(d::Dual, i) = d.partials[i]
 @inline partials(d::Dual, i, j) = partials(d, i).partials[j]
 @inline partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
+
+@inline partials(::Type{T}, x::Real, i...) where T =
+    partials(x, i...)
+@inline partials(::Type{T}, d::Dual{T}, i...) where T =
+    partials(d, i...)
+partials(::Type{T}, d::Dual{S}, i...) where {T,S} =
+    throw(DualMismatchError(T,S))
+
+
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
 @inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
@@ -89,16 +114,14 @@ end
 
 macro define_binary_dual_op(f, xy_body, x_body, y_body)
     defs = quote
-        @inline $(f)(x::Dual, y::Dual) = throw(TagMismatchError(x, y))
-        @inline $(f)(x::Dual{T}, y::Dual{T}) where {T} = $xy_body
-        @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{T,Dual{S,Y,N},M}) where {T,S,X<:Real,Y<:Real,N,M} = $xy_body
-        @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{S,Y,N})           where {T,S,X<:Real,Y<:Real,N,M} = $x_body
-        @inline $(f)(x::Dual{S,X,N},           y::Dual{T,Dual{S,Y,N},M}) where {T,S,X<:Real,Y<:Real,N,M} = $y_body
+        @inline $(f)(x::Dual{Txy}, y::Dual{Txy}) where {Txy} = $xy_body
+        @inline $(f)(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} =
+            Ty ≺ Tx ? $x_body : $y_body
     end
     for R in REAL_TYPES
         expr = quote
-            @inline $(f)(x::Dual{T}, y::$R) where {T} = $x_body
-            @inline $(f)(x::$R, y::Dual{T}) where {T} = $y_body
+            @inline $(f)(x::Dual{Tx}, y::$R) where {Tx} = $x_body
+            @inline $(f)(x::$R, y::Dual{Ty}) where {Ty} = $y_body
         end
         append!(defs.args, expr.args)
     end
@@ -107,51 +130,51 @@ end
 
 macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_body, z_body)
     defs = quote
-        @inline $(f)(x::Dual, y::Dual, z::Dual) = throw(TagMismatchError(x, y, z))
-        @inline $(f)(x::Dual{T}, y::Dual{T}, z::Dual{T}) where {T} = $xyz_body
-        @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{T,Dual{S,Y,N},M}, z::Dual{T,Dual{S,Z,N},M}) where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $xyz_body
-        @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{T,Dual{S,Y,N},M}, z::Dual{S,Z,N})           where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $xy_body
-        @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{S,Y,N},           z::Dual{T,Dual{S,Z,N},M}) where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $xz_body
-        @inline $(f)(x::Dual{S,X,N},           y::Dual{T,Dual{S,Y,N},M}, z::Dual{T,Dual{S,Z,N},M}) where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $yz_body
-        @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{S,Y,N},           z::Dual{S,Z,N})           where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $x_body
-        @inline $(f)(x::Dual{S,X,N},           y::Dual{T,Dual{S,Y,N},M}, z::Dual{S,Z,N})           where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $y_body
-        @inline $(f)(x::Dual{S,X,N},           y::Dual{S,Y,N},           z::Dual{T,Dual{S,Z,N},M}) where {T,S,X<:Real,Y<:Real,Z<:Real,N,M} = $z_body
+        @inline $(f)(x::Dual{Txyz}, y::Dual{Txyz}, z::Dual{Txyz}) where {Txyz} = $xyz_body
+        @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::Dual{Tz}) where {Txy,Tz} =
+            Tz ≺ Txy ? $xy_body : $z_body
+        @inline $(f)(x::Dual{Txz}, y::Dual{Ty}, z::Dual{Txz}) where {Txz,Ty} =
+            Ty ≺ Txz ? $xz_body : $y_body
+        @inline $(f)(x::Dual{Tx}, y::Dual{Tyz}, z::Dual{Tyz}) where {Tx,Tyz} =
+            Tyz ≺ Tx ? $x_body  : $yz_body
+        @inline function $(f)(x::Dual{Tx}, y::Dual{Ty}, z::Dual{Tz}) where {Tx,Ty,Tz}
+            if Tz ≺ Tx && Ty ≺ Tx
+                $x_body
+            elseif Tz ≺ Ty
+                $y_body
+            else
+                $z_body
+            end
+        end
     end
     for R in REAL_TYPES
         expr = quote
-            @inline $(f)(x::Dual, y::Dual, z::$R) = throw(TagMismatchError(x, y, z))
-            @inline $(f)(x::Dual, y::$R, z::Dual) = throw(TagMismatchError(x, y, z))
-            @inline $(f)(x::$R, y::Dual, z::Dual) = throw(TagMismatchError(x, y, z))
+            @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::$R) where {Txy} = $xy_body
+            @inline $(f)(x::Dual{Tx}, y::Dual{Ty}, z::$R)  where {Tx, Ty} =
+                Ty ≺ Tx ? $x_body : $y_body
 
-            @inline $(f)(x::Dual{T}, y::Dual{T}, z::$R) where {T} = $xy_body
-            @inline $(f)(x::Dual{T}, y::$R, z::Dual{T}) where {T} = $xz_body
-            @inline $(f)(x::$R, y::Dual{T}, z::Dual{T}) where {T} = $yz_body
+            @inline $(f)(x::Dual{Txz}, y::$R, z::Dual{Txz}) where {Txz} = $xz_body
+            @inline $(f)(x::Dual{Tx}, y::$R, z::Dual{Tz}) where {Tx,Tz} =
+                Tz ≺ Tx ? $x_body : $z_body
 
-            @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{T,Dual{S,Y,N},M}, z::$R)                    where {T,S,X<:Real,Y<:Real,N,M} = $xy_body
-            @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::$R,                    z::Dual{T,Dual{S,Z,N},M}) where {T,S,X<:Real,Z<:Real,N,M} = $xz_body
-            @inline $(f)(x::$R,                    y::Dual{T,Dual{S,Y,N},M}, z::Dual{T,Dual{S,Z,N},M}) where {T,S,Y<:Real,Z<:Real,N,M} = $yz_body
-
-            @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::Dual{S,Y,N},           z::$R)                    where {T,S,X<:Real,Y<:Real,N,M} = $x_body
-            @inline $(f)(x::Dual{T,Dual{S,X,N},M}, y::$R,                    z::Dual{S,Z,N})           where {T,S,X<:Real,Z<:Real,N,M} = $x_body
-            @inline $(f)(x::$R,                    y::Dual{T,Dual{S,Y,N},M}, z::Dual{S,Z,N})           where {T,S,Y<:Real,Z<:Real,N,M} = $y_body
-            @inline $(f)(x::Dual{S,X,N},           y::Dual{T,Dual{S,Y,N},M}, z::$R)                    where {T,S,X<:Real,Y<:Real,N,M} = $y_body
-            @inline $(f)(x::Dual{S,X,N},           y::$R,                    z::Dual{T,Dual{S,Z,N},M}) where {T,S,X<:Real,Z<:Real,N,M} = $z_body
-            @inline $(f)(x::$R,                    y::Dual{S,Y,N},           z::Dual{T,Dual{S,Z,N},M}) where {T,S,Y<:Real,Z<:Real,N,M} = $z_body
+            @inline $(f)(x::$R, y::Dual{Tyz}, z::Dual{Tyz}) where {Tyz} = $yz_body
+            @inline $(f)(x::$R, y::Dual{Ty}, z::Dual{Tz}) where {Ty,Tz} =
+                Tz ≺ Ty ? $y_body : $z_body
         end
         append!(defs.args, expr.args)
         for Q in REAL_TYPES
             Q === R && continue
             expr = quote
-                @inline $(f)(x::Dual{T}, y::$R, z::$Q) where {T} = $x_body
-                @inline $(f)(x::$R, y::Dual{T}, z::$Q) where {T} = $y_body
-                @inline $(f)(x::$R, y::$Q, z::Dual{T}) where {T} = $z_body
+                @inline $(f)(x::Dual{Tx}, y::$R, z::$Q) where {Tx} = $x_body
+                @inline $(f)(x::$R, y::Dual{Ty}, z::$Q) where {Ty} = $y_body
+                @inline $(f)(x::$R, y::$Q, z::Dual{Tz}) where {Tz} = $z_body
             end
             append!(defs.args, expr.args)
         end
         expr = quote
-            @inline $(f)(x::Dual{T}, y::$R, z::$R) where {T} = $x_body
-            @inline $(f)(x::$R, y::Dual{T}, z::$R) where {T} = $y_body
-            @inline $(f)(x::$R, y::$R, z::Dual{T}) where {T} = $z_body
+            @inline $(f)(x::Dual{Tx}, y::$R, z::$R) where {Tx} = $x_body
+            @inline $(f)(x::$R, y::Dual{Ty}, z::$R) where {Ty} = $y_body
+            @inline $(f)(x::$R, y::$R, z::Dual{Tz}) where {Tz} = $z_body
         end
         append!(defs.args, expr.args)
     end
@@ -195,17 +218,17 @@ function binary_dual_definition(M, f)
             begin
                 vx, vy = value(x), value(y)
                 $xy_work
-                return Dual{T}(val, _mul_partials(partials(x), partials(y), dvx, dvy))
+                return Dual{Txy}(val, _mul_partials(partials(x), partials(y), dvx, dvy))
             end,
             begin
                 vx = value(x)
                 $x_work
-                return Dual{T}(val, dvx * partials(x))
+                return Dual{Tx}(val, dvx * partials(x))
             end,
             begin
                 vy = value(y)
                 $y_work
-                return Dual{T}(val, dvy * partials(y))
+                return Dual{Ty}(val, dvy * partials(y))
             end
         )
     end
@@ -314,6 +337,7 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float1
 
 @inline Base.conj(d::Dual) = d
 
+
 @inline Base.transpose(d::Dual) = d
 
 @inline Base.ctranspose(d::Dual) = d
@@ -373,19 +397,19 @@ for f in (:(Base.:^), :(NaNMath.pow))
                 powval = vy * ($f)(vx, vy - 1)
                 logval = isconstant(y) ? one(expv) : expv * log(vx)
                 new_partials = _mul_partials(partials(x), partials(y), powval, logval)
-                return Dual{T}(expv, new_partials)
+                return Dual{Txy}(expv, new_partials)
             end,
             begin
                 v = value(x)
                 expv = ($f)(v, y)
                 deriv = y * ($f)(v, y - 1)
-                return Dual{T}(expv, deriv * partials(x))
+                return Dual{Tx}(expv, deriv * partials(x))
             end,
             begin
                 v = value(y)
                 expv = ($f)(x, v)
                 deriv = expv*log(x)
-                return Dual{T}(expv, deriv * partials(y))
+                return Dual{Ty}(expv, deriv * partials(y))
             end
         )
     end
@@ -405,13 +429,13 @@ end
 
 @define_ternary_dual_op(
     Base.hypot,
-    calc_hypot(x, y, z, T),
-    calc_hypot(x, y, z, T),
-    calc_hypot(x, y, z, T),
-    calc_hypot(x, y, z, T),
-    calc_hypot(x, y, z, T),
-    calc_hypot(x, y, z, T),
-    calc_hypot(x, y, z, T),
+    calc_hypot(x, y, z, Txyz),
+    calc_hypot(x, y, z, Txy),
+    calc_hypot(x, y, z, Txz),
+    calc_hypot(x, y, z, Tyz),
+    calc_hypot(x, y, z, Tx),
+    calc_hypot(x, y, z, Ty),
+    calc_hypot(x, y, z, Tz),
 )
 
 # fma #
@@ -451,9 +475,9 @@ end
     calc_fma_xy(x, y, z),                          # xy_body
     calc_fma_xz(x, y, z),                          # xz_body
     Base.fma(y, x, z),                             # yz_body
-    Dual{T}(fma(value(x), y, z), partials(x) * y), # x_body
-    Base.fma(y, x, z),                             # y_body
-    Dual{T}(fma(x, y, value(z)), partials(z))      # z_body
+    Dual{Tx}(fma(value(x), y, z), partials(x) * y), # x_body
+    Base.fma(y, x, z),                              # y_body
+    Dual{Tz}(fma(x, y, value(z)), partials(z))      # z_body
 )
 
 # muladd #
@@ -493,9 +517,9 @@ end
     calc_muladd_xy(x, y, z),                          # xy_body
     calc_muladd_xz(x, y, z),                          # xz_body
     Base.muladd(y, x, z),                             # yz_body
-    Dual{T}(muladd(value(x), y, z), partials(x) * y), # x_body
+    Dual{Tx}(muladd(value(x), y, z), partials(x) * y), # x_body
     Base.muladd(y, x, z),                             # y_body
-    Dual{T}(muladd(x, y, value(z)), partials(z))      # z_body
+    Dual{Tz}(muladd(x, y, value(z)), partials(z))      # z_body
 )
 
 # sincos #

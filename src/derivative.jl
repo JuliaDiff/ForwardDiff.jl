@@ -2,11 +2,6 @@
 # API methods #
 ###############
 
-const AllowedDerivativeConfig{F,H} = Union{DerivativeConfig{Tag{F,H}}, DerivativeConfig{Tag{Void,H}}}
-
-derivative(f!, y, x, cfg::DerivativeConfig) = throw(ConfigMismatchError(f, cfg))
-derivative!(out, f!, y, x, cfg::DerivativeConfig) = throw(ConfigMismatchError(f, cfg))
-
 """
     ForwardDiff.derivative(f, x::Real)
 
@@ -15,8 +10,8 @@ Return `df/dx` evaluated at `x`, assuming `f` is called as `f(x)`.
 This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative(f::F, x::R) where {F,R<:Real}
-    T = typeof(Tag(F, R))
-    return extract_derivative(f(Dual{T}(x, one(x))))
+    T = typeof(Tag(f, R))
+    return extract_derivative(T, f(Dual{T}(x, one(x))))
 end
 
 """
@@ -25,13 +20,14 @@ end
 Return `df!/dx` evaluated at `x`, assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
 """
-@inline function derivative(f!::F, y::AbstractArray, x::R,
-                            cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+@inline function derivative(f!, y::AbstractArray, x::Real,
+                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
+    checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
-    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
+    f!(ydual, Dual{T}(x, one(x)))
     map!(value, y, ydual)
-    return extract_derivative(ydual)
+    return extract_derivative(T, ydual)
 end
 
 """
@@ -44,10 +40,10 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
-    T = typeof(Tag(F, R))
+    T = typeof(Tag(f, R))
     ydual = f(Dual{T}(x, one(x)))
-    result = extract_value!(result, ydual)
-    result = extract_derivative!(result, ydual)
+    result = extract_value!(T, result, ydual)
+    result = extract_derivative!(T, result, ydual)
     return result
 end
 
@@ -58,13 +54,14 @@ Compute `df!/dx` evaluated at `x` and store the result(s) in `result`, assuming 
 called as `f!(y, x)` where the result is stored in `y`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
-                             f!::F, y::AbstractArray, x::R,
-                             cfg::AllowedDerivativeConfig{F,H} = DerivativeConfig(f!, y, x)) where {F,R<:Real,H}
+                             f!, y::AbstractArray, x::Real,
+                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
+    checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
-    f!(ydual, Dual{Tag{F,H}}(x, one(x)))
-    result = extract_value!(result, y, ydual)
-    result = extract_derivative!(result, ydual)
+    f!(ydual, Dual{T}(x, one(x)))
+    result = extract_value!(T, result, y, ydual)
+    result = extract_derivative!(T, result, ydual)
     return result
 end
 
@@ -75,12 +72,14 @@ end
 # non-mutating #
 #--------------#
 
-@inline extract_derivative(y::Dual{T,V,1}) where {T,V} = partials(y, 1)
-@inline extract_derivative(y::Real) = zero(y)
-@inline extract_derivative(y::AbstractArray) = map(extract_derivative, y)
+@inline extract_derivative(::Type{T}, y::Dual) where {T}          = partials(T, y, 1)
+@inline extract_derivative(::Type{T}, y::Real) where {T}          = zero(y)
+@inline extract_derivative(::Type{T}, y::AbstractArray) where {T} = map(d -> extract_derivative(T,d), y)
 
 # mutating #
 #----------#
 
-extract_derivative!(result::AbstractArray, y::AbstractArray) = map!(extract_derivative, result, y)
-extract_derivative!(result::DiffResult, y) = DiffResults.derivative!(extract_derivative, result, y)
+extract_derivative!(::Type{T}, result::AbstractArray, y::AbstractArray) where {T} =
+    map!(d -> extract_derivative(T,d), result, y)
+extract_derivative!(::Type{T}, result::DiffResult, y) where {T} =
+    DiffResults.derivative!(d -> extract_derivative(T,d), result, y)

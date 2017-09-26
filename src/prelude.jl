@@ -31,6 +31,8 @@ function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
     end
 end
 
+chunksize(::Chunk{N}) where {N} = N
+
 replace_match!(f, ismatch, x) = x
 
 function replace_match!(f, ismatch, lines::AbstractArray)

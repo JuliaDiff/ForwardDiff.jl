@@ -22,13 +22,11 @@ h = [-66.0  -40.0    0.0;
      -40.0  130.0  -80.0;
        0.0  -80.0  200.0]
 
-for c in (1, 2, 3), tag in (nothing, f)
+for c in (1, 2, 3), tag in (nothing, Tag((f,gradient), eltype(x)))
     println("  ...running hardcoded test with chunk size = $c and tag = $tag")
-    cfg = ForwardDiff.HessianConfig(tag, x, ForwardDiff.Chunk{c}())
-    resultcfg = ForwardDiff.HessianConfig(tag, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}())
+    cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}(), tag)
+    resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}(), tag)
 
-    D = Dual{typeof(Tag(Void, eltype(x))), eltype(x), c}
-    @test eltype(cfg) == Dual{typeof(Tag(typeof(tag), Dual{Void,eltype(x),0})), D, c}
     @test eltype(resultcfg) == eltype(cfg)
 
     @test isapprox(h, ForwardDiff.hessian(f, x))
@@ -65,10 +63,10 @@ for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     h = ForwardDiff.hessian(f, X)
     # finite difference approximation error is really bad for Hessians...
     @test isapprox(h, Calculus.hessian(f, X), atol=0.02)
-    for c in CHUNK_SIZES, tag in (nothing, f)
+    for c in CHUNK_SIZES, tag in (nothing, Tag((f,gradient), eltype(x)))
         println("  ...testing $f with chunk size = $c and tag = $tag")
-        cfg = ForwardDiff.HessianConfig(tag, X, ForwardDiff.Chunk{c}())
-        resultcfg = ForwardDiff.HessianConfig(tag, DiffResults.HessianResult(X), X, ForwardDiff.Chunk{c}())
+        cfg = ForwardDiff.HessianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
+        resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(X), X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.hessian(f, X, cfg)
         @test isapprox(out, h)
@@ -121,8 +119,8 @@ result1 = DiffResults.HessianResult(x)
 result2 = DiffResults.HessianResult(x)
 result3 = DiffResults.HessianResult(x)
 result1 = ForwardDiff.hessian!(result1, prod, sx)
-result2 = ForwardDiff.hessian!(result2, prod, sx, ForwardDiff.HessianConfig(nothing, result2, x))
-result3 = ForwardDiff.hessian!(result3, prod, sx, ForwardDiff.HessianConfig(nothing, result3, x))
+result2 = ForwardDiff.hessian!(result2, prod, sx, ForwardDiff.HessianConfig(prod, result2, x, ForwardDiff.Chunk(x), nothing))
+result3 = ForwardDiff.hessian!(result3, prod, sx, ForwardDiff.HessianConfig(prod, result3, x, ForwardDiff.Chunk(x), nothing))
 @test DiffResults.value(result1) == DiffResults.value(result)
 @test DiffResults.value(result2) == DiffResults.value(result)
 @test DiffResults.value(result3) == DiffResults.value(result)
@@ -137,8 +135,8 @@ sresult1 = DiffResults.HessianResult(sx)
 sresult2 = DiffResults.HessianResult(sx)
 sresult3 = DiffResults.HessianResult(sx)
 sresult1 = ForwardDiff.hessian!(sresult1, prod, sx)
-sresult2 = ForwardDiff.hessian!(sresult2, prod, sx, ForwardDiff.HessianConfig(nothing, sresult2, x))
-sresult3 = ForwardDiff.hessian!(sresult3, prod, sx, ForwardDiff.HessianConfig(nothing, sresult3, x))
+sresult2 = ForwardDiff.hessian!(sresult2, prod, sx, ForwardDiff.HessianConfig(prod, sresult2, x, ForwardDiff.Chunk(x), nothing))
+sresult3 = ForwardDiff.hessian!(sresult3, prod, sx, ForwardDiff.HessianConfig(prod, sresult3, x, ForwardDiff.Chunk(x), nothing))
 @test DiffResults.value(sresult1) == DiffResults.value(result)
 @test DiffResults.value(sresult2) == DiffResults.value(result)
 @test DiffResults.value(sresult3) == DiffResults.value(result)
