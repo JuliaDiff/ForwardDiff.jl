@@ -374,13 +374,13 @@ end
     Base.:/,
     begin
         vx, vy = value(x), value(y)
-        Dual{T}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
+        Dual{Txy}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
     end,
-    Dual{T}(value(x) / y, partials(x) / y),
+    Dual{Tx}(value(x) / y, partials(x) / y),
     begin
         v = value(y)
         divv = x / v
-        Dual{T}(divv, -(divv / v) * partials(y))
+        Dual{Ty}(divv, -(divv / v) * partials(y))
     end
 )
 
