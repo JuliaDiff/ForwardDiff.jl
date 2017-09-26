@@ -321,7 +321,7 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float1
 @inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
 
 for (M, f, arity) in DiffRules.diffrules()
-    in(f, (:^, :pow)) && continue
+    in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/))) && continue
     if arity == 1
         eval(unary_dual_definition(M, f))
     elseif arity == 2
@@ -340,6 +340,25 @@ end
 
 @inline Base.:*(d::Dual, x::Bool) = x ? d : (signbit(value(d))==0 ? zero(d) : -zero(d))
 @inline Base.:*(x::Bool, d::Dual) = d * x
+
+# / #
+#---#
+
+# We can't use the normal diffrule autogeneration for this because (x/y) === (x * (1/y))
+# doesn't generally hold true for floating point; see issue #264
+@define_binary_dual_op(
+    Base.:/,
+    begin
+        vx, vy = value(x), value(y)
+        Dual{T}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
+    end,
+    Dual{T}(value(x) / y, partials(x) / y),
+    begin
+        v = value(y)
+        divv = x / v
+        Dual{T}(divv, -(divv / v) * partials(y))
+    end
+)
 
 # exponentiation #
 #----------------#
