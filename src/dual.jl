@@ -507,7 +507,7 @@ end
     return quote
         $(Expr(:meta, :inline))
         v = muladd(value(x), y, value(z))
-        Dual(v, $ex)
+        Dual{T}(v, $ex)
     end
 end
 
