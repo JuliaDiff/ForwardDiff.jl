@@ -9,8 +9,8 @@ Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian(f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x)) where {T}
-    checktag(T, f, x)
+function jacobian(f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+    CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f, x, cfg)
     else
@@ -24,8 +24,8 @@ end
 Return `J(f!)` evaluated at `x`,  assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
 """
-function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x)) where {T}
-    checktag(T, f!, x)    
+function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    CHK && checktag(T, f!, x)    
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
@@ -42,8 +42,8 @@ as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x)) where {T}
-    checktag(T, f, x)
+function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f, x, cfg)
     else
@@ -60,8 +60,8 @@ called as `f!(y, x)` where the result is stored in `y`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x)) where {T}
-    checktag(T, f!, x)
+function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+    CHK && checktag(T, f!, x)
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)
     else

@@ -9,8 +9,8 @@ Return `∇f` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), Real)`.
 """
-function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x)) where {T}
-    checktag(T, f, x)
+function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
     else
@@ -26,8 +26,8 @@ Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f
 
 This method assumes that `isa(f(x), Real)`.
 """
-function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x)) where {T}
-    checktag(T, f, x)
+function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)
     else
