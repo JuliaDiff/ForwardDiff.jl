@@ -3,11 +3,13 @@
 ###############
 
 """
-    ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
+    ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x), check=Val{true}())
 
 Return `∇f` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), Real)`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
     CHK && checktag(T, f, x)
@@ -19,12 +21,13 @@ function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f
 end
 
 """
-    ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))
+    ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x), check=Val{true}())
 
 Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f` is called as
 `f(x)`.
 
 This method assumes that `isa(f(x), Real)`.
+
 """
 function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
     CHK && checktag(T, f, x)

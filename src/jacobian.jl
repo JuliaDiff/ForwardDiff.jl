@@ -3,11 +3,13 @@
 ###############
 
 """
-    ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
+    ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())
 
 Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian(f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T,CHK}
     CHK && checktag(T, f, x)
@@ -19,10 +21,12 @@ function jacobian(f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f
 end
 
 """
-    ForwardDiff.jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))
+    ForwardDiff.jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x), check=Val{true}())
 
 Return `J(f!)` evaluated at `x`,  assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
     CHK && checktag(T, f!, x)    
@@ -35,12 +39,14 @@ end
 
 
 """
-    ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))
+    ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())
 
 Compute `J(f)` evaluated at `x` and store the result(s) in `result`, assuming `f` is called
 as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
     CHK && checktag(T, f, x)
@@ -53,12 +59,14 @@ function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray,
 end
 
 """
-    ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))
+    ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x), check=Val{true}())
 
 Compute `J(f!)` evaluated at `x` and store the result(s) in `result`, assuming `f!` is
 called as `f!(y, x)` where the result is stored in `y`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T,CHK}
     CHK && checktag(T, f!, x)
