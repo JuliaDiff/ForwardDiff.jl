@@ -24,7 +24,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 """
 @inline function derivative(f!, y::AbstractArray, x::Real,
                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
-    CHK && checktag(T, f, x)
+    CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
@@ -60,7 +60,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f!, y::AbstractArray, x::Real,
                              cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
-    CHK && checktag(T, f, x)
+    CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
