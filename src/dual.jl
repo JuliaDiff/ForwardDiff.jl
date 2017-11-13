@@ -7,10 +7,10 @@ struct Dual{T,V<:Real,N} <: Real
     partials::Partials{N,V}
 end
 
-
 ##############
 # Exceptions #
 ##############
+
 struct DualMismatchError{A,B} <: Exception
     a::A
     b::B
@@ -48,20 +48,6 @@ end
 
 @inline Dual(args...) = Dual{Void}(args...)
 
-###################
-# Promotion       #
-###################
-
-Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
-                                      ::Type{Dual{T2,V2,N2}}) where {T1,V1<:Real,N1,T2,V2<:Real,N2}
-    # V1 and V2 might themselves be Dual types
-    if T2 ≺ T1
-        Dual{T1,promote_type(V1,Dual{T2,V2,N2}),N1}
-    else
-        Dual{T2,promote_type(V2,Dual{T1,V1,N1}),N2}
-    end
-end
-
 ##############################
 # Utility/Accessor Functions #
 ##############################
@@ -69,7 +55,7 @@ end
 @inline value(x::Real) = x
 @inline value(d::Dual) = d.value
 
-@inline value(::Type{T}, x::Real)    where T = x
+@inline value(::Type{T}, x::Real) where T = x
 @inline value(::Type{T}, d::Dual{T}) where T = value(d)
 function value(::Type{T}, d::Dual{S}) where {T,S}
     # TODO: in the case of nested Duals, it may be possible to "transpose" the Dual objects
@@ -83,14 +69,9 @@ end
 @inline partials(d::Dual, i, j) = partials(d, i).partials[j]
 @inline partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
 
-@inline partials(::Type{T}, x::Real, i...) where T =
-    partials(x, i...)
-@inline partials(::Type{T}, d::Dual{T}, i...) where T =
-    partials(d, i...)
-partials(::Type{T}, d::Dual{S}, i...) where {T,S} =
-    throw(DualMismatchError(T,S))
-
-
+@inline partials(::Type{T}, x::Real, i...) where T = partials(x, i...)
+@inline partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
+partials(::Type{T}, d::Dual{S}, i...) where {T,S} = throw(DualMismatchError(T,S))
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
 @inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
@@ -307,6 +288,16 @@ end
 # Promotion/Conversion #
 ########################
 
+Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
+                                      ::Type{Dual{T2,V2,N2}}) where {T1,V1<:Real,N1,T2,V2<:Real,N2}
+    # V1 and V2 might themselves be Dual types
+    if T2 ≺ T1
+        Dual{T1,promote_type(V1,Dual{T2,V2,N2}),N1}
+    else
+        Dual{T2,promote_type(V2,Dual{T1,V1,N1}),N2}
+    end
+end
+
 function Base.promote_rule(::Type{Dual{T,A,N}},
                            ::Type{Dual{T,B,N}}) where {T,A<:Real,B<:Real,N}
     return Dual{T,promote_type(A, B),N}
@@ -336,7 +327,6 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float1
 ###################################
 
 @inline Base.conj(d::Dual) = d
-
 
 @inline Base.transpose(d::Dual) = d
 
