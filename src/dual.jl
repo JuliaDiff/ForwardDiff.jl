@@ -525,13 +525,23 @@ end
 # max #
 #-----#
 
-@inline function Base.max(a::Dual, b::Dual)
+@inline function Base.max(a::Dual{T}, b::Dual{T}) where T
     if value(a) > value(b)
         return a
     elseif value(a) < value(b)
         return b
     else # value(a) == value(b)
         return ifelse(epsilon(a) == epsilon(b), a, Dual(value(a), NaN))
+    end
+end
+
+@inline function Base.max(a::Dual{T}, b::T) where T
+    if value(a) > b
+        return a
+    elseif value(a) < b
+        return b
+    else # value(a) == value(b)
+        return Dual(value(a), NaN)
     end
 end
 
