@@ -522,6 +522,19 @@ end
     return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
 end
 
+# max #
+#-----#
+
+@inline function Base.max(a::Dual, b::Dual)
+    if value(a) > value(b)
+        return a
+    elseif value(a) < value(b)
+        return b
+    else # value(a) == value(b)
+        return ifelse(epsilon(a) == epsilon(b), a, Dual(value(a), NaN))
+    end
+end
+
 ###################
 # Pretty Printing #
 ###################
