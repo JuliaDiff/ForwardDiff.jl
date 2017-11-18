@@ -90,6 +90,11 @@ for c in (1, 2, 3), tags in ((nothing, nothing),
     @test isapprox(DiffResults.jacobian(out), j)
 end
 
+cfgx = ForwardDiff.JacobianConfig(sin, x)
+@test_throws ForwardDiff.InvalidTagException ForwardDiff.jacobian(f, x, cfgx)
+@test ForwardDiff.jacobian(f, x, cfgx, Val{false}()) == ForwardDiff.jacobian(f,x)
+
+
 ########################
 # test vs. Calculus.jl #
 ########################

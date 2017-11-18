@@ -25,10 +25,14 @@ Tag(::Void, ::Type{V}) where {V} = nothing
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
 
+struct InvalidTagException{E,O} <: Exception
+end
 
+Base.showerror(io::IO, e::InvalidTagException{E,O}) where {E,O} =
+    print(io, "Invalid Tag object:\n  Expected $E,\n  Observed $O.")
 
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
-    error("Invalid Tag object:\n  Expected $(Tag{F,V}),\n  Observed $(Tag{FT,VT}).")
+    throw(InvalidTagException{Tag{F,V},Tag{FT,VT}}())
 
 checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 

@@ -53,6 +53,11 @@ for c in (1, 2, 3), tag in (nothing, Tag((f,gradient), eltype(x)))
     @test isapprox(DiffResults.hessian(out), h)
 end
 
+cfgx = ForwardDiff.HessianConfig(sin, x)
+@test_throws ForwardDiff.InvalidTagException ForwardDiff.hessian(f, x, cfgx)
+@test ForwardDiff.hessian(f, x, cfgx, Val{false}()) == ForwardDiff.hessian(f,x)
+
+
 ########################
 # test vs. Calculus.jl #
 ########################
