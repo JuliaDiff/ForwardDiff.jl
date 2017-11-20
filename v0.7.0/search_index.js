@@ -53,7 +53,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.derivative",
     "category": "Function",
-    "text": "ForwardDiff.derivative(f, x::Real)\n\nReturn df/dx evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))\n\nReturn df!/dx evaluated at x, assuming f! is called as f!(y, x) where the result is stored in y.\n\n\n\n"
+    "text": "ForwardDiff.derivative(f, x::Real)\n\nReturn df/dx evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x), check=Val{true}())\n\nReturn df!/dx evaluated at x, assuming f! is called as f!(y, x) where the result is stored in y.\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -61,7 +61,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.derivative!",
     "category": "Function",
-    "text": "ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f, x::Real)\n\nCompute df/dx evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))\n\nCompute df!/dx evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\n\n\n"
+    "text": "ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f, x::Real)\n\nCompute df/dx evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x), check=Val{true}())\n\nCompute df!/dx evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -77,7 +77,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.gradient",
     "category": "Function",
-    "text": "ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))\n\nReturn ∇f evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
+    "text": "ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x), check=Val{true}())\n\nReturn ∇f evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -85,7 +85,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.gradient!",
     "category": "Function",
-    "text": "ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))\n\nCompute ∇f evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
+    "text": "ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x), check=Val{true}())\n\nCompute ∇f evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
 },
 
 {
@@ -101,7 +101,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.jacobian",
     "category": "Function",
-    "text": "ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))\n\nReturn J(f) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\n\n\nForwardDiff.jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))\n\nReturn J(f!) evaluated at x,  assuming f! is called as f!(y, x) where the result is stored in y.\n\n\n\n"
+    "text": "ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())\n\nReturn J(f) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\nForwardDiff.jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x), check=Val{true}())\n\nReturn J(f!) evaluated at x,  assuming f! is called as f!(y, x) where the result is stored in y.\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -109,7 +109,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.jacobian!",
     "category": "Function",
-    "text": "ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))\n\nCompute J(f) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\n\n\nForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))\n\nCompute J(f!) evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\nThis method assumes that isa(f(x), AbstractArray).\n\n\n\n"
+    "text": "ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())\n\nCompute J(f) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\nForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x), check=Val{true}())\n\nCompute J(f!) evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\nThis method assumes that isa(f(x), AbstractArray).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -125,7 +125,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.hessian",
     "category": "Function",
-    "text": "ForwardDiff.hessian(f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x))\n\nReturn H(f) (i.e. J(∇(f))) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
+    "text": "ForwardDiff.hessian(f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())\n\nReturn H(f) (i.e. J(∇(f))) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -133,7 +133,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.hessian!",
     "category": "Function",
-    "text": "ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x))\n\nCompute H(f) (i.e. J(∇(f))) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\nForwardDiff.hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, result, x))\n\nExactly like ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig), but because isa(result, DiffResult), cfg is constructed as HessianConfig(f, result, x) instead of HessianConfig(f, x).\n\n\n\n"
+    "text": "ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())\n\nCompute H(f) (i.e. J(∇(f))) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\nForwardDiff.hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, result, x), check=Val{true}())\n\nExactly like ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig), but because isa(result, DiffResult), cfg is constructed as HessianConfig(f, result, x) instead of HessianConfig(f, x).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -241,6 +241,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "user/advanced.html#Custom-tags-and-tag-checking-1",
+    "page": "Advanced Usage Guide",
+    "title": "Custom tags and tag checking",
+    "category": "section",
+    "text": "The Dual type includes a \"tag\" parameter indicating the particular function call to which it belongs. This is to avoid a problem known as _perturbation confusion_ which can arise when there are nested differentiation calls. Tags are automatically generated as part of the appropriate config object, and the tag is checked when the config is used as part of a differentiation call (derivative, gradient, etc.): an InvalidTagException will be thrown if the incorrect config object is used.This checking can sometimes be inconvenient, and there are certain cases where you may want to disable this checking.warning: Warning\nDisabling tag checking should only be done with caution, especially if the code itself could be used inside another differentiation call.(preferred) Provide an extra Val{false}() argument to the differentiation function, e.g.\ncfg = ForwarDiff.GradientConfig(g, x)\nForwarDiff.gradient(f, x, cfg, Val{false}())\nIf using as part of a library, the tag can be checked manually via\nForwardDiff.checktag(cfg, g, x)\n(discouraged) Construct the config object with nothing instead of a function argument, e.g.\ncfg = GradientConfig(nothing, x)\ngradient(f, x, cfg)"
+},
+
+{
     "location": "user/upgrade.html#",
     "page": "Upgrading from Older Versions",
     "title": "Upgrading from Older Versions",
@@ -285,7 +293,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Upgrading from Older Versions",
     "title": "Retrieving Lower-Order Results",
     "category": "section",
-    "text": "# ForwardDiff v0.1\nanswer, results = ForwardDiff.hessian(f, x, AllResults)\nv = ForwardDiff.value(results)\ng = ForwardDiff.gradient(results)\nh = ForwardDiff.hessian(results) # == answer\n\n# ForwardDiff v0.2\nout = HessianResult(x)\nForwardDiff.hessian!(out, f, x)\nv = ForwardDiff.value(out)\ng = ForwardDiff.gradient(out)\nh = ForwardDiff.hessian(out)\n\n# ForwardDiff v0.3 & above\nusing DiffBase\nout = DiffBase.HessianResult(x)\nForwardDiff.hessian!(out, f, x)\nv = DiffBase.value(out)\ng = DiffBase.gradient(out)\nh = DiffBase.hessian(out)\n\n# ForwardDiff v0.6 & above\nusing DiffBase\nout = DiffBase.HessianResult(x)\nout = ForwardDiff.hessian!(out, f, x) # re-alias output!\nv = DiffBase.value(out)\ng = DiffBase.gradient(out)\nh = DiffBase.hessian(out)\n\n# ForwardDiff v0.7 & above\nusing DiffResults\nout = DiffResults.HessianResult(x)\nout = ForwardDiff.hessian!(out, f, x) # re-alias output!\nv = DiffResults.value(out)\ng = DiffResults.gradient(out)\nh = DiffResults.hessian(out)"
+    "text": "# ForwardDiff v0.1\nanswer, results = ForwardDiff.hessian(f, x, AllResults)\nv = ForwardDiff.value(results)\ng = ForwardDiff.gradient(results)\nh = ForwardDiff.hessian(results) # == answer\n\n# ForwardDiff v0.2\nout = HessianResult(x)\nForwardDiff.hessian!(out, f, x)\nv = ForwardDiff.value(out)\ng = ForwardDiff.gradient(out)\nh = ForwardDiff.hessian(out)\n\n# ForwardDiff v0.3 & above\nusing DiffBase\nout = DiffBase.HessianResult(x)\nForwardDiff.hessian!(out, f, x)\nv = DiffBase.value(out)\ng = DiffBase.gradient(out)\nh = DiffBase.hessian(out)\n\n# ForwardDiff v0.6 & above\nusing DiffResults\nout = DiffResults.HessianResult(x)\nout = ForwardDiff.hessian!(out, f, x) # re-alias output!\nv = DiffResults.value(out)\ng = DiffResults.gradient(out)\nh = DiffResults.hessian(out)"
 },
 
 {
