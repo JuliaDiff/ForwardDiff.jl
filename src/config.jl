@@ -87,6 +87,7 @@ function DerivativeConfig(f::F,
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
+checktag(::DerivativeConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
 
 ##################
@@ -122,6 +123,7 @@ function GradientConfig(f::F,
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
+checktag(::GradientConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{GradientConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 
 ##################
@@ -186,6 +188,7 @@ function JacobianConfig(f::F,
     return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
 end
 
+checktag(::JacobianConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 
 #################
@@ -249,5 +252,6 @@ function HessianConfig(f::F,
     return HessianConfig(jacobian_config, gradient_config)
 end
 
+checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
     Dual{T,Dual{T,V,N},N}
