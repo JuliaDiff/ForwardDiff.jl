@@ -53,7 +53,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.derivative",
     "category": "Function",
-    "text": "ForwardDiff.derivative(f, x::Real)\n\nReturn df/dx evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))\n\nReturn df!/dx evaluated at x, assuming f! is called as f!(y, x) where the result is stored in y.\n\n\n\n"
+    "text": "ForwardDiff.derivative(f, x::Real)\n\nReturn df/dx evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x), check=Val{true}())\n\nReturn df!/dx evaluated at x, assuming f! is called as f!(y, x) where the result is stored in y.\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -61,7 +61,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.derivative!",
     "category": "Function",
-    "text": "ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f, x::Real)\n\nCompute df/dx evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))\n\nCompute df!/dx evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\n\n\n"
+    "text": "ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f, x::Real)\n\nCompute df/dx evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Union{Real,AbstractArray}).\n\n\n\nForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x), check=Val{true}())\n\nCompute df!/dx evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -77,7 +77,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.gradient",
     "category": "Function",
-    "text": "ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))\n\nReturn ∇f evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
+    "text": "ForwardDiff.gradient(f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x), check=Val{true}())\n\nReturn ∇f evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -85,7 +85,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.gradient!",
     "category": "Function",
-    "text": "ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x))\n\nCompute ∇f evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
+    "text": "ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig = GradientConfig(f, x), check=Val{true}())\n\nCompute ∇f evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
 },
 
 {
@@ -101,7 +101,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.jacobian",
     "category": "Function",
-    "text": "ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))\n\nReturn J(f) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\n\n\nForwardDiff.jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))\n\nReturn J(f!) evaluated at x,  assuming f! is called as f!(y, x) where the result is stored in y.\n\n\n\n"
+    "text": "ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())\n\nReturn J(f) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\nForwardDiff.jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x), check=Val{true}())\n\nReturn J(f!) evaluated at x,  assuming f! is called as f!(y, x) where the result is stored in y.\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -109,7 +109,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.jacobian!",
     "category": "Function",
-    "text": "ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x))\n\nCompute J(f) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\n\n\nForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x))\n\nCompute J(f!) evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\nThis method assumes that isa(f(x), AbstractArray).\n\n\n\n"
+    "text": "ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())\n\nCompute J(f) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), AbstractArray).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\nForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f!, y, x), check=Val{true}())\n\nCompute J(f!) evaluated at x and store the result(s) in result, assuming f! is called as f!(y, x) where the result is stored in y.\n\nThis method assumes that isa(f(x), AbstractArray).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -125,7 +125,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.hessian",
     "category": "Function",
-    "text": "ForwardDiff.hessian(f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x))\n\nReturn H(f) (i.e. J(∇(f))) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\n"
+    "text": "ForwardDiff.hessian(f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())\n\nReturn H(f) (i.e. J(∇(f))) evaluated at x, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -133,7 +133,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Differentiation API",
     "title": "ForwardDiff.hessian!",
     "category": "Function",
-    "text": "ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x))\n\nCompute H(f) (i.e. J(∇(f))) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\n\n\nForwardDiff.hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, result, x))\n\nExactly like ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig), but because isa(result, DiffResult), cfg is constructed as HessianConfig(f, result, x) instead of HessianConfig(f, x).\n\n\n\n"
+    "text": "ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())\n\nCompute H(f) (i.e. J(∇(f))) evaluated at x and store the result(s) in result, assuming f is called as f(x).\n\nThis method assumes that isa(f(x), Real).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\nForwardDiff.hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, result, x), check=Val{true}())\n\nExactly like ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig), but because isa(result, DiffResult), cfg is constructed as HessianConfig(f, result, x) instead of HessianConfig(f, x).\n\nSet check to Val{false}() to disable tag checking. This can lead to perturbation confusion, so should be used with care.\n\n\n\n"
 },
 
 {
@@ -238,6 +238,14 @@ var documenterSearchIndex = {"docs": [
     "title": "SIMD Vectorization",
     "category": "section",
     "text": "Many operations on ForwardDiff's dual numbers are amenable to SIMD vectorization. For some ForwardDiff benchmarks, we've seen SIMD vectorization yield speedups of almost 3x.To enable SIMD optimizations, start your Julia process with the -O3 flag. This flag enables LLVM's SLPVectorizerPass during compilation, which attempts to automatically insert SIMD instructions where possible for certain arithmetic operations.Here's an example of LLVM bitcode generated for an addition of two Dual numbers without SIMD instructions (i.e. not starting Julia with -O3):julia> using ForwardDiff: Dual\n\njulia> a = Dual(1., 2., 3., 4.)\nDual{Void}(1.0,2.0,3.0,4.0)\n\njulia> b = Dual(5., 6., 7., 8.)\nDual{Void}(5.0,6.0,7.0,8.0)\n\njulia> @code_llvm a + b\n\ndefine void @\"julia_+_70852\"(%Dual* noalias sret, %Dual*, %Dual*) #0 {\ntop:\n  %3 = getelementptr inbounds %Dual, %Dual* %1, i64 0, i32 1, i32 0, i64 0\n  %4 = load double, double* %3, align 8\n  %5 = getelementptr inbounds %Dual, %Dual* %2, i64 0, i32 1, i32 0, i64 0\n  %6 = load double, double* %5, align 8\n  %7 = fadd double %4, %6\n  %8 = getelementptr inbounds %Dual, %Dual* %1, i64 0, i32 1, i32 0, i64 1\n  %9 = load double, double* %8, align 8\n  %10 = getelementptr inbounds %Dual, %Dual* %2, i64 0, i32 1, i32 0, i64 1\n  %11 = load double, double* %10, align 8\n  %12 = fadd double %9, %11\n  %13 = getelementptr inbounds %Dual, %Dual* %1, i64 0, i32 1, i32 0, i64 2\n  %14 = load double, double* %13, align 8\n  %15 = getelementptr inbounds %Dual, %Dual* %2, i64 0, i32 1, i32 0, i64 2\n  %16 = load double, double* %15, align 8\n  %17 = fadd double %14, %16\n  %18 = getelementptr inbounds %Dual, %Dual* %1, i64 0, i32 0\n  %19 = load double, double* %18, align 8\n  %20 = getelementptr inbounds %Dual, %Dual* %2, i64 0, i32 0\n  %21 = load double, double* %20, align 8\n  %22 = fadd double %19, %21\n  %23 = getelementptr inbounds %Dual, %Dual* %0, i64 0, i32 0\n  store double %22, double* %23, align 8\n  %24 = getelementptr inbounds %Dual, %Dual* %0, i64 0, i32 1, i32 0, i64 0\n  store double %7, double* %24, align 8\n  %25 = getelementptr inbounds %Dual, %Dual* %0, i64 0, i32 1, i32 0, i64 1\n  store double %12, double* %25, align 8\n  %26 = getelementptr inbounds %Dual, %Dual* %0, i64 0, i32 1, i32 0, i64 2\n  store double %17, double* %26, align 8\n  ret void\n}If we start up Julia with -O3 instead, the call to @code_llvm will show that LLVM can SIMD-vectorize the addition:julia> @code_llvm a + b\n\ndefine void @\"julia_+_70842\"(%Dual* noalias sret, %Dual*, %Dual*) #0 {\ntop:\n  %3 = bitcast %Dual* %1 to <4 x double>*            # cast the Dual to a SIMD-able LLVM vector\n  %4 = load <4 x double>, <4 x double>* %3, align 8\n  %5 = bitcast %Dual* %2 to <4 x double>*\n  %6 = load <4 x double>, <4 x double>* %5, align 8\n  %7 = fadd <4 x double> %4, %6                      # SIMD add\n  %8 = bitcast %Dual* %0 to <4 x double>*\n  store <4 x double> %7, <4 x double>* %8, align 8\n  ret void\n}Note that whether or not SIMD instructions can actually be used will depend on your machine and Julia build. For example, pre-built Julia binaries might not emit vectorized LLVM bitcode. To overcome this specific issue, you can locally rebuild Julia's system image."
+},
+
+{
+    "location": "user/advanced.html#Custom-tags-and-tag-checking-1",
+    "page": "Advanced Usage Guide",
+    "title": "Custom tags and tag checking",
+    "category": "section",
+    "text": "The Dual type includes a \"tag\" parameter indicating the particular function call to which it belongs. This is to avoid a problem known as _perturbation confusion_ which can arise when there are nested differentiation calls. Tags are automatically generated as part of the appropriate config object, and the tag is checked when the config is used as part of a differentiation call (derivative, gradient, etc.): an InvalidTagException will be thrown if the incorrect config object is used.This checking can sometimes be inconvenient, and there are certain cases where you may want to disable this checking.warning: Warning\nDisabling tag checking should only be done with caution, especially if the code itself could be used inside another differentiation call.(preferred) Provide an extra Val{false}() argument to the differentiation function, e.g.\ncfg = ForwarDiff.GradientConfig(g, x)\nForwarDiff.gradient(f, x, cfg, Val{false}())\nIf using as part of a library, the tag can be checked manually via\nForwardDiff.checktag(cfg, g, x)\n(discouraged) Construct the config object with nothing instead of a function argument, e.g.\ncfg = GradientConfig(nothing, x)\ngradient(f, x, cfg)"
 },
 
 {
