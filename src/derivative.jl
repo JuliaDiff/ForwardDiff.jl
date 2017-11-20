@@ -15,14 +15,16 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 end
 
 """
-    ForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))
+    ForwardDiff.derivative(f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x), check=Val{true}())
 
 Return `df!/dx` evaluated at `x`, assuming `f!` is called as `f!(y, x)` where the result is
 stored in `y`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 @inline function derivative(f!, y::AbstractArray, x::Real,
-                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
-    checktag(T, f!, x)
+                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
@@ -48,15 +50,17 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 end
 
 """
-    ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x))
+    ForwardDiff.derivative!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::Real, cfg::DerivativeConfig = DerivativeConfig(f!, y, x), check=Val{true}())
 
 Compute `df!/dx` evaluated at `x` and store the result(s) in `result`, assuming `f!` is
 called as `f!(y, x)` where the result is stored in `y`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f!, y::AbstractArray, x::Real,
-                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x)) where {T}
-    checktag(T, f!, x)
+                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))

@@ -46,6 +46,11 @@ for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
     @test isapprox(DiffResults.value(out), v)
 end
 
+cfgx = ForwardDiff.GradientConfig(sin, x)
+@test_throws ForwardDiff.InvalidTagException ForwardDiff.gradient(f, x, cfgx)
+@test ForwardDiff.gradient(f, x, cfgx, Val{false}()) == ForwardDiff.gradient(f,x)
+
+
 ########################
 # test vs. Calculus.jl #
 ########################
@@ -129,5 +134,6 @@ sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
 @test DiffResults.gradient(sresult1) == DiffResults.gradient(result)
 @test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
 @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
+
 
 end # module

@@ -18,14 +18,21 @@ function Tag(f::F, ::Type{V}) where {F,V}
     Tag{F,V}()
 end
 
+Tag(::Void, ::Type{V}) where {V} = nothing
+
+
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
 
+struct InvalidTagException{E,O} <: Exception
+end
 
+Base.showerror(io::IO, e::InvalidTagException{E,O}) where {E,O} =
+    print(io, "Invalid Tag object:\n  Expected $E,\n  Observed $O.")
 
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
-    error("Invalid Tag object:\n  Expected $(Tag{F,V}),\n  Observed $(Tag{FT,VT}).")
+    throw(InvalidTagException{Tag{F,V},Tag{FT,VT}}())
 
 checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
@@ -80,6 +87,7 @@ function DerivativeConfig(f::F,
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
+checktag(::DerivativeConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
 
 ##################
@@ -115,6 +123,7 @@ function GradientConfig(f::F,
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
+checktag(::GradientConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{GradientConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 
 ##################
@@ -179,15 +188,16 @@ function JacobianConfig(f::F,
     return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
 end
 
+checktag(::JacobianConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 
 #################
 # HessianConfig #
 #################
 
-struct HessianConfig{TG,TJ,V,N,DG,DJ} <: AbstractConfig{N}
-    jacobian_config::JacobianConfig{TJ,V,N,DJ}
-    gradient_config::GradientConfig{TG,Dual{TJ,V,N},N,DG}
+struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
+    jacobian_config::JacobianConfig{T,V,N,DJ}
+    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
 end
 
 """
@@ -211,10 +221,9 @@ This constructor does not store/modify `x`.
 function HessianConfig(f::F,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tagj = Tag((f,gradient), V),
-                       tagg = Tag(f, Dual{typeof(tagj),V,chunksize(chunk)})) where {F,V}
-    jacobian_config = JacobianConfig((f,gradient), x, chunk, tagj)
-    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tagg)
+                       tag = Tag(f, V)) where {F,V}
+    jacobian_config = JacobianConfig(f, x, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
@@ -237,12 +246,12 @@ function HessianConfig(f::F,
                        result::DiffResult,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tagj = Tag((f,typeof(gradient)), V),
-                       tagg = Tag(f, Dual{typeof(tagj),V,chunksize(chunk)})) where {F,V}
-    jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tagj)
-    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tagg)
+                       tag = Tag(f, V)) where {F,V}
+    jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
-Base.eltype(::Type{HessianConfig{TG,TJ,V,N,DG,DJ}}) where {TG,TJ,V,N,DG,DJ} =
-    Dual{TG,Dual{TJ,V,N},N}
+checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
+Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
+    Dual{T,Dual{T,V,N},N}

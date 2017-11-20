@@ -283,3 +283,36 @@ Note that whether or not SIMD instructions can actually be used will depend on y
 and Julia build. For example, pre-built Julia binaries might not emit vectorized LLVM
 bitcode. To overcome this specific issue, you can [locally rebuild Julia's system
 image](http://docs.julialang.org/en/latest/devdocs/sysimg).
+
+## Custom tags and tag checking
+
+The `Dual` type includes a "tag" parameter indicating the particular function call to
+which it belongs. This is to avoid a problem known as [_perturbation
+confusion_](https://github.com/JuliaDiff/ForwardDiff.jl/issues/83) which can arise when
+there are nested differentiation calls. Tags are automatically generated as part of the
+appropriate config object, and the tag is checked when the config is used as part of a
+differentiation call (`derivative`, `gradient`, etc.): an `InvalidTagException` will be
+thrown if the incorrect config object is used.
+
+This checking can sometimes be inconvenient, and there are certain cases where you may
+want to disable this checking.
+
+!!! warning
+    Disabling tag checking should only be done with caution, especially if the code itself
+    could be used inside another differentiation call.
+
+1. (preferred) Provide an extra `Val{false}()` argument to the differentiation function, e.g.
+   ```julia
+   cfg = ForwarDiff.GradientConfig(g, x)
+   ForwarDiff.gradient(f, x, cfg, Val{false}())
+   ```
+   If using as part of a library, the tag can be checked manually via
+   ```julia
+   ForwardDiff.checktag(cfg, g, x)
+   ```
+
+2. (discouraged) Construct the config object with `nothing` instead of a function argument, e.g.
+   ```julia
+   cfg = GradientConfig(nothing, x)
+   gradient(f, x, cfg)
+   ```
