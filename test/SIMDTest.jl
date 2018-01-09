@@ -1,6 +1,7 @@
 module SIMDTest
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff: Dual, valtype
 
 const DUALS = (Dual(1., 2., 3., 4.),

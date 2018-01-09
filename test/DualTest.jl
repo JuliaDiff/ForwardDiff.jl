@@ -1,6 +1,7 @@
 module DualTest
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
 
@@ -302,8 +303,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test convert(Dual{TestTag(),Dual{TestTag(),V,M},N}, NESTED_FDNUM) === NESTED_FDNUM
     @test convert(Dual{TestTag(),WIDE_T,N}, PRIMAL) === Dual{TestTag()}(WIDE_T(PRIMAL), zero(Partials{N,WIDE_T}))
     @test convert(Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}, PRIMAL) === Dual{TestTag()}(Dual{TestTag()}(WIDE_T(PRIMAL), zero(Partials{M,WIDE_T})), zero(Partials{N,Dual{TestTag(),V,M}}))
-    @test convert(Dual{TestTag(),Dual{TestTag(),V,M},N}, FDNUM) === Dual{TestTag()}(Dual{TestTag(),V,M}(PRIMAL), convert(Partials{N,Dual{TestTag(),V,M}}, PARTIALS))
-    @test convert(Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}, FDNUM) === Dual{TestTag()}(Dual{TestTag(),WIDE_T,M}(PRIMAL), convert(Partials{N,Dual{TestTag(),WIDE_T,M}}, PARTIALS))
+    @test convert(Dual{TestTag(),Dual{TestTag(),V,M},N}, FDNUM) === Dual{TestTag()}(convert(Dual{TestTag(),V,M}, PRIMAL), convert(Partials{N,Dual{TestTag(),V,M}}, PARTIALS))
+    @test convert(Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}, FDNUM) === Dual{TestTag()}(convert(Dual{TestTag(),WIDE_T,M}, PRIMAL), convert(Partials{N,Dual{TestTag(),WIDE_T,M}}, PARTIALS))
 
     ##############
     # Arithmetic #

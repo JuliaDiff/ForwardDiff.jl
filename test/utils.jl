@@ -1,6 +1,7 @@
 import ForwardDiff
-using ForwardDiff.DEFAULT_CHUNK_THRESHOLD
-using Base.Test
+using ForwardDiff: DEFAULT_CHUNK_THRESHOLD
+using Compat
+using Compat.Test
 
 # seed RNG, thus making result inaccuracies deterministic
 # so we don't have to retune EPS for arbitrary inputs

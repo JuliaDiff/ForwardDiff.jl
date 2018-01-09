@@ -1,18 +1,19 @@
 module PartialsTest
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff
-using ForwardDiff.Partials
+using ForwardDiff: Partials
 
 samerng() = MersenneTwister(1)
 
 for N in (0, 3), T in (Int, Float32, Float64)
     println("  ...testing Partials{$N,$T}")
 
-    VALUES = (rand(T,N)...)
+    VALUES = (rand(T,N)...,)
     PARTIALS = Partials{N,T}(VALUES)
 
-    VALUES2 = (rand(T,N)...)
+    VALUES2 = (rand(T,N)...,)
     PARTIALS2 = Partials{N,T}(VALUES2)
 
     ##############################
@@ -122,7 +123,7 @@ for N in (0, 3), T in (Int, Float32, Float64)
         @test ForwardDiff._mul_partials(PARTIALS, ZERO_PARTIALS, X, Y) == X * PARTIALS
 
         if ForwardDiff.NANSAFE_MODE_ENABLED
-            ZEROS = Partials((zeros(T, N)...))
+            ZEROS = Partials((fill(zero(T), N)...,))
 
             @test (NaN * ZEROS).values == ZEROS.values
             @test (Inf * ZEROS).values == ZEROS.values
