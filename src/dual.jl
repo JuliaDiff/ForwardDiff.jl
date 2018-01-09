@@ -98,7 +98,7 @@ macro define_binary_dual_op(f, xy_body, x_body, y_body)
         @inline $(f)(x::Dual{Txy}, y::Dual{Txy}) where {Txy} = $xy_body
         @inline $(f)(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} = Ty ≺ Tx ? $x_body : $y_body
     end
-    for R in REAL_TYPES
+    for R in AMBIGUOUS_TYPES
         expr = quote
             @inline $(f)(x::Dual{Tx}, y::$R) where {Tx} = $x_body
             @inline $(f)(x::$R, y::Dual{Ty}) where {Ty} = $y_body
@@ -124,7 +124,7 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
             end
         end
     end
-    for R in REAL_TYPES
+    for R in AMBIGUOUS_TYPES
         expr = quote
             @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::$R) where {Txy} = $xy_body
             @inline $(f)(x::Dual{Tx}, y::Dual{Ty}, z::$R)  where {Tx, Ty} = Ty ≺ Tx ? $x_body : $y_body
@@ -134,7 +134,7 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
             @inline $(f)(x::$R, y::Dual{Ty}, z::Dual{Tz}) where {Ty,Tz} = Tz ≺ Ty ? $y_body : $z_body
         end
         append!(defs.args, expr.args)
-        for Q in REAL_TYPES
+        for Q in AMBIGUOUS_TYPES
             Q === R && continue
             expr = quote
                 @inline $(f)(x::Dual{Tx}, y::$R, z::$Q) where {Tx} = $x_body
