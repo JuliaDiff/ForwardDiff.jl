@@ -19,10 +19,9 @@ samerng() = MersenneTwister(1)
 intrand(V) = V == Int ? rand(2:10) : rand(V)
 
 dual_isapprox(a, b) = isapprox(a, b)
-dual_isapprox(a::Dual{T,T1,T2}, b::Dual{T,T3,T4}) where {T,T1,T2,T3,T4} =
-            isapprox(value(a), value(b)) && isapprox(partials(a), partials(b))
-dual_isapprox(a::Dual{T,T1,T2}, b::Dual{T3,T4,T5}) where {T,T1,T2,T3,T4,T5} =
-            error("Tags don't match")
+dual_isapprox(a::Dual{T,T1,T2}, b::Dual{T,T3,T4}) where {T,T1,T2,T3,T4} = isapprox(value(a), value(b)) && isapprox(partials(a), partials(b))
+dual_isapprox(a::Dual{T,T1,T2}, b::Dual{T3,T4,T5}) where {T,T1,T2,T3,T4,T5} = error("Tags don't match")
+
 ForwardDiff.:≺(::Type{TestTag()}, ::Int) = true
 ForwardDiff.:≺(::Int, ::Type{TestTag()}) = false
 
@@ -394,7 +393,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     if V != Int
         for (M, f, arity) in DiffRules.diffrules()
-            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/)) && continue
+            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)) && continue
             println("       ...auto-testing $(M).$(f) with $arity arguments")
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
