@@ -305,11 +305,6 @@ Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V<:Real,N} = Dual{T}(conv
 Base.convert(::Type{Dual{T,V,N}}, x::Real) where {T,V<:Real,N} = Dual{T}(V(x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
-Base.promote_array_type(F, ::Type{D}, ::Type{A}) where {D<:Dual,A<:AbstractFloat} = promote_type(D, A)
-Base.promote_array_type(F, ::Type{<:Dual}, ::Type{<:AbstractFloat}, ::Type{P}) where {P} = P
-Base.promote_array_type(F, ::Type{A}, ::Type{D}) where {D<:Dual,A<:AbstractFloat} = promote_type(D, A)
-Base.promote_array_type(F, ::Type{<:AbstractFloat}, ::Type{<:Dual}, ::Type{P}) where {P} = P
-
 Base.float(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
 Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
 
