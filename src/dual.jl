@@ -96,8 +96,7 @@ partials(::Type{T}, d::Dual{S}, i...) where {T,S} = throw(DualMismatchError(T,S)
 macro define_binary_dual_op(f, xy_body, x_body, y_body)
     defs = quote
         @inline $(f)(x::Dual{Txy}, y::Dual{Txy}) where {Txy} = $xy_body
-        @inline $(f)(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} =
-            Ty ≺ Tx ? $x_body : $y_body
+        @inline $(f)(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} = Ty ≺ Tx ? $x_body : $y_body
     end
     for R in REAL_TYPES
         expr = quote
@@ -112,12 +111,9 @@ end
 macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_body, z_body)
     defs = quote
         @inline $(f)(x::Dual{Txyz}, y::Dual{Txyz}, z::Dual{Txyz}) where {Txyz} = $xyz_body
-        @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::Dual{Tz}) where {Txy,Tz} =
-            Tz ≺ Txy ? $xy_body : $z_body
-        @inline $(f)(x::Dual{Txz}, y::Dual{Ty}, z::Dual{Txz}) where {Txz,Ty} =
-            Ty ≺ Txz ? $xz_body : $y_body
-        @inline $(f)(x::Dual{Tx}, y::Dual{Tyz}, z::Dual{Tyz}) where {Tx,Tyz} =
-            Tyz ≺ Tx ? $x_body  : $yz_body
+        @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::Dual{Tz}) where {Txy,Tz} = Tz ≺ Txy ? $xy_body : $z_body
+        @inline $(f)(x::Dual{Txz}, y::Dual{Ty}, z::Dual{Txz}) where {Txz,Ty} = Ty ≺ Txz ? $xz_body : $y_body
+        @inline $(f)(x::Dual{Tx}, y::Dual{Tyz}, z::Dual{Tyz}) where {Tx,Tyz} = Tyz ≺ Tx ? $x_body  : $yz_body
         @inline function $(f)(x::Dual{Tx}, y::Dual{Ty}, z::Dual{Tz}) where {Tx,Ty,Tz}
             if Tz ≺ Tx && Ty ≺ Tx
                 $x_body
@@ -131,16 +127,11 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
     for R in REAL_TYPES
         expr = quote
             @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::$R) where {Txy} = $xy_body
-            @inline $(f)(x::Dual{Tx}, y::Dual{Ty}, z::$R)  where {Tx, Ty} =
-                Ty ≺ Tx ? $x_body : $y_body
-
+            @inline $(f)(x::Dual{Tx}, y::Dual{Ty}, z::$R)  where {Tx, Ty} = Ty ≺ Tx ? $x_body : $y_body
             @inline $(f)(x::Dual{Txz}, y::$R, z::Dual{Txz}) where {Txz} = $xz_body
-            @inline $(f)(x::Dual{Tx}, y::$R, z::Dual{Tz}) where {Tx,Tz} =
-                Tz ≺ Tx ? $x_body : $z_body
-
+            @inline $(f)(x::Dual{Tx}, y::$R, z::Dual{Tz}) where {Tx,Tz} = Tz ≺ Tx ? $x_body : $z_body
             @inline $(f)(x::$R, y::Dual{Tyz}, z::Dual{Tyz}) where {Tyz} = $yz_body
-            @inline $(f)(x::$R, y::Dual{Ty}, z::Dual{Tz}) where {Ty,Tz} =
-                Tz ≺ Ty ? $y_body : $z_body
+            @inline $(f)(x::$R, y::Dual{Ty}, z::Dual{Tz}) where {Ty,Tz} = Tz ≺ Ty ? $y_body : $z_body
         end
         append!(defs.args, expr.args)
         for Q in REAL_TYPES
