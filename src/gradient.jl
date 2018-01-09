@@ -70,10 +70,8 @@ function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
     return result
 end
 
-extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} =
-    fill!(result, zero(y))
-extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}=
-    copy!(result, partials(T, dual))
+extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
+extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}= copyto!(result, partials(T, dual))
 
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
     offset = index - 1

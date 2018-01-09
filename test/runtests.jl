@@ -1,53 +1,43 @@
 using ForwardDiff
 
 println("Testing Partials...")
-tic()
-include("PartialsTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("PartialsTest.jl")
+println("done (took $t seconds).")
 
 println("Testing Dual...")
-tic()
-include("DualTest.jl")
-println("done (took $(toq()) seconds).")
+# t = @elapsed include("DualTest.jl")
+println("done (took $t seconds).")
 
 println("Testing derivative functionality...")
-tic()
-include("DerivativeTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("DerivativeTest.jl")
+println("done (took $t seconds).")
 
 println("Testing gradient functionality...")
-tic()
-include("GradientTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("GradientTest.jl")
+println("done (took $t seconds).")
 
 println("Testing jacobian functionality...")
-tic()
-include("JacobianTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("JacobianTest.jl")
+println("done (took $t seconds).")
 
 println("Testing hessian functionality...")
-tic()
-include("HessianTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("HessianTest.jl")
+println("done (took $t seconds).")
 
 println("Testing perturbation confusion functionality...")
-tic()
-include("ConfusionTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("ConfusionTest.jl")
+println("done (took $t seconds).")
 
 println("Testing miscellaneous functionality...")
-tic()
-include("MiscTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("MiscTest.jl")
+println("done (took $t seconds).")
 
 if Base.JLOptions().opt_level >= 3
     println("Testing SIMD vectorization...")
-    tic()
-    include("SIMDTest.jl")
-    println("done (took $(toq()) seconds).")
+    t = @elapsed include("SIMDTest.jl")
+    println("done (took $t seconds).")
 end
 
 println("Testing deprecations...")
-tic()
-include("DeprecatedTest.jl")
-println("done (took $(toq()) seconds).")
+t = @elapsed include("DeprecatedTest.jl")
+println("done (took $t seconds).")

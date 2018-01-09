@@ -1,10 +1,8 @@
 module ConfusionTest
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff
-
-using Base.Test
-
 
 # Perturbation Confusion (Issue #83) #
 #------------------------------------#
@@ -37,13 +35,13 @@ L(t,q,q̇) = m/2 * dot(q̇,q̇) - m*g*q[2]
 
 ∂L∂q̇(L, t, q, q̇) = ForwardDiff.gradient(a->L(t,q,a), q̇)
 Dqq̇(L, t, q, q̇) = ForwardDiff.jacobian(a->∂L∂q̇(L,t,a,q̇), q)
-@test Dqq̇(L, t, q, q̇)  == zeros(2,2)
+@test Dqq̇(L, t, q, q̇)  == fill(0.0, 2, 2)
 
 
 q = [1,2]
 p = [5,6]
 function Legendre_transformation(F, w)
-    z = zeros(w)
+    z = fill(0.0, size(w))
     M = ForwardDiff.hessian(F, z)
     b = ForwardDiff.gradient(F, z)
     v = cholfact(M)\(w-b)

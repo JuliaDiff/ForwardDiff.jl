@@ -2,7 +2,8 @@ module HessianTest
 
 import Calculus
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays

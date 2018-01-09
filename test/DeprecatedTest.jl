@@ -1,6 +1,7 @@
 module DeprecatedTest
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff, DiffResults
 
 using ForwardDiff: AbstractConfig, GradientConfig,

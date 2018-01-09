@@ -2,7 +2,8 @@ module DerivativeTest
 
 import Calculus
 
-using Base.Test
+using Compat
+using Compat.Test
 using ForwardDiff
 using DiffTests
 
@@ -49,7 +50,7 @@ end
 for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
     println("  ...testing $f!")
     m, n = 3, 2
-    y = zeros(m, n)
+    y = fill(0.0, m, n)
     f = x -> (tmp = similar(y, promote_type(eltype(y), typeof(x)), m, n); f!(tmp, x); tmp)
     v = f(x)
     cfg = ForwardDiff.DerivativeConfig(f!, y, x)

@@ -219,10 +219,10 @@ SIMD instructions (i.e. not starting Julia with `-O3`):
 julia> using ForwardDiff: Dual
 
 julia> a = Dual(1., 2., 3., 4.)
-Dual{Void}(1.0,2.0,3.0,4.0)
+Dual{Nothing}(1.0,2.0,3.0,4.0)
 
 julia> b = Dual(5., 6., 7., 8.)
-Dual{Void}(5.0,6.0,7.0,8.0)
+Dual{Nothing}(5.0,6.0,7.0,8.0)
 
 julia> @code_llvm a + b
 

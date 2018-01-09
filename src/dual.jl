@@ -46,7 +46,7 @@ end
 @inline (::Type{Dual{T}})(value::Real, partials::Real...) where {T} = Dual{T}(value, partials)
 @inline (::Type{Dual{T}})(value::V, ::Chunk{N}, p::Val{i}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
 
-@inline Dual(args...) = Dual{Void}(args...)
+@inline Dual(args...) = Dual{Nothing}(args...)
 
 ##############################
 # Utility/Accessor Functions #
@@ -84,8 +84,8 @@ partials(::Type{T}, d::Dual{S}, i...) where {T,S} = throw(DualMismatchError(T,S)
 @inline valtype(::Dual{T,V,N}) where {T,V,N} = V
 @inline valtype(::Type{Dual{T,V,N}}) where {T,V,N} = V
 
-@inline tagtype(::V) where {V} = Void
-@inline tagtype(::Type{V}) where {V} = Void
+@inline tagtype(::V) where {V} = Nothing
+@inline tagtype(::Type{V}) where {V} = Nothing
 @inline tagtype(::Dual{T,V,N}) where {T,V,N} = T
 @inline tagtype(::Type{Dual{T,V,N}}) where {T,V,N} = T
 
@@ -302,11 +302,11 @@ for R in (:BigFloat, :Bool, :Irrational, :Real)
 end
 
 Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V<:Real,N} = Dual{T}(convert(V, value(d)), convert(Partials{N,V}, partials(d)))
-Base.convert(::Type{Dual{T,V,N}}, x::Real) where {T,V<:Real,N} = Dual{T}(V(x), zero(Partials{N,V}))
+Base.convert(::Type{Dual{T,V,N}}, x::Real) where {T,V<:Real,N} = Dual{T}(convert(V, x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
-Base.float(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
-Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = Dual{T,promote_type(V, Float16),N}(d)
+Base.float(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
+Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
 
 ###################################
 # General Mathematical Operations #

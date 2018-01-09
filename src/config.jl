@@ -18,7 +18,7 @@ function Tag(f::F, ::Type{V}) where {F,V}
     Tag{F,V}()
 end
 
-Tag(::Void, ::Type{V}) where {V} = nothing
+Tag(::Nothing, ::Type{V}) where {V} = nothing
 
 
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
