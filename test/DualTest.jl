@@ -305,17 +305,6 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test convert(Dual{TestTag(),Dual{TestTag(),V,M},N}, FDNUM) === Dual{TestTag()}(Dual{TestTag(),V,M}(PRIMAL), convert(Partials{N,Dual{TestTag(),V,M}}, PARTIALS))
     @test convert(Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}, FDNUM) === Dual{TestTag()}(Dual{TestTag(),WIDE_T,M}(PRIMAL), convert(Partials{N,Dual{TestTag(),WIDE_T,M}}, PARTIALS))
 
-    if V != Int
-        @test Base.promote_array_type(+, Dual{TestTag(),V,N}, V, Base.promote_op(+, Dual{TestTag(),V,N}, V)) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, Dual{TestTag(),Int,N}, V, Base.promote_op(+, Dual{TestTag(),Int,N}, V)) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, V, Dual{TestTag(),V,N}, Base.promote_op(+, V, Dual{TestTag(),V,N})) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, V, Dual{TestTag(),Int,N}, Base.promote_op(+, V, Dual{TestTag(),Int,N})) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, Dual{TestTag(),V,N}, V) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, Dual{TestTag(),Int,N}, V) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, V, Dual{TestTag(),V,N}) == Dual{TestTag(),V,N}
-        @test Base.promote_array_type(+, V, Dual{TestTag(),Int,N}) == Dual{TestTag(),V,N}
-    end
-
     ##############
     # Arithmetic #
     ##############
