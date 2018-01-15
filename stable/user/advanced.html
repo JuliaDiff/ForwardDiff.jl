@@ -85,10 +85,10 @@ julia&gt; vector_hessian(cumprod, [1, 2, 3])
  2  1  0</code></pre><p>Likewise, you could write a version of <code>vector_hessian</code> which supports functions of the form <code>f!(y, x)</code>, or perhaps an in-place Jacobian with <code>ForwardDiff.jacobian!</code>.</p><h2><a class="nav-anchor" id="SIMD-Vectorization-1" href="#SIMD-Vectorization-1">SIMD Vectorization</a></h2><p>Many operations on ForwardDiff&#39;s dual numbers are amenable to <a href="https://en.wikipedia.org/wiki/SIMD#Hardware">SIMD vectorization</a>. For some ForwardDiff benchmarks, we&#39;ve seen SIMD vectorization yield <a href="https://github.com/JuliaDiff/ForwardDiff.jl/issues/98#issuecomment-253149761">speedups of almost 3x</a>.</p><p>To enable SIMD optimizations, start your Julia process with the <code>-O3</code> flag. This flag enables <a href="http://llvm.org/docs/Vectorizers.html#the-slp-vectorizer">LLVM&#39;s SLPVectorizerPass</a> during compilation, which attempts to automatically insert SIMD instructions where possible for certain arithmetic operations.</p><p>Here&#39;s an example of LLVM bitcode generated for an addition of two <code>Dual</code> numbers without SIMD instructions (i.e. not starting Julia with <code>-O3</code>):</p><pre><code class="language-julia">julia&gt; using ForwardDiff: Dual
 
 julia&gt; a = Dual(1., 2., 3., 4.)
-Dual{Void}(1.0,2.0,3.0,4.0)
+Dual{Nothing}(1.0,2.0,3.0,4.0)
 
 julia&gt; b = Dual(5., 6., 7., 8.)
-Dual{Void}(5.0,6.0,7.0,8.0)
+Dual{Nothing}(5.0,6.0,7.0,8.0)
 
 julia&gt; @code_llvm a + b
 
