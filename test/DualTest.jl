@@ -384,9 +384,6 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test transpose(FDNUM) === FDNUM
     @test transpose(NESTED_FDNUM) === NESTED_FDNUM
 
-    @test ctranspose(FDNUM) === FDNUM
-    @test ctranspose(NESTED_FDNUM) === NESTED_FDNUM
-
     @test abs(-FDNUM) === FDNUM
     @test abs(FDNUM) === FDNUM
     @test abs(-NESTED_FDNUM) === NESTED_FDNUM
