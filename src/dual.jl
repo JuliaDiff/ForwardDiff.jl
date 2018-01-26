@@ -317,7 +317,7 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V
 @inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
 
 for (M, f, arity) in DiffRules.diffrules()
-    in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/))) && continue
+    in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-))) && continue
     if arity == 1
         eval(unary_dual_definition(M, f))
     elseif arity == 2
@@ -330,6 +330,31 @@ end
 #################
 # Special Cases #
 #################
+
+# +/- #
+#-----#
+
+@define_binary_dual_op(
+    Base.:+,
+    begin
+        vx, vy = value(x), value(y)
+        Dual{Txy}(vx + vy, partials(x) + partials(y))
+    end,
+    Dual{Tx}(value(x) + y, partials(x)),
+    Dual{Ty}(x + value(y), partials(y))
+)
+
+@define_binary_dual_op(
+    Base.:-,
+    begin
+        vx, vy = value(x), value(y)
+        Dual{Txy}(vx - vy, partials(x) - partials(y))
+    end,
+    Dual{Tx}(value(x) - y, partials(x)),
+    Dual{Ty}(x - value(y), -partials(y))
+)
+
+@inline Base.:-(d::Dual{T}) where {T} = Dual{T}(-value(d), -partials(d))
 
 # * #
 #---#
