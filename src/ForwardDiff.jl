@@ -5,6 +5,7 @@ module ForwardDiff
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
+using Random
 using Compat
 
 import NaNMath
