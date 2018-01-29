@@ -94,14 +94,15 @@ partials(::Type{T}, d::Dual{S}, i...) where {T,S} = throw(DualMismatchError(T,S)
 ####################################
 
 macro define_binary_dual_op(f, xy_body, x_body, y_body)
+    FD = ForwardDiff
     defs = quote
-        @inline $(f)(x::Dual{Txy}, y::Dual{Txy}) where {Txy} = $xy_body
-        @inline $(f)(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} = Ty ≺ Tx ? $x_body : $y_body
+        @inline $(f)(x::$FD.Dual{Txy}, y::$FD.Dual{Txy}) where {Txy} = $xy_body
+        @inline $(f)(x::$FD.Dual{Tx}, y::$FD.Dual{Ty}) where {Tx,Ty} = Ty ≺ Tx ? $x_body : $y_body
     end
     for R in AMBIGUOUS_TYPES
         expr = quote
-            @inline $(f)(x::Dual{Tx}, y::$R) where {Tx} = $x_body
-            @inline $(f)(x::$R, y::Dual{Ty}) where {Ty} = $y_body
+            @inline $(f)(x::$FD.Dual{Tx}, y::$R) where {Tx} = $x_body
+            @inline $(f)(x::$R, y::$FD.Dual{Ty}) where {Ty} = $y_body
         end
         append!(defs.args, expr.args)
     end
@@ -109,12 +110,13 @@ macro define_binary_dual_op(f, xy_body, x_body, y_body)
 end
 
 macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_body, z_body)
+    FD = ForwardDiff
     defs = quote
-        @inline $(f)(x::Dual{Txyz}, y::Dual{Txyz}, z::Dual{Txyz}) where {Txyz} = $xyz_body
-        @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::Dual{Tz}) where {Txy,Tz} = Tz ≺ Txy ? $xy_body : $z_body
-        @inline $(f)(x::Dual{Txz}, y::Dual{Ty}, z::Dual{Txz}) where {Txz,Ty} = Ty ≺ Txz ? $xz_body : $y_body
-        @inline $(f)(x::Dual{Tx}, y::Dual{Tyz}, z::Dual{Tyz}) where {Tx,Tyz} = Tyz ≺ Tx ? $x_body  : $yz_body
-        @inline function $(f)(x::Dual{Tx}, y::Dual{Ty}, z::Dual{Tz}) where {Tx,Ty,Tz}
+        @inline $(f)(x::$FD.Dual{Txyz}, y::$FD.Dual{Txyz}, z::$FD.Dual{Txyz}) where {Txyz} = $xyz_body
+        @inline $(f)(x::$FD.Dual{Txy}, y::$FD.Dual{Txy}, z::$FD.Dual{Tz}) where {Txy,Tz} = Tz ≺ Txy ? $xy_body : $z_body
+        @inline $(f)(x::$FD.Dual{Txz}, y::$FD.Dual{Ty}, z::$FD.Dual{Txz}) where {Txz,Ty} = Ty ≺ Txz ? $xz_body : $y_body
+        @inline $(f)(x::$FD.Dual{Tx}, y::$FD.Dual{Tyz}, z::$FD.Dual{Tyz}) where {Tx,Tyz} = Tyz ≺ Tx ? $x_body  : $yz_body
+        @inline function $(f)(x::$FD.Dual{Tx}, y::$FD.Dual{Ty}, z::$FD.Dual{Tz}) where {Tx,Ty,Tz}
             if Tz ≺ Tx && Ty ≺ Tx
                 $x_body
             elseif Tz ≺ Ty
@@ -126,27 +128,27 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
     end
     for R in AMBIGUOUS_TYPES
         expr = quote
-            @inline $(f)(x::Dual{Txy}, y::Dual{Txy}, z::$R) where {Txy} = $xy_body
-            @inline $(f)(x::Dual{Tx}, y::Dual{Ty}, z::$R)  where {Tx, Ty} = Ty ≺ Tx ? $x_body : $y_body
-            @inline $(f)(x::Dual{Txz}, y::$R, z::Dual{Txz}) where {Txz} = $xz_body
-            @inline $(f)(x::Dual{Tx}, y::$R, z::Dual{Tz}) where {Tx,Tz} = Tz ≺ Tx ? $x_body : $z_body
-            @inline $(f)(x::$R, y::Dual{Tyz}, z::Dual{Tyz}) where {Tyz} = $yz_body
-            @inline $(f)(x::$R, y::Dual{Ty}, z::Dual{Tz}) where {Ty,Tz} = Tz ≺ Ty ? $y_body : $z_body
+            @inline $(f)(x::$FD.Dual{Txy}, y::$FD.Dual{Txy}, z::$R) where {Txy} = $xy_body
+            @inline $(f)(x::$FD.Dual{Tx}, y::$FD.Dual{Ty}, z::$R)  where {Tx, Ty} = Ty ≺ Tx ? $x_body : $y_body
+            @inline $(f)(x::$FD.Dual{Txz}, y::$R, z::$FD.Dual{Txz}) where {Txz} = $xz_body
+            @inline $(f)(x::$FD.Dual{Tx}, y::$R, z::$FD.Dual{Tz}) where {Tx,Tz} = Tz ≺ Tx ? $x_body : $z_body
+            @inline $(f)(x::$R, y::$FD.Dual{Tyz}, z::$FD.Dual{Tyz}) where {Tyz} = $yz_body
+            @inline $(f)(x::$R, y::$FD.Dual{Ty}, z::$FD.Dual{Tz}) where {Ty,Tz} = Tz ≺ Ty ? $y_body : $z_body
         end
         append!(defs.args, expr.args)
         for Q in AMBIGUOUS_TYPES
             Q === R && continue
             expr = quote
-                @inline $(f)(x::Dual{Tx}, y::$R, z::$Q) where {Tx} = $x_body
-                @inline $(f)(x::$R, y::Dual{Ty}, z::$Q) where {Ty} = $y_body
-                @inline $(f)(x::$R, y::$Q, z::Dual{Tz}) where {Tz} = $z_body
+                @inline $(f)(x::$FD.Dual{Tx}, y::$R, z::$Q) where {Tx} = $x_body
+                @inline $(f)(x::$R, y::$FD.Dual{Ty}, z::$Q) where {Ty} = $y_body
+                @inline $(f)(x::$R, y::$Q, z::$FD.Dual{Tz}) where {Tz} = $z_body
             end
             append!(defs.args, expr.args)
         end
         expr = quote
-            @inline $(f)(x::Dual{Tx}, y::$R, z::$R) where {Tx} = $x_body
-            @inline $(f)(x::$R, y::Dual{Ty}, z::$R) where {Ty} = $y_body
-            @inline $(f)(x::$R, y::$R, z::Dual{Tz}) where {Tz} = $z_body
+            @inline $(f)(x::$FD.Dual{Tx}, y::$R, z::$R) where {Tx} = $x_body
+            @inline $(f)(x::$R, y::$FD.Dual{Ty}, z::$R) where {Ty} = $y_body
+            @inline $(f)(x::$R, y::$R, z::$FD.Dual{Tz}) where {Tz} = $z_body
         end
         append!(defs.args, expr.args)
     end
@@ -154,20 +156,22 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
 end
 
 function unary_dual_definition(M, f)
+    FD = ForwardDiff
     work = qualified_cse!(quote
         val = $M.$f(x)
         deriv = $(DiffRules.diffrule(M, f, :x))
     end)
     return quote
-        @inline function $M.$f(d::Dual{T}) where T
-            x = value(d)
+        @inline function $M.$f(d::$FD.Dual{T}) where T
+            x = $FD.value(d)
             $work
-            return Dual{T}(val, deriv * partials(d))
+            return $FD.Dual{T}(val, deriv * $FD.partials(d))
         end
     end
 end
 
 function binary_dual_definition(M, f)
+    FD = ForwardDiff
     dvx, dvy = DiffRules.diffrule(M, f, :vx, :vy)
     xy_work = qualified_cse!(quote
         val = $M.$f(vx, vy)
@@ -188,19 +192,19 @@ function binary_dual_definition(M, f)
         @define_binary_dual_op(
             $M.$f,
             begin
-                vx, vy = value(x), value(y)
+                vx, vy = $FD.value(x), $FD.value(y)
                 $xy_work
-                return Dual{Txy}(val, _mul_partials(partials(x), partials(y), dvx, dvy))
+                return $FD.Dual{Txy}(val, $FD._mul_partials($FD.partials(x), $FD.partials(y), dvx, dvy))
             end,
             begin
-                vx = value(x)
+                vx = $FD.value(x)
                 $x_work
-                return Dual{Tx}(val, dvx * partials(x))
+                return $FD.Dual{Tx}(val, dvx * $FD.partials(x))
             end,
             begin
-                vy = value(y)
+                vy = $FD.value(y)
                 $y_work
-                return Dual{Ty}(val, dvy * partials(y))
+                return $FD.Dual{Ty}(val, dvy * $FD.partials(y))
             end
         )
     end
