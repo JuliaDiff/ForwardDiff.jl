@@ -6,6 +6,7 @@ using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
 using Compat
+using Compat.Random
 
 import NaNMath
 import SpecialFunctions
