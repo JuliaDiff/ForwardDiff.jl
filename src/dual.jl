@@ -65,9 +65,9 @@ end
 @inline partials(x::Real) = Partials{0,typeof(x)}(tuple())
 @inline partials(d::Dual) = d.partials
 @inline partials(x::Real, i...) = zero(x)
-@inline partials(d::Dual, i) = d.partials[i]
-@inline partials(d::Dual, i, j) = partials(d, i).partials[j]
-@inline partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
+@inline Base.@propagate_inbounds partials(d::Dual, i) = d.partials[i]
+@inline Base.@propagate_inbounds partials(d::Dual, i, j) = partials(d, i).partials[j]
+@inline Base.@propagate_inbounds partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
 
 @inline partials(::Type{T}, x::Real, i...) where T = partials(x, i...)
 @inline partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
