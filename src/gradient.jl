@@ -41,9 +41,11 @@ end
 
 @inline gradient(f, x::SArray)                      = vector_mode_gradient(f, x)
 @inline gradient(f, x::SArray, cfg::GradientConfig) = gradient(f, x)
+@inline gradient(f, x::SArray, cfg::GradientConfig, ::Val) = gradient(f, x)
 
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_gradient!(result, f, x)
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::GradientConfig) = gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::GradientConfig, ::Val) = gradient!(result, f, x)
 
 #####################
 # result extraction #

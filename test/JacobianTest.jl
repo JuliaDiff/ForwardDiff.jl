@@ -177,6 +177,9 @@ actual = ForwardDiff.jacobian(diff, x)
 @test ForwardDiff.jacobian(diff, sx) == actual
 @test ForwardDiff.jacobian(diff, sx, cfg) == actual
 @test ForwardDiff.jacobian(diff, sx, scfg) == actual
+@test ForwardDiff.jacobian(diff, sx, scfg) isa StaticArray
+@test ForwardDiff.jacobian(diff, sx, scfg, Val{false}()) == actual
+@test ForwardDiff.jacobian(diff, sx, scfg, Val{false}()) isa StaticArray
 
 out = similar(x, 6, 9)
 ForwardDiff.jacobian!(out, diff, sx)

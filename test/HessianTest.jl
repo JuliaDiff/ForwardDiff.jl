@@ -105,6 +105,9 @@ actual = ForwardDiff.hessian(prod, x)
 @test ForwardDiff.hessian(prod, sx) == actual
 @test ForwardDiff.hessian(prod, sx, cfg) == actual
 @test ForwardDiff.hessian(prod, sx, scfg) == actual
+@test ForwardDiff.hessian(prod, sx, scfg) isa StaticArray
+@test ForwardDiff.hessian(prod, sx, scfg, Val{false}()) == actual
+@test ForwardDiff.hessian(prod, sx, scfg, Val{false}()) isa StaticArray
 
 out = similar(x, 9, 9)
 ForwardDiff.hessian!(out, prod, sx)
