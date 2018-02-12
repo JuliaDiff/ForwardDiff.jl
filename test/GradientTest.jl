@@ -94,6 +94,9 @@ actual = ForwardDiff.gradient(prod, x)
 @test ForwardDiff.gradient(prod, sx) == actual
 @test ForwardDiff.gradient(prod, sx, cfg) == actual
 @test ForwardDiff.gradient(prod, sx, scfg) == actual
+@test ForwardDiff.gradient(prod, sx, scfg) isa StaticArray
+@test ForwardDiff.gradient(prod, sx, scfg, Val{false}()) == actual
+@test ForwardDiff.gradient(prod, sx, scfg, Val{false}()) isa StaticArray
 
 out = similar(x)
 ForwardDiff.gradient!(out, prod, sx)

@@ -80,9 +80,11 @@ end
 
 @inline jacobian(f, x::SArray) = vector_mode_jacobian(f, x)
 @inline jacobian(f, x::SArray, cfg::JacobianConfig) = jacobian(f, x)
+@inline jacobian(f, x::SArray, cfg::JacobianConfig, ::Val) = jacobian(f, x)
 
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_jacobian!(result, f, x)
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::JacobianConfig) = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::JacobianConfig, ::Val) = jacobian!(result, f, x)
 
 #####################
 # result extraction #
