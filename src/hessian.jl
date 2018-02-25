@@ -78,3 +78,27 @@ function hessian!(result::ImmutableDiffResult, f::F, x::SArray{S,V}) where {F,S,
     result = DiffResults.value!(result, val)
     return result
 end
+
+hessian(f, x::FieldVector) = jacobian(y -> gradient(f, y), x)
+
+hessian(f, x::FieldVector, cfg::HessianConfig) = hessian(f, x)
+
+hessian!(result::AbstractArray, f, x::FieldVector) = jacobian!(result, y -> gradient(f, y), x)
+
+hessian!(result::MutableDiffResult, f, x::FieldVector) = hessian!(result, f, x, HessianConfig(f, result, x))
+
+hessian!(result::ImmutableDiffResult, f, x::FieldVector, cfg::HessianConfig) = hessian!(result, f, x)
+
+function hessian!(result::ImmutableDiffResult, f::F, x::FieldVector{N,V}) where {F,N,V}
+    T = typeof(Tag(f,V))
+    d1 = dualize(T, x)
+    d2 = dualize(T, d1)
+    fd2 = f(d2)
+    val = value(T,value(T,fd2))
+    grad = extract_gradient(T,value(T,fd2), x)
+    hess = extract_jacobian(T,partials(T,fd2), x)
+    result = DiffResults.hessian!(result, hess)
+    result = DiffResults.gradient!(result, grad)
+    result = DiffResults.value!(result, val)
+    return result
+end
