@@ -29,6 +29,18 @@ end
 
 @inline static_dual_eval(::Type{T}, f, x::SArray) where {T} = f(dualize(T, x))
 
+########### FieldVectors ###########
+@generated function dualize(::Type{T}, x::FieldVector{N,V}) where {T,V,N}
+    dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
+    return quote
+        chunk = Chunk{N}()
+        $(Expr(:meta, :inline))
+        return similar_type($x, Dual{T,V,N})($(dx))
+    end
+end
+@inline static_dual_eval(::Type{T}, f, x::FieldVector) where {T} = f(dualize(T, x))
+####################################
+
 function vector_mode_dual_eval(f, x, cfg::Union{JacobianConfig,GradientConfig})
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)

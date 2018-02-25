@@ -45,6 +45,12 @@ end
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_gradient!(result, f, x)
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::GradientConfig) = gradient!(result, f, x)
 
+@inline gradient(f, x::FieldVector)                      = vector_mode_gradient(f, x)
+@inline gradient(f, x::FieldVector, cfg::GradientConfig) = gradient(f, x)
+
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::FieldVector) = vector_mode_gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::FieldVector, cfg::GradientConfig) = gradient!(result, f, x)
+
 #####################
 # result extraction #
 #####################
@@ -54,6 +60,14 @@ end
     return quote
         $(Expr(:meta, :inline))
         return SArray{S}($result)
+    end
+end
+
+@generated function extract_gradient(::Type{T}, y::Real, x::FieldVector{N,V}) where {T,N,V}
+    result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        return similar_type($x,V)($result)
     end
 end
 
@@ -108,6 +122,16 @@ end
 end
 
 @inline function vector_mode_gradient!(result, f::F, x::SArray{S,V}) where {F,S,V}
+    T = typeof(Tag(f,V))
+    return extract_gradient!(T, result, static_dual_eval(T, f, x))
+end
+
+@inline function vector_mode_gradient(f::F, x::FieldVector{N,V}) where {F,N,V}
+    T = typeof(Tag(f,V))
+    return extract_gradient(T, static_dual_eval(T, f, x), x)
+end
+
+@inline function vector_mode_gradient!(result, f::F, x::FieldVector{N,V}) where {F,N,V}
     T = typeof(Tag(f,V))
     return extract_gradient!(T, result, static_dual_eval(T, f, x))
 end
