@@ -78,46 +78,29 @@ function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray
     return result
 end
 
-@inline jacobian(f, x::SArray) = vector_mode_jacobian(f, x)
-@inline jacobian(f, x::SArray, cfg::JacobianConfig) = jacobian(f, x)
+@inline jacobian(f, x::Union{FieldVector, SArray}) = vector_mode_jacobian(f, x)
+@inline jacobian(f, x::Union{FieldVector, SArray}, cfg::JacobianConfig) = jacobian(f, x)
 
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::JacobianConfig) = jacobian!(result, f, x)
-
-@inline jacobian(f, x::FieldVector) = vector_mode_jacobian(f, x)
-@inline jacobian(f, x::FieldVector, cfg::JacobianConfig) = jacobian(f, x)
-
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::FieldVector) = vector_mode_jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::FieldVector, cfg::JacobianConfig) = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::Union{FieldVector, SArray}) = vector_mode_jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::Union{FieldVector, SArray}, cfg::JacobianConfig) = jacobian!(result, f, x)
 
 #####################
 # result extraction #
 #####################
 
-@generated function extract_jacobian(::Type{T}, ydual::SArray{SY,VY,DY,M},
-                                     x::SArray{SX,VX,DX,N}) where {T,SY,VY,DY,M,SX,VX,DX,N}
+@generated function extract_jacobian(::Type{T}, ydual::Union{FieldVector, SArray},
+                                     x::Union{FieldVector, SArray}) where {T}
+    M = length(ydual)
+    N = length(x)
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        return SArray{Tuple{M,N}}($result)
+        return SArray{Tuple{$M,$N}}($result)
     end
 end
 
-function extract_jacobian(::Type{T}, ydual::AbstractArray, x::SArray{S,V,D,N}) where {T,S,V,D,N}
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
-    return extract_jacobian!(T, result, ydual, N)
-end
-
-@generated function extract_jacobian(::Type{T}, ydual::FieldVector{M,VY},
-                                     x::FieldVector{N,VX}) where {T,M,VY,N,VX}
-    result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
-    return quote
-        $(Expr(:meta, :inline))
-        return SArray{Tuple{M,N}}($result)
-    end
-end
-
-function extract_jacobian(::Type{T}, ydual::AbstractArray, x::FieldVector{N,VX}) where {T,N,VX}
+function extract_jacobian(::Type{T}, ydual::AbstractArray, x::Union{FieldVector, SArray}) where {T}
+    N = length(x)
     result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     return extract_jacobian!(T, result, ydual, N)
 end
@@ -185,12 +168,15 @@ function vector_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T,V,N}) 
     return result
 end
 
-@inline function vector_mode_jacobian(f::F, x::SArray{S,V}) where {F,S,V}
+@inline function vector_mode_jacobian(f::F, x::Union{FieldVector, SArray}) where {F}
+    V = eltype(x)
     T = typeof(Tag(f,V))
     return extract_jacobian(T, static_dual_eval(T, f, x), x)
 end
 
-@inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+@inline function vector_mode_jacobian!(result, f::F, x::Union{FieldVector, SArray}) where {F}
+    N = length(x)
+    V = eltype(x)
     T = typeof(Tag(f,V))
     ydual = static_dual_eval(T, f, x)
     result = extract_jacobian!(T, result, ydual, N)
@@ -198,7 +184,8 @@ end
     return result
 end
 
-@inline function vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
+@inline function vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::Union{FieldVector, SArray}) where {F}
+    V = eltype(x)
     T = typeof(Tag(f,V))
     ydual = static_dual_eval(T, f, x)
     result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
@@ -206,26 +193,6 @@ end
     return result
 end
 
-@inline function vector_mode_jacobian(f::F, x::FieldVector{N,V}) where {F,N,V}
-    T = typeof(Tag(f,V))
-    return extract_jacobian(T, static_dual_eval(T, f, x), x)
-end
-
-@inline function vector_mode_jacobian!(result, f::F, x::FieldVector{N,V}) where {F,N,V}
-    T = typeof(Tag(f,V))
-    ydual = static_dual_eval(T, f, x)
-    result = extract_jacobian!(T, result, ydual, N)
-    result = extract_value!(T, result, ydual)
-    return result
-end
-
-@inline function vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::FieldVector{N,V}) where {F,N,V}
-    T = typeof(Tag(f,V))
-    ydual = static_dual_eval(T, f, x)
-    result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
-    result = DiffResults.value!(d -> value(T,d), result, ydual)
-    return result
-end
 # chunk mode #
 #------------#
 

@@ -153,4 +153,72 @@ sresult3 = ForwardDiff.hessian!(sresult3, prod, sx, ForwardDiff.HessianConfig(pr
 @test DiffResults.hessian(sresult2) == DiffResults.hessian(result)
 @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 
+
+println("  ...testing specialized FieldVector codepaths")
+
+struct Point3D{R<:Real} <: FieldVector{3,R}
+    x::R
+    y::R
+    z::R
+end
+StaticArrays.similar_type(p::Type{P}, ::Type{R}, size::Size{(3,)}) where {P<:Point3D, R<:Real} = Point3D{R}
+
+x = rand(3, 1)
+fx = Point3D(x)
+
+cfg = ForwardDiff.HessianConfig(nothing, x)
+fcfg = ForwardDiff.HessianConfig(nothing, fx)
+
+actual = ForwardDiff.hessian(prod, x)
+@test ForwardDiff.hessian(prod, fx) == actual
+@test ForwardDiff.hessian(prod, fx, cfg) == actual
+@test ForwardDiff.hessian(prod, fx, fcfg) == actual
+
+out = similar(x, length(x), length(x))
+ForwardDiff.hessian!(out, prod, fx)
+@test out == actual
+
+out = similar(x, length(x), length(x))
+ForwardDiff.hessian!(out, prod, fx, cfg)
+@test out == actual
+
+out = similar(x, length(x), length(x))
+ForwardDiff.hessian!(out, prod, fx, fcfg)
+@test out == actual
+
+result = DiffResults.HessianResult(x)
+result = ForwardDiff.hessian!(result, prod, x)
+
+result1 = DiffResults.HessianResult(x)
+result2 = DiffResults.HessianResult(x)
+result3 = DiffResults.HessianResult(x)
+result1 = ForwardDiff.hessian!(result1, prod, fx)
+result2 = ForwardDiff.hessian!(result2, prod, fx, ForwardDiff.HessianConfig(prod, result2, x, ForwardDiff.Chunk(x), nothing))
+result3 = ForwardDiff.hessian!(result3, prod, fx, ForwardDiff.HessianConfig(prod, result3, x, ForwardDiff.Chunk(x), nothing))
+@test DiffResults.value(result1) == DiffResults.value(result)
+@test DiffResults.value(result2) == DiffResults.value(result)
+@test DiffResults.value(result3) == DiffResults.value(result)
+@test DiffResults.gradient(result1) == DiffResults.gradient(result)
+@test DiffResults.gradient(result2) == DiffResults.gradient(result)
+@test DiffResults.gradient(result3) == DiffResults.gradient(result)
+@test DiffResults.hessian(result1) == DiffResults.hessian(result)
+@test DiffResults.hessian(result2) == DiffResults.hessian(result)
+@test DiffResults.hessian(result3) == DiffResults.hessian(result)
+
+fresult1 = DiffResults.HessianResult(fx)
+fresult2 = DiffResults.HessianResult(fx)
+fresult3 = DiffResults.HessianResult(fx)
+fresult1 = ForwardDiff.hessian!(fresult1, prod, fx)
+fresult2 = ForwardDiff.hessian!(fresult2, prod, fx, ForwardDiff.HessianConfig(prod, fresult2, x, ForwardDiff.Chunk(x), nothing))
+fresult3 = ForwardDiff.hessian!(fresult3, prod, fx, ForwardDiff.HessianConfig(prod, fresult3, x, ForwardDiff.Chunk(x), nothing))
+@test DiffResults.value(fresult1) == DiffResults.value(result)
+@test DiffResults.value(fresult2) == DiffResults.value(result)
+@test DiffResults.value(fresult3) == DiffResults.value(result)
+@test DiffResults.gradient(fresult1) == DiffResults.gradient(result)[:]
+@test DiffResults.gradient(fresult2) == DiffResults.gradient(result)[:]
+@test DiffResults.gradient(fresult3) == DiffResults.gradient(result)[:]
+@test DiffResults.hessian(fresult1) == DiffResults.hessian(result)
+@test DiffResults.hessian(fresult2) == DiffResults.hessian(result)
+@test DiffResults.hessian(fresult3) == DiffResults.hessian(result)
+
 end # module
