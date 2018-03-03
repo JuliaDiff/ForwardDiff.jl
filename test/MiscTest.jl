@@ -6,6 +6,7 @@ using Compat
 using Compat.Test
 using ForwardDiff
 using DiffTests
+using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -136,6 +137,58 @@ h = ForwardDiff.hessian(y -> sum(hypot.(x, y)), y)
 for i in 1:3, j in 1:3
     i != j && (@test h[i, j] ≈ 0.0)
 end
+
+################
+# FieldVectors #
+################
+
+# issue 305
+
+# Test mutable FieldVector
+
+mutable struct MPoint{R<:Real} <: FieldVector{2,R}
+    x::R
+    y::R
+end
+
+StaticArrays.similar_type(p::Type{P}, ::Type{R}, size::Size{(2,)}) where {P<:MPoint, R<:Real} = MPoint{R}
+
+f305scalar(x::MPoint) = sum(x+x)
+@test ForwardDiff.gradient(f305scalar, MPoint(1.0, 2.0)) == MPoint(2.0, 2.0)
+@test ForwardDiff.hessian(f305scalar, MPoint(1.0, 2.0)) == zeros(2,2)
+
+f305vector(x::MPoint) = x+x
+@test ForwardDiff.jacobian(f305vector, MPoint(1.0, 2.0)) == [2.0 0.0; 0.0 2.0]
+
+# Test correct dispatch in differentiation
+
+struct DifferentPoint{R<:Real} <: FieldVector{2,R}
+    x::R
+    y::R
+end
+
+StaticArrays.similar_type(p::Type{P}, ::Type{R}, size::Size{(2,)}) where {P<:DifferentPoint, R<:Real} = DifferentPoint{R}
+
+f305dispatch(p) = sum(p.^2)
+f305dispatch(p::MPoint) = p.x^2
+f305dispatch(p::DifferentPoint) = p.y^2
+
+@test ForwardDiff.gradient(f305dispatch, [1.0, 2.0]) == [2.0, 4.0]
+@test ForwardDiff.gradient(f305dispatch, MPoint(1.0, 2.0)) == [2.0, 0.0]
+@test ForwardDiff.gradient(f305dispatch, DifferentPoint(1.0, 2.0)) == [0.0, 4.0]
+
+@test ForwardDiff.hessian(f305dispatch, [1.0, 2.0]) == 2.0*eye(2)
+@test ForwardDiff.hessian(f305dispatch, MPoint(1.0, 2.0)) == diagm([2.0, 0.0]) # [2.0 0.0; 0.0 0.0]
+@test ForwardDiff.hessian(f305dispatch, DifferentPoint(1.0, 2.0)) == diagm([0.0, 2.0]) # [0.0 0.0; 0.0 2.0]
+
+f305dispatchvec(p) = p.^2
+f305dispatchvec(p::MPoint) = MPoint(p.x^2, 1.0)
+f305dispatchvec(p::DifferentPoint) = DifferentPoint(p.y^2, 1.0)
+
+@test ForwardDiff.jacobian(f305dispatchvec, [1.0, 2.0]) == diagm([2.0, 4.0])
+@test ForwardDiff.jacobian(f305dispatchvec, MPoint(1.0, 2.0)) == diagm([2.0, 0.0])
+@test ForwardDiff.jacobian(f305dispatchvec, DifferentPoint(1.0, 2.0)) == [0.0 4.0; 0.0 0.0]
+
 
 ########
 # misc #
