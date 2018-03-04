@@ -182,8 +182,8 @@ f305dispatch(p::DifferentPoint) = p.y^2
 @test ForwardDiff.hessian(f305dispatch, DifferentPoint(1.0, 2.0)) == diagm([0.0, 2.0]) # [0.0 0.0; 0.0 2.0]
 
 f305dispatchvec(p) = p.^2
-f305dispatchvec(p::MPoint) = MPoint(p.x^2, 1.0)
-f305dispatchvec(p::DifferentPoint) = DifferentPoint(p.y^2, 1.0)
+f305dispatchvec(p::MPoint) = MPoint(p.x^2, one(eltype(p)))
+f305dispatchvec(p::DifferentPoint) = DifferentPoint(p.y^2, one(eltype(p)))
 
 @test ForwardDiff.jacobian(f305dispatchvec, [1.0, 2.0]) == diagm([2.0, 4.0])
 @test ForwardDiff.jacobian(f305dispatchvec, MPoint(1.0, 2.0)) == diagm([2.0, 0.0])
