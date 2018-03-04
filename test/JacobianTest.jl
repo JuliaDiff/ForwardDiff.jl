@@ -220,4 +220,66 @@ sresult3 = ForwardDiff.jacobian!(sresult3, diff, sx, scfg)
 @test DiffResults.jacobian(sresult2) == DiffResults.jacobian(result)
 @test DiffResults.jacobian(sresult3) == DiffResults.jacobian(result)
 
+
+println("  ...testing specialized FieldVector codepaths")
+
+struct Point3D{R<:Real} <: FieldVector{3,R}
+    x::R
+    y::R
+    z::R
+end
+StaticArrays.similar_type(p::Type{P}, ::Type{R}, size::Size{(3,)}) where {P<:Point3D, R<:Real} = Point3D{R}
+
+x = rand(3, 1)
+fx = Point3D(x)
+
+cfg = ForwardDiff.JacobianConfig(nothing, x)
+fcfg = ForwardDiff.JacobianConfig(nothing, fx)
+
+actual = ForwardDiff.jacobian(diff, x)
+@test ForwardDiff.jacobian(diff, fx) == actual
+@test ForwardDiff.jacobian(diff, fx, cfg) == actual
+@test ForwardDiff.jacobian(diff, fx, fcfg) == actual
+
+out = similar(x, 2, 3)
+ForwardDiff.jacobian!(out, diff, fx)
+@test out == actual
+
+out = similar(x, 2, 3)
+ForwardDiff.jacobian!(out, diff, fx, cfg)
+@test out == actual
+
+out = similar(x, 2, 3)
+ForwardDiff.jacobian!(out, diff, fx, fcfg)
+@test out == actual
+
+result = DiffResults.JacobianResult(similar(x, 2), x)
+result = ForwardDiff.jacobian!(result, diff, x)
+
+result1 = DiffResults.JacobianResult(similar(fx, 2), fx)
+result2 = DiffResults.JacobianResult(similar(fx, 2), fx)
+result3 = DiffResults.JacobianResult(similar(fx, 2), fx)
+result1 = ForwardDiff.jacobian!(result1, diff, fx)
+result2 = ForwardDiff.jacobian!(result2, diff, fx, cfg)
+result3 = ForwardDiff.jacobian!(result3, diff, fx, fcfg)
+@test DiffResults.value(result1) == DiffResults.value(result)
+@test DiffResults.value(result2) == DiffResults.value(result)
+@test DiffResults.value(result3) == DiffResults.value(result)
+@test DiffResults.jacobian(result1) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(result2) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(result3) == DiffResults.jacobian(result)
+
+sy = @SVector fill(zero(eltype(fx)), 2)
+fresult1 = DiffResults.JacobianResult(sy, fx)
+fresult2 = DiffResults.JacobianResult(sy, fx)
+fresult3 = DiffResults.JacobianResult(sy, fx)
+fresult1 = ForwardDiff.jacobian!(fresult1, diff, fx)
+fresult2 = ForwardDiff.jacobian!(fresult2, diff, fx, cfg)
+fresult3 = ForwardDiff.jacobian!(fresult3, diff, fx, fcfg)
+@test DiffResults.value(fresult1) == DiffResults.value(result)
+@test DiffResults.value(fresult2) == DiffResults.value(result)
+@test DiffResults.value(fresult3) == DiffResults.value(result)
+@test DiffResults.jacobian(fresult1) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(fresult2) == DiffResults.jacobian(result)
+@test DiffResults.jacobian(fresult3) == DiffResults.jacobian(result)
 end # module

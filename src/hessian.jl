@@ -55,17 +55,18 @@ function hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig{T}
     return result
 end
 
-hessian(f, x::SArray) = jacobian(y -> gradient(f, y), x)
+hessian(f, x::Union{FieldVector, SArray}) = jacobian(y -> gradient(f, y), x)
 
-hessian(f, x::SArray, cfg::HessianConfig) = hessian(f, x)
+hessian(f, x::Union{FieldVector, SArray}, cfg::HessianConfig) = hessian(f, x)
 
-hessian!(result::AbstractArray, f, x::SArray) = jacobian!(result, y -> gradient(f, y), x)
+hessian!(result::AbstractArray, f, x::Union{FieldVector, SArray}) = jacobian!(result, y -> gradient(f, y), x)
 
-hessian!(result::MutableDiffResult, f, x::SArray) = hessian!(result, f, x, HessianConfig(f, result, x))
+hessian!(result::MutableDiffResult, f, x::Union{FieldVector, SArray}) = hessian!(result, f, x, HessianConfig(f, result, x))
 
-hessian!(result::ImmutableDiffResult, f, x::SArray, cfg::HessianConfig) = hessian!(result, f, x)
+hessian!(result::ImmutableDiffResult, f, x::Union{FieldVector, SArray}, cfg::HessianConfig) = hessian!(result, f, x)
 
-function hessian!(result::ImmutableDiffResult, f::F, x::SArray{S,V}) where {F,S,V}
+function hessian!(result::ImmutableDiffResult, f::F, x::Union{FieldVector, SArray}) where {F}
+    V = eltype(x)
     T = typeof(Tag(f,V))
     d1 = dualize(T, x)
     d2 = dualize(T, d1)

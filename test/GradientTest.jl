@@ -136,5 +136,65 @@ sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
 @test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
 @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
 
+println("  ...testing specialized FieldVector codepaths")
+
+struct Point3D{R<:Real} <: FieldVector{3,R}
+    x::R
+    y::R
+    z::R
+end
+StaticArrays.similar_type(p::Type{P}, ::Type{R}, size::Size{(3,)}) where {P<:Point3D, R<:Real} = Point3D{R}
+
+x = rand(3, 1)
+fx = Point3D(x)
+
+cfg = ForwardDiff.GradientConfig(nothing, x)
+fcfg = ForwardDiff.GradientConfig(nothing, fx)
+
+actual = ForwardDiff.gradient(prod, x)
+@test ForwardDiff.gradient(prod, fx) == actual[:]
+@test ForwardDiff.gradient(prod, fx, cfg) == actual[:]
+@test ForwardDiff.gradient(prod, fx, fcfg) == actual[:]
+
+out = similar(x)
+ForwardDiff.gradient!(out, prod, fx)
+@test out == actual
+
+out = similar(x)
+ForwardDiff.gradient!(out, prod, fx, cfg)
+@test out == actual
+
+out = similar(x)
+ForwardDiff.gradient!(out, prod, fx, fcfg)
+@test out == actual
+
+result = DiffResults.GradientResult(x)
+result = ForwardDiff.gradient!(result, prod, x)
+
+result1 = DiffResults.GradientResult(x)
+result2 = DiffResults.GradientResult(x)
+result3 = DiffResults.GradientResult(x)
+result1 = ForwardDiff.gradient!(result1, prod, fx)
+result2 = ForwardDiff.gradient!(result2, prod, fx, cfg)
+result3 = ForwardDiff.gradient!(result3, prod, fx, fcfg)
+@test DiffResults.value(result1) == DiffResults.value(result)
+@test DiffResults.value(result2) == DiffResults.value(result)
+@test DiffResults.value(result3) == DiffResults.value(result)
+@test DiffResults.gradient(result1) == DiffResults.gradient(result)
+@test DiffResults.gradient(result2) == DiffResults.gradient(result)
+@test DiffResults.gradient(result3) == DiffResults.gradient(result)
+
+fresult1 = DiffResults.GradientResult(fx)
+fresult2 = DiffResults.GradientResult(fx)
+fresult3 = DiffResults.GradientResult(fx)
+fresult1 = ForwardDiff.gradient!(fresult1, prod, fx)
+fresult2 = ForwardDiff.gradient!(fresult2, prod, fx, cfg)
+fresult3 = ForwardDiff.gradient!(fresult3, prod, fx, fcfg)
+@test DiffResults.value(fresult1) == DiffResults.value(result)
+@test DiffResults.value(fresult2) == DiffResults.value(result)
+@test DiffResults.value(fresult3) == DiffResults.value(result)
+@test DiffResults.gradient(fresult1) == DiffResults.gradient(result)[:]
+@test DiffResults.gradient(fresult2) == DiffResults.gradient(result)[:]
+@test DiffResults.gradient(fresult3) == DiffResults.gradient(result)[:]
 
 end # module

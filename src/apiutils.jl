@@ -17,17 +17,19 @@ end
 ###################################
 # vector mode function evaluation #
 ###################################
-
-@generated function dualize(::Type{T}, x::SArray{S,V,D,N}) where {T,S,V,D,N}
+@generated function dualize(::Type{T}, x::Union{FieldVector, SArray}) where {T}
+    N = length(x)
+    V = eltype(x)
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
     return quote
-        chunk = Chunk{N}()
+        chunk = Chunk{$N}()
         $(Expr(:meta, :inline))
-        return SArray{S}($(dx))
+        # return SArray{S}($(dx))
+        similar_type($x,Dual{T,$V,$N})($(dx))
     end
 end
 
-@inline static_dual_eval(::Type{T}, f, x::SArray) where {T} = f(dualize(T, x))
+@inline static_dual_eval(::Type{T}, f, x::Union{FieldVector, SArray}) where {T} = f(dualize(T, x))
 
 function vector_mode_dual_eval(f, x, cfg::Union{JacobianConfig,GradientConfig})
     xdual = cfg.duals
