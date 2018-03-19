@@ -56,4 +56,13 @@ Lagrangian2Hamiltonian(L, t, q, p)
 @test ForwardDiff.gradient(a->Lagrangian2Hamiltonian(L, t, a, p), q) == [0.0,g]
 
 
+#267: let scoping
+@noinline f83a(z, x) = x[1]
+z83a = ([(1, (2), [(3, (4, 5, [1, 2, (3, (4, 5), [5])]), (5))])])
+let z = z83a
+    g = x -> f83a(z, x)
+    h = x -> g(x)
+    @test ForwardDiff.hessian(h, [1.]) == zeros(1, 1)
+end
+
 end # module
