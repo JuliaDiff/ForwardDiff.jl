@@ -318,8 +318,6 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V
 
 @inline Base.conj(d::Dual) = d
 
-@inline Base.abs(d::Dual) = signbit(value(d)) ? -d : d
-
 for (M, f, arity) in DiffRules.diffrules()
     in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-))) && continue
     if arity == 1
