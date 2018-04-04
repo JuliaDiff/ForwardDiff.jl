@@ -29,7 +29,7 @@ Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f
 This method assumes that `isa(f(x), Real)`.
 
 """
-function gradient!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)
@@ -92,13 +92,13 @@ end
 # vector mode #
 ###############
 
-function vector_mode_gradient(f, x, cfg::GradientConfig{T}) where {T}
+function vector_mode_gradient(f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval(f, x, cfg)
     result = similar(x, valtype(ydual))
     return extract_gradient!(T, result, ydual)
 end
 
-function vector_mode_gradient!(result, f, x, cfg::GradientConfig{T}) where {T}
+function vector_mode_gradient!(result, f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval(f, x, cfg)
     result = extract_gradient!(T, result, ydual)
     return result
