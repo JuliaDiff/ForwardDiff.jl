@@ -34,6 +34,19 @@ function hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig
     return result
 end
 
+
+mutable struct GradF{R,CFG,F}
+    result::R
+    cfg::CFG
+    f::F # Add tag check on constructino of GradF???
+end
+function (x::GradF)(y, z)
+    inner_result = DiffResult(zero(eltype(y)), y)
+    gradient!(inner_result, x.f, z, x.cfg.gradient_config, Val{false}())
+    x.result = DiffResults.value!(x.result, value(DiffResults.value(inner_result)))
+    return y
+end
+
 """
     ForwardDiff.hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, result, x), check=Val{true}())
 
@@ -45,14 +58,9 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 """
 function hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {T,CHK}
     CHK && checktag(T, f, x)
-    ∇f! = (y, z) -> begin
-        inner_result = DiffResult(zero(eltype(y)), y)
-        gradient!(inner_result, f, z, cfg.gradient_config, Val{false}())
-        result = DiffResults.value!(result, value(DiffResults.value(inner_result)))
-        return y
-    end
+    ∇f! = GradF(result, cfg, f)
     jacobian!(DiffResults.hessian(result), ∇f!, DiffResults.gradient(result), x, cfg.jacobian_config, Val{false}())
-    return result
+    return ∇f!.result
 end
 
 hessian(f, x::SArray) = jacobian(y -> gradient(f, y), x)
