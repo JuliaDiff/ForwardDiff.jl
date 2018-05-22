@@ -298,7 +298,14 @@ function Base.promote_rule(::Type{Dual{T,A,N}},
     return Dual{T,promote_type(A, B),N}
 end
 
-for R in (:BigFloat, :Bool, :Irrational, :Real)
+for R in (:BigFloat, :Bool)
+    @eval begin
+        Base.promote_rule(::Type{$R}, ::Type{Dual{T,V,N}}) where {T,V<:Real,N} = Dual{T,promote_type($R, V),N}
+        Base.promote_rule(::Type{Dual{T,V,N}}, ::Type{$R}) where {T,V<:Real,N} = Dual{T,promote_type(V, $R),N}
+    end
+end
+
+for R in (:Irrational, :Real)
     @eval begin
         Base.promote_rule(::Type{R}, ::Type{Dual{T,V,N}}) where {R<:$R,T,V<:Real,N} = Dual{T,promote_type(R, V),N}
         Base.promote_rule(::Type{Dual{T,V,N}}, ::Type{R}) where {T,V<:Real,N,R<:$R} = Dual{T,promote_type(V, R),N}
