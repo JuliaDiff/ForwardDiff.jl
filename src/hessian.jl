@@ -35,15 +35,20 @@ function hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig
 end
 
 
-mutable struct GradF{R,CFG,F}
+# We use this struct below instead of an
+# equivalent closure in order to avoid
+# JuliaLang/julia#15276-related performance
+# issues. See #316.
+mutable struct InnerGradientForHess{R,C,F}
     result::R
-    cfg::CFG
-    f::F # Add tag check on constructino of GradF???
+    cfg::C
+    f::F
 end
-function (x::GradF)(y, z)
+
+function (g::InnerGradientForHess)(y, z)
     inner_result = DiffResult(zero(eltype(y)), y)
-    gradient!(inner_result, x.f, z, x.cfg.gradient_config, Val{false}())
-    x.result = DiffResults.value!(x.result, value(DiffResults.value(inner_result)))
+    gradient!(inner_result, g.f, z, g.cfg.gradient_config, Val{false}())
+    g.result = DiffResults.value!(g.result, value(DiffResults.value(inner_result)))
     return y
 end
 
@@ -58,7 +63,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 """
 function hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {T,CHK}
     CHK && checktag(T, f, x)
-    ∇f! = GradF(result, cfg, f)
+    ∇f! = InnerGradientForHess(result, cfg, f)
     jacobian!(DiffResults.hessian(result), ∇f!, DiffResults.gradient(result), x, cfg.jacobian_config, Val{false}())
     return ∇f!.result
 end
