@@ -287,6 +287,10 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test promote_type(Dual{TestTag(),V,N}, Dual{TestTag(),WIDE_T,N}) == Dual{TestTag(),WIDE_T,N}
     @test promote_type(Dual{TestTag(),WIDE_T,N}, Dual{TestTag(),Dual{TestTag(),V,M},N}) == Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}
 
+    # issue #322
+    @test promote_type(Bool, Dual{TestTag(),V,N}) == Dual{TestTag(),promote_type(Bool, V),N}
+    @test promote_type(BigFloat, Dual{TestTag(),V,N}) == Dual{TestTag(),promote_type(BigFloat, V),N}
+
     WIDE_FDNUM = convert(Dual{TestTag(),WIDE_T,N}, FDNUM)
     WIDE_NESTED_FDNUM = convert(Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}, NESTED_FDNUM)
 
