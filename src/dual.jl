@@ -34,17 +34,17 @@ tag can be extracted, so it should be used in the _innermost_ function.
 # Constructors #
 ################
 
-@inline (::Type{Dual{T}})(value::V, partials::Partials{N,V}) where {T,N,V} = Dual{T,V,N}(value, partials)
+@inline Dual{T}(value::V, partials::Partials{N,V}) where {T,N,V} = Dual{T,V,N}(value, partials)
 
-@inline function (::Type{Dual{T}})(value::A, partials::Partials{N,B}) where {T,N,A,B}
+@inline function Dual{T}(value::A, partials::Partials{N,B}) where {T,N,A,B}
     C = promote_type(A, B)
     return Dual{T}(convert(C, value), convert(Partials{N,C}, partials))
 end
 
-@inline (::Type{Dual{T}})(value::Real, partials::Tuple) where {T} = Dual{T}(value, Partials(partials))
-@inline (::Type{Dual{T}})(value::Real, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
-@inline (::Type{Dual{T}})(value::Real, partials::Real...) where {T} = Dual{T}(value, partials)
-@inline (::Type{Dual{T}})(value::V, ::Chunk{N}, p::Val{i}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
+@inline Dual{T}(value::Real, partials::Tuple) where {T} = Dual{T}(value, Partials(partials))
+@inline Dual{T}(value::Real, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
+@inline Dual{T}(value::Real, partials::Real...) where {T} = Dual{T}(value, partials)
+@inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
 
 @inline Dual(args...) = Dual{Nothing}(args...)
 
