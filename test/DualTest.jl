@@ -455,4 +455,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     end
 end
 
+# Test that SpecialFunctions functions are visible
+@test lbeta(Dual(1.0), Dual(1.0)) == Dual(0.0)
+
 end # module
