@@ -5,11 +5,11 @@ module ForwardDiff
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
+using SpecialFunctions
 using Compat
 using Compat.Random
 
 import NaNMath
-import SpecialFunctions
 import CommonSubexpressions
 
 include("prelude.jl")
