@@ -23,9 +23,6 @@ include("jacobian.jl")
 include("hessian.jl")
 include("deprecated.jl")
 
-# This is a deprecation binding and should be removed in the next minor release.
-const DiffBase = DiffResults
-
-export DiffBase, DiffResults
+export DiffResults
 
 end # module
