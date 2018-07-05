@@ -2,8 +2,7 @@ module GradientTest
 
 import Calculus
 
-using Compat
-using Compat.Test
+using Test
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
@@ -21,7 +20,7 @@ v = f(x)
 g = [-9.4, 15.6, 52.0]
 
 for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
-    println("  ...running hardcoded test with chunk size = $c and tag = $tag")
+    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
     @test eltype(cfg) == Dual{typeof(tag), eltype(x), c}
@@ -61,7 +60,7 @@ for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
     for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
-        println("  ...testing $f with chunk size = $c and tag = $tag")
+        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
         cfg = ForwardDiff.GradientConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.gradient(f, X, cfg)

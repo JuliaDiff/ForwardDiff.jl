@@ -2,8 +2,8 @@ module DerivativeTest
 
 import Calculus
 
-using Compat
-using Compat.Test
+using Test
+using Random
 using ForwardDiff
 using DiffTests
 

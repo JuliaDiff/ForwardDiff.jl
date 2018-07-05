@@ -16,7 +16,7 @@ makedocs(modules=[ForwardDiff],
 
 deploydocs(repo = "github.com/JuliaDiff/ForwardDiff.jl.git",
            osname = "linux",
-           julia = "0.6",
+           julia = "0.7",
            target = "build",
            deps = nothing,
            make = nothing)
