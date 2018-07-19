@@ -1,8 +1,8 @@
 module SIMDTest
 
-using Compat
-using Compat.Test
+using Test
 using ForwardDiff: Dual, valtype
+using InteractiveUtils: code_llvm
 
 const DUALS = (Dual(1., 2., 3., 4.),
                Dual(1., 2., 3., 4., 5.),
@@ -19,28 +19,28 @@ end
 
 for D in map(typeof, DUALS)
     plus_bitcode = sprint(io -> code_llvm(io, +, (D, D)))
-    @test contains(plus_bitcode, "fadd <4 x double>")
+    @test occursin("fadd <4 x double>", plus_bitcode)
 
     minus_bitcode = sprint(io -> code_llvm(io, -, (D, D)))
-    @test contains(minus_bitcode, "fsub <4 x double>")
+    @test occursin("fsub <4 x double>", minus_bitcode)
 
     times_bitcode = sprint(io -> code_llvm(io, *, (D, D)))
-    @test ismatch(r"fadd \<.*?x double\>", times_bitcode)
-    @test ismatch(r"fmul \<.*?x double\>", times_bitcode)
+    @test occursin(r"fadd \<.*?x double\>", times_bitcode)
+    @test occursin(r"fmul \<.*?x double\>", times_bitcode)
 
     div_bitcode = sprint(io -> code_llvm(io, /, (D, D)))
-    @test ismatch(r"fadd \<.*?x double\>", div_bitcode)
-    @test ismatch(r"fmul \<.*?x double\>", div_bitcode)
+    @test occursin(r"fadd \<.*?x double\>", div_bitcode)
+    @test occursin(r"fmul \<.*?x double\>", div_bitcode)
 
     exp_bitcode = sprint(io -> code_llvm(io, ^, (D, D)))
-    @test ismatch(r"fadd \<.*?x double\>", exp_bitcode)
+    @test occursin(r"fadd \<.*?x double\>", exp_bitcode)
     if !(valtype(D) <: Dual)
         # see https://github.com/JuliaDiff/ForwardDiff.jl/issues/167
-        @test ismatch(r"fmul \<.*?x double\>", exp_bitcode)
+        @test occursin(r"fmul \<.*?x double\>", exp_bitcode)
 
         # see https://github.com/JuliaDiff/ForwardDiff.jl/pull/201
         sum_bitcode = sprint(io -> code_llvm(io, simd_sum, (Vector{D},)))
-        @test ismatch(r"fadd \<.*?x double\>", sum_bitcode)
+        @test occursin(r"fadd (fast |)\<.*?x double\>", sum_bitcode)
     end
 end
 

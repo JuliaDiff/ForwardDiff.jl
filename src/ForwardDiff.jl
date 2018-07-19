@@ -5,8 +5,7 @@ module ForwardDiff
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
-using Compat
-using Compat.Random
+using Random
 
 import NaNMath
 import SpecialFunctions

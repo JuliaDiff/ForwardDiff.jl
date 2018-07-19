@@ -1,8 +1,9 @@
 module ConfusionTest
 
-using Compat
-using Compat.Test
+using Test
 using ForwardDiff
+
+using LinearAlgebra
 
 # Perturbation Confusion (Issue #83) #
 #------------------------------------#
@@ -44,7 +45,7 @@ function Legendre_transformation(F, w)
     z = fill(0.0, size(w))
     M = ForwardDiff.hessian(F, z)
     b = ForwardDiff.gradient(F, z)
-    v = cholfact(M)\(w-b)
+    v = cholesky(M)\(w-b)
     dot(w,v) - F(v)
 end
 function Lagrangian2Hamiltonian(Lagrangian, t, q, p)

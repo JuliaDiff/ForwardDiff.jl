@@ -2,8 +2,7 @@ module JacobianTest
 
 import Calculus
 
-using Compat
-using Compat.Test
+using Test
 using ForwardDiff
 using ForwardDiff: Dual, Tag, JacobianConfig
 using StaticArrays
@@ -33,7 +32,7 @@ j = [0.8242369704835132  0.4121184852417566  -10.933563142616123
 
 for c in (1, 2, 3), tags in ((nothing, nothing),
                              (Tag(f, eltype(x)), Tag(f!, eltype(x))))
-    println("  ...running hardcoded test with chunk size = $c and tag = $tags")
+    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tags))")
     cfg = JacobianConfig(f, x, ForwardDiff.Chunk{c}(), tags[1])
     ycfg = JacobianConfig(f!, fill(0.0, 4), x, ForwardDiff.Chunk{c}(), tags[2])
 
@@ -108,7 +107,7 @@ for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
         if tag == Tag
             tag = Tag(f, eltype(X))
         end
-        println("  ...testing $f with chunk size = $c and tag = $tag")
+        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
         cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.jacobian(f, X, cfg)
@@ -131,7 +130,7 @@ for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     j = ForwardDiff.jacobian(f!, fill!(similar(Y), 0.0), X)
     @test isapprox(j, Calculus.jacobian(x -> (y = fill!(similar(Y), 0.0); f!(y, x); vec(y)), X, :forward), atol=FINITEDIFF_ERROR)
     for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
-        println("  ...testing $(f!) with chunk size = $c and tag = $tag")
+        println("  ...testing $(f!) with chunk size = $c and tag = $(repr(tag))")
         ycfg = JacobianConfig(f!, fill!(similar(Y), 0.0), X, ForwardDiff.Chunk{c}(), tag)
 
         y = fill!(similar(Y), 0.0)
@@ -173,35 +172,38 @@ sx = StaticArrays.SArray{Tuple{3,3}}(x)
 cfg = ForwardDiff.JacobianConfig(nothing, x)
 scfg = ForwardDiff.JacobianConfig(nothing, sx)
 
-actual = ForwardDiff.jacobian(diff, x)
-@test ForwardDiff.jacobian(diff, sx) == actual
-@test ForwardDiff.jacobian(diff, sx, cfg) == actual
-@test ForwardDiff.jacobian(diff, sx, scfg) == actual
-@test ForwardDiff.jacobian(diff, sx, scfg) isa StaticArray
-@test ForwardDiff.jacobian(diff, sx, scfg, Val{false}()) == actual
-@test ForwardDiff.jacobian(diff, sx, scfg, Val{false}()) isa StaticArray
+_diff(A) = diff(A; dims=1)
+_diff(A::StaticArray) = diff(A) # StaticArray's don't use dims kwarg (yet)
+
+actual = ForwardDiff.jacobian(_diff, x)
+@test ForwardDiff.jacobian(_diff, sx) == actual
+@test ForwardDiff.jacobian(_diff, sx, cfg) == actual
+@test ForwardDiff.jacobian(_diff, sx, scfg) == actual
+@test ForwardDiff.jacobian(_diff, sx, scfg) isa StaticArray
+@test ForwardDiff.jacobian(_diff, sx, scfg, Val{false}()) == actual
+@test ForwardDiff.jacobian(_diff, sx, scfg, Val{false}()) isa StaticArray
 
 out = similar(x, 6, 9)
-ForwardDiff.jacobian!(out, diff, sx)
+ForwardDiff.jacobian!(out, _diff, sx)
 @test out == actual
 
 out = similar(x, 6, 9)
-ForwardDiff.jacobian!(out, diff, sx, cfg)
+ForwardDiff.jacobian!(out, _diff, sx, cfg)
 @test out == actual
 
 out = similar(x, 6, 9)
-ForwardDiff.jacobian!(out, diff, sx, scfg)
+ForwardDiff.jacobian!(out, _diff, sx, scfg)
 @test out == actual
 
 result = DiffResults.JacobianResult(similar(x, 6), x)
-result = ForwardDiff.jacobian!(result, diff, x)
+result = ForwardDiff.jacobian!(result, _diff, x)
 
 result1 = DiffResults.JacobianResult(similar(sx, 6), sx)
 result2 = DiffResults.JacobianResult(similar(sx, 6), sx)
 result3 = DiffResults.JacobianResult(similar(sx, 6), sx)
-result1 = ForwardDiff.jacobian!(result1, diff, sx)
-result2 = ForwardDiff.jacobian!(result2, diff, sx, cfg)
-result3 = ForwardDiff.jacobian!(result3, diff, sx, scfg)
+result1 = ForwardDiff.jacobian!(result1, _diff, sx)
+result2 = ForwardDiff.jacobian!(result2, _diff, sx, cfg)
+result3 = ForwardDiff.jacobian!(result3, _diff, sx, scfg)
 @test DiffResults.value(result1) == DiffResults.value(result)
 @test DiffResults.value(result2) == DiffResults.value(result)
 @test DiffResults.value(result3) == DiffResults.value(result)
@@ -213,9 +215,9 @@ sy = @SVector fill(zero(eltype(sx)), 6)
 sresult1 = DiffResults.JacobianResult(sy, sx)
 sresult2 = DiffResults.JacobianResult(sy, sx)
 sresult3 = DiffResults.JacobianResult(sy, sx)
-sresult1 = ForwardDiff.jacobian!(sresult1, diff, sx)
-sresult2 = ForwardDiff.jacobian!(sresult2, diff, sx, cfg)
-sresult3 = ForwardDiff.jacobian!(sresult3, diff, sx, scfg)
+sresult1 = ForwardDiff.jacobian!(sresult1, _diff, sx)
+sresult2 = ForwardDiff.jacobian!(sresult2, _diff, sx, cfg)
+sresult3 = ForwardDiff.jacobian!(sresult3, _diff, sx, scfg)
 @test DiffResults.value(sresult1) == DiffResults.value(result)
 @test DiffResults.value(sresult2) == DiffResults.value(result)
 @test DiffResults.value(sresult3) == DiffResults.value(result)

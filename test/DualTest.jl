@@ -1,7 +1,7 @@
 module DualTest
 
-using Compat
-using Compat.Test
+using Test
+using Random
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
 

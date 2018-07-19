@@ -2,10 +2,10 @@ module MiscTest
 
 import NaNMath
 
-using Compat
-using Compat.Test
+using Test
 using ForwardDiff
 using DiffTests
+using SparseArrays: sparse
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -114,7 +114,7 @@ N = 4
 a = fill(1.0, N)
 jac0 = reshape(vcat([[fill(0.0, N*(i-1)); a; fill(0.0, N^2-N*i)] for i = 1:N]...), N^2, N)
 
-for op in (:-, :+, :.-, :.+, :./, :.*)
+for op in (:.-, :.+, :./, :.*)
     f = @eval x -> [$op(x[1], a); $op(x[2], a); $op(x[3], a); $op(x[4], a)]
     jac = @eval ForwardDiff.jacobian(f, a)
     @test isapprox(jac0, jac)

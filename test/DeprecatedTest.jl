@@ -1,7 +1,6 @@
 module DeprecatedTest
 
-using Compat
-using Compat.Test
+using Test
 using ForwardDiff, DiffResults
 
 using ForwardDiff: AbstractConfig, GradientConfig,
@@ -31,7 +30,7 @@ out = DiffResults.HessianResult(x)
 N = 1
 chunk = ForwardDiff.Chunk{N}()
 
-info("The following tests print lots of deprecation warnings on purpose.")
+@info("The following tests print lots of deprecation warnings on purpose.")
 
 @test similar_config(GradientConfig{N}(x), GradientConfig(nothing, x, chunk))
 @test similar_config(JacobianConfig{N}(x), JacobianConfig(nothing, x, chunk))
@@ -40,6 +39,6 @@ info("The following tests print lots of deprecation warnings on purpose.")
 @test similar_config(HessianConfig{N}(out, x), HessianConfig(nothing, out, x, chunk))
 @test similar_config(MultithreadConfig(GradientConfig(nothing, x, chunk)), GradientConfig(nothing, x, chunk))
 
-info("Deprecation testing is now complete, so any further deprecation warnings are real.")
+@info("Deprecation testing is now complete, so any further deprecation warnings are real.")
 
 end # module
