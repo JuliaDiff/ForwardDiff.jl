@@ -408,8 +408,12 @@ for f in (:(Base.:^), :(NaNMath.pow))
             begin
                 v = value(x)
                 expv = ($f)(v, y)
-                deriv = y * ($f)(v, y - 1)
-                return Dual{Tx}(expv, deriv * partials(x))
+                if y == zero(y)
+                    new_partials = zero(partials(x))
+                else
+                    new_partials = partials(x) * y * ($f)(v, y - 1)
+                end
+                return Dual{Tx}(expv, new_partials)
             end,
             begin
                 v = value(y)

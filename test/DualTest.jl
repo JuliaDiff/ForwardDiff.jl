@@ -455,4 +455,14 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     end
 end
 
+@testset "Exponentiation of zero" begin
+    x0 = 0.0
+    x1 = Dual{:t1}(x0, 1.0)
+    x2 = Dual{:t2}(x1, 1.0)
+    x3 = Dual{:t3}(x2, 1.0)
+    @test x3^2 === x3 * x3
+    @test x2^1 === x2
+    @test x1^0 === Dual{:t1}(1.0, 0.0)
+end
+
 end # module
