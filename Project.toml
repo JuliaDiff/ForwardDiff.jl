@@ -10,3 +10,11 @@ NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+CommonSubexpressions = "0.1.0"
+DiffResults = "0.0.1"
+DiffRules = "0.0.4"
+NaNMath = "0.2.2"
+SpecialFunctions = "0.1.0"
+StaticArrays = "0.8.2"
