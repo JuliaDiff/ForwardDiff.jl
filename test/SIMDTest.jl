@@ -18,7 +18,7 @@ function simd_sum(x::Vector{T}) where T
     return s
 end
 
-for D in map(typeof, DUALS)
+@testset "SIMD $D" for D in map(typeof, DUALS)
     plus_bitcode = sprint(io -> code_llvm(io, +, (D, D)))
     @test occursin("fadd <4 x double>", plus_bitcode)
 
