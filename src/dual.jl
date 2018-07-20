@@ -425,6 +425,18 @@ for f in (:(Base.:^), :(NaNMath.pow))
     end
 end
 
+@inline Base.literal_pow(::typeof(^), x::Dual{T}, ::Val{0}) where {T} =
+    Dual{T}(one(value(x)), zero(partials(x)))
+
+for y in 1:3
+    @eval @inline function Base.literal_pow(::typeof(^), x::Dual{T}, ::Val{$y}) where {T}
+        v = value(x)
+        expv = v^$y
+        deriv = $y * v^$(y - 1)
+        return Dual{T}(expv, deriv * partials(x))
+    end
+end
+
 # hypot #
 #-------#
 

@@ -460,9 +460,10 @@ end
     x1 = Dual{:t1}(x0, 1.0)
     x2 = Dual{:t2}(x1, 1.0)
     x3 = Dual{:t3}(x2, 1.0)
-    @test x3^2 === x3 * x3
-    @test x2^1 === x2
-    @test x1^0 === Dual{:t1}(1.0, 0.0)
+    pow = ^  # to call non-literal power
+    @test pow(x3, 2) === x3^2 === x3 * x3
+    @test pow(x2, 1) === x2^1 === x2
+    @test pow(x1, 0) === x1^0 === Dual{:t1}(1.0, 0.0)
 end
 
 end # module

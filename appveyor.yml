@@ -4,6 +4,9 @@ environment:
   - JULIA_URL: "https://julialang-s3.julialang.org/bin/winnt/x64/0.7/julia-0.7-latest-win64.exe"
   - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x86/julia-latest-win32.exe"
   - JULIA_URL: "https://julialangnightlies-s3.julialang.org/bin/winnt/x64/julia-latest-win64.exe"
+  global:
+    JULIA_PROJECT: "@."
+    # as in https://github.com/travis-ci/travis-build/blob/5aef38fe4785caf3fec7a53364e6c17501c8fbb9/lib/travis/build/script/julia.rb#L23
 
 matrix:
     allow_failures:
@@ -34,7 +37,7 @@ build_script:
 # Need to convert from shallow to complete for Pkg.clone to work
   - IF EXIST .git\shallow (git fetch --unshallow)
   - C:\projects\julia\bin\julia -e "versioninfo();
-      Pkg.clone(pwd(), \"ForwardDiff\"); Pkg.build(\"ForwardDiff\")"
+      using Pkg; Pkg.build(\"ForwardDiff\")"
 
 test_script:
-  - C:\projects\julia\bin\julia -e "Pkg.test(\"ForwardDiff\")"
+  - C:\projects\julia\bin\julia -e "using Pkg; Pkg.test(\"ForwardDiff\")"
