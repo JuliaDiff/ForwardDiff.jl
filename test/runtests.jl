@@ -35,7 +35,3 @@ println("done (took $t seconds).")
 println("Testing SIMD vectorization...")
 t = @elapsed include("SIMDTest.jl")
 println("done (took $t seconds).")
-
-println("Testing deprecations...")
-t = @elapsed include("DeprecatedTest.jl")
-println("done (took $t seconds).")
