@@ -54,6 +54,9 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     ################
 
     @test Dual{TestTag()}(PRIMAL, PARTIALS...) === FDNUM
+    @test Dual(PRIMAL, PARTIALS...) === Dual{Nothing}(PRIMAL, PARTIALS...)
+    @test Dual(PRIMAL) === Dual{Nothing}(PRIMAL)
+
     @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS)) === Dual{TestTag(),widen(V),N}
     @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS.values)) === Dual{TestTag(),widen(V),N}
     @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS...)) === Dual{TestTag(),widen(V),N}
