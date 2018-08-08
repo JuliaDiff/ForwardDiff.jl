@@ -45,8 +45,17 @@ end
 @inline Dual{T}(value::Real, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
 @inline Dual{T}(value::Real, partials::Real...) where {T} = Dual{T}(value, partials)
 @inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
-
 @inline Dual(args...) = Dual{Nothing}(args...)
+
+function Dual{T,V,N}(x::Real) where {T,V,N}
+    Base.depwarn("Dual{$T,$V,$N}(x::Real) is deprecated, use `convert(Dual{$T,$V,$N}, x)` instead.", :Dual)
+    return convert(Dual{T,V,N}, x)
+end
+
+function Dual{T,V}(x::Real) where {T,V}
+    Base.depwarn("Dual{$T,$V}(x::Real) is deprecated, use `convert(Dual{$T,$V}, x)` instead.", :Dual)
+    return convert(Dual{T,V}, x)
+end
 
 ##############################
 # Utility/Accessor Functions #
@@ -315,7 +324,6 @@ end
 Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V<:Real,N} = Dual{T}(convert(V, value(d)), convert(Partials{N,V}, partials(d)))
 Base.convert(::Type{Dual{T,V,N}}, x::Real) where {T,V<:Real,N} = Dual{T}(convert(V, x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
-(::Type{D})(x::Real) where {D<:Dual} = convert(D, x)
 
 Base.float(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
 Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
