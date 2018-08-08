@@ -5,7 +5,7 @@ t = @elapsed include("PartialsTest.jl")
 println("done (took $t seconds).")
 
 println("Testing Dual...")
-# t = @elapsed include("DualTest.jl")
+t = @elapsed include("DualTest.jl")
 println("done (took $t seconds).")
 
 println("Testing derivative functionality...")
@@ -32,11 +32,9 @@ println("Testing miscellaneous functionality...")
 t = @elapsed include("MiscTest.jl")
 println("done (took $t seconds).")
 
-if Base.JLOptions().opt_level >= 3
-    println("Testing SIMD vectorization...")
-    t = @elapsed include("SIMDTest.jl")
-    println("done (took $t seconds).")
-end
+println("Testing SIMD vectorization...")
+t = @elapsed include("SIMDTest.jl")
+println("done (took $t seconds).")
 
 println("Testing deprecations...")
 t = @elapsed include("DeprecatedTest.jl")

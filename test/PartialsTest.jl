@@ -36,10 +36,6 @@ for N in (0, 3), T in (Int, Float32, Float64)
         @test PARTIALS[i] == VALUES[i]
     end
 
-    @test start(PARTIALS) == start(VALUES)
-    @test N == 0 || (next(PARTIALS, start(PARTIALS)) == next(VALUES, start(VALUES)))
-    @test done(PARTIALS, start(PARTIALS)) == done(VALUES, start(VALUES))
-
     i = 1
     for p in PARTIALS
         @test p == VALUES[i]

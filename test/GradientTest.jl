@@ -138,5 +138,4 @@ sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
 @test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
 @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
 
-
 end # module

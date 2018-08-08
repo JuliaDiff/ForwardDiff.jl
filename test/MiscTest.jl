@@ -115,9 +115,11 @@ a = fill(1.0, N)
 jac0 = reshape(vcat([[fill(0.0, N*(i-1)); a; fill(0.0, N^2-N*i)] for i = 1:N]...), N^2, N)
 
 for op in (:.-, :.+, :./, :.*)
-    f = @eval x -> [$op(x[1], a); $op(x[2], a); $op(x[3], a); $op(x[4], a)]
-    jac = @eval ForwardDiff.jacobian(f, a)
-    @test isapprox(jac0, jac)
+    @eval begin
+        f = x -> [$op(x[1], a); $op(x[2], a); $op(x[3], a); $op(x[4], a)]
+        jac = ForwardDiff.jacobian(f, a)
+        @test isapprox(jac0, jac)
+    end
 end
 
 # NaNs #
@@ -133,8 +135,10 @@ h = ForwardDiff.hessian(y -> sum(hypot.(x, y)), y)
 @test h[1, 1] ≈ (x[1]^2) / (x[1]^2 + y[1]^2)^(3/2)
 @test h[2, 2] ≈ (x[2]^2) / (x[2]^2 + y[2]^2)^(3/2)
 @test h[3, 3] ≈ (x[3]^2) / (x[3]^2 + y[3]^2)^(3/2)
-for i in 1:3, j in 1:3
-    i != j && (@test h[i, j] ≈ 0.0)
+let i, j
+    for i in 1:3, j in 1:3
+        i != j && @test h[i, j] ≈ 0.0
+    end
 end
 
 ########
@@ -144,8 +148,8 @@ end
 # issue 267
 @noinline f267(z, x) = x[1]
 z267 = ([(1, (2), [(3, (4, 5, [1, 2, (3, (4, 5), [5])]), (5))])])
-let z = z267
-    g = x -> f267(z, x)
+let z = z267,
+    g = x -> f267(z, x),
     h = x -> g(x)
     @test ForwardDiff.hessian(h, [1.]) == fill(0.0, 1, 1)
 end

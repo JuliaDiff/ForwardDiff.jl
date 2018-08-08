@@ -9,7 +9,7 @@ using DiffTests
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
-srand(1)
+Random.seed!(1)
 
 ########################
 # test vs. Calculus.jl #

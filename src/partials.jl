@@ -22,9 +22,8 @@ end
 
 @inline Base.@propagate_inbounds Base.getindex(partials::Partials, i::Int) = partials.values[i]
 
-Base.start(partials::Partials) = start(partials.values)
-Base.next(partials::Partials, i) = next(partials.values, i)
-Base.done(partials::Partials, i) = done(partials.values, i)
+Base.iterate(partials::Partials) = iterate(partials.values)
+Base.iterate(partials::Partials, i) = iterate(partials.values, i)
 
 Base.IndexStyle(::Type{<:Partials}) = IndexLinear()
 
