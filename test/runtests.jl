@@ -32,6 +32,8 @@ println("Testing miscellaneous functionality...")
 t = @elapsed include("MiscTest.jl")
 println("done (took $t seconds).")
 
-println("Testing SIMD vectorization...")
-t = @elapsed include("SIMDTest.jl")
-println("done (took $t seconds).")
+if Base.JLOptions().opt_level >= 3
+    println("Testing SIMD vectorization...")
+    t = @elapsed include("SIMDTest.jl")
+    println("done (took $t seconds).")
+end
