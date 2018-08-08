@@ -1,5 +1,3 @@
-__precompile__()
-
 module ForwardDiff
 
 using DiffRules, DiffResults
@@ -20,7 +18,6 @@ include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
-include("deprecated.jl")
 
 export DiffResults
 

@@ -5,7 +5,7 @@ using Random
 
 # seed RNG, thus making result inaccuracies deterministic
 # so we don't have to retune EPS for arbitrary inputs
-srand(1)
+Random.seed!(1)
 
 const XLEN = DEFAULT_CHUNK_THRESHOLD + 1
 const YLEN = div(DEFAULT_CHUNK_THRESHOLD, 2) + 1

@@ -419,12 +419,12 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                     if isnan(actualdx)
                         @test isnan(partials(dx, 1))
                     else
-                        @test partials(dx, 1) == actualdx
+                        @test partials(dx, 1) ≈ actualdx
                     end
                     if isnan(actualdy)
                         @test isnan(partials(dy, 1))
                     else
-                        @test partials(dy, 1) == actualdy
+                        @test partials(dy, 1) ≈ actualdy
                     end
                 end
             end
