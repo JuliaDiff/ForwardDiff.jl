@@ -94,7 +94,6 @@ cfgx = ForwardDiff.JacobianConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.jacobian(f, x, cfgx)
 @test ForwardDiff.jacobian(f, x, cfgx, Val{false}()) == ForwardDiff.jacobian(f,x)
 
-
 ########################
 # test vs. Calculus.jl #
 ########################
@@ -173,7 +172,6 @@ cfg = ForwardDiff.JacobianConfig(nothing, x)
 scfg = ForwardDiff.JacobianConfig(nothing, sx)
 
 _diff(A) = diff(A; dims=1)
-_diff(A::StaticArray) = diff(A) # StaticArray's don't use dims kwarg (yet)
 
 actual = ForwardDiff.jacobian(_diff, x)
 @test ForwardDiff.jacobian(_diff, sx) == actual
