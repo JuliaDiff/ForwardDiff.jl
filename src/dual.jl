@@ -47,15 +47,9 @@ end
 @inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V<:Real,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
 @inline Dual(args...) = Dual{Nothing}(args...)
 
-function Dual{T,V,N}(x::Real) where {T,V,N}
-    Base.depwarn("Dual{$T,$V,$N}(x::Real) is deprecated, use `convert(Dual{$T,$V,$N}, x)` instead.", :Dual)
-    return convert(Dual{T,V,N}, x)
-end
-
-function Dual{T,V}(x::Real) where {T,V}
-    Base.depwarn("Dual{$T,$V}(x::Real) is deprecated, use `convert(Dual{$T,$V}, x)` instead.", :Dual)
-    return convert(Dual{T,V}, x)
-end
+# we define these special cases so that the "constructor <--> convert" pun holds for `Dual`
+@inline Dual{T,V,N}(x::Real) where {T,V,N} = convert(Dual{T,V,N}, x)
+@inline Dual{T,V}(x::Real) where {T,V} = convert(Dual{T,V}, x)
 
 ##############################
 # Utility/Accessor Functions #
