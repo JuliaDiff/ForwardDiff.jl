@@ -1,7 +1,5 @@
 [![Build Status](https://travis-ci.org/JuliaDiff/ForwardDiff.jl.svg?branch=master)](https://travis-ci.org/JuliaDiff/ForwardDiff.jl) [![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
 
-[![ForwardDiff](http://pkg.julialang.org/badges/ForwardDiff_0.6.svg)](http://pkg.julialang.org/?pkg=ForwardDiff)
-
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](http://www.juliadiff.org/ForwardDiff.jl/stable)
 [![](https://img.shields.io/badge/docs-latest-blue.svg)](http://www.juliadiff.org/ForwardDiff.jl/latest)
 
