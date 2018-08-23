@@ -72,8 +72,8 @@ end
 @inline Base.@propagate_inbounds partials(d::Dual, i, j) = partials(d, i).partials[j]
 @inline Base.@propagate_inbounds partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
 
-@inline partials(::Type{T}, x::Real, i...) where T = partials(x, i...)
-@inline partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
+@inline Base.@propagate_inbounds partials(::Type{T}, x::Real, i...) where T = partials(x, i...)
+@inline Base.@propagate_inbounds partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
 partials(::Type{T}, d::Dual{S}, i...) where {T,S} = throw(DualMismatchError(T,S))
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
