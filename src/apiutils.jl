@@ -53,36 +53,28 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    for i in eachindex(duals)
-        duals[i] = Dual{T,V,N}(x[i], seed)
-    end
+    duals .= Dual{T,V,N}.(x, Base.RefValue(seed))
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    for i in 1:N
-        duals[i] = Dual{T,V,N}(x[i], seeds[i])
-    end
+    duals[1:N] .= Dual{T,V,N}.(x[1:N], seeds[1:N])
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     offset = index - 1
-    for i in 1:N
-        j = i + offset
-        duals[j] = Dual{T,V,N}(x[j], seed)
-    end
+    chunk = (1:N) .+ offset
+    duals[chunk] .= Dual{T,V,N}.(x[chunk], Base.RefValue(seed))
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
     offset = index - 1
-    for i in 1:chunksize
-        j = i + offset
-        duals[j] = Dual{T,V,N}(x[j], seeds[i])
-    end
+    chunk = (1:chunksize) .+ offset
+    duals[chunk] .= Dual{T,V,N}.(x[chunk], seeds[1:chunksize])
     return duals
 end
