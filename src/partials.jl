@@ -20,7 +20,7 @@ end
 @inline Base.length(::Partials{N}) where {N} = N
 @inline Base.size(::Partials{N}) where {N} = (N,)
 
-@inline Base.@propagate_inbounds Base.getindex(partials::Partials, i::Int) = partials.values[i]
+@inline Base.@propagate_inbounds Base.getindex(partials::Partials, I...) = partials.values[I...]
 
 Base.iterate(partials::Partials) = iterate(partials.values)
 Base.iterate(partials::Partials, i) = iterate(partials.values, i)
