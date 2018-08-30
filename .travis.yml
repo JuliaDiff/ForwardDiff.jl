@@ -5,7 +5,7 @@ julia:
     - nightly
 matrix:
   allow_failures:
-  - julia: nightly
+    - julia: nightly
 notifications:
     email: false
 sudo: false
