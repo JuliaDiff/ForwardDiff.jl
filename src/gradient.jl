@@ -77,8 +77,9 @@ extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}= copyt
 
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
     offset = index - 1
-    chunk = (1:chunksize) .+ offset
-    result[chunk] .= ForwardDiff.partials(T, dual, 1:chunksize)
+    for i in 1:chunksize
+        result[i + offset] = partials(T, dual, i)
+    end
     return result
 end
 
