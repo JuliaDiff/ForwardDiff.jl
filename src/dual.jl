@@ -160,8 +160,9 @@ end
 
 function unary_dual_definition(M, f)
     FD = ForwardDiff
+    Mf = M == :Base ? f : :($M.$f)
     work = qualified_cse!(quote
-        val = $M.$f(x)
+        val = $Mf(x)
         deriv = $(DiffRules.diffrule(M, f, :x))
     end)
     return quote
@@ -176,19 +177,20 @@ end
 function binary_dual_definition(M, f)
     FD = ForwardDiff
     dvx, dvy = DiffRules.diffrule(M, f, :vx, :vy)
+    Mf = M == :Base ? f : :($M.$f)
     xy_work = qualified_cse!(quote
-        val = $M.$f(vx, vy)
+        val = $Mf(vx, vy)
         dvx = $dvx
         dvy = $dvy
     end)
     dvx, _ = DiffRules.diffrule(M, f, :vx, :y)
     x_work = qualified_cse!(quote
-        val = $M.$f(vx, y)
+        val = $Mf(vx, y)
         dvx = $dvx
     end)
     _, dvy = DiffRules.diffrule(M, f, :x, :vy)
     y_work = qualified_cse!(quote
-        val = $M.$f(x, vy)
+        val = $Mf(x, vy)
         dvy = $dvy
     end)
     expr = quote
