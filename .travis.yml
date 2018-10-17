@@ -15,5 +15,5 @@ script:
     - julia --color=yes -O3 -e 'using Pkg; Pkg.add("StaticArrays"); include("test/SIMDTest.jl")';
 after_success:
     - julia --color=yes -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
-    - julia --color=yes -e 'using Pkg; Pkg.add("Documenter")'
+    - julia --color=yes -e 'using Pkg; ps=Pkg.PackageSpec(name="Documenter", version="0.19"); Pkg.add(ps); Pkg.pin(ps)'
     - julia --color=yes -e 'include("docs/make.jl")'
