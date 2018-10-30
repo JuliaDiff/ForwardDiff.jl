@@ -27,6 +27,9 @@ Base.iterate(partials::Partials, i) = iterate(partials.values, i)
 
 Base.IndexStyle(::Type{<:Partials}) = IndexLinear()
 
+# Can be deleted after https://github.com/JuliaLang/julia/pull/29854 is on a release
+Base.mightalias(x::AbstractArray, y::Partials) = false
+
 #####################
 # Generic Functions #
 #####################
