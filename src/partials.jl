@@ -2,6 +2,8 @@ struct Partials{N,V} <: AbstractVector{V}
     values::NTuple{N,V}
 end
 
+Base.mightalias(x::AbstractArray, y::Partials) = false
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
