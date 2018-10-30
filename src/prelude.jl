@@ -10,8 +10,11 @@ const DEFAULT_CHUNK_THRESHOLD = 10
 
 struct Chunk{N} end
 
+const CHUNKS = [Chunk{i}() for i in 1:DEFAULT_CHUNK_THRESHOLD]
+
 function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     N = pickchunksize(input_length, threshold)
+    N <= DEFAULT_CHUNK_THRESHOLD && return CHUNKS[N]
     return Chunk{N}()
 end
 
