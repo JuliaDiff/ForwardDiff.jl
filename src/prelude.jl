@@ -6,7 +6,7 @@ const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isr
 
 const BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 
-const DEFAULT_CHUNK_THRESHOLD = 10
+const DEFAULT_CHUNK_THRESHOLD = 12
 
 struct Chunk{N} end
 
