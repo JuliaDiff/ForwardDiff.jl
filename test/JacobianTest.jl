@@ -101,7 +101,7 @@ cfgx = ForwardDiff.JacobianConfig(sin, x)
 for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
-    @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=FINITEDIFF_ERROR)
+    @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
     for c in CHUNK_SIZES, tag in (nothing, Tag)
         if tag == Tag
             tag = Tag(f, eltype(X))
