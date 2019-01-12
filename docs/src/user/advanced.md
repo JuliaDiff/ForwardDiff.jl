@@ -267,3 +267,11 @@ to the code above:
 ```julia
 xdual = ForwardDiff.seed_duals(x)
 ```
+
+After the calculations are done, the value and derivative of the calculation
+can be extracted using the following:
+
+```julia
+y.value # Returns the value, i.e. what would've been produced without Duals
+y.partials[i] # Returns the derivative of the value w.r.t. the ith variable
+```
