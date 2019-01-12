@@ -247,6 +247,7 @@ version of this vector would thus be:
 
 ```julia
 using ForwardDiff: Dual
+struct MyTag end # Unique tag for the Duals
 x1dual = Dual{MyTag}(1.0, (1.0, 0.0, 0.0, 0.0))
 x2dual = Dual{MyTag}(1.5, (0.0, 1.0, 0.0, 0.0))
 x3dual = Dual{MyTag}(3.0, (0.0, 0.0, 1.0, 0.0))
@@ -265,7 +266,7 @@ vector you can use the `seed_duals` function. Thus the following is equivalent
 to the code above:
 
 ```julia
-xdual = ForwardDiff.seed_duals(x)
+xdual = ForwardDiff.seed_duals(x,MyTag)
 ```
 
 After the calculations are done, the value and derivative of the calculation
