@@ -73,6 +73,16 @@ end
 @inline Dual{T,V,N}(x::Number) where {T,V,N} = convert(Dual{T,V,N}, x)
 @inline Dual{T,V}(x) where {T,V} = convert(Dual{T,V}, x)
 
+############################
+# Convenience Constructors #
+############################
+
+function seed_duals(x::AbstractArray{V},::Type{T},
+                    ::Chunk{N} = Chunk(x)) where {V,T,N}
+  seeds = construct_seeds(Partials{N,V})
+  duals = [Dual{T}(x[i],seeds[i]) for i in 1:length(x)]
+end
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
