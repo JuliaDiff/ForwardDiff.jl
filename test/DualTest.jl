@@ -170,10 +170,16 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test one(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
     @test one(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
 
-    @test rand(samerng(), FDNUM) === Dual{TestTag()}(rand(samerng(), V), zero(PARTIALS))
+    @test rand(samerng(), FDNUM) === Dual{TestTag()}(rand(samerng(), FDNUM), zero(PARTIALS))
     @test rand(samerng(), typeof(FDNUM)) === Dual{TestTag()}(rand(samerng(), V), zero(Partials{N,V}))
-    @test rand(samerng(), NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(rand(samerng(), V), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
+    @test rand(samerng(), NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(rand(samerng(), NESTED_FDNUM), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
     @test rand(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(rand(samerng(), V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
+    @test randn(samerng(), typeof(FDNUM)) === Dual{TestTag()}(randn(samerng(), V), zero(Partials{N,V}))
+    @test randn(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(randn(samerng(), V), zero(Partials{M,V})),
+    zero(Partials{N,Dual{TestTag(),V,M}}))
+    @test randexp(samerng(), typeof(FDNUM)) === Dual{TestTag()}(randexp(samerng(), V), zero(Partials{N,V}))
+    @test randexp(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(randexp(samerng(), V), zero(Partials{M,V})),
+    zero(Partials{N,Dual{TestTag(),V,M}}))
 
     # Predicates #
     #------------#
