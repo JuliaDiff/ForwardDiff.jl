@@ -170,27 +170,28 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test one(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
     @test one(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
 
-    @test rand(samerng(), FDNUM) === Dual{TestTag()}(rand(samerng(), FDNUM), zero(PARTIALS))
-    @test rand(samerng(), typeof(FDNUM)) === Dual{TestTag()}(rand(samerng(), V), zero(Partials{N,V}))
-    @test rand(samerng(), NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(rand(samerng(), NESTED_FDNUM), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
-    @test rand(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(rand(samerng(), V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
-    @test randn(samerng(), typeof(FDNUM)) === Dual{TestTag()}(randn(samerng(), V), zero(Partials{N,V}))
-    @test randn(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(randn(samerng(), V), zero(Partials{M,V})),
-    zero(Partials{N,Dual{TestTag(),V,M}}))
-    @test randexp(samerng(), typeof(FDNUM)) === Dual{TestTag()}(randexp(samerng(), V), zero(Partials{N,V}))
-    @test randexp(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(randexp(samerng(), V), zero(Partials{M,V})),
-    zero(Partials{N,Dual{TestTag(),V,M}}))
+    if V <: Integer
+        @test rand(samerng(), FDNUM) == rand(samerng(), value(FDNUM))
+        @test rand(samerng(), NESTED_FDNUM) == rand(samerng(), value(NESTED_FDNUM))
+    elseif V <: AbstractFloat
+        @test rand(samerng(), typeof(FDNUM)) === Dual{TestTag()}(rand(samerng(), V), zero(Partials{N,V}))
+        @test rand(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(rand(samerng(), V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
+        @test randn(samerng(), typeof(FDNUM)) === Dual{TestTag()}(randn(samerng(), V), zero(Partials{N,V}))
+        @test randn(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(randn(samerng(), V), zero(Partials{M,V})),
+        zero(Partials{N,Dual{TestTag(),V,M}}))
+        @test randexp(samerng(), typeof(FDNUM)) === Dual{TestTag()}(randexp(samerng(), V), zero(Partials{N,V}))
+        @test randexp(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(randexp(samerng(), V), zero(Partials{M,V})),
+        zero(Partials{N,Dual{TestTag(),V,M}}))
+    end
 
     # Predicates #
     #------------#
 
     @test ForwardDiff.isconstant(zero(FDNUM))
-    @test ForwardDiff.isconstant(rand(FDNUM))
     @test ForwardDiff.isconstant(one(FDNUM))
     @test ForwardDiff.isconstant(FDNUM) == (N == 0)
 
     @test ForwardDiff.isconstant(zero(NESTED_FDNUM))
-    @test ForwardDiff.isconstant(rand(NESTED_FDNUM))
     @test ForwardDiff.isconstant(one(NESTED_FDNUM))
     @test ForwardDiff.isconstant(NESTED_FDNUM) == (N == 0)
 
