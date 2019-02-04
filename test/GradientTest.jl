@@ -84,58 +84,61 @@ end
 println("  ...testing specialized StaticArray codepaths")
 
 x = rand(3, 3)
-sx = StaticArrays.SArray{Tuple{3,3}}(x)
 
-cfg = ForwardDiff.GradientConfig(nothing, x)
-scfg = ForwardDiff.GradientConfig(nothing, sx)
+for T in (StaticArrays.SArray, StaticArrays.MArray)
+    sx = T{Tuple{3,3}}(x)
 
-actual = ForwardDiff.gradient(prod, x)
-@test ForwardDiff.gradient(prod, sx) == actual
-@test ForwardDiff.gradient(prod, sx, cfg) == actual
-@test ForwardDiff.gradient(prod, sx, scfg) == actual
-@test ForwardDiff.gradient(prod, sx, scfg) isa StaticArray
-@test ForwardDiff.gradient(prod, sx, scfg, Val{false}()) == actual
-@test ForwardDiff.gradient(prod, sx, scfg, Val{false}()) isa StaticArray
+    cfg = ForwardDiff.GradientConfig(nothing, x)
+    scfg = ForwardDiff.GradientConfig(nothing, sx)
 
-out = similar(x)
-ForwardDiff.gradient!(out, prod, sx)
-@test out == actual
+    actual = ForwardDiff.gradient(prod, x)
+    @test ForwardDiff.gradient(prod, sx) == actual
+    @test ForwardDiff.gradient(prod, sx, cfg) == actual
+    @test ForwardDiff.gradient(prod, sx, scfg) == actual
+    @test ForwardDiff.gradient(prod, sx, scfg) isa StaticArray
+    @test ForwardDiff.gradient(prod, sx, scfg, Val{false}()) == actual
+    @test ForwardDiff.gradient(prod, sx, scfg, Val{false}()) isa StaticArray
 
-out = similar(x)
-ForwardDiff.gradient!(out, prod, sx, cfg)
-@test out == actual
+    out = similar(x)
+    ForwardDiff.gradient!(out, prod, sx)
+    @test out == actual
 
-out = similar(x)
-ForwardDiff.gradient!(out, prod, sx, scfg)
-@test out == actual
+    out = similar(x)
+    ForwardDiff.gradient!(out, prod, sx, cfg)
+    @test out == actual
 
-result = DiffResults.GradientResult(x)
-result = ForwardDiff.gradient!(result, prod, x)
+    out = similar(x)
+    ForwardDiff.gradient!(out, prod, sx, scfg)
+    @test out == actual
 
-result1 = DiffResults.GradientResult(x)
-result2 = DiffResults.GradientResult(x)
-result3 = DiffResults.GradientResult(x)
-result1 = ForwardDiff.gradient!(result1, prod, sx)
-result2 = ForwardDiff.gradient!(result2, prod, sx, cfg)
-result3 = ForwardDiff.gradient!(result3, prod, sx, scfg)
-@test DiffResults.value(result1) == DiffResults.value(result)
-@test DiffResults.value(result2) == DiffResults.value(result)
-@test DiffResults.value(result3) == DiffResults.value(result)
-@test DiffResults.gradient(result1) == DiffResults.gradient(result)
-@test DiffResults.gradient(result2) == DiffResults.gradient(result)
-@test DiffResults.gradient(result3) == DiffResults.gradient(result)
+    result = DiffResults.GradientResult(x)
+    result = ForwardDiff.gradient!(result, prod, x)
 
-sresult1 = DiffResults.GradientResult(sx)
-sresult2 = DiffResults.GradientResult(sx)
-sresult3 = DiffResults.GradientResult(sx)
-sresult1 = ForwardDiff.gradient!(sresult1, prod, sx)
-sresult2 = ForwardDiff.gradient!(sresult2, prod, sx, cfg)
-sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
-@test DiffResults.value(sresult1) == DiffResults.value(result)
-@test DiffResults.value(sresult2) == DiffResults.value(result)
-@test DiffResults.value(sresult3) == DiffResults.value(result)
-@test DiffResults.gradient(sresult1) == DiffResults.gradient(result)
-@test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
-@test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
+    result1 = DiffResults.GradientResult(x)
+    result2 = DiffResults.GradientResult(x)
+    result3 = DiffResults.GradientResult(x)
+    result1 = ForwardDiff.gradient!(result1, prod, sx)
+    result2 = ForwardDiff.gradient!(result2, prod, sx, cfg)
+    result3 = ForwardDiff.gradient!(result3, prod, sx, scfg)
+    @test DiffResults.value(result1) == DiffResults.value(result)
+    @test DiffResults.value(result2) == DiffResults.value(result)
+    @test DiffResults.value(result3) == DiffResults.value(result)
+    @test DiffResults.gradient(result1) == DiffResults.gradient(result)
+    @test DiffResults.gradient(result2) == DiffResults.gradient(result)
+    @test DiffResults.gradient(result3) == DiffResults.gradient(result)
+
+    sresult1 = DiffResults.GradientResult(sx)
+    sresult2 = DiffResults.GradientResult(sx)
+    sresult3 = DiffResults.GradientResult(sx)
+    sresult1 = ForwardDiff.gradient!(sresult1, prod, sx)
+    sresult2 = ForwardDiff.gradient!(sresult2, prod, sx, cfg)
+    sresult3 = ForwardDiff.gradient!(sresult3, prod, sx, scfg)
+    @test DiffResults.value(sresult1) == DiffResults.value(result)
+    @test DiffResults.value(sresult2) == DiffResults.value(result)
+    @test DiffResults.value(sresult3) == DiffResults.value(result)
+    @test DiffResults.gradient(sresult1) == DiffResults.gradient(result)
+    @test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
+    @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
+end
 
 end # module
