@@ -292,7 +292,7 @@ end
 # Predicates #
 #------------#
 
-isconstant(d::Dual) = iszero(partials(d))
+isconstant(d::Dual) = all_zero_partials(partials(d))
 
 for pred in UNARY_PREDICATES
     @eval Base.$(pred)(d::Dual) = $(pred)(value(d))

@@ -34,7 +34,7 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 # Generic Functions #
 #####################
 
-@inline iszero(partials::Partials) = iszero_tuple(partials.values)
+@inline all_zero_partials(partials::Partials) = iszero_tuple(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
 @inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
@@ -92,19 +92,15 @@ end
 
 if NANSAFE_MODE_ENABLED
     @inline function Base.:*(partials::Partials, x::Real)
-        x = ifelse(!isfinite(x) && iszero(partials), one(x), x)
-        return Partials(scale_tuple(partials.values, x))
+        return Partials(scale_tuple_nansafe(partials.values, x))
     end
 
     @inline function Base.:/(partials::Partials, x::Real)
-        x = ifelse(x == zero(x) && iszero(partials), one(x), x)
-        return Partials(div_tuple_by_scalar(partials.values, x))
+        return Partials(div_tuple_by_scalar_nansafe(partials.values, x))
     end
 
     @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
-        x_a = ifelse(!isfinite(x_a) && iszero(a), one(x_a), x_a)
-        x_b = ifelse(!isfinite(x_b) && iszero(b), one(x_b), x_b)
-        return Partials(mul_tuples(a.values, b.values, x_a, x_b))
+        return Partials(mul_tuples_nansafe(a.values, b.values, x_a, x_b))
     end
 else
     @inline function Base.:*(partials::Partials, x::Real)
@@ -201,8 +197,30 @@ end
     return tupexpr(i -> :(tup[$i] * x), N)
 end
 
+@generated function scale_tuple_nansafe(tup::NTuple{N}, x) where N
+    ex = tupexpr(i -> quote
+        t_i = tup[$i]
+        ifelse(is_x_inf && iszero(t_i), t_i, t_i * x)
+    end, N)
+    return quote
+        is_x_inf = !isfinite(x)
+        return $ex
+    end
+end
+
 @generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
     return tupexpr(i -> :(tup[$i] / x), N)
+end
+
+@generated function div_tuple_by_scalar_nansafe(tup::NTuple{N}, x) where N
+    ex = tupexpr(i -> quote
+        t_i = tup[$i]
+        ifelse(is_x_zero && iszero(t_i), t_i, t_i / x)
+    end, N)
+    return quote
+        is_x_zero = iszero(x)
+        return $ex
+    end
 end
 
 @generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
@@ -219,6 +237,21 @@ end
 
 @generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
     return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
+end
+
+@generated function mul_tuples_nansafe(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
+    ex = tupexpr(i -> quote
+        a_i = a[$i]
+        b_i = b[$i]
+        a_term = ifelse(is_af_inf && iszero(a_i), a_i, a_i * afactor)
+        b_term = ifelse(is_bf_inf && iszero(b_i), b_i, b_i * bfactor)
+        a_term + b_term
+    end, N)
+    return quote
+        is_af_inf = !isfinite(afactor)
+        is_bf_inf = !isfinite(bfactor)
+        return $ex
+    end
 end
 
 ###################

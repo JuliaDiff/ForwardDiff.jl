@@ -54,8 +54,8 @@ for N in (0, 3), T in (Int, Float32, Float64)
 
     @test rand(samerng(), PARTIALS) == rand(samerng(), typeof(PARTIALS))
 
-    @test ForwardDiff.iszero(PARTIALS) == (N == 0)
-    @test ForwardDiff.iszero(zero(PARTIALS))
+    @test ForwardDiff.all_zero_partials(PARTIALS) == (N == 0)
+    @test ForwardDiff.all_zero_partials(zero(PARTIALS))
 
     @test PARTIALS == copy(PARTIALS)
     @test (PARTIALS == PARTIALS2) == (N == 0)
