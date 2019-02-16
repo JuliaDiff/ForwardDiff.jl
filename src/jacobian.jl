@@ -29,7 +29,7 @@ stored in `y`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
-    CHK && checktag(T, f!, x)    
+    CHK && checktag(T, f!, x)
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
@@ -78,30 +78,31 @@ function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray
     return result
 end
 
-@inline jacobian(f, x::SArray) = vector_mode_jacobian(f, x)
-@inline jacobian(f, x::SArray, cfg::JacobianConfig) = jacobian(f, x)
-@inline jacobian(f, x::SArray, cfg::JacobianConfig, ::Val) = jacobian(f, x)
+@inline jacobian(f, x::StaticArray) = vector_mode_jacobian(f, x)
+@inline jacobian(f, x::StaticArray, cfg::JacobianConfig) = jacobian(f, x)
+@inline jacobian(f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian(f, x)
 
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray) = vector_mode_jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::JacobianConfig) = jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::SArray, cfg::JacobianConfig, ::Val) = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray) = vector_mode_jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig) = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian!(result, f, x)
 
 #####################
 # result extraction #
 #####################
 
-@generated function extract_jacobian(::Type{T}, ydual::SArray{SY,VY,DY,M},
-                                     x::SArray{SX,VX,DX,N}) where {T,SY,VY,DY,M,SX,VX,DX,N}
+@generated function extract_jacobian(::Type{T}, ydual::StaticArray, x::StaticArray) where T
+    M, N = length(ydual), length(x)
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
+    V = StaticArrays.similar_type(x, valtype(eltype(ydual)), Size(M, N))
     return quote
         $(Expr(:meta, :inline))
-        return SArray{Tuple{M,N}}($result)
+        return $V($result)
     end
 end
 
-function extract_jacobian(::Type{T}, ydual::AbstractArray, x::SArray{S,V,D,N}) where {T,S,V,D,N}
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
-    return extract_jacobian!(T, result, ydual, N)
+function extract_jacobian(::Type{T}, ydual::AbstractArray, x::StaticArray) where T
+    result = similar(ydual, valtype(eltype(ydual)), length(ydual), length(x))
+    return extract_jacobian!(T, result, ydual, length(x))
 end
 
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, n) where {T}
@@ -167,21 +168,21 @@ function vector_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T,V,N}) 
     return result
 end
 
-@inline function vector_mode_jacobian(f::F, x::SArray{S,V}) where {F,S,V}
-    T = typeof(Tag(f,V))
+@inline function vector_mode_jacobian(f, x::StaticArray)
+    T = typeof(Tag(f, eltype(x)))
     return extract_jacobian(T, static_dual_eval(T, f, x), x)
 end
 
-@inline function vector_mode_jacobian!(result, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
-    T = typeof(Tag(f,V))
+@inline function vector_mode_jacobian!(result, f, x::StaticArray)
+    T = typeof(Tag(f, eltype(x)))
     ydual = static_dual_eval(T, f, x)
-    result = extract_jacobian!(T, result, ydual, N)
+    result = extract_jacobian!(T, result, ydual, length(x))
     result = extract_value!(T, result, ydual)
     return result
 end
 
-@inline function vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::SArray{S,V,D,N}) where {F,S,V,D,N}
-    T = typeof(Tag(f,V))
+@inline function vector_mode_jacobian!(result::ImmutableDiffResult, f, x::StaticArray)
+    T = typeof(Tag(f, eltype(x)))
     ydual = static_dual_eval(T, f, x)
     result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
     result = DiffResults.value!(d -> value(T,d), result, ydual)
