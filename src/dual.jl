@@ -82,9 +82,12 @@ end
 
 @inline value(::Type{T}, x) where T = x
 @inline value(::Type{T}, d::Dual{T}) where T = value(d)
-function value(::Type{T}, d::Dual{S}) where {T,S}
-    # TODO: in the case of nested Duals, it may be possible to "transpose" the Dual objects
-    throw(DualMismatchError(T,S))
+@inline function value(::Type{T}, d::Dual{S}) where {T,S}
+    if S ≺ T
+        d
+    else
+        throw(DualMismatchError(T,S))        
+    end
 end
 
 @inline partials(x) = Partials{0,typeof(x)}(tuple())
@@ -96,7 +99,14 @@ end
 
 @inline Base.@propagate_inbounds partials(::Type{T}, x, i...) where T = partials(x, i...)
 @inline Base.@propagate_inbounds partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
-partials(::Type{T}, d::Dual{S}, i...) where {T,S} = throw(DualMismatchError(T,S))
+@inline function partials(::Type{T}, d::Dual{S}, i...) where {T,S}
+    if S ≺ T
+        zero(d)
+    else
+        throw(DualMismatchError(T,S))
+    end
+end
+
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
 @inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
