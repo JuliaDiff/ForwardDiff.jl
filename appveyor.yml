@@ -1,7 +1,7 @@
 environment:
   matrix:
-  - julia_version: 0.7
-  - julia_version: 1
+  - julia_version: 1.0
+  - julia_version: 1.1
   - julia_version: nightly
 
 platform:
@@ -10,9 +10,9 @@ platform:
 
 # # Uncomment the following lines to allow failures on nightly julia
 # # (tests will run but not make your overall status red)
-# matrix:
-#   allow_failures:
-#   - julia_version: nightly
+matrix:
+  allow_failures:
+  - julia_version: nightly
 
 branches:
   only:
