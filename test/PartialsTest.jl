@@ -120,10 +120,14 @@ for N in (0, 3), T in (Int, Float32, Float64)
 
         if ForwardDiff.NANSAFE_MODE_ENABLED
             ZEROS = Partials((fill(zero(T), N)...,))
+            SEED = ForwardDiff.single_seed(Partials{N,T}, Val(N))
 
             @test (NaN * ZEROS).values == ZEROS.values
+            @test (NaN * SEED).values === promote(fill(zero(T), N - 1)..., NaN)
             @test (Inf * ZEROS).values == ZEROS.values
-            @test (ZEROS / 0).values == ZEROS.values
+            @test (Inf * SEED).values === promote(fill(zero(T), N - 1)..., Inf)
+            @test (ZEROS / 0.0).values == ZEROS.values
+            @test (SEED / 0.0).values === promote(fill(zero(T), N - 1)..., Inf)
 
             @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, NaN).values == ZEROS.values
             @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, X).values == ZEROS.values
