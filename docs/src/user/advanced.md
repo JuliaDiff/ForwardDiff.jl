@@ -134,7 +134,7 @@ or `isinf(y)`, in which case a `NaN` derivative will be propagated instead.
 
 It is possible to fix this behavior by checking that the perturbation component is zero
 before attempting to propagate derivative information, but this check can noticeably
-decrease performance (~5%-10% on our benchmarks).
+decrease performance.
 
 In order to preserve performance in the majority of use cases, ForwardDiff disables this
 check by default. If your code is affected by this `NaN` behvaior, you can enable
