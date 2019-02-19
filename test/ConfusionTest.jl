@@ -66,4 +66,11 @@ let z = z83a
     @test ForwardDiff.hessian(h, [1.]) == zeros(1, 1)
 end
 
+@test ForwardDiff.derivative(1.0) do x
+    ForwardDiff.derivative(x) do y
+        x
+    end
+end == 0.0
+
+
 end # module
