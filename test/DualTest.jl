@@ -477,10 +477,10 @@ end
 end
 
 @testset "Duals with ranges" begin
-    t = Dual.((0.0,10.0),0)
+    t = ForwardDiff.Dual.((0.0,10.0),0)
     r = (t[1]:1/60:t[2])
     @test r[1] == t[1]
-    @test r[2] == t[2]
+    @test r[end] == t[2]
 end
 
 end # module
