@@ -141,4 +141,13 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
 end
 
+# Issue 399
+
+let
+    f_const(x) = 1.0
+    g_grad_const = x -> ForwardDiff.gradient(f_const, x)
+    @test g_grad_const([1.0]) == [0.0]
+    @test isempty(g_grad_const(zeros(Float64, 0)))
+end
+
 end # module
