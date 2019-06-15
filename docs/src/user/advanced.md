@@ -251,7 +251,7 @@ struct MyTag end # Unique tag for the Duals
 x1dual = Dual{MyTag}(1.0, (1.0, 0.0, 0.0, 0.0))
 x2dual = Dual{MyTag}(1.5, (0.0, 1.0, 0.0, 0.0))
 x3dual = Dual{MyTag}(3.0, (0.0, 0.0, 1.0, 0.0))
-x4dual = Dual{MyTag}(1.0, (0.0, 0.0, 0.0, 0.0))
+x4dual = Dual{MyTag}(1.0, (0.0, 0.0, 0.0, 1.0))
 xdual = [x1dual, x2dual, x3dual, x4dual]
 ```
 
