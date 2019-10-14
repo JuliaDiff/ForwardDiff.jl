@@ -34,7 +34,7 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 # Generic Functions #
 #####################
 
-@inline iszero(partials::Partials) = iszero_tuple(partials.values)
+@inline Base.iszero(partials::Partials) = iszero_tuple(partials.values)
 
 @inline Base.zero(partials::Partials) = zero(typeof(partials))
 @inline Base.zero(::Type{Partials{N,V}}) where {N,V} = Partials{N,V}(zero_tuple(NTuple{N,V}))
