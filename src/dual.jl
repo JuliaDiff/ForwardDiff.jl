@@ -442,7 +442,13 @@ for f in (:(Base.:^), :(NaNMath.pow))
                 vx, vy = value(x), value(y)
                 expv = ($f)(vx, vy)
                 powval = vy * ($f)(vx, vy - 1)
-                logval = isconstant(y) ? one(expv) : expv * log(vx)
+                if isconstant(y)
+                    logval = one(expv)
+                elseif iszero(vx) && vy > 0
+                    logval = zero(vx)
+                else
+                    logval = expv * log(vx)
+                end
                 new_partials = _mul_partials(partials(x), partials(y), powval, logval)
                 return Dual{Txy}(expv, new_partials)
             end,
@@ -459,7 +465,7 @@ for f in (:(Base.:^), :(NaNMath.pow))
             begin
                 v = value(y)
                 expv = ($f)(x, v)
-                deriv = expv*log(x)
+                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*log(x)
                 return Dual{Ty}(expv, deriv * partials(y))
             end
         )

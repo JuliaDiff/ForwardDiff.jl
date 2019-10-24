@@ -89,4 +89,11 @@ for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
     @test isapprox(DiffResults.derivative(out), d)
 end
 
+@testset "exponential function at base zero" begin
+    @test (x -> ForwardDiff.derivative(y -> x^y, -0.5))(0.0) === -Inf
+    @test (x -> ForwardDiff.derivative(y -> x^y,  0.0))(0.0) === -Inf
+    @test (x -> ForwardDiff.derivative(y -> x^y,  0.5))(0.0) === 0.0
+    @test (x -> ForwardDiff.derivative(y -> x^y,  1.5))(0.0) === 0.0
+end
+
 end # module
