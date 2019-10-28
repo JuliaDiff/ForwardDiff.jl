@@ -13,8 +13,12 @@ notifications:
 sudo: false
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia --color=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("ForwardDiff"); Pkg.test("ForwardDiff"; coverage=true)';
-    - julia --color=yes -O3 -e 'using Pkg; Pkg.add("StaticArrays"); include("test/SIMDTest.jl")';
+    - julia --project -e 'using Pkg;
+                          Pkg.update();
+                          Pkg.instantiate()'
+    - julia --project -e 'using Pkg;
+                          Pkg.test("ForwardDiff"; coverage=true)'
+    - julia --project --color=yes -O3 -e 'include("test/SIMDTest.jl")'
 after_success:
     - julia --color=yes -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
     - julia --color=yes -e 'using Pkg; ps=Pkg.PackageSpec(name="Documenter", version="0.19"); Pkg.add(ps); Pkg.pin(ps)'
