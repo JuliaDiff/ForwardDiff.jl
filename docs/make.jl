@@ -2,7 +2,6 @@ using Documenter, ForwardDiff
 
 makedocs(modules=[ForwardDiff],
          doctest = false,
-         format = :html,
          sitename = "ForwardDiff",
          pages = ["Introduction" => "index.md",
                   "User Documentation" => [
@@ -14,9 +13,6 @@ makedocs(modules=[ForwardDiff],
                     "How ForwardDiff Works" => "dev/how_it_works.md",
                     "How to Contribute" => "dev/contributing.md"]])
 
-deploydocs(repo = "github.com/JuliaDiff/ForwardDiff.jl.git",
-           osname = "linux",
-           julia = "0.7",
-           target = "build",
-           deps = nothing,
-           make = nothing)
+deploydocs(
+    repo = "github.com/JuliaDiff/ForwardDiff.jl.git"
+)
