@@ -1,5 +1,6 @@
 using ForwardDiff
 
+#=
 println("Testing Partials...")
 t = @elapsed include("PartialsTest.jl")
 println("done (took $t seconds).")
@@ -32,8 +33,11 @@ println("Testing miscellaneous functionality...")
 t = @elapsed include("MiscTest.jl")
 println("done (took $t seconds).")
 
-if Base.JLOptions().opt_level >= 3
-    println("Testing SIMD vectorization...")
-    t = @elapsed include("SIMDTest.jl")
-    println("done (took $t seconds).")
-end
+# These tests need to be run in a process where bounds checking is not explicitly enabled
+# (like they are with Pkg.test)
+=#
+println("Testing SIMD vectorization...")
+project = Base.active_project()
+simdfile = joinpath(@__DIR__, "SIMDTest.jl")
+t = @elapsed run(`$(Base.julia_cmd()) --check-bounds=no --code-coverage=none -O2 --project=$project $simdfile`)
+println("done (took $t seconds).")

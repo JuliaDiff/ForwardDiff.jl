@@ -2,6 +2,7 @@
 *.jl.*.cov
 *.jl.mem
 *.DS_Store
-docs/build/
-docs/site/
-benchmark_data/
+/docs/build/
+/docs/site/
+/benchmark_data/
+/Manifest.toml
