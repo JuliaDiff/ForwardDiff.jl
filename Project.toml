@@ -1,6 +1,6 @@
 name = "ForwardDiff"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.4"
+version = "0.10.5"
 
 [deps]
 CommonSubexpressions = "bbf7d656-a473-5ed7-a52c-81e309532950"
@@ -19,7 +19,7 @@ DiffRules = "0.0.4, 0.0.5, 0.0.6, 0.0.7, 0.0.8, 0.0.9, 0.0.10"
 DiffTests = "0.0.1, 0.1"
 NaNMath = "0.2.2, 0.3"
 SpecialFunctions = "0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8"
-StaticArrays = "0.8.3, 0.9, 0.10, 0.11"
+StaticArrays = "0.8.3, 0.9, 0.10, 0.11, 0.12"
 julia = "1"
 
 [extras]
