@@ -1,6 +1,5 @@
 using ForwardDiff
 
-#=
 println("Testing Partials...")
 t = @elapsed include("PartialsTest.jl")
 println("done (took $t seconds).")
@@ -35,7 +34,6 @@ println("done (took $t seconds).")
 
 # These tests need to be run in a process where bounds checking is not explicitly enabled
 # (like they are with Pkg.test)
-=#
 println("Testing SIMD vectorization...")
 project = Base.active_project()
 simdfile = joinpath(@__DIR__, "SIMDTest.jl")
