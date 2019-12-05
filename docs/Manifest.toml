@@ -11,9 +11,9 @@ version = "0.8.10"
 
 [[BinaryProvider]]
 deps = ["Libdl", "SHA"]
-git-tree-sha1 = "29995a7b317bbd06be147e1974a3541ce2502dca"
+git-tree-sha1 = "5b08ed6036d9d3f0ee6369410b830f8873d4024c"
 uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
-version = "0.5.7"
+version = "0.5.8"
 
 [[CommonSubexpressions]]
 deps = ["Test"]
@@ -36,16 +36,16 @@ deps = ["Mmap"]
 uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DiffResults]]
-deps = ["Compat", "StaticArrays"]
-git-tree-sha1 = "34a4a1e8be7bc99bc9c611b895b5baf37a80584c"
+deps = ["StaticArrays"]
+git-tree-sha1 = "e01a432d7de9ee2ec4fe596fdaf100e2117a14db"
 uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
-version = "0.0.4"
+version = "1.0.0"
 
 [[DiffRules]]
-deps = ["Random", "Test"]
-git-tree-sha1 = "dc0869fb2f5b23466b32ea799bd82c76480167f7"
+deps = ["NaNMath", "Random", "SpecialFunctions"]
+git-tree-sha1 = "f734b5f6bc9c909027ef99f6d91d5d9e4b111eed"
 uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
-version = "0.0.10"
+version = "0.1.0"
 
 [[Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -59,17 +59,17 @@ version = "0.8.1"
 
 [[Documenter]]
 deps = ["Base64", "Dates", "DocStringExtensions", "InteractiveUtils", "JSON", "LibGit2", "Logging", "Markdown", "REPL", "Test", "Unicode"]
-git-tree-sha1 = "ac9736f359294bd60f75a4c4c1f2da0e98f6b71f"
+git-tree-sha1 = "2a3194cd09bfc259322e296db87dd012d06e89ee"
 repo-rev = "master"
 repo-url = "https://github.com/JuliaDocs/Documenter.jl.git"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-version = "0.24.0-DEV"
+version = "0.24.2"
 
 [[ForwardDiff]]
-deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "Documenter", "NaNMath", "Random", "SpecialFunctions", "StaticArrays"]
+deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "NaNMath", "Random", "SpecialFunctions", "StaticArrays"]
 path = ".."
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.4"
+version = "0.10.7"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
@@ -102,19 +102,18 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
 [[NaNMath]]
-deps = ["Compat"]
-git-tree-sha1 = "ce3b85e484a5d4c71dd5316215069311135fa9f2"
+git-tree-sha1 = "928b8ca9b2791081dc71a51c55347c27c618760f"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
-version = "0.3.2"
+version = "0.3.3"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
-git-tree-sha1 = "ef0af6c8601db18c282d092ccbd2f01f3f0cd70b"
+git-tree-sha1 = "0139ba59ce9bc680e2925aec5b7db79065d60556"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "0.3.7"
+version = "0.3.10"
 
 [[Pkg]]
-deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
+deps = ["Dates", "LibGit2", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[Printf]]
@@ -154,9 +153,9 @@ version = "0.8.0"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "1085ffbf5fd48fdba64ef8e902ca429c4e1212d3"
+git-tree-sha1 = "5a3bcb6233adabde68ebc97be66e95dcb787424c"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "0.11.1"
+version = "0.12.1"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
