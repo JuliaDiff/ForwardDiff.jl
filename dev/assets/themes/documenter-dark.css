@@ -1070,38 +1070,9 @@ html.theme--documenter-dark {
  *
  * The main container is <div> that is identified by id #documenter.
  */
-  /* a11y-dark theme
- * Based on the Tomorrow Night Eighties theme:
- *   https://github.com/isagalaev/highlight.js/blob/master/src/styles/tomorrow-night-eighties.css
- * @author: ericwbailey
- *
- * Copied from: https://github.com/highlightjs/highlight.js
- *
- * Copyright (c) 2006, Ivan Sagalaev
- * All rights reserved.
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright
- *       notice, this list of conditions and the following disclaimer in the
- *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of highlight.js nor the names of its contributors
- *       may be used to endorse or promote products derived from this software
- *       without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE REGENTS AND CONTRIBUTORS BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+  /* a11y-dark theme */
+  /* Based on the Tomorrow Night Eighties theme: https://github.com/isagalaev/highlight.js/blob/master/src/styles/tomorrow-night-eighties.css */
+  /* @author: ericwbailey */
   /* Comment */
   /* Red */
   /* Orange */
@@ -1156,7 +1127,7 @@ html.theme--documenter-dark {
     color: #e74c3c;
     font-size: 0.875em;
     font-weight: normal;
-    padding: 0.25em 0.5em 0.25em; }
+    padding: 0.1em; }
   html.theme--documenter-dark hr {
     background-color: #282f2f;
     border: none;
@@ -3714,7 +3685,7 @@ html.theme--documenter-dark {
     position: relative; }
   html.theme--documenter-dark .card-content {
     background-color: transparent;
-    padding: 1.5rem; }
+    padding: 1rem 1.25rem; }
   html.theme--documenter-dark .card-footer {
     background-color: transparent;
     border-top: 1px solid #5e6d6f;
@@ -4070,7 +4041,7 @@ html.theme--documenter-dark {
     border-style: solid;
     border-width: 0 0 0 4px;
     color: #fff;
-    padding: 1.25em 1.5em; }
+    padding: 1em 1.25em; }
     html.theme--documenter-dark .message-body code,
     html.theme--documenter-dark .message-body pre {
       background-color: white; }
@@ -7189,16 +7160,18 @@ html.theme--documenter-dark {
     background-color: transparent; }
   html.theme--documenter-dark .hero.is-danger .navbar .navbar-dropdown .navbar-item:hover {
     background-color: transparent; }
-  html.theme--documenter-dark h1 .docs-heading-anchor, html.theme--documenter-dark h2 .docs-heading-anchor, html.theme--documenter-dark h3 .docs-heading-anchor, html.theme--documenter-dark h4 .docs-heading-anchor, html.theme--documenter-dark h5 .docs-heading-anchor, html.theme--documenter-dark h6 .docs-heading-anchor {
+  html.theme--documenter-dark h1 .docs-heading-anchor, html.theme--documenter-dark h1 .docs-heading-anchor:hover, html.theme--documenter-dark h1 .docs-heading-anchor:visited, html.theme--documenter-dark h2 .docs-heading-anchor, html.theme--documenter-dark h2 .docs-heading-anchor:hover, html.theme--documenter-dark h2 .docs-heading-anchor:visited, html.theme--documenter-dark h3 .docs-heading-anchor, html.theme--documenter-dark h3 .docs-heading-anchor:hover, html.theme--documenter-dark h3 .docs-heading-anchor:visited, html.theme--documenter-dark h4 .docs-heading-anchor, html.theme--documenter-dark h4 .docs-heading-anchor:hover, html.theme--documenter-dark h4 .docs-heading-anchor:visited, html.theme--documenter-dark h5 .docs-heading-anchor, html.theme--documenter-dark h5 .docs-heading-anchor:hover, html.theme--documenter-dark h5 .docs-heading-anchor:visited, html.theme--documenter-dark h6 .docs-heading-anchor, html.theme--documenter-dark h6 .docs-heading-anchor:hover, html.theme--documenter-dark h6 .docs-heading-anchor:visited {
+    color: #f2f2f2; }
+  html.theme--documenter-dark h1 .docs-heading-anchor-permalink, html.theme--documenter-dark h2 .docs-heading-anchor-permalink, html.theme--documenter-dark h3 .docs-heading-anchor-permalink, html.theme--documenter-dark h4 .docs-heading-anchor-permalink, html.theme--documenter-dark h5 .docs-heading-anchor-permalink, html.theme--documenter-dark h6 .docs-heading-anchor-permalink {
     visibility: hidden;
     vertical-align: middle;
     margin-left: 0.5em;
     font-size: 0.7rem; }
-    html.theme--documenter-dark h1 .docs-heading-anchor::before, html.theme--documenter-dark h2 .docs-heading-anchor::before, html.theme--documenter-dark h3 .docs-heading-anchor::before, html.theme--documenter-dark h4 .docs-heading-anchor::before, html.theme--documenter-dark h5 .docs-heading-anchor::before, html.theme--documenter-dark h6 .docs-heading-anchor::before {
+    html.theme--documenter-dark h1 .docs-heading-anchor-permalink::before, html.theme--documenter-dark h2 .docs-heading-anchor-permalink::before, html.theme--documenter-dark h3 .docs-heading-anchor-permalink::before, html.theme--documenter-dark h4 .docs-heading-anchor-permalink::before, html.theme--documenter-dark h5 .docs-heading-anchor-permalink::before, html.theme--documenter-dark h6 .docs-heading-anchor-permalink::before {
       font-family: "Font Awesome 5 Free";
       font-weight: 900;
       content: "\f0c1"; }
-  html.theme--documenter-dark h1:hover .docs-heading-anchor, html.theme--documenter-dark h2:hover .docs-heading-anchor, html.theme--documenter-dark h3:hover .docs-heading-anchor, html.theme--documenter-dark h4:hover .docs-heading-anchor, html.theme--documenter-dark h5:hover .docs-heading-anchor, html.theme--documenter-dark h6:hover .docs-heading-anchor {
+  html.theme--documenter-dark h1:hover .docs-heading-anchor-permalink, html.theme--documenter-dark h2:hover .docs-heading-anchor-permalink, html.theme--documenter-dark h3:hover .docs-heading-anchor-permalink, html.theme--documenter-dark h4:hover .docs-heading-anchor-permalink, html.theme--documenter-dark h5:hover .docs-heading-anchor-permalink, html.theme--documenter-dark h6:hover .docs-heading-anchor-permalink {
     visibility: visible; }
   html.theme--documenter-dark .docs-light-only {
     display: none !important; }
@@ -7262,7 +7235,7 @@ html.theme--documenter-dark {
       content: "\f06a"; }
   html.theme--documenter-dark .admonition-body {
     color: #fff;
-    padding: 1.25em 1.5em; }
+    padding: 1em 1.25em; }
     html.theme--documenter-dark .admonition-body pre {
       background-color: #282f2f; }
     html.theme--documenter-dark .admonition-body code {
@@ -7282,9 +7255,15 @@ html.theme--documenter-dark {
       box-shadow: 0 1px 2px rgba(10, 10, 10, 0.1);
       box-shadow: none;
       border-bottom: 1px solid #5e6d6f; }
+      html.theme--documenter-dark .docstring > header code {
+        background-color: transparent; }
+      html.theme--documenter-dark .docstring > header .docstring-binding {
+        margin-right: 0.3em; }
+      html.theme--documenter-dark .docstring > header .docstring-category {
+        margin-left: 0.3em; }
     html.theme--documenter-dark .docstring > section {
       position: relative;
-      padding: 1.5rem;
+      padding: 1rem 1.25rem;
       border-bottom: 1px solid #5e6d6f; }
       html.theme--documenter-dark .docstring > section:last-child {
         border-bottom: none; }
@@ -7292,8 +7271,8 @@ html.theme--documenter-dark {
         transition: opacity 0.3s;
         opacity: 0;
         position: absolute;
-        right: 0.75rem;
-        bottom: 0.75rem; }
+        right: 0.625rem;
+        bottom: 0.5rem; }
     html.theme--documenter-dark .docstring:hover > section > a.docs-sourcelink {
       opacity: 0.2; }
     html.theme--documenter-dark .docstring > section:hover a.docs-sourcelink {
@@ -7301,13 +7280,18 @@ html.theme--documenter-dark {
   html.theme--documenter-dark .content pre {
     border: 1px solid #5e6d6f; }
   html.theme--documenter-dark .content code {
-    font-weight: inherit;
-    word-break: break-word; }
+    font-weight: inherit; }
+  html.theme--documenter-dark .content a code {
+    color: #1abc9c; }
+  html.theme--documenter-dark .content h1 code, html.theme--documenter-dark .content h2 code, html.theme--documenter-dark .content h3 code, html.theme--documenter-dark .content h4 code, html.theme--documenter-dark .content h5 code, html.theme--documenter-dark .content h6 code {
+    color: #f2f2f2; }
   html.theme--documenter-dark .content table {
     display: block;
     width: initial;
     max-width: 100%;
     overflow-x: auto; }
+  html.theme--documenter-dark .content blockquote > ul:first-child, html.theme--documenter-dark .content blockquote > ol:first-child, html.theme--documenter-dark .content .admonition-body > ul:first-child, html.theme--documenter-dark .content .admonition-body > ol:first-child {
+    margin-top: 0; }
   html.theme--documenter-dark .breadcrumb a.is-disabled {
     cursor: default;
     pointer-events: none; }
@@ -7319,6 +7303,11 @@ html.theme--documenter-dark {
   html.theme--documenter-dark .katex .katex-mathml {
     top: 0;
     right: 0; }
+  html.theme--documenter-dark html {
+    -moz-osx-font-smoothing: auto;
+    -webkit-font-smoothing: auto; }
+  html.theme--documenter-dark #documenter .docs-main > article {
+    overflow-wrap: break-word; }
   @media screen and (min-width: 1056px) {
     html.theme--documenter-dark #documenter .docs-main {
       max-width: 52rem;
@@ -7515,7 +7504,6 @@ html.theme--documenter-dark {
           margin-top: 0.5rem; }
         html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu ul.internal .tocitem {
           width: 100%;
-          color: gray;
           padding: 0; }
           html.theme--documenter-dark #documenter .docs-sidebar ul.docs-menu ul.internal .tocitem::before {
             content: "⚬";
@@ -7562,8 +7550,6 @@ html.theme--documenter-dark {
   html.theme--documenter-dark {
     background-color: #1f2424;
     font-size: 16px;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-font-smoothing: antialiased;
     min-width: 300px;
     overflow-x: auto;
     overflow-y: scroll;
@@ -7633,3 +7619,5 @@ html.theme--documenter-dark {
     html.theme--documenter-dark .hljs-keyword,
     html.theme--documenter-dark .hljs-selector-tag {
       font-weight: bold; } }
+  html.theme--documenter-dark .hljs-subst {
+    color: #f8f8f2; }
