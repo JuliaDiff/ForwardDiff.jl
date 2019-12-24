@@ -323,8 +323,8 @@ end
 # Promotion/Conversion #
 ########################
 
-Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
-                                      ::Type{Dual{T2,V2,N2}}) where {T1,V1,N1,T2,V2,N2}
+function Base.promote_rule(::Type{Dual{T1,V1,N1}},
+                           ::Type{Dual{T2,V2,N2}}) where {T1,V1,N1,T2,V2,N2}
     # V1 and V2 might themselves be Dual types
     if T2 ≺ T1
         Dual{T1,promote_type(V1,Dual{T2,V2,N2}),N1}
