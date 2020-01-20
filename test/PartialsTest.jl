@@ -135,4 +135,8 @@ for N in (0, 3), T in (Int, Float32, Float64)
     end
 end
 
+io = IOBuffer()
+show(io, MIME("text/plain"), Partials((1, 2, 3)))
+@test String(take!(io)) == "3-element ForwardDiff.Partials{3,Int64}:\n 1\n 2\n 3"
+
 end # module
