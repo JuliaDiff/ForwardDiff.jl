@@ -1,4 +1,5 @@
 language: julia
+
 julia:
     - 1.0
     - 1.2
@@ -7,11 +8,39 @@ julia:
 matrix:
   allow_failures:
     - julia: nightly
+    - env: ALLOWFAILURES=1
+
 notifications:
     email: false
+
 sudo: false
+
 jobs:
   include:
+    # These tests need to be run in a process where bounds checking is not explicitly enabled
+# (like they are with Pkg.test)
+    - stage: test
+      script:
+        - julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
+        - julia --color=yes --check-bounds=no --code-coverage=none -O2 --project=. test/SIMDTest.jl
+      julia: 1.0
+      env: ALLOWFAILURES=1
+
+    - stage: test
+      script:
+        - julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
+        - julia --color=yes --check-bounds=no --code-coverage=none -O2 --project=. test/SIMDTest.jl
+      julia: 1.3
+      env: ALLOWFAILURES=1
+
+    - stage: test
+      script:
+        - julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
+        - julia --color=yes --check-bounds=no --code-coverage=none -O2 --project=. test/SIMDTest.jl
+      julia: nightly
+      env: ALLOWFAILURES=1
+
+
     - stage: "Documentation"
       julia: 1.2
       os: linux
@@ -19,5 +48,6 @@ jobs:
         - julia --color=yes --project=docs/ -e 'using Pkg; Pkg.instantiate()'
         - julia --color=yes --project=docs/ docs/make.jl
       after_success: skip
+
 after_success:
   - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
