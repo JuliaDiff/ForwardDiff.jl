@@ -86,7 +86,7 @@ end
     if S ≺ T
         d
     else
-        throw(DualMismatchError(T,S))        
+        throw(DualMismatchError(T,S))
     end
 end
 
@@ -611,4 +611,12 @@ function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
         print(io, ",", partials(d, i))
     end
     print(io, ")")
+end
+
+function Base.typemin(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
+    ForwardDiff.Dual{T,V,N}(typemin(V))
+end
+
+function Base.typemax(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
+    ForwardDiff.Dual{T,V,N}(typemax(V))
 end
