@@ -51,7 +51,7 @@ If you find ForwardDiff useful in your work, we kindly request that you cite [th
 
 ```
 @article{RevelsLubinPapamarkou2016,
-    title = {Forward-Mode Automatic Differentiation in Julia},
+    title = {Forward-Mode Automatic Differentiation in {J}ulia},
    author = {{Revels}, J. and {Lubin}, M. and {Papamarkou}, T.},
   journal = {arXiv:1607.07892 [cs.MS]},
      year = {2016},

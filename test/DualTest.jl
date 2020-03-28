@@ -476,4 +476,15 @@ end
     @test pow(x1, 0) === x1^0 === Dual{:t1}(1.0, 0.0)
 end
 
+@testset "Type min/max" begin
+    d1 = Dual(1.0)
+    dinf = typemax(typeof(d1))
+    dminf = typemin(typeof(d1))
+    @test dminf < d1 < dinf
+    @test typeof(dminf) === typeof(d1)
+    @test typeof(dinf) === typeof(d1)
+    @test !isfinite(dminf)
+    @test !isfinite(dinf)
+end
+
 end # module

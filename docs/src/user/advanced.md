@@ -137,7 +137,7 @@ before attempting to propagate derivative information, but this check can notice
 decrease performance (~5%-10% on our benchmarks).
 
 In order to preserve performance in the majority of use cases, ForwardDiff disables this
-check by default. If your code is affected by this `NaN` behvaior, you can enable
+check by default. If your code is affected by this `NaN` behavior, you can enable
 ForwardDiff's `NaN`-safe mode by setting the `NANSAFE_MODE_ENABLED` constant to `true` in
 ForwardDiff's source.
 

@@ -141,9 +141,15 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
 end
 
-# Issue 399
+@testset "exponential function at base zero" begin
+    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [NaN, NaN])
+    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, NaN])
+    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
+    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
+end
 
-let
+# Issue 399
+@testset "chunk size zero" begin
     f_const(x) = 1.0
     g_grad_const = x -> ForwardDiff.gradient(f_const, x)
     @test g_grad_const([1.0]) == [0.0]

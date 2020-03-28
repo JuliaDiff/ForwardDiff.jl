@@ -86,7 +86,7 @@ end
     if S ≺ T
         d
     else
-        throw(DualMismatchError(T,S))        
+        throw(DualMismatchError(T,S))
     end
 end
 
@@ -442,7 +442,13 @@ for f in (:(Base.:^), :(NaNMath.pow))
                 vx, vy = value(x), value(y)
                 expv = ($f)(vx, vy)
                 powval = vy * ($f)(vx, vy - 1)
-                logval = isconstant(y) ? one(expv) : expv * log(vx)
+                if isconstant(y)
+                    logval = one(expv)
+                elseif iszero(vx) && vy > 0
+                    logval = zero(vx)
+                else
+                    logval = expv * log(vx)
+                end
                 new_partials = _mul_partials(partials(x), partials(y), powval, logval)
                 return Dual{Txy}(expv, new_partials)
             end,
@@ -459,7 +465,7 @@ for f in (:(Base.:^), :(NaNMath.pow))
             begin
                 v = value(y)
                 expv = ($f)(x, v)
-                deriv = expv*log(x)
+                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*log(x)
                 return Dual{Ty}(expv, deriv * partials(y))
             end
         )
@@ -605,4 +611,12 @@ function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
         print(io, ",", partials(d, i))
     end
     print(io, ")")
+end
+
+function Base.typemin(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
+    ForwardDiff.Dual{T,V,N}(typemin(V))
+end
+
+function Base.typemax(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
+    ForwardDiff.Dual{T,V,N}(typemax(V))
 end
