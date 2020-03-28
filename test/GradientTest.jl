@@ -148,4 +148,12 @@ end
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
 end
 
+# Issue 399
+@testset "chunk size zero" begin
+    f_const(x) = 1.0
+    g_grad_const = x -> ForwardDiff.gradient(f_const, x)
+    @test g_grad_const([1.0]) == [0.0]
+    @test isempty(g_grad_const(zeros(Float64, 0)))
+end
+
 end # module
