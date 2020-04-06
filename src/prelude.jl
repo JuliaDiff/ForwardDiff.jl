@@ -1,4 +1,4 @@
-const NANSAFE_MODE_ENABLED = false
+const NANSAFE_MODE_ENABLED = true
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
