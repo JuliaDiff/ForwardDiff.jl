@@ -257,6 +257,14 @@ Base.copy(d::Dual) = d
 Base.eps(d::Dual) = eps(value(d))
 Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
 
+function Base.nextfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
+    ForwardDiff.Dual{T}(nextfloat(d.value), d.partials)
+end
+
+function Base.prevfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
+    ForwardDiff.Dual{T}(prevfloat(d.value), d.partials)
+end
+
 Base.rtoldefault(::Type{D}) where {D<:Dual} = Base.rtoldefault(valtype(D))
 
 Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
