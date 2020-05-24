@@ -42,8 +42,6 @@ function check_complex_jacobian(f, args...; kwargs...)
 end
 
 @testset "complex" begin
-    ForwardDiff._ldexp(2.0, -3) == 0.25
-    ForwardDiff._ldexp(2.0, 3) == 16.0
     for OP in [+, *, /, -, ^]
         @show OP
         check_complex_jacobian(OP, 4.0+2im, 2.0+1im)
