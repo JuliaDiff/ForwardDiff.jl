@@ -31,3 +31,7 @@ println("done (took $t seconds).")
 println("Testing miscellaneous functionality...")
 t = @elapsed include("MiscTest.jl")
 println("done (took $t seconds).")
+
+println("Testing complex numbers...")
+t = @elapsed include("ComplexTest.jl")
+println("done (took $t seconds).")
