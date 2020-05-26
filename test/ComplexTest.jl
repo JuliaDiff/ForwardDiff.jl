@@ -1,3 +1,4 @@
+module ComplexTest
 using ForwardDiff: Dual
 using Test, ForwardDiff
 
@@ -41,13 +42,15 @@ function check_complex_jacobian(f, args...; kwargs...)
     @test isapprox(nj, fj, atol=1e-5)
 end
 
-@testset "complex" begin
+@testset "complex instructions" begin
     for OP in [+, *, /, -, ^]
-        @show OP
+        println("  ...testing Complex Valued $OP")
         check_complex_jacobian(OP, 4.0+2im, 2.0+1im)
     end
     for OP in [abs, abs2, real, imag, conj, adjoint, sin, cos, tan,
             sinh, cosh, tanh, exp, log, angle, x->x^3, x->x^0.5, sqrt]
+        println("  ...testing Complex Valued $OP")
         check_complex_jacobian(OP, 4.0+2im)
     end
+end
 end
