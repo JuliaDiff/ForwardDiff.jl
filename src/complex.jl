@@ -1,7 +1,7 @@
 Base.prevfloat(x::Dual{T,V}) where {T,V<:AbstractFloat} = prevfloat(x.value)
 Base.nextfloat(x::Dual{T,V}) where {T,V<:AbstractFloat} = nextfloat(x.value)
 
-function Base.log(z::Complex{T}) where {A, FT<:AbstractFloat, T<:Dual{A,FT}}
+function Base.log(z::Complex{T}) where {A, T<:Dual{A,<:AbstractFloat}}
     T1::T  = 1.25
     T2::T  = 3
     ln2::T = log(convert(T,2))  #0.6931471805599453
@@ -21,7 +21,7 @@ function Base.log(z::Complex{T}) where {A, FT<:AbstractFloat, T<:Dual{A,FT}}
     end
     Complex(ρρ, angle(z))
 end
-function Base.tanh(z::Complex{T}) where {A, FT<:AbstractFloat, T<:Dual{A,FT}}
+function Base.tanh(z::Complex{T}) where {A, T<:Dual{A,<:AbstractFloat}}
     Ω = prevfloat(typemax(T))
     ξ, η = reim(z)
     if isnan(ξ) && η==0 return Complex(ξ, η) end
