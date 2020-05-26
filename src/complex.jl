@@ -21,7 +21,7 @@ function Base.log(z::Complex{T}) where {A, T<:Dual{A,<:AbstractFloat}}
     end
     Complex(ρρ, angle(z))
 end
-function Base.tanh(z::Complex{T}) where {A, FT<:AbstractFloat, T<:Dual{A,FT}}
+function Base.tanh(z::Complex{T}) where {A, T<:Dual{A,<:AbstractFloat}}
     Ω = prevfloat(typemax(T))
     ξ, η = reim(z)
     if isnan(ξ) && η==0 return Complex(ξ, η) end
