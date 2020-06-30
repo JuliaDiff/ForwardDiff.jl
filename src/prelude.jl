@@ -60,7 +60,7 @@ function qualified_cse!(expr)
         placeholders[placeholder] = x
         placeholder
     end
-    cse_expr = CommonSubexpressions.cse(expr, false)
+    cse_expr = CommonSubexpressions.cse(expr, warn=false)
     replace_match!(x -> haskey(placeholders, x), cse_expr.args) do x
         placeholders[x]
     end
