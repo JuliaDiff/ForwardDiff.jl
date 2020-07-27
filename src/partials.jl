@@ -7,7 +7,7 @@ end
 ##############################
 
 @generated function single_seed(::Type{Partials{N,V}}, ::Val{i}) where {N,V,i}
-    ex = Expr(:tuple, [ifelse(i === j, :(one(V)), :(zero(V))) for j in 1:N]...)
+    ex = Expr(:tuple, [ifelse(i === j, :(oneunit(V)), :(zero(V))) for j in 1:N]...)
     return :(Partials($(ex)))
 end
 
@@ -92,18 +92,18 @@ end
 
 if NANSAFE_MODE_ENABLED
     @inline function Base.:*(partials::Partials, x::Real)
-        x = ifelse(!isfinite(x) && iszero(partials), one(x), x)
+        x = ifelse(!isfinite(x) && iszero(partials), oneunit(x), x)
         return Partials(scale_tuple(partials.values, x))
     end
 
     @inline function Base.:/(partials::Partials, x::Real)
-        x = ifelse(x == zero(x) && iszero(partials), one(x), x)
+        x = ifelse(x == zero(x) && iszero(partials), oneunit(x), x)
         return Partials(div_tuple_by_scalar(partials.values, x))
     end
 
     @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
-        x_a = ifelse(!isfinite(x_a) && iszero(a), one(x_a), x_a)
-        x_b = ifelse(!isfinite(x_b) && iszero(b), one(x_b), x_b)
+        x_a = ifelse(!isfinite(x_a) && iszero(a), oneunit(x_a), x_a)
+        x_b = ifelse(!isfinite(x_b) && iszero(b), oneunit(x_b), x_b)
         return Partials(mul_tuples(a.values, b.values, x_a, x_b))
     end
 else
@@ -184,7 +184,7 @@ end
 @generated function one_tuple(::Type{NTuple{N,V}}) where {N,V}
     ex = tupexpr(i -> :(z), N)
     return quote
-        z = one(V)
+        z = oneunit(V)
         return $ex
     end
 end

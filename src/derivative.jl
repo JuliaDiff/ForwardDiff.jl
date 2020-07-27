@@ -11,7 +11,7 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative(f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(f, R))
-    return extract_derivative(T, f(Dual{T}(x, one(x))))
+    return extract_derivative(T, f(Dual{T}(x, oneunit(x))))
 end
 
 """
@@ -27,7 +27,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
-    f!(ydual, Dual{T}(x, one(x)))
+    f!(ydual, Dual{T}(x, oneunit(x)))
     map!(value, y, ydual)
     return extract_derivative(T, ydual)
 end
@@ -43,7 +43,7 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
     T = typeof(Tag(f, R))
-    ydual = f(Dual{T}(x, one(x)))
+    ydual = f(Dual{T}(x, oneunit(x)))
     result = extract_value!(T, result, ydual)
     result = extract_derivative!(T, result, ydual)
     return result
@@ -63,7 +63,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
-    f!(ydual, Dual{T}(x, one(x)))
+    f!(ydual, Dual{T}(x, oneunit(x)))
     result = extract_value!(T, result, y, ydual)
     result = extract_derivative!(T, result, ydual)
     return result
