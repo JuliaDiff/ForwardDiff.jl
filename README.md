@@ -49,12 +49,12 @@ julia> ForwardDiff.hessian(f, x)
 
 If you find ForwardDiff useful in your work, we kindly request that you cite [the following paper](https://arxiv.org/abs/1607.07892):
 
-```
+```bibtex
 @article{RevelsLubinPapamarkou2016,
     title = {Forward-Mode Automatic Differentiation in {J}ulia},
    author = {{Revels}, J. and {Lubin}, M. and {Papamarkou}, T.},
   journal = {arXiv:1607.07892 [cs.MS]},
      year = {2016},
-     url = {https://arxiv.org/abs/1607.07892}
+      url = {https://arxiv.org/abs/1607.07892}
 }
 ```
