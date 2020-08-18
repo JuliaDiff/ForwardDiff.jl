@@ -6,6 +6,10 @@
     ForwardDiff.jacobian(f, x::AbstractArray, cfg::JacobianConfig = JacobianConfig(f, x), check=Val{true}())
 
 Return `J(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
+Multidimensional arrays are flattened in iteration order: the array
+`J(f)` has shape `length(f(x)) × length(x)`, and its elements are
+`J(f)[j,k] = ∂f(x)[j]/∂x[k]`.  When `x` is a vector, this means
+that `jacobian(x->[f(x)], x)` is the transpose of `gradient(f, x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 
