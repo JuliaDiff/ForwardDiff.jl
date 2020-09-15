@@ -94,13 +94,13 @@ end
 # result extraction #
 #####################
 
-@generated function extract_jacobian(::Type{T}, ydual::StaticArray, x::StaticArray) where T
+@generated function extract_jacobian(::Type{T}, ydual::StaticArray, x::S) where {T,S<:StaticArray}
     M, N = length(ydual), length(x)
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
-    V = StaticArrays.similar_type(x, valtype(eltype(ydual)), Size(M, N))
     return quote
         $(Expr(:meta, :inline))
-        return $V($result)
+        V = StaticArrays.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
+        return V($result)
     end
 end
 
