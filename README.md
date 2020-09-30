@@ -43,7 +43,7 @@ julia> ForwardDiff.hessian(f, x)
  1.03257   3.37871  1.71818   0.964566  0.140689
  ```
 
- Trying to switch to the latest version of ForwardDiff? See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/stable/user/upgrade.html) for details regarding user-facing changes between releases.
+ Trying to switch to the latest version of ForwardDiff? See our [upgrade guide](http://www.juliadiff.org/ForwardDiff.jl/stable/user/upgrade/) for details regarding user-facing changes between releases.
 
 ## Publications
 
