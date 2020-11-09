@@ -31,3 +31,9 @@ println("done (took $t seconds).")
 println("Testing miscellaneous functionality...")
 t = @elapsed include("MiscTest.jl")
 println("done (took $t seconds).")
+
+if VERSION >= v"1.5-"
+    println("Testing allocations...")
+    t = @elapsed include("AllocationsTest.jl")
+    println("done (took $t seconds).")
+end

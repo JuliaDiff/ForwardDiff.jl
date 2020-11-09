@@ -111,9 +111,10 @@ end
 
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, n) where {T}
     out_reshaped = reshape(result, length(ydual), n)
-    for col in 1:size(out_reshaped, 2), row in 1:size(out_reshaped, 1)
-        out_reshaped[row, col] = partials(T, ydual[row], col)
-    end
+    ydual_reshaped = vec(ydual)
+    # Use closure to avoid GPU broadcasting with Type
+    partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
+    out_reshaped .= partials_wrap.(ydual_reshaped, transpose(1:n))
     return result
 end
 
@@ -123,13 +124,13 @@ function extract_jacobian!(::Type{T}, result::MutableDiffResult, ydual::Abstract
 end
 
 function extract_jacobian_chunk!(::Type{T}, result, ydual, index, chunksize) where {T}
+    ydual_reshaped = vec(ydual)
     offset = index - 1
-    for i in 1:chunksize
-        col = i + offset
-        for row in eachindex(ydual)
-            result[row, col] = partials(T, ydual[row], i)
-        end
-    end
+    irange = 1:chunksize
+    col = irange .+ offset
+    # Use closure to avoid GPU broadcasting with Type
+    partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
+    result[:, col] .= partials_wrap.(ydual_reshaped, transpose(irange))
     return result
 end
 
