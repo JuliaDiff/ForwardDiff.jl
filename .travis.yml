@@ -2,8 +2,13 @@ language: julia
 
 julia:
     - 1.0
-    - 1.4
+    - 1
     - nightly
+
+arch:
+  - x86
+  - x64
+
 matrix:
   allow_failures:
     - julia: nightly
@@ -29,7 +34,7 @@ jobs:
       script:
         - julia --color=yes --project=. -e 'using Pkg; Pkg.instantiate()'
         - julia --color=yes --check-bounds=no --code-coverage=none -O2 --project=. test/SIMDTest.jl
-      julia: 1.3
+      julia: 1
       env: ALLOWFAILURES=1
 
     - stage: test
@@ -41,7 +46,7 @@ jobs:
 
 
     - stage: "Documentation"
-      julia: 1.2
+      julia: 1
       os: linux
       script:
         - julia --color=yes --project=docs/ -e 'using Pkg; Pkg.instantiate()'
