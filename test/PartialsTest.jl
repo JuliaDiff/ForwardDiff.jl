@@ -136,7 +136,8 @@ for N in (0, 3), T in (Int, Float32, Float64)
 end
 
 io = IOBuffer()
-show(io, MIME("text/plain"), Partials((1, 2, 3)))
-@test String(take!(io)) == "3-element ForwardDiff.Partials{3,$Int}:\n 1\n 2\n 3"
+show(io, MIME("text/plain"), Partials((Int32(1), Int32(2), Int32(3))))
+str = String(take!(io))
+@test occursin(r"^3-element ForwardDiff.Partials{3, ?Int32}:\n 1\n 2\n 3$", str)
 
 end # module
