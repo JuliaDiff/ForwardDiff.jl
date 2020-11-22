@@ -390,18 +390,18 @@ for pred in [:isequal, :(==)]
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
-            $(pred)(value(x), value(y)) && $(pred)(partials(x),       partials(y)),
-            $(pred)(value(x), y)        && $(pred)(partials(x), zero(partials(x))),
-            $(pred)(x, value(y))        && $(pred)(zero(partials(y)), partials(y)),
+            $(pred)(value(x), value(y)) && $(pred)(partials(x), partials(y)),
+            $(pred)(value(x), y)        && iszero(partials(x)),
+            $(pred)(x, value(y))        && iszero(partials(y)),
         )
     end
 end
 
 @define_binary_dual_op(
     Base.:(!=),
-    (!=)(value(x), value(y)) || (!=)(partials(x),       partials(y)),
-    (!=)(value(x), y)        || (!=)(partials(x), zero(partials(x))),
-    (!=)(x, value(y))        || (!=)(zero(partials(y)), partials(y)),
+    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
+    (!=)(value(x), y)        || !iszero(partials(x)),
+    (!=)(x, value(y))        || !iszero(partials(y)),
 )
 
 for pred in [:isless, :<, :>, :(<=), :(>=)]
@@ -413,23 +413,11 @@ for pred in [:isless, :<, :>, :(<=), :(>=)]
             else
                 $(pred)(value(x), value(y))
             end,
-            if value(x) == y # only x is Dual
-                $(pred)(partials(x), zero(partials(x)))
-            else
-                $(pred)(value(x), value(y))
-            end,
-            if x == value(y) # only y is Dual
-                $(pred)(zero(partials(y)), partials(y))
-            else
-                $(pred)(value(x), value(y))
-            end,
+            $(pred)(value(x), y), # only x is Dual
+            $(pred)(x, value(y)), # only y is Dual
         )
     end
 end
-
-# @define_binary_dual_op(Base.:(==), false, false, false)
-# @define_binary_dual_op(Base.isequal, false, false, false)
-# @define_binary_dual_op(Base.:(!=), true, true, true)
 
 ########################
 # Promotion/Conversion #
