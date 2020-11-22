@@ -4,9 +4,9 @@ println("Testing Partials...")
 t = @elapsed include("PartialsTest.jl")
 println("done (took $t seconds).")
 
-# println("Testing Dual...")
-# t = @elapsed include("DualTest.jl")
-# println("done (took $t seconds).")
+println("Testing Dual...")
+t = @elapsed include("DualTest.jl")
+println("done (took $t seconds).")
 
 println("Testing derivative functionality...")
 t = @elapsed include("DerivativeTest.jl")
