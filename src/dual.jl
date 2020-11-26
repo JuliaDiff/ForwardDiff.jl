@@ -384,7 +384,9 @@ for pred in UNARY_PREDICATES
     @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
 end
 
-# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)] # prelude.jl
+
+Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))
 
 for pred in [:isequal, :(==)]
     @eval begin
@@ -408,13 +410,9 @@ for pred in [:isless, :<, :>, :(<=), :(>=)]
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
-            if value(x) == value(y) # both Dual
-                $(pred)(partials(x), partials(y))
-            else
-                $(pred)(value(x), value(y))
-            end,
-            $(pred)(value(x), y), # only x is Dual
-            $(pred)(x, value(y)), # only y is Dual
+            $(pred)(value(x), value(y)),
+            $(pred)(value(x), y),
+            $(pred)(x, value(y)),
         )
     end
 end
