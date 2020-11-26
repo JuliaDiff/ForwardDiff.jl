@@ -222,7 +222,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     # Predicates #
     #------------#
-#=
+
     @test ForwardDiff.isconstant(zero(FDNUM))
     @test ForwardDiff.isconstant(one(FDNUM))
     @test ForwardDiff.isconstant(FDNUM) == (N == 0)
@@ -231,13 +231,13 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test ForwardDiff.isconstant(one(NESTED_FDNUM))
     @test ForwardDiff.isconstant(NESTED_FDNUM) == (N == 0)
 
-    @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2))
+    @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
     @test isequal(PRIMAL, PRIMAL2) == isequal(FDNUM, FDNUM2)
 
-    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2))
+    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == (N == M == 0)
     @test isequal(PRIMAL, PRIMAL2) == isequal(NESTED_FDNUM, NESTED_FDNUM2)
 
-    @test FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)
+    @test (FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
     @test (PRIMAL == PRIMAL2) == (FDNUM == FDNUM2)
     @test (PRIMAL == PRIMAL2) == (NESTED_FDNUM == NESTED_FDNUM2)
 
@@ -280,7 +280,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)
     @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)
     @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS2), NESTED_PARTIALS2))
-=#
+
     @test isnan(Dual{TestTag()}(NaN, PARTIALS))
     @test !(isnan(FDNUM))
 
@@ -344,7 +344,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test typeof(WIDE_NESTED_FDNUM) === Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}
 
     @test value(WIDE_FDNUM) == PRIMAL
-    # @test !(value(WIDE_NESTED_FDNUM) == PRIMAL)
+    @test (value(WIDE_NESTED_FDNUM) == PRIMAL) == (M == 0)
 
     @test convert(Dual, FDNUM) === FDNUM
     @test convert(Dual, NESTED_FDNUM) === NESTED_FDNUM
