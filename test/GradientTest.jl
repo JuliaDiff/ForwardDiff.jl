@@ -190,6 +190,10 @@ end
     ∇A = [6 0 0; 0 3 -pi; 0 0 2]
     @test ForwardDiff.gradient(det2, A) ≈ ∇A
     @test ForwardDiff.gradient(det, A) ≈ ∇A
+
+    # And issue 407
+    @test ForwardDiff.hessian(det, A) ≈ ForwardDiff.hessian(det2, A)
+
 end
 
 end # module
