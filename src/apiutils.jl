@@ -21,7 +21,7 @@ end
 @generated function dualize(::Type{T}, x::StaticArray) where T
     N = length(x)
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
-    V = StaticArrays.similar_type(x, Dual{T,eltype(x),N})
+    V = StaticArrays.similar_type(x, Dual{T,eltype(x),N,eltype(x)})
     return quote
         chunk = Chunk{$N}()
         $(Expr(:meta, :inline))
@@ -53,38 +53,38 @@ end
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
-               seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
+function seed!(duals::AbstractArray{Dual{T,V,N,P}}, x,
+               seed::Partials{N,P} = zero(Partials{N,P})) where {T,V,N,P}
     for i in eachindex(duals)
-        duals[i] = Dual{T,V,N}(x[i], seed)
+        duals[i] = Dual{T,V,N,P}(x[i], seed)
     end
     return duals
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
-               seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
+function seed!(duals::AbstractArray{Dual{T,V,N,P}}, x,
+               seeds::NTuple{N,Partials{N,P}}) where {T,V,N,P}
     for i in 1:N
-        duals[i] = Dual{T,V,N}(x[i], seeds[i])
+        duals[i] = Dual{T,V,N,P}(x[i], seeds[i])
     end
     return duals
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
-               seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
+function seed!(duals::AbstractArray{Dual{T,V,N,P}}, x, index,
+               seed::Partials{N,P} = zero(Partials{N,P})) where {T,V,N,P}
     offset = index - 1
     for i in 1:N
         j = i + offset
-        duals[j] = Dual{T,V,N}(x[j], seed)
+        duals[j] = Dual{T,V,N,P}(x[j], seed)
     end
     return duals
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
-               seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
+function seed!(duals::AbstractArray{Dual{T,V,N,P}}, x, index,
+               seeds::NTuple{N,Partials{N,P}}, chunksize = N) where {T,V,N,P}
     offset = index - 1
     for i in 1:chunksize
         j = i + offset
-        duals[j] = Dual{T,V,N}(x[j], seeds[i])
+        duals[j] = Dual{T,V,N,P}(x[j], seeds[i])
     end
     return duals
 end

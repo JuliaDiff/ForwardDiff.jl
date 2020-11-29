@@ -57,10 +57,10 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test Dual(PRIMAL, PARTIALS...) === Dual{Nothing}(PRIMAL, PARTIALS...)
     @test Dual(PRIMAL) === Dual{Nothing}(PRIMAL)
 
-    @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS)) === Dual{TestTag(),widen(V),N}
-    @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS.values)) === Dual{TestTag(),widen(V),N}
-    @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS...)) === Dual{TestTag(),widen(V),N}
-    @test typeof(NESTED_FDNUM) == Dual{TestTag(),Dual{TestTag(),V,M},N}
+    @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS)) === Dual{TestTag(),widen(V),N,widen(V)}
+    @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS.values)) === Dual{TestTag(),widen(V),N,widen(V)}
+    @test typeof(Dual{TestTag()}(widen(V)(PRIMAL), PARTIALS...)) === Dual{TestTag(),widen(V),N,widen(V)}
+    @test typeof(NESTED_FDNUM) == Dual{TestTag(),Dual{TestTag(),V,M,V},N,Dual{TestTag(),V,M,V}}
 
     #############
     # Accessors #
@@ -88,8 +88,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test ForwardDiff.valtype(FDNUM) == V
     @test ForwardDiff.valtype(typeof(FDNUM)) == V
-    @test ForwardDiff.valtype(NESTED_FDNUM) == Dual{TestTag(),V,M}
-    @test ForwardDiff.valtype(typeof(NESTED_FDNUM)) == Dual{TestTag(),V,M}
+    @test ForwardDiff.valtype(NESTED_FDNUM) == Dual{TestTag(),V,M,V}
+    @test ForwardDiff.valtype(typeof(NESTED_FDNUM)) == Dual{TestTag(),V,M,V}
 
     #####################
     # Generic Functions #
@@ -290,22 +290,22 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     WIDE_T = widen(V)
 
-    @test promote_type(Dual{TestTag(),V,N}, V) == Dual{TestTag(),V,N}
-    @test promote_type(Dual{TestTag(),V,N}, WIDE_T) == Dual{TestTag(),WIDE_T,N}
-    @test promote_type(Dual{TestTag(),WIDE_T,N}, V) == Dual{TestTag(),WIDE_T,N}
-    @test promote_type(Dual{TestTag(),V,N}, Dual{TestTag(),V,N}) == Dual{TestTag(),V,N}
-    @test promote_type(Dual{TestTag(),V,N}, Dual{TestTag(),WIDE_T,N}) == Dual{TestTag(),WIDE_T,N}
-    @test promote_type(Dual{TestTag(),WIDE_T,N}, Dual{TestTag(),Dual{TestTag(),V,M},N}) == Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}
+    @test promote_type(Dual{TestTag(),V,N}, V) == Dual{TestTag(),V,N,V}
+    @test promote_type(Dual{TestTag(),V,N}, WIDE_T) == Dual{TestTag(),WIDE_T,N,WIDE_T}
+    @test promote_type(Dual{TestTag(),WIDE_T,N}, V) == Dual{TestTag(),WIDE_T,N,WIDE_T}
+    @test promote_type(Dual{TestTag(),V,N,V}, Dual{TestTag(),V,N,V}) == Dual{TestTag(),V,N,V}
+    @test promote_type(Dual{TestTag(),V,N}, Dual{TestTag(),WIDE_T,N}) == Dual{TestTag(),WIDE_T,N,WIDE_T}
+    @test promote_type(Dual{TestTag(),WIDE_T,N}, Dual{TestTag(),Dual{TestTag(),V,M},N}) == Dual{TestTag(),Dual{TestTag(),WIDE_T,M,WIDE_T},N,Dual{TestTag(),WIDE_T,M,WIDE_T}}
 
     # issue #322
-    @test promote_type(Bool, Dual{TestTag(),V,N}) == Dual{TestTag(),promote_type(Bool, V),N}
-    @test promote_type(BigFloat, Dual{TestTag(),V,N}) == Dual{TestTag(),promote_type(BigFloat, V),N}
+    @test promote_type(Bool, Dual{TestTag(),V,N}) == Dual{TestTag(),promote_type(Bool, V),N,promote_type(Bool, V)}
+    @test promote_type(BigFloat, Dual{TestTag(),V,N}) == Dual{TestTag(),promote_type(BigFloat, V),N,promote_type(BigFloat, V)}
 
     WIDE_FDNUM = convert(Dual{TestTag(),WIDE_T,N}, FDNUM)
     WIDE_NESTED_FDNUM = convert(Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}, NESTED_FDNUM)
 
-    @test typeof(WIDE_FDNUM) === Dual{TestTag(),WIDE_T,N}
-    @test typeof(WIDE_NESTED_FDNUM) === Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}
+    @test typeof(WIDE_FDNUM) === Dual{TestTag(),WIDE_T,N,WIDE_T}
+    @test typeof(WIDE_NESTED_FDNUM) === Dual{TestTag(),Dual{TestTag(),WIDE_T,M,WIDE_T},N,Dual{TestTag(),WIDE_T,M,WIDE_T}}
 
     @test value(WIDE_FDNUM) == PRIMAL
     @test value(WIDE_NESTED_FDNUM) == PRIMAL

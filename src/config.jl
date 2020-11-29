@@ -83,7 +83,7 @@ function DerivativeConfig(f::F,
                           y::AbstractArray{Y},
                           x::X,
                           tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
-    duals = similar(y, Dual{T,Y,1})
+    duals = similar(y, Dual{T,Y,1,Y})
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
@@ -119,7 +119,7 @@ function GradientConfig(f::F,
                         ::Chunk{N} = Chunk(x),
                         ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
-    duals = similar(x, Dual{T,V,N})
+    duals = similar(x, Dual{T,V,N,V})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
@@ -156,7 +156,7 @@ function JacobianConfig(f::F,
                         ::Chunk{N} = Chunk(x),
                         ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
-    duals = similar(x, Dual{T,V,N})
+    duals = similar(x, Dual{T,V,N,V})
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
@@ -182,8 +182,8 @@ function JacobianConfig(f::F,
                         ::Chunk{N} = Chunk(x),
                         ::T = Tag(f, X)) where {F,Y,X,N,T}
     seeds = construct_seeds(Partials{N,X})
-    yduals = similar(y, Dual{T,Y,N})
-    xduals = similar(x, Dual{T,X,N})
+    yduals = similar(y, Dual{T,Y,N,Y})
+    xduals = similar(x, Dual{T,X,N,X})
     duals = (yduals, xduals)
     return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
 end
@@ -197,7 +197,7 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 
 struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
     jacobian_config::JacobianConfig{T,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
+    gradient_config::GradientConfig{T,Dual{T,V,N,V},N,DG}
 end
 
 """
@@ -254,4 +254,4 @@ end
 
 checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
-    Dual{T,Dual{T,V,N},N}
+    Dual{T,Dual{T,V,N,V},N,Dual{T,V,N,V}}
