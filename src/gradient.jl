@@ -53,12 +53,12 @@ end
 # result extraction #
 #####################
 
-@generated function extract_gradient(::Type{T}, y::Real, x::StaticArray) where T
+@generated function extract_gradient(::Type{T}, y::Real, x::S) where {T,S<:StaticArray}
     result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
-    V = StaticArrays.similar_type(x, valtype(y))
     return quote
         $(Expr(:meta, :inline))
-        return $V($result)
+        V = StaticArrays.similar_type(S, valtype($y))
+        return V($result)
     end
 end
 
