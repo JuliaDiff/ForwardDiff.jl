@@ -138,6 +138,6 @@ end
 io = IOBuffer()
 show(io, MIME("text/plain"), Partials((Int32(1), Int32(2), Int32(3))))
 str = String(take!(io))
-@test occursin(r"^3-element ForwardDiff.Partials{3, ?Int32}:\n 1\n 2\n 3$", str)
+@test str == "3-element $(ForwardDiff.Partials{3,Int}):\n 1\n 2\n 3"
 
 end # module
