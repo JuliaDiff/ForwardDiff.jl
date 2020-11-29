@@ -137,6 +137,7 @@ end
 
 io = IOBuffer()
 show(io, MIME("text/plain"), Partials((1, 2, 3)))
-@test String(take!(io)) == "3-element ForwardDiff.Partials{3,$Int}:\n 1\n 2\n 3"
+str = String(take!(io))
+@test str == "3-element $(ForwardDiff.Partials{3,Int}):\n 1\n 2\n 3"
 
 end # module
