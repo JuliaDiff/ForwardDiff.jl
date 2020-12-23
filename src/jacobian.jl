@@ -137,12 +137,17 @@ end
 reshape_jacobian(result, ydual, xdual) = reshape(result, length(ydual), length(xdual))
 reshape_jacobian(result::DiffResult, ydual, xdual) = reshape_jacobian(DiffResults.jacobian(result), ydual, xdual)
 
+extract_jacobian_chunk!(::Type, result, ydual::Real, index, chunksize) = throw(JACOBIAN_ERROR)
+
+const JACOBIAN_ERROR = ArgumentError("jacobain(f,x) expexts that f(x) is an array")
+
 ###############
 # vector mode #
 ###############
 
 function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     ydual = vector_mode_dual_eval(f, x, cfg)
+    ydual isa AbstractArray || throw(JACOBIAN_ERROR)
     result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)

@@ -91,12 +91,18 @@ function extract_gradient_chunk!(::Type{T}, result::DiffResult, dual, index, chu
     return result
 end
 
+extract_gradient_chunk!(::Type, result, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
+extract_gradient_chunk!(::Type, result::DiffResult, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
+
+const GRAD_ERROR = ArgumentError("gradient(f,x) expects that f(x) be a real number. Perhaps you meant jacobian(f,x)?")
+
 ###############
 # vector mode #
 ###############
 
 function vector_mode_gradient(f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval(f, x, cfg)
+    ydual isa Real || throw(GRAD_ERROR)
     result = similar(x, valtype(ydual))
     return extract_gradient!(T, result, ydual)
 end
