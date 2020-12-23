@@ -69,7 +69,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
     return result
 end
 
-derivative(f, x::AbstractArray) = throw(ArgumentError("derivative(f,x) expects that x is a real number. Perhaps you meant gradient(f,x)?"))
+derivative(f, x::AbstractArray) = throw(DimensionMismatch("derivative(f, x) expects that x is a real number. Perhaps you meant gradient(f, x)?"))
 
 #####################
 # result extraction #

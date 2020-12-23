@@ -49,7 +49,7 @@ end
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig) = gradient!(result, f, x)
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient!(result, f, x)
 
-gradient(f, x::Real) = throw(ArgumentError("gradient(f,x) expects that x is an array. Perhaps you meant derivative(f,x)?"))
+gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is an array. Perhaps you meant derivative(f, x)?"))
 
 #####################
 # result extraction #
@@ -96,7 +96,7 @@ end
 extract_gradient_chunk!(::Type, result, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
 extract_gradient_chunk!(::Type, result::DiffResult, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
 
-const GRAD_ERROR = ArgumentError("gradient(f,x) expects that f(x) be a real number. Perhaps you meant jacobian(f,x)?")
+const GRAD_ERROR = DimensionMismatch("gradient(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?")
 
 ###############
 # vector mode #
