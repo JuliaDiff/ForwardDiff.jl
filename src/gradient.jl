@@ -49,6 +49,8 @@ end
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig) = gradient!(result, f, x)
 @inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient!(result, f, x)
 
+gradient(f, x::Real) = throw(ArgumentError("gradient(f,x) expects that x is an array. Perhaps you meant derivative(f,x)?"))
+
 #####################
 # result extraction #
 #####################

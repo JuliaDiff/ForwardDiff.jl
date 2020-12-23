@@ -90,6 +90,8 @@ end
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig) = jacobian!(result, f, x)
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian!(result, f, x)
 
+jacobian(f, x::Real) = throw(ArgumentError("jacobian(f,x) expects that x is an array. Perhaps you meant derivative(f,x)?"))
+
 #####################
 # result extraction #
 #####################
