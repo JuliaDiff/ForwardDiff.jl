@@ -156,4 +156,10 @@ end
     @test isempty(g_grad_const(zeros(Float64, 0)))
 end
 
+@testset "dimension errors for gradient" begin
+    @test_throws DimensionMismatch ForwardDiff.gradient(identity, 2pi) # input
+    @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 2)) # vector_mode_gradient
+    @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 10^6)) # chunk_mode_gradient
+end
+
 end # module

@@ -225,4 +225,10 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.jacobian(sresult3) == DiffResults.jacobian(result)
 end
 
+@testset "dimension errors for jacobian" begin
+    @test_throws DimensionMismatch ForwardDiff.jacobian(identity, 2pi) # input
+    @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 2)) # vector_mode_jacobian
+    @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 10^6)) # chunk_mode_jacobian
+end
+
 end # module

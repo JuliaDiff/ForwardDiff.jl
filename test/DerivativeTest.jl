@@ -96,4 +96,8 @@ end
     @test (x -> ForwardDiff.derivative(y -> x^y,  1.5))(0.0) === 0.0
 end
 
+@testset "dimension error for derivative" begin
+    @test_throws DimensionMismatch ForwardDiff.derivative(sum, fill(2pi, 3))
+end
+
 end # module
