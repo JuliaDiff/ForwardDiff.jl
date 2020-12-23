@@ -197,7 +197,7 @@ end
     return result
 end
 
-const JACOBIAN_ERROR = DimensionMismatch("jacobain(f, x) expexts that f(x) is an array")
+const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expexts that f(x) is an array. Perhaps you meant gradient(f, x)?")
 
 # chunk mode #
 #------------#
