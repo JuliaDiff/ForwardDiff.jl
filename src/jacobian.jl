@@ -90,6 +90,8 @@ end
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig) = jacobian!(result, f, x)
 @inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian!(result, f, x)
 
+jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is an array. Perhaps you meant derivative(f, x)?"))
+
 #####################
 # result extraction #
 #####################
@@ -143,6 +145,7 @@ reshape_jacobian(result::DiffResult, ydual, xdual) = reshape_jacobian(DiffResult
 
 function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     ydual = vector_mode_dual_eval(f, x, cfg)
+    ydual isa AbstractArray || throw(JACOBIAN_ERROR)
     result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)
@@ -194,6 +197,8 @@ end
     return result
 end
 
+const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expexts that f(x) is an array. Perhaps you meant gradient(f, x)?")
+
 # chunk mode #
 #------------#
 
@@ -216,6 +221,7 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
         # do first chunk manually to calculate output type
         seed!(xdual, x, 1, seeds)
         $(compute_ydual)
+        ydual isa AbstractArray || throw(JACOBIAN_ERROR)
         $(result_definition)
         out_reshaped = reshape_jacobian(result, ydual, xdual)
         extract_jacobian_chunk!(T, out_reshaped, ydual, 1, N)
