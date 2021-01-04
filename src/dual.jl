@@ -226,7 +226,7 @@ function binary_dual_definition(M, f)
         dvy = $dvy
     end)
     expr = quote
-        @define_binary_dual_op(
+        $FD.@define_binary_dual_op(
             $M.$f,
             begin
                 vx, vy = $FD.value(x), $FD.value(y)
