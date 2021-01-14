@@ -19,6 +19,9 @@ include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
 
+import AbstractFFTs
+include("fft.jl")
+
 export DiffResults
 
 end # module

@@ -1,5 +1,9 @@
 using ForwardDiff
 
+println("Testing FFT...")
+t = @elapsed include("FFTTest.jl")
+println("done (took $t seconds).")
+
 println("Testing Partials...")
 t = @elapsed include("PartialsTest.jl")
 println("done (took $t seconds).")
