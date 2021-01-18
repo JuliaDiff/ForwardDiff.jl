@@ -449,6 +449,10 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
+    if VERSION >= v"1.6.0-DEV.292"
+        @test all(map(dual_isapprox, sincospi(FDNUM), (sinpi(FDNUM), cospi(FDNUM))))
+    end
+
     if V === Float32
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
         @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
