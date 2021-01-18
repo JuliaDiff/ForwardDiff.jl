@@ -612,7 +612,7 @@ end
 # sincospi #
 #----------#
 
-if VERSION >= v"1.6-"
+if VERSION >= v"1.6.0-DEV.292"
     @inline function Base.sincospi(d::Dual{T}) where T
         sd, cd = sincospi(value(d))
         return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
