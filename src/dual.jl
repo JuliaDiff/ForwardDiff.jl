@@ -279,6 +279,12 @@ Base.trunc(d::Dual) = trunc(value(d))
 Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
 Base.round(d::Dual) = round(value(d))
 
+if VERSION ≥ v"1.4"
+    Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
+else
+    Base.div(x::Dual, y::Dual) = div(value(x), value(y))
+end
+
 Base.hash(d::Dual) = hash(value(d))
 Base.hash(d::Dual, hsh::UInt) = hash(value(d), hsh)
 
