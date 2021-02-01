@@ -137,7 +137,12 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test round(NESTED_FDNUM) === round(PRIMAL)
 
         @test div(FDNUM, FDNUM2) === div(PRIMAL, PRIMAL2)
+        @test div(FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
+        @test div(PRIMAL, FDNUM2) === div(PRIMAL, PRIMAL2)
+
         @test div(NESTED_FDNUM, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
+        @test div(NESTED_FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
+        @test div(PRIMAL, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
 
         if VERSION ≥ v"1.4"
             @test div(FDNUM, FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
