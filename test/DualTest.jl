@@ -136,6 +136,19 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
 
+        @test div(FDNUM, FDNUM2) === div(PRIMAL, PRIMAL2)
+        @test div(FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
+        @test div(PRIMAL, FDNUM2) === div(PRIMAL, PRIMAL2)
+
+        @test div(NESTED_FDNUM, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
+        @test div(NESTED_FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
+        @test div(PRIMAL, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
+
+        if VERSION ≥ v"1.4"
+            @test div(FDNUM, FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
+            @test div(NESTED_FDNUM, NESTED_FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
+        end
+
         @test Base.rtoldefault(typeof(FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
         @test Dual{TestTag()}(PRIMAL-eps(V), PARTIALS) ≈ FDNUM
         @test Base.rtoldefault(typeof(NESTED_FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
