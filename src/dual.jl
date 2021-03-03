@@ -305,6 +305,9 @@ end
 @inline Base.one(d::Dual) = one(typeof(d))
 @inline Base.one(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(one(V), zero(Partials{N,V}))
 
+@inline Base.Int(d::Dual) = Int(value(d))
+@inline Base.Integer(d::Dual) = Integer(value(d))
+
 @inline Random.rand(rng::AbstractRNG, d::Dual) = rand(rng, value(d))
 @inline Random.rand(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(V), zero(Partials{N,V}))
 @inline Random.rand(rng::AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(rng, V), zero(Partials{N,V}))
