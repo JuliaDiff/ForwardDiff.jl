@@ -504,4 +504,12 @@ end
     @test !isfinite(dinf)
 end
 
+@testset "Integer" begin
+    x = Dual(1.0,1.2)
+    @test Int(x) ≡ Integer(x) ≡ convert(Int,x) ≡ convert(Integer,x) ≡ 1
+    @test_throws InexactError Int(Dual(1.5,1.2))
+    @test_throws InexactError Integer(Dual(1.5,1.2))
+    @test length(UnitRange(Dual(1.5), Dual(3.5))) == 3
+end
+
 end # module
