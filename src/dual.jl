@@ -644,3 +644,7 @@ end
 function Base.typemax(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
     ForwardDiff.Dual{T,V,N}(typemax(V))
 end
+
+if VERSION >= v"1.6.0-rc1"
+    Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
+end

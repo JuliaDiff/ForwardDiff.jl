@@ -5,6 +5,7 @@ using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
 using Random
 
+import Printf
 import NaNMath
 import SpecialFunctions
 import CommonSubexpressions
