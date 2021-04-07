@@ -34,7 +34,7 @@ Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
 
 @noinline function throw_cannot_dual(V::Type)
     throw(ArgumentError("Cannot create a dual over scalar type $V." *
-        " If the type behaves as a scalar, define FowardDiff.can_dual."))
+        " If the type behaves as a scalar, define ForwardDiff.can_dual(::Type{$V}) = true."))
 end
 
 """
