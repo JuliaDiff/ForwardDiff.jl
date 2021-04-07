@@ -510,6 +510,7 @@ if VERSION >= v"1.6.0-rc1"
         for T in (Float16, Float32, Float64, BigFloat)
             d1 = Dual(one(T))
             @test_nowarn @printf("Testing @printf: %.2e\n", d1)
+            @test @sprintf("Testing @sprintf: %.2e\n", d1) == "Testing @sprintf: 1.00e+00\n"
         end
     end
 end
