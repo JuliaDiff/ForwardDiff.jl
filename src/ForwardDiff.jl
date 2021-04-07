@@ -6,6 +6,7 @@ using StaticArrays
 using Random
 using LinearAlgebra
 
+import Printf
 import NaNMath
 import SpecialFunctions
 import CommonSubexpressions
