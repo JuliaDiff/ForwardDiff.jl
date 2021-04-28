@@ -20,6 +20,7 @@ include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
+include("multi.jl")
 
 export DiffResults
 

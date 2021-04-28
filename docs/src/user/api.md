@@ -60,3 +60,14 @@ ForwardDiff.GradientConfig
 ForwardDiff.JacobianConfig
 ForwardDiff.HessianConfig
 ```
+
+## Convenience functions for `f(xs::Union{Real, AbstractArray}...)`
+
+For a function accepting multiple arguments, the gradient of `f(xs...)::Real` may be thought of as a tuple with an entry for each argument. 
+Likewise the Jacobain of `f(xs...)::AbstractArray`. There are two convenience functions to compute all these components; 
+they are efficient for scalar `xs` but do not permit all the pre-allocation and configuration of the one-argument methods above.
+
+```@docs
+ForwardDiff.multigrad
+ForwardDiff.multijacobian
+```
