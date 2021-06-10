@@ -4,7 +4,9 @@ using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
 using Random
+using LinearAlgebra
 
+import Printf
 import NaNMath
 import SpecialFunctions
 import CommonSubexpressions

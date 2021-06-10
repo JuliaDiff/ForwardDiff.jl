@@ -1,6 +1,7 @@
 module DualTest
 
 using Test
+using Printf
 using Random
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
@@ -135,6 +136,19 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test round(FDNUM) === round(PRIMAL)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
+
+        @test div(FDNUM, FDNUM2) === div(PRIMAL, PRIMAL2)
+        @test div(FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
+        @test div(PRIMAL, FDNUM2) === div(PRIMAL, PRIMAL2)
+
+        @test div(NESTED_FDNUM, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
+        @test div(NESTED_FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
+        @test div(PRIMAL, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
+
+        if VERSION ≥ v"1.4"
+            @test div(FDNUM, FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
+            @test div(NESTED_FDNUM, NESTED_FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
+        end
 
         @test Base.rtoldefault(typeof(FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
         @test Dual{TestTag()}(PRIMAL-eps(V), PARTIALS) ≈ FDNUM
@@ -449,6 +463,10 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
+    if VERSION >= v"1.6.0-DEV.292"
+        @test all(map(dual_isapprox, sincospi(FDNUM), (sinpi(FDNUM), cospi(FDNUM))))
+    end
+
     if V === Float32
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
         @test typeof(sqrt(NESTED_FDNUM)) === typeof(NESTED_FDNUM)
@@ -485,6 +503,16 @@ end
     @test typeof(dinf) === typeof(d1)
     @test !isfinite(dminf)
     @test !isfinite(dinf)
+end
+
+if VERSION >= v"1.6.0-rc1"
+    @testset "@printf" begin
+        for T in (Float16, Float32, Float64, BigFloat)
+            d1 = Dual(one(T))
+            @test_nowarn @printf("Testing @printf: %.2e\n", d1)
+            @test @sprintf("Testing @sprintf: %.2e\n", d1) == "Testing @sprintf: 1.00e+00\n"
+        end
+    end
 end
 
 end # module

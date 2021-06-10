@@ -7,6 +7,7 @@ using ForwardDiff
 using ForwardDiff: Dual, Tag, JacobianConfig
 using StaticArrays
 using DiffTests
+using LinearAlgebra
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -229,6 +230,11 @@ end
     @test_throws DimensionMismatch ForwardDiff.jacobian(identity, 2pi) # input
     @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 2)) # vector_mode_jacobian
     @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 10^6)) # chunk_mode_jacobian
+end
+
+@testset "eigen" begin
+    @test ForwardDiff.jacobian(x -> eigvals(SymTridiagonal(x, x[1:end-1])), [1.,2.]) ≈ [(1 - 3/sqrt(5))/2 (1 - 1/sqrt(5))/2 ; (1 + 3/sqrt(5))/2 (1 + 1/sqrt(5))/2]
+    @test ForwardDiff.jacobian(x -> eigvals(Symmetric(x*x')), [1.,2.]) ≈ [0 0; 2 4]
 end
 
 end # module
