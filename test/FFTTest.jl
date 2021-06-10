@@ -17,8 +17,8 @@ x1 = Dual.(1:4.0, 2:5, 3:6)
 @test fft(x1, 1)[1] isa Complex{<:Dual}
 
 @testset "$f" for f in [fft, ifft, rfft, bfft]
-    @test value.(fft(x1)) == fft(value.(x1))
-    @test partials.(fft(x1), 1) == fft(partials.(x1, 1))
+    @test value.(f(x1)) == f(value.(x1))
+    @test partials.(f(x1), 1) == f(partials.(x1, 1))
 end
 
 
