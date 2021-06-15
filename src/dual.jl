@@ -254,8 +254,13 @@ end
 
 Base.copy(d::Dual) = d
 
-Base.eps(d::Dual) = eps(value(d))
-Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
+for f in (:(Base.eps), :(Base.floatmin), :(Base.floatmax))
+    @eval begin
+        Base.eps(d::Dual) = eps(value(d))
+        Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
+    end
+end
+
 
 function Base.nextfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
     ForwardDiff.Dual{T}(nextfloat(d.value), d.partials)
