@@ -105,6 +105,16 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test eps(NESTED_FDNUM) === eps(PRIMAL)
         @test eps(typeof(NESTED_FDNUM)) === eps(V)
 
+        @test floatmin(FDNUM) === floatmin(PRIMAL)
+        @test floatmin(typeof(FDNUM)) === floatmin(V)
+        @test floatmin(NESTED_FDNUM) === floatmin(PRIMAL)
+        @test floatmin(typeof(NESTED_FDNUM)) === floatmin(V)
+
+        @test floatmax(FDNUM) === floatmax(PRIMAL)
+        @test floatmax(typeof(FDNUM)) === floatmax(V)
+        @test floatmax(NESTED_FDNUM) === floatmax(PRIMAL)
+        @test floatmax(typeof(NESTED_FDNUM)) === floatmax(V)
+
         @test floor(Int, FDNUM) === floor(Int, PRIMAL)
         @test floor(Int, FDNUM2) === floor(Int, PRIMAL2)
         @test floor(Int, NESTED_FDNUM) === floor(Int, PRIMAL)
