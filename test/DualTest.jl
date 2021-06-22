@@ -1,6 +1,7 @@
 module DualTest
 
 using Test
+using Printf
 using Random
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
@@ -515,6 +516,16 @@ end
     @test_throws InexactError Integer(Dual(1,1,2))
     @test length(UnitRange(Dual(1.5), Dual(3.5))) == 3
     @test length(UnitRange(Dual(1.5,1), Dual(3.5,3))) == 3
+end
+  
+if VERSION >= v"1.6.0-rc1"
+    @testset "@printf" begin
+        for T in (Float16, Float32, Float64, BigFloat)
+            d1 = Dual(one(T))
+            @test_nowarn @printf("Testing @printf: %.2e\n", d1)
+            @test @sprintf("Testing @sprintf: %.2e\n", d1) == "Testing @sprintf: 1.00e+00\n"
+        end
+    end
 end
 
 end # module

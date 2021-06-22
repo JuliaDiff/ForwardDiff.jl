@@ -34,7 +34,7 @@ Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
 
 @noinline function throw_cannot_dual(V::Type)
     throw(ArgumentError("Cannot create a dual over scalar type $V." *
-        " If the type behaves as a scalar, define FowardDiff.can_dual."))
+        " If the type behaves as a scalar, define ForwardDiff.can_dual(::Type{$V}) = true."))
 end
 
 """
@@ -346,7 +346,7 @@ end
 # Promotion/Conversion #
 ########################
 
-Base.@pure function Base.promote_rule(::Type{Dual{T1,V1,N1}},
+function Base.promote_rule(::Type{Dual{T1,V1,N1}},
                                       ::Type{Dual{T2,V2,N2}}) where {T1,V1,N1,T2,V2,N2}
     # V1 and V2 might themselves be Dual types
     if T2 ≺ T1
@@ -634,6 +634,52 @@ if VERSION >= v"1.6.0-DEV.292"
     end
 end
 
+# Symmetric eigvals #
+#-------------------#
+
+function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+    λ,Q = eigen(Symmetric(value.(parent(A))))
+    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
+    Dual{Tg}.(λ, tuple.(parts...))
+end
+
+function LinearAlgebra.eigvals(A::Hermitian{<:Complex{<:Dual{Tg,T,N}}}) where {Tg,T<:Real,N}
+    λ,Q = eigen(Hermitian(value.(real.(parent(A))) .+ im .* value.(imag.(parent(A)))))
+    parts = ntuple(j -> diag(real.(Q' * (getindex.(partials.(real.(A)) .+ im .* partials.(imag.(A)), j)) * Q)), N)
+    Dual{Tg}.(λ, tuple.(parts...))
+end
+
+function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+    λ,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
+    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
+    Dual{Tg}.(λ, tuple.(parts...))
+end
+
+# A ./ (λ - λ') but with diag special cased
+function _lyap_div!(A, λ)
+    for (j,μ) in enumerate(λ), (k,λ) in enumerate(λ)
+        if k ≠ j
+            A[k,j] /= μ - λ
+        end
+    end
+    A
+end
+
+function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+    λ = eigvals(A)
+    _,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
+    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
+end
+
+function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+    λ = eigvals(A)
+    _,Q = eigen(SymTridiagonal(value.(parent(A))))
+    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
+end
+
+
 ###################
 # Pretty Printing #
 ###################
@@ -652,4 +698,8 @@ end
 
 function Base.typemax(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
     ForwardDiff.Dual{T,V,N}(typemax(V))
+end
+
+if VERSION >= v"1.6.0-rc1"
+    Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
 end
