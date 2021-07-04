@@ -387,7 +387,8 @@ for (M, f, arity) in DiffRules.diffrules()
     elseif arity == 2
         eval(binary_dual_definition(M, f))
     else
-        error("ForwardDiff currently only knows how to autogenerate Dual definitions for unary and binary functions.")
+        # error("ForwardDiff currently only knows how to autogenerate Dual definitions for unary and binary functions.")
+        # However, the presence of N-ary rules need not cause any problems here, they can simply be ignored.
     end
 end
 
