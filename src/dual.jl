@@ -387,7 +387,9 @@ Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V
 # General Mathematical Operations #
 ###################################
 
-@inline Base.conj(d::Dual) = d
+if !hasmethod(conj, Tuple{ForwardDiff.Dual})
+    @inline Base.conj(d::Dual) = d
+end
 
 for (M, f, arity) in DiffRules.diffrules()
     in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-))) && continue
