@@ -517,7 +517,7 @@ end
     @test length(UnitRange(Dual(1.5), Dual(3.5))) == 3
     @test length(UnitRange(Dual(1.5,1), Dual(3.5,3))) == 3
 end
-  
+
 if VERSION >= v"1.6.0-rc1"
     @testset "@printf" begin
         for T in (Float16, Float32, Float64, BigFloat)
@@ -526,6 +526,13 @@ if VERSION >= v"1.6.0-rc1"
             @test @sprintf("Testing @sprintf: %.2e\n", d1) == "Testing @sprintf: 1.00e+00\n"
         end
     end
+end
+
+@testset "float" begin # issue #492
+    @test float(Dual{Nothing, Int, 2}) === Dual{Nothing, Float64, 2}
+    @test float(Dual(1)) isa Dual{Nothing, Float64, 0}
+    @test value.(float.(Dual.(1:4, 2:5, 3:6))) isa Vector{Float64}
+    @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
 end
 
 end # module
