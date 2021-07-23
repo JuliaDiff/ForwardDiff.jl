@@ -314,6 +314,10 @@ end
     Integer(value(d))
 end
 
+for F in (:Float16, :Float32, :Float64)
+    @eval @inline Base.$F(d::Dual) = $F(value(d))
+end
+
 @inline Random.rand(rng::AbstractRNG, d::Dual) = rand(rng, value(d))
 @inline Random.rand(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(V), zero(Partials{N,V}))
 @inline Random.rand(rng::AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(rng, V), zero(Partials{N,V}))
