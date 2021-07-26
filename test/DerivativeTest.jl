@@ -100,4 +100,8 @@ end
     @test_throws DimensionMismatch ForwardDiff.derivative(sum, fill(2pi, 3))
 end
 
+@testset "function that calls a floating point constructor" begin
+    @test ForwardDiff.derivative(x->2*Float32(x), 3) === 2f0
+end
+
 end # module

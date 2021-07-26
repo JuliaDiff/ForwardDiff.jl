@@ -517,6 +517,12 @@ end
     @test length(UnitRange(Dual(1.5), Dual(3.5))) == 3
     @test length(UnitRange(Dual(1.5,1), Dual(3.5,3))) == 3
 end
+
+@testset "Float" begin
+    for F in (Float16, Float32, Float64)
+        @test F(Dual(3, 5)) == Dual(F(3), F(5))
+    end
+end
   
 if VERSION >= v"1.6.0-rc1"
     @testset "@printf" begin
