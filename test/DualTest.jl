@@ -519,9 +519,8 @@ end
 end
 
 @testset "Float" begin
-    x = Dual(1.0, 0)
     for F in (Float16, Float32, Float64)
-        @test F(1.0) == F(x)
+        @test F(Dual(3, 5)) == Dual(F(3), F(5))
     end
 end
   

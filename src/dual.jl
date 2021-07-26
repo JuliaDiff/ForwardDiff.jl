@@ -315,7 +315,7 @@ end
 end
 
 for F in (:Float16, :Float32, :Float64)
-    @eval @inline Base.$F(d::Dual) = $F(value(d))
+    @eval @inline Base.$F(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, $F),N}, d)
 end
 
 @inline Random.rand(rng::AbstractRNG, d::Dual) = rand(rng, value(d))
