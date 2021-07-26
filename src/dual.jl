@@ -314,10 +314,6 @@ end
     Integer(value(d))
 end
 
-for F in (:Float16, :Float32, :Float64)
-    @eval @inline Base.$F(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, $F),N}, d)
-end
-
 @inline Random.rand(rng::AbstractRNG, d::Dual) = rand(rng, value(d))
 @inline Random.rand(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(V), zero(Partials{N,V}))
 @inline Random.rand(rng::AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(rng, V), zero(Partials{N,V}))
@@ -386,6 +382,10 @@ Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
 Base.float(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
 Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
+
+for F in (:Float16, :Float32, :Float64)
+    @eval @inline Base.$F(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, $F),N}, d)
+end
 
 ###################################
 # General Mathematical Operations #
