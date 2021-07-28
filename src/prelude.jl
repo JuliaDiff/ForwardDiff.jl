@@ -1,4 +1,8 @@
-const NANSAFE_MODE_ENABLED = false
+@static if VERSION >= v"1.6"
+    const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
+else
+    const NANSAFE_MODE_ENABLED = false
+end
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
