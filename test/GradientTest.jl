@@ -193,7 +193,21 @@ end
 
     # And issue 407
     @test ForwardDiff.hessian(det, A) ≈ ForwardDiff.hessian(det2, A)
+end
 
+@testset "branches in mul!" begin
+    a, b = rand(3,3), rand(3,3)
+
+    # Issue 536, version with 3-arg *, Julia 1.7:
+    @test ForwardDiff.derivative(x -> sum(x*a*b), 0.0) ≈ sum(a * b)
+
+    # version with just mul!
+    dx = ForwardDiff.derivative(0.0) do x
+        c = similar(a, typeof(x))
+        mul!(c, a, b, x, false)
+        sum(c)
+    end
+    @test dx ≈ sum(a * b)
 end
 
 end # module
