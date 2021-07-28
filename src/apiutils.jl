@@ -31,13 +31,13 @@ end
 
 @inline static_dual_eval(::Type{T}, f, x::StaticArray) where T = f(dualize(T, x))
 
-function vector_mode_dual_eval!(f::F, x, cfg::Union{JacobianConfig,GradientConfig}) where {F}
+function vector_mode_dual_eval!(f::F, cfg::Union{JacobianConfig,GradientConfig}, x) where {F}
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     return f(xdual)
 end
 
-function vector_mode_dual_eval!(f!::F, y, x, cfg::JacobianConfig) where {F}
+function vector_mode_dual_eval!(f!::F, cfg::JacobianConfig, y, x) where {F}
     ydual, xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
     seed!(ydual, y)
