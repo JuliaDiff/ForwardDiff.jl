@@ -503,6 +503,14 @@ end
     @test typeof(dinf) === typeof(d1)
     @test !isfinite(dminf)
     @test !isfinite(dinf)
+
+    dfmin = floatmin(typeof(d1))
+    dfmax = floatmax(typeof(d1))
+    @test dfmin < d1 < dfmax
+    @test typeof(dfmin) === typeof(d1)
+    @test typeof(dfmax) === typeof(d1)
+    @test isfinite(dfmin)
+    @test isfinite(dfmax)
 end
 
 @testset "Integer" begin
