@@ -123,6 +123,8 @@ end
 @inline tagtype(::Type{V}) where {V} = Nothing
 @inline tagtype(::Dual{T,V,N}) where {T,V,N} = T
 @inline tagtype(::Type{Dual{T,V,N}}) where {T,V,N} = T
+@inline tagtype(::Complex{T}) where T = tagtype(T)
+@inline tagtype(::Type{Complex{T}}) where T = tagtype(T)
 
 ####################################
 # N-ary Operation Definition Tools #

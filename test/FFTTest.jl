@@ -1,7 +1,7 @@
 module FFTTest
 
 using Test
-using ForwardDiff: Dual, valtype, value, partials
+using ForwardDiff: Dual, valtype, value, partials, derivative
 using FFTW
 using AbstractFFTs: complexfloat, realfloat
 
@@ -21,6 +21,12 @@ x1 = Dual.(1:4.0, 2:5, 3:6)
     @test partials.(f(x1), 1) == f(partials.(x1, 1))
 end
 
+f = x -> real(fft([x; 0; 0])[1])
+@test derivative(f,0.1) ≈ 1
 
+r = x -> real(rfft([x; 0; 0])[1])
+@test derivative(r,0.1) ≈ 1
 
+# c = x -> dct([x; 0; 0])[1]
+# @test derivative(c,0.1) ≈ 1
 end # module
