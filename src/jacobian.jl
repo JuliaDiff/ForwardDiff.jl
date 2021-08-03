@@ -144,7 +144,7 @@ reshape_jacobian(result::DiffResult, ydual, xdual) = reshape_jacobian(DiffResult
 ###############
 
 function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
-    ydual = vector_mode_dual_eval(f, x, cfg)
+    ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa AbstractArray || throw(JACOBIAN_ERROR)
     result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
@@ -153,7 +153,7 @@ function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,
 end
 
 function vector_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
-    ydual = vector_mode_dual_eval(f!, y, x, cfg)
+    ydual = vector_mode_dual_eval!(f!, cfg, y, x)
     map!(d -> value(T,d), y, ydual)
     result = similar(y, length(y), N)
     extract_jacobian!(T, result, ydual, N)
@@ -162,14 +162,14 @@ function vector_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,
 end
 
 function vector_mode_jacobian!(result, f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
-    ydual = vector_mode_dual_eval(f, x, cfg)
+    ydual = vector_mode_dual_eval!(f, cfg, x)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)
     return result
 end
 
 function vector_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
-    ydual = vector_mode_dual_eval(f!, y, x, cfg)
+    ydual = vector_mode_dual_eval!(f!, cfg, y, x)
     map!(d -> value(T,d), y, ydual)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, y, ydual)
@@ -197,7 +197,7 @@ end
     return result
 end
 
-const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expexts that f(x) is an array. Perhaps you meant gradient(f, x)?")
+const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expects that f(x) is an array. Perhaps you meant gradient(f, x)?")
 
 # chunk mode #
 #------------#

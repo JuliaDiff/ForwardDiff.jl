@@ -305,6 +305,15 @@ end
 @inline Base.one(d::Dual) = one(typeof(d))
 @inline Base.one(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(one(V), zero(Partials{N,V}))
 
+@inline function Base.Int(d::Dual)
+    all(iszero, partials(d)) || throw(InexactError(:Int, Int, d))
+    Int(value(d))
+end
+@inline function Base.Integer(d::Dual)
+    all(iszero, partials(d)) || throw(InexactError(:Integer, Integer, d))
+    Integer(value(d))
+end
+
 @inline Random.rand(rng::AbstractRNG, d::Dual) = rand(rng, value(d))
 @inline Random.rand(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(V), zero(Partials{N,V}))
 @inline Random.rand(rng::AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(rng, V), zero(Partials{N,V}))
@@ -371,14 +380,12 @@ Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(convert(V, x), zero
 Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(convert(V, x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
-Base.float(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
-Base.AbstractFloat(d::Dual{T,V,N}) where {T,V,N} = convert(Dual{T,promote_type(V, Float16),N}, d)
+Base.float(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T,float(V),N}
+Base.float(d::Dual) = convert(float(typeof(d)), d)
 
 ###################################
 # General Mathematical Operations #
 ###################################
-
-@inline Base.conj(d::Dual) = d
 
 for (M, f, arity) in DiffRules.diffrules()
     in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-))) && continue
@@ -387,7 +394,8 @@ for (M, f, arity) in DiffRules.diffrules()
     elseif arity == 2
         eval(binary_dual_definition(M, f))
     else
-        error("ForwardDiff currently only knows how to autogenerate Dual definitions for unary and binary functions.")
+        # error("ForwardDiff currently only knows how to autogenerate Dual definitions for unary and binary functions.")
+        # However, the presence of N-ary rules need not cause any problems here, they can simply be ignored.
     end
 end
 
@@ -683,12 +691,10 @@ function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
     print(io, ")")
 end
 
-function Base.typemin(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
-    ForwardDiff.Dual{T,V,N}(typemin(V))
-end
-
-function Base.typemax(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
-    ForwardDiff.Dual{T,V,N}(typemax(V))
+for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
+    @eval function $op(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
+        ForwardDiff.Dual{T,V,N}($op(V))
+    end
 end
 
 if VERSION >= v"1.6.0-rc1"
