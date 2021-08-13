@@ -20,7 +20,7 @@ x = [0.1, 0.2, 0.3]
 v = f(x)
 g = [-9.4, 15.6, 52.0]
 
-for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
+@testset "Rosenbrock, chunk size = $c and tag = $(repr(tag))" for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
     println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
@@ -56,7 +56,7 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
 # test vs. Calculus.jl #
 ########################
 
-for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
+@testset "$f" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)

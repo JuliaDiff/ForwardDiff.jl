@@ -222,6 +222,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     # Predicates #
     #------------#
+    @testset "Predicates" begin
 
     @test ForwardDiff.isconstant(zero(FDNUM))
     @test ForwardDiff.isconstant(one(FDNUM))
@@ -234,10 +235,13 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
     @test isequal(PRIMAL, PRIMAL2) == isequal(FDNUM, FDNUM2)
 
-    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == (N == M == 0)
-    # @test isequal(PRIMAL, PRIMAL2) == isequal(NESTED_FDNUM, NESTED_FDNUM2)
+    # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
+    # and FDNUM2 has everything with a 2, and all random numbers nonzero.
+    # M is the length of M_PARTIALS, which affects:
+    # NESTED_FDNUM = Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
-    @info "Predicates" N M V PRIMAL PRIMAL2 NESTED_FDNUM NESTED_FDNUM2
+    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == (N == M == 0)
+    @test isequal(NESTED_FDNUM, NESTED_FDNUM2) == isequal(PRIMAL, PRIMAL2) && (N == M == 0)
 
     @test (FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
     @test (PRIMAL == PRIMAL2) == (FDNUM == FDNUM2)
@@ -322,6 +326,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test isodd(Dual{TestTag()}(Dual{TestTag()}(1)))
     @test !(isodd(Dual{TestTag()}(Dual{TestTag()}(2))))
 
+    end
     ########################
     # Promotion/Conversion #
     ########################
@@ -395,8 +400,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     # Division #
     #----------#
+    @testset "Division" begin
 
     if M > 0 && N > 0
+        # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
+        # all random numbers nonzero, and FDNUM2 another draw. M only affects NESTED_FDNUM.
         @test Dual{1}(FDNUM) / Dual{1}(PRIMAL) === Dual{1}(FDNUM / PRIMAL)
         @test Dual{1}(PRIMAL) / Dual{1}(FDNUM) === Dual{1}(PRIMAL / FDNUM)
         @test_broken Dual{1}(FDNUM) / FDNUM2 === Dual{1}(FDNUM / FDNUM2)
@@ -413,8 +421,12 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test dual_isapprox(NESTED_FDNUM / PRIMAL, Dual{TestTag()}(value(NESTED_FDNUM) / PRIMAL, partials(NESTED_FDNUM) / PRIMAL))
     @test dual_isapprox(PRIMAL / NESTED_FDNUM, Dual{TestTag()}(PRIMAL / value(NESTED_FDNUM), (-(PRIMAL) / value(NESTED_FDNUM)^2) * partials(NESTED_FDNUM)))
 
+    end
+
     # Exponentiation #
     #----------------#
+    @testset "Exponentiation" begin
+
     # If V == Int, the LHS terms are Int's. Large inputs cause integer overflow
     # within the generic fallback of `isapprox`, resulting in a DomainError.
     # Promote to Float64 to avoid issues.
@@ -428,6 +440,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test partials(NaNMath.pow(Dual{TestTag()}(-2.0, 1.0), Dual{TestTag()}(2.0, 0.0)), 1) == -4.0
 
+    end
     ###################################
     # General Mathematical Operations #
     ###################################
@@ -520,6 +533,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     # Special Cases #
     #---------------#
+    @testset "Special Cases" begin
 
     @test_broken dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
     @test_broken dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM3), sqrt(FDNUM^2 + FDNUM2^2 + FDNUM3^2))
@@ -569,6 +583,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         end
     end
 end
+
+#############
+# bug fixes #
+#############
 
 @testset "Exponentiation of zero" begin
     x0 = 0.0
