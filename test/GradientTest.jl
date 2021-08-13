@@ -84,9 +84,9 @@ end
 
 println("  ...testing specialized StaticArray codepaths")
 
-x = rand(3, 3)
+@testset "$T" for T in (StaticArrays.SArray, StaticArrays.MArray)
+    x = rand(3, 3)
 
-for T in (StaticArrays.SArray, StaticArrays.MArray)
     sx = T{Tuple{3,3}}(x)
 
     cfg = ForwardDiff.GradientConfig(nothing, x)
