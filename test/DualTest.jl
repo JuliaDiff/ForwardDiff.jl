@@ -14,6 +14,7 @@ import Calculus
 struct TestTag end
 
 samerng() = MersenneTwister(1)
+Random.seed!(132)
 
 # By lower-bounding the Int range at 2, we avoid cases where differentiating an
 # exponentiation of an Int value would cause a DomainError due to reducing the
