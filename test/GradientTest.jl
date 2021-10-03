@@ -162,4 +162,11 @@ end
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 10^6)) # chunk_mode_gradient
 end
 
+@testset "ArithmeticStyle" begin
+    function f(p)
+        sum(collect(0.0:p[1]:p[2]))
+    end
+    @test ForwardDiff.gradient(f, [0.2,25.0]) == [7875.0, 0.0]
+end
+
 end # module
