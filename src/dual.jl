@@ -20,6 +20,11 @@ struct Dual{T,V,N} <: Real
     end
 end
 
+##########
+# Traits #
+##########
+Base.ArithmeticStyle(::Type{<:Dual{T,V}}) where {T,V} = Base.ArithmeticStyle(V)
+
 ##############
 # Exceptions #
 ##############
