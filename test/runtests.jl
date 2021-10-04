@@ -33,7 +33,7 @@ t = @elapsed include("MiscTest.jl")
 println("done (took $t seconds).")
 
 println("Testing AbstractDifferentiation interface...")
-t = @elapsed include("AbstractDifferentiation.jl")
+t = @elapsed include("AbstractDifferentiationTest.jl")
 println("done (took $t seconds).")
 
 if VERSION >= v"1.5-"
