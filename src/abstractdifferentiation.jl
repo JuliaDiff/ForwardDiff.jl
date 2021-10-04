@@ -26,7 +26,9 @@ AD.primal_value(::ForwardDiffBackend, ::Any, f, xs) = value.(f(xs...))
 
 AD.gradient(::ForwardDiffBackend, f, x::AbstractArray) = (gradient(f, x),)
 
-AD.jacobian(::ForwardDiffBackend, f, x::AbstractArray) = (jacobian(at_least_0dim ∘ f, x),)
+function AD.jacobian(ba::ForwardDiffBackend, f, x::AbstractArray)
+    return AD.value_and_jacobian(ba, f, x)[2]
+end
 AD.jacobian(::ForwardDiffBackend, f, x::Number) = (derivative(f, x),)
 
 AD.hessian(::ForwardDiffBackend, f, x::AbstractArray) = (hessian(f, x),)
@@ -36,6 +38,14 @@ function AD.value_and_gradient(::ForwardDiffBackend, f, x::AbstractArray)
     return DiffResults.value(result), (DiffResults.derivative(result),)
 end
 
+function AD.value_and_jacobian(::ForwardDiffBackend, f, xs::AbstractArray)
+    y = f(xs)
+    if y isa Number
+        return y, (adjoint(ForwardDiff.gradient(f, xs)),)
+    else
+        return y, (ForwardDiff.jacobian(f, xs),)
+    end
+end
 function AD.value_and_jacobian(::ForwardDiffBackend, f, x::Number)
     result = derivative!(DiffResults.DiffResult(x, x), f, x)
     return DiffResults.value(result), (DiffResults.derivative(result),)
@@ -59,9 +69,6 @@ function AD.value_gradient_and_hessian(::ForwardDiffBackend, f, x)
         (DiffResults.hessian(result),),
     )
 end
-
-@inline at_least_0dim(x::Number) = fill(x)
-@inline at_least_0dim(x) = x
 
 @inline step_toward(x::Number, v::Number, h) = x + h * v
 # support arrays and tuples
