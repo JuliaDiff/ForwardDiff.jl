@@ -1,5 +1,6 @@
 module ForwardDiff
 
+using AbstractDifferentiation: AbstractDifferentiation, AD
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
@@ -20,6 +21,7 @@ include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
+include("abstractdifferentiation.jl")
 
 export DiffResults
 
