@@ -3,6 +3,7 @@ uuid = "f6369f11-7733-5829-9624-2563aa707210"
 version = "0.10.20"
 
 [deps]
+AbstractDifferentiation = "c29ec348-61ec-40c8-8164-b8c60e9d9f3d"
 CommonSubexpressions = "bbf7d656-a473-5ed7-a52c-81e309532950"
 DiffResults = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
 DiffRules = "b552c78f-8df3-52c6-915a-8e097449b14b"
@@ -14,6 +15,7 @@ SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
+AbstractDifferentiation = "0.2"
 Calculus = "0.2, 0.3, 0.4, 0.5"
 CommonSubexpressions = "0.3"
 DiffResults = "0.0.1, 0.0.2, 0.0.3, 0.0.4, 1.0.1"
