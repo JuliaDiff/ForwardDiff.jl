@@ -33,7 +33,7 @@ function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
     if input_length <= threshold
         return input_length
     else
-        nchunks = round(Int, input_length / DEFAULT_CHUNK_THRESHOLD, RoundUp)
+        nchunks = round(Int, input_length / threshold, RoundUp)
         return round(Int, input_length / nchunks, RoundUp)
     end
 end
