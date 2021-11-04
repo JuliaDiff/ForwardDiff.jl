@@ -6,7 +6,7 @@ using Random
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
 
-using NaNMath, SpecialFunctions
+using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
 
 import Calculus
@@ -420,12 +420,22 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        for (M, f, arity) in DiffRules.diffrules(filter_modules = (:Base, :SpecialFunctions, :NaNMath))
-            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)) && continue
+        for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
+            if f in (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)
+                continue  # Skip these rules
+            elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
+                continue  # Skip rules for methods not defined in the current scope
+            end
             println("       ...auto-testing $(M).$(f) with $arity arguments")
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
-                modifier = in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth)) ? one(V) : zero(V)
+                modifier = if in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth))
+                    one(V)
+                elseif in(f, (:log1mexp, :log2mexp))
+                    -one(V)
+                else
+                    zero(V)
+                end
                 @eval begin
                     x = rand() + $modifier
                     dx = $M.$f(Dual{TestTag()}(x, one(x)))
