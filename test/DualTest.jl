@@ -420,7 +420,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        for (M, f, arity) in DiffRules.diffrules(filtered_modules = (:Base, :SpecialFunctions, :NaNMath))
+        for (M, f, arity) in DiffRules.diffrules(filter_modules = (:Base, :SpecialFunctions, :NaNMath))
             in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)) && continue
             println("       ...auto-testing $(M).$(f) with $arity arguments")
             if arity == 1

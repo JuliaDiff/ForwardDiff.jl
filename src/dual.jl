@@ -392,7 +392,7 @@ Base.float(d::Dual) = convert(float(typeof(d)), d)
 # General Mathematical Operations #
 ###################################
 
-for (M, f, arity) in DiffRules.diffrules(filtered_modules = (:Base, :SpecialFunctions, :NaNMath))
+for (M, f, arity) in DiffRules.diffrules(filter_modules = (:Base, :SpecialFunctions, :NaNMath))
     in((M, f), ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-))) && continue
     if arity == 1
         eval(unary_dual_definition(M, f))
