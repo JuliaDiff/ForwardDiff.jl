@@ -12,6 +12,7 @@ using LinearAlgebra
 import Printf
 import NaNMath
 import SpecialFunctions
+import LogExpFunctions
 import CommonSubexpressions
 
 include("prelude.jl")
