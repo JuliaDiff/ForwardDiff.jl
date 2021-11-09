@@ -391,14 +391,16 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     # Exponentiation #
     #----------------#
+    # If V == Int, the LHS terms are Int's. Large inputs cause integer overflow
+    # within the generic fallback of `isapprox`, resulting in a DomainError.
+    # Promote to Float64 to avoid issues.
+    @test dual_isapprox(1.0 * FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
+    @test dual_isapprox(1.0 * FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
+    @test dual_isapprox(1.0 * PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
 
-    @test dual_isapprox(FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
-    @test dual_isapprox(FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
-    @test dual_isapprox(PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
-
-    @test dual_isapprox(NESTED_FDNUM^NESTED_FDNUM2, exp(NESTED_FDNUM2 * log(NESTED_FDNUM)))
-    @test dual_isapprox(NESTED_FDNUM^PRIMAL, exp(PRIMAL * log(NESTED_FDNUM)))
-    @test dual_isapprox(PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
+    @test dual_isapprox(1.0 * NESTED_FDNUM^NESTED_FDNUM2, exp(NESTED_FDNUM2 * log(NESTED_FDNUM)))
+    @test dual_isapprox(1.0 * NESTED_FDNUM^PRIMAL, exp(PRIMAL * log(NESTED_FDNUM)))
+    @test dual_isapprox(1.0 * PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
 
     @test partials(NaNMath.pow(Dual{TestTag()}(-2.0, 1.0), Dual{TestTag()}(2.0, 0.0)), 1) == -4.0
 
