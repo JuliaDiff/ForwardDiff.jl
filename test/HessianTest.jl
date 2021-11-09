@@ -3,6 +3,7 @@ module HessianTest
 import Calculus
 
 using Test
+using LinearAlgebra
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays

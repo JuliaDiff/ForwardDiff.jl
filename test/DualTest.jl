@@ -240,6 +240,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     # M is the length of M_PARTIALS, which affects:
     # NESTED_FDNUM = Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
+@show N M 
     @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == (N == M == 0)
     @test isequal(NESTED_FDNUM, NESTED_FDNUM2) == isequal(PRIMAL, PRIMAL2) && (N == M == 0)
 
