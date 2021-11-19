@@ -205,6 +205,9 @@ const SIMDInt = Union{
                      }
 const SIMDType = Union{SIMDFloat, SIMDInt}
 
+# This may not be a sharp bound, but at least people won't get worse result.
+const HAS_FLEXIABLE_VECTOR_LENGTH = VERSION >= v"1.6"
+
 function julia_type_to_llvm_type(@nospecialize(T::DataType))
     T === Float64 ? "double" :
     T === Float32 ? "float"  :
@@ -217,7 +220,7 @@ function julia_type_to_llvm_type(@nospecialize(T::DataType))
 end
 
 @generated function scale_tuple(tup::NTuple{N,T}, x::S) where {N,T,S}
-    if !(T === S && S <: SIMDType)
+    if !(HAS_FLEXIABLE_VECTOR_LENGTH && T === S && S <: SIMDType)
         return tupexpr(i -> :(tup[$i] * x), N)
     end
 
@@ -239,7 +242,7 @@ end
 end
 
 @generated function div_tuple_by_scalar(tup::NTuple{N,T}, x::S) where {N,T,S}
-    if !(T === S === typeof(one(T) / one(S)) && S <: SIMDType)
+    if !(HAS_FLEXIABLE_VECTOR_LENGTH && T === S === typeof(one(T) / one(S)) && S <: SIMDType)
         return tupexpr(i -> :(tup[$i] / x), N)
     end
 
@@ -261,7 +264,7 @@ end
 end
 
 @generated function add_tuples(a::NTuple{N,T}, b::NTuple{N,S}) where {N,T,S}
-    if !(T === S && S <: SIMDType)
+    if !(HAS_FLEXIABLE_VECTOR_LENGTH && T === S && S <: SIMDType)
         return tupexpr(i -> :(a[$i] + b[$i]), N)
     end
 
@@ -281,7 +284,7 @@ end
 end
 
 @generated function sub_tuples(a::NTuple{N,T}, b::NTuple{N,S}) where {N,T,S}
-    if !(T === S && S <: SIMDType)
+    if !(HAS_FLEXIABLE_VECTOR_LENGTH && T === S && S <: SIMDType)
         return tupexpr(i -> :(a[$i] - b[$i]), N)
     end
 
@@ -300,38 +303,32 @@ end
     end
 end
 
-if VERSION >= v"1.4" # fsub requires LLVM 8 (Julia 1.4)
-    @generated function minus_tuple(tup::NTuple{N,T}) where {N,T}
-        T <: SIMDType || return tupexpr(i -> :(-tup[$i]), N)
+@generated function minus_tuple(tup::NTuple{N,T}) where {N,T}
+    (HAS_FLEXIABLE_VECTOR_LENGTH && T <: SIMDType) || return tupexpr(i -> :(-tup[$i]), N)
 
-        S = julia_type_to_llvm_type(T)
-        VT = NTuple{N, VecElement{T}}
-        if T <: SIMDFloat
-            llvmir = """
-            %res = fneg nsz contract <$N x $S> %0
-            ret <$N x $S> %res
-            """
-        else
-            llvmir = """
-            %res = sub <$N x $S> zeroinitializer, %0
-            ret <$N x $S> %res
-            """
-        end
-
-        quote
-            $(Expr(:meta, :inline))
-            ret = Base.llvmcall($llvmir, $VT, Tuple{$VT}, $VT(tup))
-            Base.@ntuple $N i->ret[i].value
-        end
+    S = julia_type_to_llvm_type(T)
+    VT = NTuple{N, VecElement{T}}
+    if T <: SIMDFloat
+        llvmir = """
+        %res = fneg nsz contract <$N x $S> %0
+        ret <$N x $S> %res
+        """
+    else
+        llvmir = """
+        %res = sub <$N x $S> zeroinitializer, %0
+        ret <$N x $S> %res
+        """
     end
-else
-    @generated function minus_tuple(tup::NTuple{N,T}) where {N,T}
-        return tupexpr(i -> :(-tup[$i]), N)
+
+    quote
+        $(Expr(:meta, :inline))
+        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT}, $VT(tup))
+        Base.@ntuple $N i->ret[i].value
     end
 end
 
 @generated function mul_tuples(a::NTuple{N,V1}, b::NTuple{N,V2}, afactor::S1, bfactor::S2) where {N,V1,V2,S1,S2}
-    if !(V1 === V2 === S1 === S2 && S2 <: SIMDFloat)
+    if !(HAS_FLEXIABLE_VECTOR_LENGTH && V1 === V2 === S1 === S2 && S2 <: SIMDFloat)
         return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
     end
 
