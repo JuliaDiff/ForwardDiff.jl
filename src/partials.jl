@@ -300,27 +300,33 @@ end
     end
 end
 
-@generated function minus_tuple(tup::NTuple{N,T}) where {N,T}
-    T <: SIMDType || return tupexpr(i -> :(-tup[$i]), N)
+if VERSION >= v"1.4" # fsub requires LLVM 8 (Julia 1.4)
+    @generated function minus_tuple(tup::NTuple{N,T}) where {N,T}
+        T <: SIMDType || return tupexpr(i -> :(-tup[$i]), N)
 
-    S = julia_type_to_llvm_type(T)
-    VT = NTuple{N, VecElement{T}}
-    if T <: SIMDFloat
-        llvmir = """
-        %res = fneg nsz contract <$N x $S> %0
-        ret <$N x $S> %res
-        """
-    else
-        llvmir = """
-        %res = sub <$N x $S> zeroinitializer, %0
-        ret <$N x $S> %res
-        """
+        S = julia_type_to_llvm_type(T)
+        VT = NTuple{N, VecElement{T}}
+        if T <: SIMDFloat
+            llvmir = """
+            %res = fneg nsz contract <$N x $S> %0
+            ret <$N x $S> %res
+            """
+        else
+            llvmir = """
+            %res = sub <$N x $S> zeroinitializer, %0
+            ret <$N x $S> %res
+            """
+        end
+
+        quote
+            $(Expr(:meta, :inline))
+            ret = Base.llvmcall($llvmir, $VT, Tuple{$VT}, $VT(tup))
+            Base.@ntuple $N i->ret[i].value
+        end
     end
-
-    quote
-        $(Expr(:meta, :inline))
-        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT}, $VT(tup))
-        Base.@ntuple $N i->ret[i].value
+else
+    @generated function minus_tuple(tup::NTuple{N,T}) where {N,T}
+        return tupexpr(i -> :(-tup[$i]), N)
     end
 end
 
