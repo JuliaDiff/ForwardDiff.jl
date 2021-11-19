@@ -53,7 +53,7 @@ Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 
 Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
 
-@inline chunksize(::AbstractConfig{N}) where {N} = N
+@inline (chunksize(::AbstractConfig{N})::Int) where {N} = N
 
 ####################
 # DerivativeConfig #

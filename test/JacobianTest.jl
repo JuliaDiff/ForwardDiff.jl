@@ -237,4 +237,9 @@ end
     @test ForwardDiff.jacobian(x -> eigvals(Symmetric(x*x')), [1.,2.]) ≈ [0 0; 2 4]
 end
 
+@testset "type stability" begin
+    g!(dy, y) = dy[1] = y[1]
+    @inferred ForwardDiff.jacobian(g!, [1.0], [0.0])
+end
+
 end # module
