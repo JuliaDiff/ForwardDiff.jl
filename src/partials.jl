@@ -216,19 +216,11 @@ function julia_type_to_llvm_type(@nospecialize(T::DataType))
     error("$T cannot be mapped to a LLVM type")
 end
 
-function llvmir_scalar_to_vec(@nospecialize(T::DataType), n::Int, vname::String)
-    S = julia_type_to_llvm_type(T)
-    el = string("ele", vname)
-    """
-      %$el = insertelement <$n x $S> undef, $S %0, i32 0
-      %$vname = shufflevector <$n x $S> %$el, <$n x $S> undef, <$n x i32> zeroinitializer
-    """
-end
+@generated function scale_tuple(tup::NTuple{N,T}, x::S) where {N,T,S}
+    if !(T === S && S <: SIMDType)
+        return tupexpr(i -> :(tup[$i] * x), N)
+    end
 
-@generated function scale_tuple(tup::NTuple{N,T1}, x::S1) where {N,T1,S1}
-    (T1 <: SIMDType && S1 <: SIMDType) || return tupexpr(i -> :(tup[$i] * x), N)
-
-    T = promote_type(T1, S1)
     S = julia_type_to_llvm_type(T)
     VT = NTuple{N, VecElement{T}}
     op = T <: SIMDFloat ? "fmul nsz contract" : "mul"
@@ -241,16 +233,16 @@ end
 
     quote
         $(Expr(:meta, :inline))
-        t = Base.@ntuple $N i->$T(tup[i])
-        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $T}, $VT(t), $T(x))
+        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $T}, $VT(tup), x)
         Base.@ntuple $N i->ret[i].value
     end
 end
 
-@generated function div_tuple_by_scalar(tup::NTuple{N,T1}, x::S1) where {N,T1,S1}
-    (T1 <: SIMDType && S1 <: SIMDType) || return tupexpr(i -> :(tup[$i] / x), N)
+@generated function div_tuple_by_scalar(tup::NTuple{N,T}, x::S) where {N,T,S}
+    if !(T === S === typeof(one(T) / one(S)) && S <: SIMDType)
+        return tupexpr(i -> :(tup[$i] / x), N)
+    end
 
-    T = typeof(one(T1) / one(S1))
     S = julia_type_to_llvm_type(T)
     VT = NTuple{N, VecElement{T}}
     op = T <: SIMDFloat ? "fdiv nsz contract" : "div"
@@ -263,16 +255,16 @@ end
 
     quote
         $(Expr(:meta, :inline))
-        t = Base.@ntuple $N i->$T(tup[i])
-        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $T}, $VT(t), $T(x))
+        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $T}, $VT(tup), x)
         Base.@ntuple $N i->ret[i].value
     end
 end
 
-@generated function add_tuples(a::NTuple{N,T1}, b::NTuple{N,S1}) where {N,T1,S1}
-    (T1 <: SIMDType && S1 <: SIMDType) || return tupexpr(i -> :(a[$i] + b[$i]), N)
+@generated function add_tuples(a::NTuple{N,T}, b::NTuple{N,S}) where {N,T,S}
+    if !(T === S && S <: SIMDType)
+        return tupexpr(i -> :(a[$i] + b[$i]), N)
+    end
 
-    T = promote_type(T1, S1)
     S = julia_type_to_llvm_type(T)
     VT = NTuple{N, VecElement{T}}
     op = T <: SIMDFloat ? "fadd nsz contract" : "add"
@@ -283,17 +275,16 @@ end
 
     quote
         $(Expr(:meta, :inline))
-        at = Base.@ntuple $N i->$T(a[i])
-        bt = Base.@ntuple $N i->$T(b[i])
-        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $VT}, $VT(at), $VT(bt))
+        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $VT}, $VT(a), $VT(b))
         Base.@ntuple $N i->ret[i].value
     end
 end
 
-@generated function sub_tuples(a::NTuple{N,T1}, b::NTuple{N,S1}) where {N,T1,S1}
-    (T1 <: SIMDType && S1 <: SIMDType) || return tupexpr(i -> :(a[$i] - b[$i]), N)
+@generated function sub_tuples(a::NTuple{N,T}, b::NTuple{N,S}) where {N,T,S}
+    if !(T === S && S <: SIMDType)
+        return tupexpr(i -> :(a[$i] - b[$i]), N)
+    end
 
-    T = promote_type(T1, S1)
     S = julia_type_to_llvm_type(T)
     VT = NTuple{N, VecElement{T}}
     op = T <: SIMDFloat ? "fsub nsz contract" : "sub"
@@ -304,9 +295,7 @@ end
 
     quote
         $(Expr(:meta, :inline))
-        at = Base.@ntuple $N i->$T(a[i])
-        bt = Base.@ntuple $N i->$T(b[i])
-        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $VT}, $VT(at), $VT(bt))
+        ret = Base.llvmcall($llvmir, $VT, Tuple{$VT, $VT}, $VT(a), $VT(b))
         Base.@ntuple $N i->ret[i].value
     end
 end
@@ -316,11 +305,17 @@ end
 
     S = julia_type_to_llvm_type(T)
     VT = NTuple{N, VecElement{T}}
-    op = T <: SIMDFloat ? "fneg nsz contract" : "sub"
-    llvmir = """
-    %res = $op <$N x $S> %0
-    ret <$N x $S> %res
-    """
+    if T <: SIMDFloat
+        llvmir = """
+        %res = fneg nsz contract <$N x $S> %0
+        ret <$N x $S> %res
+        """
+    else
+        llvmir = """
+        %res = sub <$N x $S> zeroinitializer, %0
+        ret <$N x $S> %res
+        """
+    end
 
     quote
         $(Expr(:meta, :inline))
@@ -330,41 +325,35 @@ end
 end
 
 @generated function mul_tuples(a::NTuple{N,V1}, b::NTuple{N,V2}, afactor::S1, bfactor::S2) where {N,V1,V2,S1,S2}
-    return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
-end
+    if !(V1 === V2 === S1 === S2 && S2 <: SIMDFloat)
+        return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
+    end
 
-#=
-@inline function scale_tuple(tup::NTuple{N,T}, x) where {N,T<:SIMDType}
-    Tuple(Vec{N,T}(tup...) * x)
-end
+    T = V1
+    S = julia_type_to_llvm_type(T)
+    fmuladd = "@llvm.fmuladd.v$(N)f$(sizeof(T)*8)"
 
-@inline function div_tuple_by_scalar(tup::NTuple{N,T}, x) where {N,T<:SIMDType}
-    Tuple(Vec{N,T}(tup...) / x)
-end
+    VT = NTuple{N, VecElement{T}}
+    llvmir = """
+    declare <$N x $S> $fmuladd(<$N x $S>, <$N x $S>, <$N x $S>)
 
-@inline function add_tuples(a::NTuple{N,T}, b::NTuple{N,S}) where {N,T<:SIMDType,S<:SIMDType}
-    va = Vec{N,T}(a...)
-    vb = Vec{N,S}(b...)
-    return Tuple(va + vb)
+    define <$N x $S> @entry(<$N x $S>, <$N x $S>, $S, $S) alwaysinline {
+    top:
+        %el1 = insertelement <$N x $S> undef, $S %2, i32 0
+        %afactor = shufflevector <$N x $S> %el1, <$N x $S> undef, <$N x i32> zeroinitializer
+        %el2 = insertelement <$N x $S> undef, $S %3, i32 0
+        %bfactor = shufflevector <$N x $S> %el2, <$N x $S> undef, <$N x i32> zeroinitializer
+        %tmp = fmul nsz contract <$N x $S> %1, %bfactor
+        %res = call nsz contract <$N x $S> $fmuladd(<$N x $S> %0, <$N x $S> %afactor, <$N x $S> %tmp)
+        ret <$N x $S> %res
+    }
+    """
+    quote
+        $(Expr(:meta, :inline))
+        ret = Base.llvmcall(($llvmir, "entry"), $VT, Tuple{$VT, $VT, $T, $T}, $VT(a), $VT(b), afactor, bfactor)
+        Base.@ntuple $N i->ret[i].value
+    end
 end
-
-@inline function sub_tuples(a::NTuple{N,T}, b::NTuple{N,S}) where {N,T<:SIMDType,S<:SIMDType}
-    va = Vec{N,T}(a...)
-    vb = Vec{N,S}(b...)
-    return Tuple(va - vb)
-end
-
-@inline function minus_tuple(a::NTuple{N,T}) where {N,T<:SIMDType}
-    va = Vec{N,T}(a...)
-    return Tuple(-va)
-end
-
-@inline function mul_tuples(a::NTuple{N,T}, b::NTuple{N,S}, afactor::SIMDType, bfactor::SIMDType) where {N,T<:SIMDType,S<:SIMDType}
-    va = Vec{N,T}(a...)
-    vb = Vec{N,S}(b...)
-    return Tuple(muladd(afactor, va, bfactor * vb))
-end
-=#
 
 ###################
 # Pretty Printing #
