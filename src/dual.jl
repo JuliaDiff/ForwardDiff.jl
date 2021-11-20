@@ -541,6 +541,16 @@ end
 # fma #
 #-----#
 
+@inline function calc_fma_xyz(x::Dual{T,V,N},
+                              y::Dual{T,V,N},
+                              z::Dual{T,V,N}) where {T, V<:SIMDFloat,N}
+    xv, yv, zv = value(x), value(y), value(z)
+    rv = fma(xv, yv, zv)
+    N == 0 && return Dual{T}(rv)
+    xp, yp, zp = Vec(partials(x).values), Vec(partials(y).values), Vec(partials(z).values)
+    parts = Tuple(fma(xv, yp, fma(yv, xp, zp)))
+    Dual{T}(rv, parts)
+end
 @generated function calc_fma_xyz(x::Dual{T,<:Any,N},
                                  y::Dual{T,<:Any,N},
                                  z::Dual{T,<:Any,N}) where {T,N}
@@ -583,6 +593,16 @@ end
 # muladd #
 #--------#
 
+@inline function calc_muladd_xyz(x::Dual{T,V,N},
+                                 y::Dual{T,V,N},
+                                 z::Dual{T,V,N}) where {T, V<:SIMDType,N}
+    xv, yv, zv = value(x), value(y), value(z)
+    rv = muladd(xv, yv, zv)
+    N == 0 && return Dual{T}(rv)
+    xp, yp, zp = Vec(partials(x).values), Vec(partials(y).values), Vec(partials(z).values)
+    parts = Tuple(muladd(xv, yp, muladd(yv, xp, zp)))
+    Dual{T}(rv, parts)
+end
 @generated function calc_muladd_xyz(x::Dual{T,<:Any,N},
                                     y::Dual{T,<:Any,N},
                                     z::Dual{T,<:Any,N}) where {T,N}
