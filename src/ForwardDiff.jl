@@ -8,6 +8,7 @@ if VERSION >= v"1.6"
 end
 using Random
 using LinearAlgebra
+import SIMD: Vec
 
 import Printf
 import NaNMath

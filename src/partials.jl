@@ -141,6 +141,13 @@ end
 @inline _mul_partials(a::Partials{0,A}, b::Partials{N,B}, afactor, bfactor) where {N,A,B} = bfactor * b
 @inline _mul_partials(a::Partials{N,A}, b::Partials{0,B}, afactor, bfactor) where {N,A,B} = afactor * a
 
+const SIMDFloat = Union{Float64, Float32}
+const SIMDInt = Union{
+                       Int128, Int64, Int32, Int16, Int8,
+                       UInt128, UInt64, UInt32, UInt16, UInt8,
+                     }
+const SIMDType = Union{SIMDFloat, SIMDInt}
+
 ##################################
 # Generated Functions on NTuples #
 ##################################
@@ -164,6 +171,7 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
+iszero_tuple(tup::NTuple{N,V}) where {N, V<:SIMDType} = sum(Vec(tup) != zero(V)) == 0
 @generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     return quote
@@ -205,15 +213,14 @@ const SIMDInt = Union{
                      }
 const SIMDType = Union{SIMDFloat, SIMDInt}
 const NT{N,T} = NTuple{N,T}
-using SIMD
 
 # SIMD implementation
-add_tuples(a::NT{N,T}, b::NT{N,T})               where {N, T<:SIMDType}  = Tuple(Vec(a) + Vec(b))
-sub_tuples(a::NT{N,T}, b::NT{N,T})               where {N, T<:SIMDType}  = Tuple(Vec(a) - Vec(b))
-scale_tuple(tup::NT{N,T}, x::T)                  where {N, T<:SIMDType}  = Tuple(Vec(tup) * x)
-div_tuple_by_scalar(tup::NT{N,T}, x::T)          where {N, T<:SIMDFloat} = Tuple(Vec(tup) / x)
-minus_tuple(tup::NT{N,T})                        where {N, T<:SIMDType}  = Tuple(-Vec(tup))
-mul_tuples(a::NT{N,T}, b::NT{N,T}, af::T, bf::T) where {N, T<:SIMDType}  = Tuple(muladd(Vec{N,T}(af), Vec(a), Vec{N,T}(bf) * Vec(b)))
+@inline add_tuples(a::NT{N,T}, b::NT{N,T})               where {N, T<:SIMDType}  = Tuple(Vec(a) + Vec(b))
+@inline sub_tuples(a::NT{N,T}, b::NT{N,T})               where {N, T<:SIMDType}  = Tuple(Vec(a) - Vec(b))
+@inline scale_tuple(tup::NT{N,T}, x::T)                  where {N, T<:SIMDType}  = Tuple(Vec(tup) * x)
+@inline div_tuple_by_scalar(tup::NT{N,T}, x::T)          where {N, T<:SIMDFloat} = Tuple(Vec(tup) / x)
+@inline minus_tuple(tup::NT{N,T})                        where {N, T<:SIMDType}  = Tuple(-Vec(tup))
+@inline mul_tuples(a::NT{N,T}, b::NT{N,T}, af::T, bf::T) where {N, T<:SIMDType}  = Tuple(muladd(af, Vec(a), bf * Vec(b)))
 
 
 # Fallback implementations
@@ -222,7 +229,7 @@ mul_tuples(a::NT{N,T}, b::NT{N,T}, af::T, bf::T) where {N, T<:SIMDType}  = Tuple
 @generated scale_tuple(tup::NT{N}, x)             where N = tupexpr(i -> :(tup[$i] * x), N)
 @generated div_tuple_by_scalar(tup::NT{N}, x)     where N = tupexpr(i -> :(tup[$i] / x), N)
 @generated minus_tuple(tup::NT{N})                where N = tupexpr(i -> :(-tup[$i]), N)
-@generated mul_tuples(a::NT{N}, b::NT{N}, af, bf) where N = tupexpr(i -> :((af * a[$i]) + (bf * b[$i])), N)
+@generated mul_tuples(a::NT{N}, b::NT{N}, af, bf) where N = tupexpr(i -> :(muladd(af, a[$i], bf * b[$i])), N)
 
 ###################
 # Pretty Printing #
