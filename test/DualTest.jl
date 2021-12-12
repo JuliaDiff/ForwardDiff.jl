@@ -444,24 +444,23 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                 end
             elseif arity == 2
                 derivs = DiffRules.diffrule(M, f, :x, :y)
+                x, y = if f === :ldexp
+                    rand(), rand(1:10)
+                elseif f === :mod
+                    13 + rand(), 5 + rand() # make sure x/y is not an integer
+                else
+                    rand(1:10), rand()
+                end
                 @eval begin
-                    x, y = rand(1:10), rand()
+                    x, y = $x, $y
                     dx = $M.$f(Dual{TestTag()}(x, one(x)), y)
                     dy = $M.$f(x, Dual{TestTag()}(y, one(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
                     @test value(dx) == $M.$f(x, y)
                     @test value(dy) == value(dx)
-                    if isnan(actualdx)
-                        @test isnan(partials(dx, 1))
-                    else
-                        @test partials(dx, 1) ≈ actualdx
-                    end
-                    if isnan(actualdy)
-                        @test isnan(partials(dy, 1))
-                    else
-                        @test partials(dy, 1) ≈ actualdy
-                    end
+                    @test partials(dx, 1) ≈ actualdx nans=true
+                    @test partials(dy, 1) ≈ actualdy nans=true
                 end
             end
         end
