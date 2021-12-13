@@ -82,3 +82,42 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
     duals[dual_inds] .= Dual{T,V,N}.(view(x, dual_inds), getindex.(Ref(seeds), seed_inds))
     return duals
 end
+
+# To reduce compile times
+
+function seed!(duals::Array{Dual{T,V,N}}, x,
+               seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
+    @inbounds @simd for i in eachindex(x)
+        duals[i] = Dual{T,V,N}(x[i], seed)
+    end
+    return duals
+end
+
+function seed!(duals::Array{Dual{T,V,N}}, x,
+               seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
+    @inbounds @simd for i in 1:N
+        duals[i] = Dual{T,V,N}(x[i], seeds[i])
+    end
+    return duals
+end
+
+function seed!(duals::Array{Dual{T,V,N}}, x, index,
+               seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
+    offset = index - 1
+    dual_inds = offset:N+offset
+    @inbounds @simd for i in dual_inds
+        duals[i] = Dual{T,V,N}(x[i], seed)
+    end
+    return duals
+end
+
+function seed!(duals::Array{Dual{T,V,N}}, x, index,
+               seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
+    offset = index - 1
+    seed_inds = 1:chunksize
+    dual_inds = offset:chunksize+offset
+    @inbounds for (i,j) in enumerate(dual_inds)
+        duals[j] = Dual{T,V,N}(x[j], seeds[i])
+    end
+    return duals
+end
