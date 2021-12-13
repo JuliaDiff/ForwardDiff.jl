@@ -197,32 +197,29 @@ end
     return tupexpr(i -> :(rand(V)), N)
 end
 
+@generated function scale_tuple(tup::NTuple{N}, x) where N
+    return tupexpr(i -> :(tup[$i] * x), N)
+end
 
-const SIMDFloat = Union{Float64, Float32}
-const SIMDInt = Union{
-                       Int128, Int64, Int32, Int16, Int8,
-                       UInt128, UInt64, UInt32, UInt16, UInt8,
-                     }
-const SIMDType = Union{SIMDFloat, SIMDInt}
-const NT{N,T} = NTuple{N,T}
-using SIMD
+@generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
+    return tupexpr(i -> :(tup[$i] / x), N)
+end
 
-# SIMD implementation
-add_tuples(a::NT{N,T}, b::NT{N,T})               where {N, T<:SIMDType}  = Tuple(Vec(a) + Vec(b))
-sub_tuples(a::NT{N,T}, b::NT{N,T})               where {N, T<:SIMDType}  = Tuple(Vec(a) - Vec(b))
-scale_tuple(tup::NT{N,T}, x::T)                  where {N, T<:SIMDType}  = Tuple(Vec(tup) * x)
-div_tuple_by_scalar(tup::NT{N,T}, x::T)          where {N, T<:SIMDFloat} = Tuple(Vec(tup) / x)
-minus_tuple(tup::NT{N,T})                        where {N, T<:SIMDType}  = Tuple(-Vec(tup))
-mul_tuples(a::NT{N,T}, b::NT{N,T}, af::T, bf::T) where {N, T<:SIMDType}  = Tuple(muladd(Vec{N,T}(af), Vec(a), Vec{N,T}(bf) * Vec(b)))
+@generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
+    return tupexpr(i -> :(a[$i] + b[$i]), N)
+end
 
+@generated function sub_tuples(a::NTuple{N}, b::NTuple{N})  where N
+    return tupexpr(i -> :(a[$i] - b[$i]), N)
+end
 
-# Fallback implementations
-@generated add_tuples(a::NT{N}, b::NT{N})         where N = tupexpr(i -> :(a[$i] + b[$i]), N)
-@generated sub_tuples(a::NT{N}, b::NT{N})         where N = tupexpr(i -> :(a[$i] - b[$i]), N)
-@generated scale_tuple(tup::NT{N}, x)             where N = tupexpr(i -> :(tup[$i] * x), N)
-@generated div_tuple_by_scalar(tup::NT{N}, x)     where N = tupexpr(i -> :(tup[$i] / x), N)
-@generated minus_tuple(tup::NT{N})                where N = tupexpr(i -> :(-tup[$i]), N)
-@generated mul_tuples(a::NT{N}, b::NT{N}, af, bf) where N = tupexpr(i -> :((af * a[$i]) + (bf * b[$i])), N)
+@generated function minus_tuple(tup::NTuple{N}) where N
+    return tupexpr(i -> :(-tup[$i]), N)
+end
+
+@generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
+    return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
+end
 
 ###################
 # Pretty Printing #
