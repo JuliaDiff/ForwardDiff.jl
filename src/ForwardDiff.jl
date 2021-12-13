@@ -8,20 +8,12 @@ if VERSION >= v"1.6"
 end
 using Random
 using LinearAlgebra
-import SIMD: Vec
 
 import Printf
 import NaNMath
 import SpecialFunctions
 import LogExpFunctions
 import CommonSubexpressions
-
-const SIMDFloat = Union{Float64, Float32}
-const SIMDInt = Union{
-                       Int128, Int64, Int32, Int16, Int8,
-                       UInt128, UInt64, UInt32, UInt16, UInt8,
-                     }
-const SIMDType = Union{SIMDFloat, SIMDInt}
 
 include("prelude.jl")
 include("partials.jl")
