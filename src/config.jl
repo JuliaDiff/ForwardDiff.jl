@@ -14,8 +14,8 @@ const TAGCOUNT = Threads.Atomic{UInt}(0)
 end
 
 function Tag(f::F, ::Type{V}) where {F,V}
-    tagcount(Tag{F,V}) # trigger generated function
-    Tag{F,V}()
+    tagcount(Tag{objectid(F),V}) # trigger generated function
+    Tag{objectid(F),V}()
 end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
