@@ -157,4 +157,27 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 end
 
+
+##################################################
+# Demonstrate Hessian for vector valued function #
+##################################################
+println("  ...testing vector valued hessian")
+function vector_hessian(f, x)
+    out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
+    # Compute the dimension of vector-valued function output
+    input_dim = length(x)
+    output_dim = Int(size(out)[1] / input_dim)
+    # Reshape into a 3rd order tensor -- a stack of normal hessian matrices for each output channel of the vector-valued function.
+    return reshape(out, output_dim, input_dim, input_dim)
+end
+
+for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
+    hessian_tensor = vector_hessian(f, X)
+    for i in range(1, size(hessian_tensor)[1])
+        h1 = hessian_tensor[i, :, :]
+        h2 = ForwardDiff.hessian(x -> f(x)[i], X)
+        @test isapprox(h1, h2)
+    end
+end
+
 end # module

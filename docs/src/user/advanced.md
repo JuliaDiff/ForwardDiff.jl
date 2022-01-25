@@ -180,10 +180,13 @@ expensive operation):
 
 ```julia
 julia> function vector_hessian(f, x)
-       n = length(x)
-       out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
-       return reshape(out, n, n, n)
-   end
+    out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
+    # Compute the dimension of vector-valued function output
+    input_dim = length(x)
+    output_dim = Int(size(out)[1] / input_dim)
+    # Reshape into a 3rd order tensor -- a stack of normal hessian matrices for each output channel of the vector-valued function.
+    return reshape(out, output_dim, input_dim, input_dim)
+end
 vector_hessian (generic function with 1 method)
 
 julia> vector_hessian(cumprod, [1, 2, 3])
