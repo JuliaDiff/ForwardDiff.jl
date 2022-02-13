@@ -682,7 +682,7 @@ end
 
 function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
-    _,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
+    _,Q = eigen(Symmetric(value.(parent(A))))
     parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
