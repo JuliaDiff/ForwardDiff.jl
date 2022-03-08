@@ -262,12 +262,15 @@ Base.copy(d::Dual) = d
 Base.eps(d::Dual) = eps(value(d))
 Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
 
-# We overload Base._precision to support the base keyword in Julia 1.8
+# The `base` keyword was added in Julia 1.8:
 # https://github.com/JuliaLang/julia/pull/42428
-let precision = VERSION >= v"1.8.0-DEV.725" ? :_precision : :precision
-    @eval begin
-        Base.$precision(d::Dual) = Base.$precision(value(d))
-        Base.$precision(::Type{D}) where {D<:Dual} = Base.$precision(valtype(D))
+if VERSION < v"1.8.0-DEV.725"
+    Base.precision(d::Dual) = precision(value(d))
+    Base.precision(::Type{D}) where {D<:Dual} = precision(valtype(D))
+else
+    Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
+    function Base.precision(::Type{D}; base::Integer=2) where {D<Dual}
+        precision(valtype(d); base=base)
     end
 end
 
