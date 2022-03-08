@@ -270,7 +270,7 @@ if VERSION < v"1.8.0-DEV.725"
 else
     Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
     function Base.precision(::Type{D}; base::Integer=2) where {D<:Dual}
-        precision(valtype(d); base=base)
+        precision(valtype(D); base=base)
     end
 end
 
