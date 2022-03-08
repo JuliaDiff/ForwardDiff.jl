@@ -262,6 +262,15 @@ Base.copy(d::Dual) = d
 Base.eps(d::Dual) = eps(value(d))
 Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
 
+# We overload Base._precision to support the base keyword in Julia 1.8
+# https://github.com/JuliaLang/julia/pull/42428
+let precision = VERSION >= v"1.8.0-DEV.725" ? :_precision : :precision
+    @eval begin
+        Base.$precision(d::Dual) = Base.$precision(value(d))
+        Base.$precision(::Type{D}) where {D<:Dual} = Base.$precision(valtype(D))
+    end
+end
+
 function Base.nextfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
     ForwardDiff.Dual{T}(nextfloat(d.value), d.partials)
 end

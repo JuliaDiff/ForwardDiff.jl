@@ -105,6 +105,17 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test eps(NESTED_FDNUM) === eps(PRIMAL)
         @test eps(typeof(NESTED_FDNUM)) === eps(V)
 
+        @test precision(FDNUM) === precision(PRIMAL)
+        @test precision(typeof(FDNUM)) === precision(V)
+        @test precision(NESTED_FDNUM) === precision(PRIMAL)
+        @test precision(typeof(NESTED_FDNUM)) === precision(V)
+        if VERSION >= v"1.8.0-DEV.725" # https://github.com/JuliaLang/julia/pull/42428
+            @test precision(FDNUM; base=10) === precision(PRIMAL; base=10)
+            @test precision(typeof(FDNUM); base=10) === precision(V; base=10)
+            @test precision(NESTED_FDNUM; base=10) === precision(PRIMAL; base=10)
+            @test precision(typeof(NESTED_FDNUM); base=10) === precision(V; base=10)
+        end
+
         @test floor(Int, FDNUM) === floor(Int, PRIMAL)
         @test floor(Int, FDNUM2) === floor(Int, PRIMAL2)
         @test floor(Int, NESTED_FDNUM) === floor(Int, PRIMAL)
