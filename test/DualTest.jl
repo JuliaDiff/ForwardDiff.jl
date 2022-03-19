@@ -30,7 +30,7 @@ ForwardDiff.:≺(::Int, ::Type{TestTag()}) = false
 ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
 ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
-@testset "Dual{TestTag(),$V,$N} and Dual{TestTag(),Dual{TestTag(),$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
+@testset "Dual{Z,$V,$N} and Dual{Z,Dual{Z,$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
     println("  ...testing Dual{TestTag(),$V,$N} and Dual{TestTag(),Dual{TestTag(),$V,$M},$N}")
 
     PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), N))
@@ -240,9 +240,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     # M is the length of M_PARTIALS, which affects:
     # NESTED_FDNUM = Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
-@show N M 
+    @show N M NESTED_FDNUM PRIMAL M_PARTIALS2 NESTED_PARTIALS2
     @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == (N == M == 0)
-    @test isequal(NESTED_FDNUM, NESTED_FDNUM2) == isequal(PRIMAL, PRIMAL2) && (N == M == 0)
+    @show N M NESTED_FDNUM NESTED_FDNUM2 PRIMAL PRIMAL2
+    @test isequal(NESTED_FDNUM, NESTED_FDNUM2) == isequal(PRIMAL, PRIMAL2)
 
     @test (FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
     @test (PRIMAL == PRIMAL2) == (FDNUM == FDNUM2)

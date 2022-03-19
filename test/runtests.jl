@@ -1,6 +1,6 @@
 using ForwardDiff, Test
 
-@testset "ForwardDiff" begin
+@testset "ForwardDiff.jl" begin
     t0 = time()
     @testset "Partials" begin
         println("##### Testing Partials...")
