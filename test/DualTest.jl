@@ -137,6 +137,14 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
 
+        @test fld(FDNUM, FDNUM2) === fld(PRIMAL, PRIMAL2)
+        @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
+        @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
+
+        @test cld(FDNUM, FDNUM2) === cld(PRIMAL, PRIMAL2)
+        @test cld(FDNUM, PRIMAL2) === cld(PRIMAL, PRIMAL2)
+        @test cld(PRIMAL, FDNUM2) === cld(PRIMAL, PRIMAL2)
+
         @test div(FDNUM, FDNUM2) === div(PRIMAL, PRIMAL2)
         @test div(FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
         @test div(PRIMAL, FDNUM2) === div(PRIMAL, PRIMAL2)
