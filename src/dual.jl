@@ -284,9 +284,9 @@ Base.trunc(d::Dual) = trunc(value(d))
 Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
 Base.round(d::Dual) = round(value(d))
 
-Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
+Base.fld(x::T, y::T) where {T<:Dual} = fld(value(x), value(y))
 
-Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
+Base.cld(x::T, y::T) where {T<:Dual} = cld(value(x), value(y))
 
 if VERSION ≥ v"1.4"
     Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
