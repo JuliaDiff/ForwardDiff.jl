@@ -1,7 +1,9 @@
 @static if VERSION >= v"1.6"
     const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
+    const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
 else
     const NANSAFE_MODE_ENABLED = false
+    const DEFAULT_CHUNK_THRESHOLD = 12
 end
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
@@ -9,8 +11,6 @@ const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, Rou
 const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isreal, :isinteger]
 
 const BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
-
-const DEFAULT_CHUNK_THRESHOLD = 12
 
 struct Chunk{N} end
 
