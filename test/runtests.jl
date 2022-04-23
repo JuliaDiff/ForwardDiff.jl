@@ -1,4 +1,8 @@
-using ForwardDiff, Test
+using ForwardDiff, Test, Random
+
+SEED = trunc(Int, time())
+println("Testing with Random.seed!($SEED)")
+Random.seed!(SEED)
 
 @testset "ForwardDiff.jl" begin
     t0 = time()

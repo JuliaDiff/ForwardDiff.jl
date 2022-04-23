@@ -175,8 +175,8 @@ end
     @test ForwardDiff.gradient(f, [0.2,25.0]) == [7875.0, 0.0]
 end
 
-# Issue 197
 @testset "det with branches" begin
+    # Issue 197
     det2(A) = return (
         A[1,1]*(A[2,2]*A[3,3]-A[2,3]*A[3,2]) -
         A[1,2]*(A[2,1]*A[3,3]-A[2,3]*A[3,1]) +
@@ -193,6 +193,12 @@ end
 
     # And issue 407
     @test ForwardDiff.hessian(det, A) ≈ ForwardDiff.hessian(det2, A)
+    
+    # https://discourse.julialang.org/t/forwarddiff-and-zygote-return-wrong-jacobian-for-log-det-l/77961
+    S = [1.0 0.8; 0.8 1.0]
+    L = cholesky(S).L
+    @test ForwardDiff.gradient(L -> log(det(L)), Matrix(L)) ≈ [1.0 -1.3333333333333337; 0.0 1.666666666666667]
+    @test ForwardDiff.gradient(L -> logdet(L), Matrix(L)) ≈ [1.0 -1.3333333333333337; 0.0 1.666666666666667]
 end
 
 @testset "branches in mul!" begin
