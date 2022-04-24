@@ -294,6 +294,18 @@ Base.copy(d::Dual) = d
 Base.eps(d::Dual) = eps(value(d))
 Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
 
+# The `base` keyword was added in Julia 1.8:
+# https://github.com/JuliaLang/julia/pull/42428
+if VERSION < v"1.8.0-DEV.725"
+    Base.precision(d::Dual) = precision(value(d))
+    Base.precision(::Type{D}) where {D<:Dual} = precision(valtype(D))
+else
+    Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
+    function Base.precision(::Type{D}; base::Integer=2) where {D<:Dual}
+        precision(valtype(D); base=base)
+    end
+end
+
 function Base.nextfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
     ForwardDiff.Dual{T}(nextfloat(d.value), d.partials)
 end
@@ -315,6 +327,10 @@ Base.trunc(d::Dual) = trunc(value(d))
 
 Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
 Base.round(d::Dual) = round(value(d))
+
+Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
+
+Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
 
 if VERSION ≥ v"1.4"
     Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
