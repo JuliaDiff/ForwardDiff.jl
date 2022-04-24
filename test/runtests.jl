@@ -1,7 +1,7 @@
 using ForwardDiff, Test, Random
 
 SEED = trunc(Int, time())
-println("Testing with Random.seed!($SEED)")
+println("##### Random.seed!($SEED), on VERSION == $VERSION")
 Random.seed!(SEED)
 
 @testset "ForwardDiff.jl" begin
@@ -53,5 +53,5 @@ Random.seed!(SEED)
             println("##### done (took $t seconds).")
         end
     end
-    println("##### Running all ForwardDiff tests took $(t0 - time()) seconds.")
+    println("##### Running all ForwardDiff tests took $(time() - t0) seconds.")
 end

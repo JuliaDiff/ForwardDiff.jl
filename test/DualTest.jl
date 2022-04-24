@@ -44,6 +44,13 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     PARTIALS3 = Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL3 = intrand(V)
     FDNUM3 = Dual{TestTag()}(PRIMAL3, PARTIALS3)
+    
+    if !allunique([PRIMAL, PRIMAL2, PRIMAL3])
+        @info "testing with non-unique primals" PRIMAL PRIMAL2 PRIMAL3
+    end
+    if N > 0 && !allunique([PARTIALS, PARTIALS2, PARTIALS3])
+        @info "testing with non-unique partials" PARTIALS PARTIALS2 PARTIALS3
+    end
 
     M_PARTIALS = Partials{M,V}(ntuple(m -> intrand(V), M))
     NESTED_PARTIALS = convert(Partials{N,Dual{TestTag(),V,M}}, PARTIALS)
@@ -232,22 +239,27 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test ForwardDiff.isconstant(one(NESTED_FDNUM))
     @test ForwardDiff.isconstant(NESTED_FDNUM) == (N == 0)
 
-    @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
-    @test isequal(PRIMAL, PRIMAL2) == isequal(FDNUM, FDNUM2)
-
     # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
     # and FDNUM2 has everything with a 2, and all random numbers nonzero.
     # M is the length of M_PARTIALS, which affects:
     # NESTED_FDNUM = Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
-    @show N M NESTED_FDNUM PRIMAL M_PARTIALS2 NESTED_PARTIALS2
-    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == (N == M == 0)
-    @show N M NESTED_FDNUM NESTED_FDNUM2 PRIMAL PRIMAL2
-    @test isequal(NESTED_FDNUM, NESTED_FDNUM2) == isequal(PRIMAL, PRIMAL2)
+    @test (FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
+    @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
+    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
 
-    @test (FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)) == (N == 0)
-    @test (PRIMAL == PRIMAL2) == (FDNUM == FDNUM2)
-    @test (PRIMAL == PRIMAL2) == (NESTED_FDNUM == NESTED_FDNUM2)
+    if PRIMAL == PRIMAL2
+        @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
+        @test isequal(FDNUM, FDNUM2) == (PARTIALS == PARTIALS2)
+        
+        @test (FDNUM == FDNUM2) == (PARTIALS == PARTIALS2)
+        @test (NESTED_FDNUM == NESTED_FDNUM2) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
+    else
+        @test !isequal(FDNUM, FDNUM2)
+        
+        @test FDNUM != FDNUM2
+        @test NESTED_FDNUM != NESTED_FDNUM2
+    end
 
     @test isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(2, PARTIALS2))
     @test !(isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(1, PARTIALS2)))
