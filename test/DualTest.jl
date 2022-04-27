@@ -440,7 +440,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     if V != Int
         for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
-            if f in (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)
+            if f in (:/, :rem2pi)
                 continue  # Skip these rules
             elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
                 continue  # Skip rules for methods not defined in the current scope
@@ -457,9 +457,20 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                 end
                 @eval begin
                     x = rand() + $modifier
-                    dx = $M.$f(Dual{TestTag()}(x, one(x)))
-                    @test value(dx) == $M.$f(x)
-                    @test partials(dx, 1) == $deriv
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)))
+                    actualval = $M.$f(x)
+                    @assert actualval isa Real || actualval isa Complex
+                    if actualval isa Real
+                        @test dx isa Dual{TestTag()}
+                        @test value(dx) == actualval
+                        @test partials(dx, 1) == $deriv
+                    else
+                        @test dx isa Complex{<:Dual{TestTag()}}
+                        @test value(real(dx)) == real(actualval)
+                        @test value(imag(dx)) == imag(actualval)
+                        @test partials(real(dx), 1) == real($deriv)
+                        @test partials(imag(dx), 1) == imag($deriv)
+                    end
                 end
             elseif arity == 2
                 derivs = DiffRules.diffrule(M, f, :x, :y)
@@ -472,14 +483,31 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                 end
                 @eval begin
                     x, y = $x, $y
-                    dx = $M.$f(Dual{TestTag()}(x, one(x)), y)
-                    dy = $M.$f(x, Dual{TestTag()}(y, one(y)))
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)), y)
+                    dy = @inferred $M.$f(x, Dual{TestTag()}(y, one(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
-                    @test value(dx) == $M.$f(x, y)
-                    @test value(dy) == value(dx)
-                    @test partials(dx, 1) ≈ actualdx nans=true
-                    @test partials(dy, 1) ≈ actualdy nans=true
+                    actualval = $M.$f(x, y)
+                    @assert actualval isa Real || actualval isa Complex
+                    if actualval isa Real
+                        @test dx isa Dual{TestTag()}
+                        @test dy isa Dual{TestTag()}
+                        @test value(dx) == actualval
+                        @test value(dy) == actualval
+                        @test partials(dx, 1) ≈ actualdx nans=true
+                        @test partials(dy, 1) ≈ actualdy nans=true
+                    else
+                        @test dx isa Complex{<:Dual{TestTag()}}
+                        @test dy isa Complex{<:Dual{TestTag()}}
+                        @test real(value(dx)) == real(actualval)
+                        @test real(value(dy)) == real(actualval)
+                        @test imag(value(dx)) == imag(actualval)
+                        @test imag(value(dy)) == imag(actualval)
+                        @test partials(real(dx), 1) ≈ real(actualdx) nans=true
+                        @test partials(real(dy), 1) ≈ real(actualdy) nans=true
+                        @test partials(imag(dx), 1) ≈ imag(actualdx) nans=true
+                        @test partials(imag(dy), 1) ≈ imag(actualdy) nans=true
+                    end
                 end
             end
         end

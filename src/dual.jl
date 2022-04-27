@@ -195,6 +195,38 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
     return esc(defs)
 end
 
+# Support complex-valued functions such as `hankelh1`
+function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
+    return Dual{T}(val, deriv * partial)
+end
+function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
+    return Dual{T}(val, _mul_partials(partial1, partial2, deriv1, deriv2))
+end
+function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
+    reval, imval = reim(val)
+    if deriv isa Real
+        p = deriv * partial
+        return Complex(Dual{T}(reval, p), Dual{T}(imval, zero(p)))
+    else
+        rederiv, imderiv = reim(deriv)
+        return Complex(Dual{T}(reval, rederiv * partial), Dual{T}(imval, imderiv * partial))
+    end
+end
+function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
+    reval, imval = reim(val)
+    if deriv1 isa Real && deriv2 isa Real
+        p = _mul_partials(partial1, partial2, deriv1, deriv2)
+        return Complex(Dual{T}(reval, p), Dual{T}(imval, zero(p)))
+    else
+        rederiv1, imderiv1 = reim(deriv1)
+        rederiv2, imderiv2 = reim(deriv2)
+        return Complex(
+            Dual{T}(reval, _mul_partials(partial1, partial2, rederiv1, rederiv2)),
+            Dual{T}(imval, _mul_partials(partial1, partial2, imderiv1, imderiv2)),
+        )
+    end
+end
+
 function unary_dual_definition(M, f)
     FD = ForwardDiff
     Mf = M == :Base ? f : :($M.$f)
@@ -206,7 +238,7 @@ function unary_dual_definition(M, f)
         @inline function $M.$f(d::$FD.Dual{T}) where T
             x = $FD.value(d)
             $work
-            return $FD.Dual{T}(val, deriv * $FD.partials(d))
+            return $FD.dual_definition_retval(Val{T}(), val, deriv, $FD.partials(d))
         end
     end
 end
@@ -236,17 +268,17 @@ function binary_dual_definition(M, f)
             begin
                 vx, vy = $FD.value(x), $FD.value(y)
                 $xy_work
-                return $FD.Dual{Txy}(val, $FD._mul_partials($FD.partials(x), $FD.partials(y), dvx, dvy))
+                return $FD.dual_definition_retval(Val{Txy}(), val, dvx, $FD.partials(x), dvy, $FD.partials(y))
             end,
             begin
                 vx = $FD.value(x)
                 $x_work
-                return $FD.Dual{Tx}(val, dvx * $FD.partials(x))
+                return $FD.dual_definition_retval(Val{Tx}(), val, dvx, $FD.partials(x))
             end,
             begin
                 vy = $FD.value(y)
                 $y_work
-                return $FD.Dual{Ty}(val, dvy * $FD.partials(y))
+                return $FD.dual_definition_retval(Val{Ty}(), val, dvy, $FD.partials(y))
             end
         )
     end
