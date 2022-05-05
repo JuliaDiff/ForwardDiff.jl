@@ -7,7 +7,7 @@ using ForwardDiff: Partials
 
 samerng() = MersenneTwister(1)
 
-for N in (0, 3), T in (Int, Float32, Float64)
+for N in (0, 3), T in (Int, Float32, Float64, ComplexF32, ComplexF64)
     println("  ...testing Partials{$N,$T}")
 
     VALUES = (rand(T,N)...,)
