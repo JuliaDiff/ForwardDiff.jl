@@ -539,6 +539,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test dual_isapprox(f(FDNUM, PRIMAL2, PRIMAL3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS))
         @test dual_isapprox(f(PRIMAL, PRIMAL2, FDNUM3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
     end
+
+    @test all(map(dual_isapprox, logabsgamma(FDNUM), (loggamma(abs(FDNUM)), sign(gamma(FDNUM)))))
 end
 
 @testset "Exponentiation of zero" begin

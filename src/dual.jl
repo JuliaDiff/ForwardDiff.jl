@@ -742,6 +742,15 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
+# SpecialFunctions.logabsgamma           #
+# Derivative is not defined in DiffRules #
+#----------------------------------------#
+
+function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
+    x = value(d)
+    y, s = SpecialFunctions.logabsgamma(x)
+    return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), s)
+end
 
 ###################
 # Pretty Printing #
