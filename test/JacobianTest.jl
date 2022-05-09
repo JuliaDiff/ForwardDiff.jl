@@ -253,6 +253,8 @@ end
     @test ForwardDiff.jacobian(ev1, x0) ≈ numdiff(ev1, x0)
     ev2(x) = eigen(SymTridiagonal(x, x[1:end-1])).vectors[:,1]
     @test ForwardDiff.jacobian(ev2, x0) ≈ numdiff(ev2, x0)
+    x0_static = SVector{2}(x0)
+    @test ForwardDiff.jacobian(ev1, x0_static) ≈ numdif(ev1, x0)
 end
 
 @testset "type stability" begin
