@@ -235,26 +235,14 @@ end
 @testset "eigen" begin
     @test ForwardDiff.jacobian(x -> eigvals(SymTridiagonal(x, x[1:end-1])), [1.,2.]) ≈ [(1 - 3/sqrt(5))/2 (1 - 1/sqrt(5))/2 ; (1 + 3/sqrt(5))/2 (1 + 1/sqrt(5))/2]
     @test ForwardDiff.jacobian(x -> eigvals(Symmetric(x*x')), [1.,2.]) ≈ [0 0; 2 4]
-
-    function numdiff(f, x, Δ=1.e-5);
-        f0 = f(x);
-        dx = zero(x);
-        res = zeros(length(f0), length(x));
-        for j=1:length(x)
-         fill!(dx, 0)
-         dx[j] = Δ
-         res[:,j] = (f(x+dx)-f(x-dx))/(2Δ)
-        end
-        return res
-    end
-
+    
     x0 = [1.0, 2.0];
     ev1(x) = eigen(Symmetric(x*x')).vectors[:,1]
-    @test ForwardDiff.jacobian(ev1, x0) ≈ numdiff(ev1, x0)
+    @test ForwardDiff.jacobian(ev1, x0) ≈ Calculus.finite_difference_jacobian(ev1, x0)
     ev2(x) = eigen(SymTridiagonal(x, x[1:end-1])).vectors[:,1]
-    @test ForwardDiff.jacobian(ev2, x0) ≈ numdiff(ev2, x0)
+    @test ForwardDiff.jacobian(ev2, x0) ≈ Calculus.finite_difference_jacobian(ev2, x0)
     x0_static = SVector{2}(x0)
-    @test ForwardDiff.jacobian(ev1, x0_static) ≈ numdiff(ev1, x0)
+    @test ForwardDiff.jacobian(ev1, x0_static) ≈ Calculus.finite_difference_jacobian(ev1, x0)
 end
 
 @testset "type stability" begin
