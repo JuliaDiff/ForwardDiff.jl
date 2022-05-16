@@ -229,7 +229,6 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     # Predicates #
     #------------#
-    @testset "Predicates" begin
 
     @test ForwardDiff.isconstant(zero(FDNUM))
     @test ForwardDiff.isconstant(one(FDNUM))
@@ -340,7 +339,6 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test isodd(Dual{TestTag()}(Dual{TestTag()}(1)))
     @test !(isodd(Dual{TestTag()}(Dual{TestTag()}(2))))
 
-    end
     ########################
     # Promotion/Conversion #
     ########################
@@ -414,7 +412,6 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     # Division #
     #----------#
-    @testset "Division" begin
 
     if M > 0 && N > 0
         # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
@@ -435,11 +432,8 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test dual_isapprox(NESTED_FDNUM / PRIMAL, Dual{TestTag()}(value(NESTED_FDNUM) / PRIMAL, partials(NESTED_FDNUM) / PRIMAL))
     @test dual_isapprox(PRIMAL / NESTED_FDNUM, Dual{TestTag()}(PRIMAL / value(NESTED_FDNUM), (-(PRIMAL) / value(NESTED_FDNUM)^2) * partials(NESTED_FDNUM)))
 
-    end
-
     # Exponentiation #
     #----------------#
-    @testset "Exponentiation" begin
 
     # If V == Int, the LHS terms are Int's. Large inputs cause integer overflow
     # within the generic fallback of `isapprox`, resulting in a DomainError.
@@ -454,7 +448,6 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test partials(NaNMath.pow(Dual{TestTag()}(-2.0, 1.0), Dual{TestTag()}(2.0, 0.0)), 1) == -4.0
 
-    end
     ###################################
     # General Mathematical Operations #
     ###################################
@@ -547,7 +540,6 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     # Special Cases #
     #---------------#
-    @testset "Special Cases" begin
 
     @test_broken dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
     @test_broken dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM3), sqrt(FDNUM^2 + FDNUM2^2 + FDNUM3^2))
