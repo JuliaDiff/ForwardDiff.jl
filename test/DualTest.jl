@@ -464,7 +464,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
+        @testset "$f" for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
             if f in (:/, :rem2pi)
                 continue  # Skip these rules
             elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
@@ -524,10 +524,14 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
                     else
                         @test dx isa Complex{<:Dual{TestTag()}}
                         @test dy isa Complex{<:Dual{TestTag()}}
-                        @test real(value(dx)) == real(actualval)
-                        @test real(value(dy)) == real(actualval)
-                        @test imag(value(dx)) == imag(actualval)
-                        @test imag(value(dy)) == imag(actualval)
+                        # @test real(value(dx)) == real(actualval)
+                        # @test real(value(dy)) == real(actualval)
+                        # @test imag(value(dx)) == imag(actualval)
+                        # @test imag(value(dy)) == imag(actualval)
+                        @test value(real(dx)) == real(actualval)
+                        @test value(real(dy)) == real(actualval)
+                        @test value(imag(dx)) == imag(actualval)
+                        @test value(imag(dy)) == imag(actualval)
                         @test partials(real(dx), 1) ≈ real(actualdx) nans=true
                         @test partials(real(dy), 1) ≈ real(actualdy) nans=true
                         @test partials(imag(dx), 1) ≈ imag(actualdx) nans=true
