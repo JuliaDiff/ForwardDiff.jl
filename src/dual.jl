@@ -706,6 +706,12 @@ function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
+function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
+    λ,Q = eigen(Symmetric(value.(parent(A))))
+    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
+    Dual{Tg}.(λ, tuple.(parts...))
+end
+
 function LinearAlgebra.eigvals(A::Hermitian{<:Complex{<:Dual{Tg,T,N}}}) where {Tg,T<:Real,N}
     λ,Q = eigen(Hermitian(value.(real.(parent(A))) .+ im .* value.(imag.(parent(A)))))
     parts = ntuple(j -> diag(real.(Q' * (getindex.(partials.(real.(A)) .+ im .* partials.(imag.(A)), j)) * Q)), N)
@@ -730,7 +736,14 @@ end
 
 function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
-    _,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
+    _,Q = eigen(Symmetric(value.(parent(A))))
+    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
+end
+
+function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
+    λ = eigvals(A)
+    _,Q = eigen(Symmetric(value.(parent(A))))
     parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
