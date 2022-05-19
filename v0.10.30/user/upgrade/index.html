@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Upgrading from Older Versions · ForwardDiff</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.044/juliamono.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ForwardDiff</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><span class="tocitem">User Documentation</span><ul><li><a class="tocitem" href="../limitations/">Limitations of ForwardDiff</a></li><li><a class="tocitem" href="../api/">Differentiation API</a></li><li><a class="tocitem" href="../advanced/">Advanced Usage Guide</a></li><li class="is-active"><a class="tocitem" href>Upgrading from Older Versions</a><ul class="internal"><li class="toplevel"><a class="tocitem" href="#Unexported-API-Functions"><span>Unexported API Functions</span></a></li><li class="toplevel"><a class="tocitem" href="#Using-The-AbstractConfig-API"><span>Using The <code>AbstractConfig</code> API</span></a></li><li class="toplevel"><a class="tocitem" href="#Enabling-Multithreading"><span>Enabling Multithreading</span></a></li><li class="toplevel"><a class="tocitem" href="#Retrieving-Lower-Order-Results"><span>Retrieving Lower-Order Results</span></a></li><li><a class="tocitem" href="#Higher-Order-Differentiation"><span>Higher-Order Differentiation</span></a></li><li><a class="tocitem" href="#Creating-Differentiation-Functions"><span>Creating Differentiation Functions</span></a></li></ul></li></ul></li><li><span class="tocitem">Developer Documentation</span><ul><li><a class="tocitem" href="../../dev/how_it_works/">How ForwardDiff Works</a></li><li><a class="tocitem" href="../../dev/contributing/">How to Contribute</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Documentation</a></li><li class="is-active"><a href>Upgrading from Older Versions</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Upgrading from Older Versions</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/JuliaDiff/ForwardDiff.jl/blob/master/docs/src/user/upgrade.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Upgrading-from-Older-Versions"><a class="docs-heading-anchor" href="#Upgrading-from-Older-Versions">Upgrading from Older Versions</a><a id="Upgrading-from-Older-Versions-1"></a><a class="docs-heading-anchor-permalink" href="#Upgrading-from-Older-Versions" title="Permalink"></a></h1><p>Each new minor release of ForwardDiff may introduce changes in the API or behavior. Here, we&#39;ll provide some examples that highlight the key differences to help you upgrade from older versions of ForwardDiff.</p><h1 id="Unexported-API-Functions"><a class="docs-heading-anchor" href="#Unexported-API-Functions">Unexported API Functions</a><a id="Unexported-API-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Unexported-API-Functions" title="Permalink"></a></h1><p>In order to avoid namespace conflicts with other packages, ForwardDiff&#39;s  <a href="../api/#Differentiation-API">Differentiation API</a> is no longer exported by default. Thus, you must now fully qualify the functions to  reference them:</p><pre><code class="language-julia hljs"># ForwardDiff v0.1
+using ForwardDiff
+hessian(f, x)
+
+# ForwardDiff v0.2 &amp; above
+using ForwardDiff
+ForwardDiff.hessian(f, x)</code></pre><h1 id="Using-The-AbstractConfig-API"><a class="docs-heading-anchor" href="#Using-The-AbstractConfig-API">Using The <code>AbstractConfig</code> API</a><a id="Using-The-AbstractConfig-API-1"></a><a class="docs-heading-anchor-permalink" href="#Using-The-AbstractConfig-API" title="Permalink"></a></h1><pre><code class="language-julia hljs"># ForwardDiff v0.1
+ForwardDiff.gradient(f, x; chunk_size = 10)
+
+# ForwardDiff v0.2
+ForwardDiff.gradient(f, x, Chunk{10}())
+
+# ForwardDiff v0.3 &amp; v0.4
+ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig{10}(x))
+
+# ForwardDiff v0.5 &amp; above
+ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x ForwardDiff.Chunk{10}()))</code></pre><h1 id="Enabling-Multithreading"><a class="docs-heading-anchor" href="#Enabling-Multithreading">Enabling Multithreading</a><a id="Enabling-Multithreading-1"></a><a class="docs-heading-anchor-permalink" href="#Enabling-Multithreading" title="Permalink"></a></h1><pre><code class="language-julia hljs"># ForwardDiff v0.1 &amp; v0.2
+ForwardDiff.gradient(f, x; multithread = true)
+
+# ForwardDiff v0.3 &amp; v0.4
+ForwardDiff.gradient(f, x, ForwardDiff.MultithreadConfig(ForwardDiff.GradientConfig(x)))
+
+# ForwardDiff v0.5 &amp; above
+error(&quot;ForwardDiff no longer supports internal multithreading.&quot;)</code></pre><h1 id="Retrieving-Lower-Order-Results"><a class="docs-heading-anchor" href="#Retrieving-Lower-Order-Results">Retrieving Lower-Order Results</a><a id="Retrieving-Lower-Order-Results-1"></a><a class="docs-heading-anchor-permalink" href="#Retrieving-Lower-Order-Results" title="Permalink"></a></h1><pre><code class="language-julia hljs"># ForwardDiff v0.1
+answer, results = ForwardDiff.hessian(f, x, AllResults)
+v = ForwardDiff.value(results)
+g = ForwardDiff.gradient(results)
+h = ForwardDiff.hessian(results) # == answer
+
+# ForwardDiff v0.2
+out = HessianResult(x)
+ForwardDiff.hessian!(out, f, x)
+v = ForwardDiff.value(out)
+g = ForwardDiff.gradient(out)
+h = ForwardDiff.hessian(out)
+
+# ForwardDiff v0.3 &amp; above
+using DiffBase
+out = DiffBase.HessianResult(x)
+ForwardDiff.hessian!(out, f, x)
+v = DiffBase.value(out)
+g = DiffBase.gradient(out)
+h = DiffBase.hessian(out)
+
+# ForwardDiff v0.6 &amp; above
+using DiffResults
+out = DiffResults.HessianResult(x)
+out = ForwardDiff.hessian!(out, f, x) # re-alias output!
+v = DiffResults.value(out)
+g = DiffResults.gradient(out)
+h = DiffResults.hessian(out)</code></pre><h2 id="Higher-Order-Differentiation"><a class="docs-heading-anchor" href="#Higher-Order-Differentiation">Higher-Order Differentiation</a><a id="Higher-Order-Differentiation-1"></a><a class="docs-heading-anchor-permalink" href="#Higher-Order-Differentiation" title="Permalink"></a></h2><p>In order to maintain feature parity between all API functions, ForwardDiff no longer provides the <code>tensor</code> function. Instead, users can take higher-order/higher-dimensional derivatives by composing existing API functions. For example, here&#39;s how to reimplement <code>tensor</code>:</p><pre><code class="language-julia hljs"># ForwardDiff v0.1
+ForwardDiff.tensor(f, x)
+
+# ForwardDiff v0.2 &amp; above
+function tensor(f, x)
+    n = length(x)
+    out = ForwardDiff.jacobian(y -&gt; ForwardDiff.hessian(f, y), x)
+    return reshape(out, n, n, n)
+end
+
+tensor(f, x)</code></pre><h2 id="Creating-Differentiation-Functions"><a class="docs-heading-anchor" href="#Creating-Differentiation-Functions">Creating Differentiation Functions</a><a id="Creating-Differentiation-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Creating-Differentiation-Functions" title="Permalink"></a></h2><p>Since v0.2, ForwardDiff no longer supports automatic generation of differentiation functions. Instead, users explicitly define their own functions using ForwardDiff&#39;s API. This leads to clearer code, less &quot;magic&quot;, and more flexibility.</p><pre><code class="language-julia hljs"># ForwardDiff v0.1
+df = ForwardDiff.derivative(f)
+
+# ForwardDiff v0.2 &amp; above
+df = x -&gt; ForwardDiff.derivative(f, x)</code></pre><pre><code class="language-julia hljs"># ForwardDiff v0.1
+# in-place gradient function of f
+gf! = ForwardDiff.gradient(f, mutates = true)
+
+# ForwardDiff v0.2 &amp; above
+gf! = (out, x) -&gt; ForwardDiff.gradient!(out, f, x)</code></pre><pre><code class="language-julia hljs"># ForwardDiff v0.1
+# in-place Jacobian function of f!(y, x):
+jf! = ForwardDiff.jacobian(f!, mutates = true, output_length = length(y))
+
+# ForwardDiff v0.2 &amp; above
+jf! = (out, y, x) -&gt; ForwardDiff.jacobian!(out, f!, y, x)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../advanced/">« Advanced Usage Guide</a><a class="docs-footer-nextpage" href="../../dev/how_it_works/">How ForwardDiff Works »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.17 on <span class="colophon-date" title="Thursday 19 May 2022 00:15">Thursday 19 May 2022</span>. Using Julia version 1.7.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
