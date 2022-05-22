@@ -540,8 +540,24 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test dual_isapprox(f(PRIMAL, PRIMAL2, FDNUM3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
     end
 
+    # Functions in Specialfunctions that return tuples and
+    # therefore are not supported by DiffRules
     @test dual_isapprox(logabsgamma(FDNUM)[1], loggamma(abs(FDNUM)))
     @test dual_isapprox(logabsgamma(FDNUM)[2], sign(gamma(FDNUM)))
+
+    a = rand()
+    fdnum = Dual{TestTag()}(1 + PRIMAL, PARTIALS) # 1 + PRIMAL avoids issues with finite differencing close to 0
+    for ind in ((), (0,), (1,), (2,))
+        pq = gamma_inc(a, fdnum, ind...)
+        @test pq isa Tuple{Dual{TestTag()},Dual{TestTag()}}
+        # We have to adjust tolerances if lower accuracy is requested
+        # Therefore we don't use `dual_isapprox`
+        tol = eps(float(V))^(1 / 2^(isempty(ind) ? 1 : 1 + first(ind)))
+        for i in 1:2
+            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
+            @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
+        end
+    end
 end
 
 @testset "Exponentiation of zero" begin

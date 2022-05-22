@@ -755,14 +755,22 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
-# SpecialFunctions.logabsgamma           #
-# Derivative is not defined in DiffRules #
-#----------------------------------------#
+# Functions in SpecialFunctions which return tuples #
+# Their derivatives are not defined in DiffRules    #
+#---------------------------------------------------#
 
 function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
     x = value(d)
     y, s = SpecialFunctions.logabsgamma(x)
     return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), s)
+end
+
+# Derivatives wrt to first parameter and precision setting are not supported
+function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
+    x = value(d)
+    p, q = SpecialFunctions.gamma_inc(a, x, ind)
+    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
 
 ###################
