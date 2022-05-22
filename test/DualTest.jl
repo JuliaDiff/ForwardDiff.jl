@@ -556,7 +556,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test pq isa Tuple{Dual{TestTag()},Dual{TestTag()}}
         # We have to adjust tolerances if lower accuracy is requested
         # Therefore we don't use `dual_isapprox`
-        tol = (V === Float32 ? 1f-4 : 1e-6)^(1 / 2^(isempty(ind) ? 0 : first(ind)))
+        tol = V === Float32 ? 5f-4 : 1e-6
+        tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
             @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
             @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
