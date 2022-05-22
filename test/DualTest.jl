@@ -545,9 +545,13 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test dual_isapprox(logabsgamma(FDNUM)[1], loggamma(abs(FDNUM)))
     @test dual_isapprox(logabsgamma(FDNUM)[2], sign(gamma(FDNUM)))
 
-    a = rand()
+    a = rand(float(V))
     fdnum = Dual{TestTag()}(1 + PRIMAL, PARTIALS) # 1 + PRIMAL avoids issues with finite differencing close to 0
     for ind in ((), (0,), (1,), (2,))
+        # Only test if primal method exists
+        # (e.g., older versions of SpecialFunctions don't define `gamma_inc(a, x)` but only `gamma_inc(a, x, ind)`
+        hasmethod(gamma_inc, typeof((a, 1 + PRIMAL, ind...))) || continue
+
         pq = gamma_inc(a, fdnum, ind...)
         @test pq isa Tuple{Dual{TestTag()},Dual{TestTag()}}
         # We have to adjust tolerances if lower accuracy is requested
