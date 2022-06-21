@@ -106,6 +106,17 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test eps(NESTED_FDNUM) === eps(PRIMAL)
         @test eps(typeof(NESTED_FDNUM)) === eps(V)
 
+        @test precision(FDNUM) === precision(PRIMAL)
+        @test precision(typeof(FDNUM)) === precision(V)
+        @test precision(NESTED_FDNUM) === precision(PRIMAL)
+        @test precision(typeof(NESTED_FDNUM)) === precision(V)
+        if VERSION >= v"1.8.0-DEV.725" # https://github.com/JuliaLang/julia/pull/42428
+            @test precision(FDNUM; base=10) === precision(PRIMAL; base=10)
+            @test precision(typeof(FDNUM); base=10) === precision(V; base=10)
+            @test precision(NESTED_FDNUM; base=10) === precision(PRIMAL; base=10)
+            @test precision(typeof(NESTED_FDNUM); base=10) === precision(V; base=10)
+        end
+
         @test floor(Int, FDNUM) === floor(Int, PRIMAL)
         @test floor(Int, FDNUM2) === floor(Int, PRIMAL2)
         @test floor(Int, NESTED_FDNUM) === floor(Int, PRIMAL)
@@ -137,6 +148,14 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test round(FDNUM) === round(PRIMAL)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
+
+        @test fld(FDNUM, FDNUM2) === fld(PRIMAL, PRIMAL2)
+        @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
+        @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
+
+        @test cld(FDNUM, FDNUM2) === cld(PRIMAL, PRIMAL2)
+        @test cld(FDNUM, PRIMAL2) === cld(PRIMAL, PRIMAL2)
+        @test cld(PRIMAL, FDNUM2) === cld(PRIMAL, PRIMAL2)
 
         @test div(FDNUM, FDNUM2) === div(PRIMAL, PRIMAL2)
         @test div(FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
@@ -422,7 +441,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
 
     if V != Int
         for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
-            if f in (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)
+            if f in (:/, :rem2pi)
                 continue  # Skip these rules
             elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
                 continue  # Skip rules for methods not defined in the current scope
@@ -439,29 +458,56 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
                 end
                 @eval begin
                     x = rand() + $modifier
-                    dx = $M.$f(Dual{TestTag()}(x, one(x)))
-                    @test value(dx) == $M.$f(x)
-                    @test partials(dx, 1) == $deriv
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)))
+                    actualval = $M.$f(x)
+                    @assert actualval isa Real || actualval isa Complex
+                    if actualval isa Real
+                        @test dx isa Dual{TestTag()}
+                        @test value(dx) == actualval
+                        @test partials(dx, 1) == $deriv
+                    else
+                        @test dx isa Complex{<:Dual{TestTag()}}
+                        @test value(real(dx)) == real(actualval)
+                        @test value(imag(dx)) == imag(actualval)
+                        @test partials(real(dx), 1) == real($deriv)
+                        @test partials(imag(dx), 1) == imag($deriv)
+                    end
                 end
             elseif arity == 2
                 derivs = DiffRules.diffrule(M, f, :x, :y)
+                x, y = if f === :ldexp
+                    rand(), rand(1:10)
+                elseif f === :mod
+                    13 + rand(), 5 + rand() # make sure x/y is not an integer
+                else
+                    rand(1:10), rand()
+                end
                 @eval begin
-                    x, y = rand(1:10), rand()
-                    dx = $M.$f(Dual{TestTag()}(x, one(x)), y)
-                    dy = $M.$f(x, Dual{TestTag()}(y, one(y)))
+                    x, y = $x, $y
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)), y)
+                    dy = @inferred $M.$f(x, Dual{TestTag()}(y, one(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
-                    @test value(dx) == $M.$f(x, y)
-                    @test value(dy) == value(dx)
-                    if isnan(actualdx)
-                        @test isnan(partials(dx, 1))
+                    actualval = $M.$f(x, y)
+                    @assert actualval isa Real || actualval isa Complex
+                    if actualval isa Real
+                        @test dx isa Dual{TestTag()}
+                        @test dy isa Dual{TestTag()}
+                        @test value(dx) == actualval
+                        @test value(dy) == actualval
+                        @test partials(dx, 1) ≈ actualdx nans=true
+                        @test partials(dy, 1) ≈ actualdy nans=true
                     else
-                        @test partials(dx, 1) ≈ actualdx
-                    end
-                    if isnan(actualdy)
-                        @test isnan(partials(dy, 1))
-                    else
-                        @test partials(dy, 1) ≈ actualdy
+                        @test dx isa Complex{<:Dual{TestTag()}}
+                        @test dy isa Complex{<:Dual{TestTag()}}
+                        @test real(value(dx)) == real(actualval)
+                        @test real(value(dy)) == real(actualval)
+                        @test imag(value(dx)) == imag(actualval)
+                        @test imag(value(dy)) == imag(actualval)
+                        @test partials(real(dx), 1) ≈ real(actualdx) nans=true
+                        @test partials(real(dy), 1) ≈ real(actualdy) nans=true
+                        @test partials(imag(dx), 1) ≈ imag(actualdx) nans=true
+                        @test partials(imag(dy), 1) ≈ imag(actualdy) nans=true
                     end
                 end
             end
@@ -494,6 +540,9 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test dual_isapprox(f(FDNUM, PRIMAL2, PRIMAL3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS))
         @test dual_isapprox(f(PRIMAL, PRIMAL2, FDNUM3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
     end
+
+    @test dual_isapprox(logabsgamma(FDNUM)[1], loggamma(abs(FDNUM)))
+    @test dual_isapprox(logabsgamma(FDNUM)[2], sign(gamma(FDNUM)))
 end
 
 @testset "Exponentiation of zero" begin
