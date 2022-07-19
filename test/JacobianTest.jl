@@ -15,6 +15,8 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 # hardcoded test #
 ##################
 
+@testset "hardcoded" begin
+
 f! = (y, x) -> begin
     y[1] = x[1] * x[2]
     y[1] *= sin(x[3]^2)
@@ -31,9 +33,8 @@ j = [0.8242369704835132  0.4121184852417566  -10.933563142616123
      0.169076696546684   0.084538348273342   -2.299173530851733
      0.0                 0.0                 1.0]
 
-for c in (1, 2, 3), tags in ((nothing, nothing),
+@testset "chunk size = $c and tag = $(repr(tags))" for c in (1, 2, 3), tags in ((nothing, nothing),
                              (Tag(f, eltype(x)), Tag(f!, eltype(x))))
-    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tags))")
     cfg = JacobianConfig(f, x, ForwardDiff.Chunk{c}(), tags[1])
     ycfg = JacobianConfig(f!, fill(0.0, 4), x, ForwardDiff.Chunk{c}(), tags[2])
 
@@ -95,19 +96,20 @@ cfgx = ForwardDiff.JacobianConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.jacobian(f, x, cfgx)
 @test ForwardDiff.jacobian(f, x, cfgx, Val{false}()) == ForwardDiff.jacobian(f,x)
 
+end
+
 ########################
 # test vs. Calculus.jl #
 ########################
 
-for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
+@testset "Comparison vs Calculus.jl" begin
+
+@testset "$f" for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag)
-        if tag == Tag
-            tag = Tag(f, eltype(X))
-        end
-        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
+
+    @testset "chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(X)))
         cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.jacobian(f, X, cfg)
@@ -124,13 +126,13 @@ for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     end
 end
 
-for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
+@testset "$f!" for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     v = fill!(similar(Y), 0.0)
     f!(v, X)
     j = ForwardDiff.jacobian(f!, fill!(similar(Y), 0.0), X)
     @test isapprox(j, Calculus.jacobian(x -> (y = fill!(similar(Y), 0.0); f!(y, x); vec(y)), X, :forward), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
-        println("  ...testing $(f!) with chunk size = $c and tag = $(repr(tag))")
+
+    @testset "chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
         ycfg = JacobianConfig(f!, fill!(similar(Y), 0.0), X, ForwardDiff.Chunk{c}(), tag)
 
         y = fill!(similar(Y), 0.0)
@@ -160,14 +162,14 @@ for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     end
 end
 
+end
+
 ##########################################
 # test specialized StaticArray codepaths #
 ##########################################
 
-println("  ...testing specialized StaticArray codepaths")
-
 x = rand(3, 3)
-for T in (StaticArrays.SArray, StaticArrays.MArray)
+@testset "Specialized $T codepaths" for T in (StaticArrays.SArray, StaticArrays.MArray)
     sx = T{Tuple{3,3}}(x)
 
     cfg = ForwardDiff.JacobianConfig(nothing, x)

@@ -31,7 +31,6 @@ ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
 ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
 @testset "Dual{Z,$V,$N} and Dual{Z,Dual{Z,$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
-    println("  ...testing Dual{TestTag(),$V,$N} and Dual{TestTag(),Dual{TestTag(),$V,$M},$N}")
 
     PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL = intrand(V)
@@ -466,13 +465,12 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        @testset "$f" for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
+        @testset "auto-testing $(M).$(f) with $arity arguments" for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
             if f in (:/, :rem2pi)
                 continue  # Skip these rules
             elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
                 continue  # Skip rules for methods not defined in the current scope
             end
-            println("       ...auto-testing $(M).$(f) with $arity arguments")
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
                 modifier = if in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth))

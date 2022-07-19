@@ -8,8 +8,6 @@ using ForwardDiff: Partials
 samerng() = MersenneTwister(1)
 
 @testset "Partials{$N,$T}" for N in (0, 3), T in (Int, Float32, Float64)
-    println("  ...testing Partials{$N,$T}")
-
     VALUES = (rand(T,N)...,)
     PARTIALS = Partials{N,T}(VALUES)
 

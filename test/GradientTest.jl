@@ -15,13 +15,14 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 # hardcoded test #
 ##################
 
+@testset "hardcoded tests" begin
+
 f = DiffTests.rosenbrock_1
 x = [0.1, 0.2, 0.3]
 v = f(x)
 g = [-9.4, 15.6, 52.0]
 
 @testset "Rosenbrock, chunk size = $c and tag = $(repr(tag))" for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
-    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
     @test eltype(cfg) == Dual{typeof(tag), eltype(x), c}
@@ -51,17 +52,19 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.gradient(f, x, cfgx)
 @test ForwardDiff.gradient(f, x, cfgx, Val{false}()) == ForwardDiff.gradient(f,x)
 
+end
 
 ########################
 # test vs. Calculus.jl #
 ########################
+@testset "Comparison vs Calculus.jl" begin
 
 @testset "$f" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
-        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
+
+    @testset "chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(X)))
         cfg = ForwardDiff.GradientConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.gradient(f, X, cfg)
@@ -78,15 +81,15 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
     end
 end
 
+end
+
 ##########################################
 # test specialized StaticArray codepaths #
 ##########################################
 
-println("  ...testing specialized StaticArray codepaths")
+x = rand(3, 3)
 
-@testset "$T" for T in (StaticArrays.SArray, StaticArrays.MArray)
-    x = rand(3, 3)
-
+@testset "Specialized $T codepaths" for T in (StaticArrays.SArray, StaticArrays.MArray)
     sx = T{Tuple{3,3}}(x)
 
     cfg = ForwardDiff.GradientConfig(nothing, x)
