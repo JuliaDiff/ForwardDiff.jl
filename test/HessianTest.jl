@@ -68,7 +68,7 @@ cfgx = ForwardDiff.HessianConfig(sin, x)
 
 @testset "Comparison vs Calculus.jl" begin
 
-@testset "$f" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
+@testset "$f(x::Vector)::Number" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     h = ForwardDiff.hessian(f, X)

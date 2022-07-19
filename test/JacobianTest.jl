@@ -104,7 +104,7 @@ end
 
 @testset "Comparison vs Calculus.jl" begin
 
-@testset "$f" for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
+@testset "$f(x::Array)::Array" for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
@@ -126,7 +126,7 @@ end
     end
 end
 
-@testset "$f!" for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
+@testset "$f!(y::Array, x::Array)" for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     v = fill!(similar(Y), 0.0)
     f!(v, X)
     j = ForwardDiff.jacobian(f!, fill!(similar(Y), 0.0), X)

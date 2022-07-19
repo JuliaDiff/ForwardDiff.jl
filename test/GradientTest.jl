@@ -59,7 +59,7 @@ end
 ########################
 @testset "Comparison vs Calculus.jl" begin
 
-@testset "$f" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
+@testset "$f(x::Vector)::Number" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)

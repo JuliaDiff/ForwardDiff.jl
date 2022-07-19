@@ -19,7 +19,7 @@ const x = 1
 
 @testset "Derivative test vs Calculus.jl" begin
 
-@testset "$f" for f in DiffTests.NUMBER_TO_NUMBER_FUNCS
+@testset "$f(x::Number)::Number" for f in DiffTests.NUMBER_TO_NUMBER_FUNCS
     v = f(x)
     d = ForwardDiff.derivative(f, x)
     @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
@@ -30,7 +30,7 @@ const x = 1
     @test isapprox(DiffResults.derivative(out), d)
 end
 
-@testset "$f" for f in DiffTests.NUMBER_TO_ARRAY_FUNCS
+@testset "$f(x::Number)::Array" for f in DiffTests.NUMBER_TO_ARRAY_FUNCS
     v = f(x)
     d = ForwardDiff.derivative(f, x)
 
@@ -47,7 +47,7 @@ end
     @test isapprox(DiffResults.derivative(out), d)
 end
 
-@testset "$f!" for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
+@testset "$f!(y::Vector, x::Number)" for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
     m, n = 3, 2
     y = fill(0.0, m, n)
     f = x -> (tmp = similar(y, promote_type(eltype(y), typeof(x)), m, n); f!(tmp, x); tmp)
