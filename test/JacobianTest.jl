@@ -104,6 +104,50 @@ end
 
 @testset "Comparison vs Calculus.jl" begin
 
+@testset "$f(x::Vector)::Vector" for f in DiffTests.VECTOR_TO_VECTOR_FUNCS
+    v = f(X)
+    j = ForwardDiff.jacobian(f, X)
+    @test isapprox(j, Calculus.jacobian(f, X, :forward), atol=1.3FINITEDIFF_ERROR)
+
+    @testset "chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(X)))
+        cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
+
+        out = ForwardDiff.jacobian(f, X, cfg)
+        @test isapprox(out, j)
+
+        out = similar(X, length(v), length(X))
+        ForwardDiff.jacobian!(out, f, X, cfg)
+        @test isapprox(out, j)
+
+        out = DiffResults.DiffResult(similar(v, length(v)), similar(v, length(v), length(X)))
+        ForwardDiff.jacobian!(out, f, X, cfg)
+        @test isapprox(DiffResults.value(out), v)
+        @test isapprox(DiffResults.jacobian(out), j)
+    end
+end
+
+@testset "$f(x::Matrix)::Matrix" for f in DiffTests.MATRIX_TO_MATRIX_FUNCS
+    v = f(XX)
+    j = ForwardDiff.jacobian(f, XX)
+    @test isapprox(j, Calculus.jacobian(x -> vec(f(reshape(x, size(XX)))), vec(XX), :forward), atol=1.3FINITEDIFF_ERROR)
+
+    @testset "chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(XX)))
+        cfg = JacobianConfig(f, XX, ForwardDiff.Chunk{c}(), tag)
+
+        out = ForwardDiff.jacobian(f, XX, cfg)
+        @test isapprox(out, j)
+
+        out = similar(XX, length(v), length(XX))
+        ForwardDiff.jacobian!(out, f, XX, cfg)
+        @test isapprox(out, j)
+
+        out = DiffResults.DiffResult(similar(v, length(v)), similar(v, length(v), length(XX)))
+        ForwardDiff.jacobian!(out, f, XX, cfg)
+        @test isapprox(DiffResults.value(out), vec(v))
+        @test isapprox(DiffResults.jacobian(out), j)
+    end
+end
+
 @testset "$f(x::Array)::Array" for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
