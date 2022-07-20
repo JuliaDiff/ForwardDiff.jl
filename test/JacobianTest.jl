@@ -129,7 +129,7 @@ end
 @testset "$f(x::Matrix)::Matrix" for f in DiffTests.MATRIX_TO_MATRIX_FUNCS
     v = f(XX)
     j = ForwardDiff.jacobian(f, XX)
-    @test isapprox(j, Calculus.jacobian(x -> vec(f(reshape(x, size(XX)))), vec(XX), :forward), atol=1.3FINITEDIFF_ERROR)
+    @test isapprox(j, Calculus.jacobian(x -> vec(f(reshape(x, size(XX)))), vec(XX), :forward), atol=2.5FINITEDIFF_ERROR)
 
     @testset "chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(XX)))
         cfg = JacobianConfig(f, XX, ForwardDiff.Chunk{c}(), tag)
