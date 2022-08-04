@@ -112,6 +112,9 @@ end
     end
 end
 
+@inline partials(z::Complex{TD}) where {TD <: Dual} = real(z).partials + im*imag(z).partials
+@inline Base.@propagate_inbounds partials(z::Complex{TD}, i) where {TD} = real(z).partials[i] + im*imag(z).partials[i]
+
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
 @inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
@@ -123,6 +126,8 @@ end
 @inline valtype(::Type{V}) where {V} = V
 @inline valtype(::Dual{T,V,N}) where {T,V,N} = V
 @inline valtype(::Type{Dual{T,V,N}}) where {T,V,N} = V
+@inline valtype(::Complex{Dual{T,V,N}}) where {T,V,N} = complex(V)
+@inline valtype(::Type{Complex{Dual{T,V,N}}}) where {T,V,N} = complex(V)
 
 @inline tagtype(::V) where {V} = Nothing
 @inline tagtype(::Type{V}) where {V} = Nothing

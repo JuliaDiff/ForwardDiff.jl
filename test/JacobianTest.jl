@@ -250,4 +250,41 @@ end
     @inferred ForwardDiff.jacobian(g!, [1.0], [0.0])
 end
 
+##########################################
+# test specialized R^n -> C^m            #
+##########################################
+
+g(x) = [
+    x[1]^2 + im*x[2], 
+    im*x[1]^2 - x[2], 
+    x[1] * x[2] * im
+    ]
+
+x_in = randn(2)
+
+J = [
+    2*x_in[1] im; 
+    2*im*x_in[1] -1; 
+    x_in[2]*im x_in[1]*im
+    ]
+
+@testset "Real -> Complex Jacobian, No Chunking" begin
+    @test ForwardDiff.jacobian(g, x_in) == J
+
+    J_out = zeros(complex(eltype(x_in)), (3, 2))
+    ForwardDiff.jacobian!(J_out, g, x_in)
+    @test J_out == J
+end
+
+for c in 1:2
+    @testset "Chunked Real -> Complex Jacobian, Chunk = $c" begin
+        cfg = ForwardDiff.JacobianConfig(g, x_in, ForwardDiff.Chunk(c))
+        @test ForwardDiff.jacobian(g, x_in, cfg) == J
+
+        J_out = zeros(complex(eltype(x_in)), (3, 2))
+        ForwardDiff.jacobian!(J_out, g, x_in, cfg)
+        @test J_out == J
+    end
+end
+
 end # module
