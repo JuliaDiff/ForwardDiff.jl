@@ -534,7 +534,7 @@ for f in (:(Base.:^), :(NaNMath.pow))
             begin
                 v = value(x)
                 expv = ($f)(v, y)
-                if y == zero(y)
+                if y == zero(y) || iszero(partials(x))
                     new_partials = zero(partials(x))
                 else
                     new_partials = partials(x) * y * ($f)(v, y - 1)
