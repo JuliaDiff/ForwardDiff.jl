@@ -84,6 +84,12 @@ julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg);
   0.281853 seconds (4 allocations: 160 bytes)
 ```
 
+The underlying heuristic will compute a suitable chunk size smaller or equal
+to the `ForwardDiff.DEFAULT_CHUNK_THRESHOLD` constant. As of ForwardDiff
+v0.10.32 and Julia 1.6, this constant can be configured at load time via
+[Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) by setting the
+`default_chunk_threshold` value.
+
 If your input dimension is constant across calls, you should explicitly select a chunk size
 rather than relying on ForwardDiff's heuristic. There are two reasons for this. The first is
 that ForwardDiff's heuristic depends only on the input dimension, whereas in reality the
