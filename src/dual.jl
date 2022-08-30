@@ -384,16 +384,39 @@ for pred in UNARY_PREDICATES
     @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
 end
 
-for pred in BINARY_PREDICATES
+# Before PR#481 this loop ran over this list:
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# Not a minimal set, as Base defines some in terms of others.
+for pred in [:isless, :<, :>, :(<=), :(>=)]
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
             $(pred)(value(x), value(y)),
             $(pred)(value(x), y),
-            $(pred)(x, value(y))
+            $(pred)(x, value(y)),
         )
     end
 end
+
+Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
+
+for pred in [:isequal, :(==)]
+    @eval begin
+        @define_binary_dual_op(
+            Base.$(pred),
+            $(pred)(value(x), value(y)) && $(pred)(partials(x), partials(y)),
+            $(pred)(value(x), y)        && iszero(partials(x)),
+            $(pred)(x, value(y))        && iszero(partials(y)),
+        )
+    end
+end
+
+@define_binary_dual_op(
+    Base.:(!=),
+    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
+    (!=)(value(x), y)        || !iszero(partials(x)),
+    (!=)(x, value(y))        || !iszero(partials(y)),
+)
 
 ########################
 # Promotion/Conversion #
