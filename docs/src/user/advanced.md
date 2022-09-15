@@ -154,8 +154,24 @@ julia> using ForwardDiff, Preferences
 julia> set_preferences!(ForwardDiff, "nansafe_mode" => true)
 ```
 
+Note that Julia has to be restarted and ForwardDiff has to be reloaded after changing
+this preference.
+
+Alternatively, you can set the preference before loading ForwardDiff, for example via:
+
+```julia
+julia> using Preferences, UUIDs
+
+julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_mode" => true)
+
+julia> using ForwardDiff
+
+julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
+Dual{:tag}(-Inf,0.0)
+```
+
 In the future, we plan on allowing users and downstream library authors to dynamically
-enable [NaN`-safe mode via the `AbstractConfig`
+enable [`NaN`-safe mode via the `AbstractConfig`
 API](https://github.com/JuliaDiff/ForwardDiff.jl/issues/181).
 
 ## Hessian of a vector-valued function
