@@ -13,7 +13,7 @@ Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 
 [compat]
 Calculus = "0.5"
@@ -25,7 +25,8 @@ LogExpFunctions = "0.3"
 NaNMath = "1"
 Preferences = "1"
 SpecialFunctions = "1, 2"
-StaticArrays = "1.5"
+StaticArrays = "1.5.7"
+StaticArraysCore = "1.3.0"
 julia = "1.6"
 
 [extras]
@@ -33,7 +34,8 @@ Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 DiffTests = "de460e47-3fe3-5279-bb4a-814414816d5d"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Calculus", "DiffTests", "SparseArrays", "Test", "InteractiveUtils"]
+test = ["Calculus", "DiffTests", "SparseArrays", "StaticArrays", "Test", "InteractiveUtils"]

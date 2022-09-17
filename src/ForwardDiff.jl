@@ -2,7 +2,8 @@ module ForwardDiff
 
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
-using StaticArrays
+using StaticArraysCore
+using StaticArraysCore: StaticArray, StaticMatrix
 if VERSION >= v"1.6"
     using Preferences
 end

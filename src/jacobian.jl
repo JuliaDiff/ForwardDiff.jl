@@ -101,7 +101,7 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
+        V = StaticArraysCore.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
         return V($result)
     end
 end

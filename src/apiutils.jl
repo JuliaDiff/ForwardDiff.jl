@@ -21,7 +21,7 @@ end
 @generated function dualize(::Type{T}, x::StaticArray) where T
     N = length(x)
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
-    V = StaticArrays.similar_type(x, Dual{T,eltype(x),N})
+    V = StaticArraysCore.similar_type(x, Dual{T,eltype(x),N})
     return quote
         chunk = Chunk{$N}()
         $(Expr(:meta, :inline))

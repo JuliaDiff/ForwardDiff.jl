@@ -59,7 +59,7 @@ gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is
     result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
     return quote
         $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype($y))
+        V = StaticArraysCore.similar_type(S, valtype($y))
         return V($result)
     end
 end
