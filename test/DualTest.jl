@@ -44,7 +44,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     PARTIALS3 = Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL3 = intrand(V)
     FDNUM3 = Dual{TestTag()}(PRIMAL3, PARTIALS3)
-    
+
     if !allunique([PRIMAL, PRIMAL2, PRIMAL3])
         @info "testing with non-unique primals" PRIMAL PRIMAL2 PRIMAL3
     end
@@ -161,6 +161,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test fld(FDNUM, FDNUM2) === fld(PRIMAL, PRIMAL2)
         @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
         @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
+
+        @test exponent(FDNUM) === exponent(PRIMAL)
+        @test exponent(FDNUM2) === exponent(PRIMAL2)
+        @test exponent(NESTED_FDNUM) === exponent(PRIMAL)
 
         @test cld(FDNUM, FDNUM2) === cld(PRIMAL, PRIMAL2)
         @test cld(FDNUM, PRIMAL2) === cld(PRIMAL, PRIMAL2)
@@ -414,7 +418,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     #----------#
 
     if M > 0 && N > 0
-        # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
+        # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials,
         # all random numbers nonzero, and FDNUM2 another draw. M only affects NESTED_FDNUM.
         @test Dual{1}(FDNUM) / Dual{1}(PRIMAL) === Dual{1}(FDNUM / PRIMAL)
         @test Dual{1}(PRIMAL) / Dual{1}(FDNUM) === Dual{1}(PRIMAL / FDNUM)
