@@ -242,7 +242,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test ForwardDiff.isconstant(one(NESTED_FDNUM))
     @test ForwardDiff.isconstant(NESTED_FDNUM) == (N == 0)
 
-    # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials,
+    # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
     # and FDNUM2 has everything with a 2, and all random numbers nonzero.
     # M is the length of M_PARTIALS, which affects:
     # NESTED_FDNUM = Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
@@ -254,12 +254,12 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     if PRIMAL == PRIMAL2
         @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
         @test isequal(FDNUM, FDNUM2) == (PARTIALS == PARTIALS2)
-
+        
         @test (FDNUM == FDNUM2) == (PARTIALS == PARTIALS2)
         @test (NESTED_FDNUM == NESTED_FDNUM2) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
     else
         @test !isequal(FDNUM, FDNUM2)
-
+        
         @test FDNUM != FDNUM2
         @test NESTED_FDNUM != NESTED_FDNUM2
     end
