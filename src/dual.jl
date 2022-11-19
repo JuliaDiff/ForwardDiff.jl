@@ -334,6 +334,8 @@ Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
 
 Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
 
+Base.exponent(x::Dual) = exponent(value(x))
+
 if VERSION ≥ v"1.4"
     Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
 else
@@ -386,16 +388,39 @@ for pred in UNARY_PREDICATES
     @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
 end
 
-for pred in BINARY_PREDICATES
+# Before PR#481 this loop ran over this list:
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# Not a minimal set, as Base defines some in terms of others.
+for pred in [:isless, :<, :>, :(<=), :(>=)]
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
             $(pred)(value(x), value(y)),
             $(pred)(value(x), y),
-            $(pred)(x, value(y))
+            $(pred)(x, value(y)),
         )
     end
 end
+
+Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
+
+for pred in [:isequal, :(==)]
+    @eval begin
+        @define_binary_dual_op(
+            Base.$(pred),
+            $(pred)(value(x), value(y)) && $(pred)(partials(x), partials(y)),
+            $(pred)(value(x), y)        && iszero(partials(x)),
+            $(pred)(x, value(y))        && iszero(partials(y)),
+        )
+    end
+end
+
+@define_binary_dual_op(
+    Base.:(!=),
+    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
+    (!=)(value(x), y)        || !iszero(partials(x)),
+    (!=)(x, value(y))        || !iszero(partials(y)),
+)
 
 ########################
 # Promotion/Conversion #
@@ -536,7 +561,7 @@ for f in (:(Base.:^), :(NaNMath.pow))
             begin
                 v = value(x)
                 expv = ($f)(v, y)
-                if y == zero(y)
+                if y == zero(y) || iszero(partials(x))
                     new_partials = zero(partials(x))
                 else
                     new_partials = partials(x) * y * ($f)(v, y - 1)
@@ -757,14 +782,22 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
-# SpecialFunctions.logabsgamma           #
-# Derivative is not defined in DiffRules #
-#----------------------------------------#
+# Functions in SpecialFunctions which return tuples #
+# Their derivatives are not defined in DiffRules    #
+#---------------------------------------------------#
 
 function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
     x = value(d)
     y, s = SpecialFunctions.logabsgamma(x)
     return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), s)
+end
+
+# Derivatives wrt to first parameter and precision setting are not supported
+function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
+    x = value(d)
+    p, q = SpecialFunctions.gamma_inc(a, x, ind)
+    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
 
 ###################

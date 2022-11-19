@@ -12,3 +12,6 @@ function being differentiated):
 - **The target function must be written generically enough to accept numbers of type `T<:Real` as input (or arrays of these numbers).** The function doesn't require a specific type signature, as long as the type signature is generic enough to avoid breaking this rule. This also means that any storage assigned used within the function must be generic as well (see [this comment](https://github.com/JuliaDiff/ForwardDiff.jl/issues/136#issuecomment-237941790) for an example).
 
 - **The types of array inputs must be subtypes of** `AbstractArray` **.** Non-`AbstractArray` array-like types are not officially supported.
+
+ForwardDiff is not natively compatible with rules defined by the [ChainRules.jl](https://github.com/JuliaDiff/ChainRules.jl) ecosystem.
+You can use [ForwardDiffChainRules.jl](https://github.com/ThummeTo/ForwardDiffChainRules.jl) to bridge this gap.
