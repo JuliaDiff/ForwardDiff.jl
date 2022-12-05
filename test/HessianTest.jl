@@ -3,6 +3,7 @@ module HessianTest
 import Calculus
 
 using Test
+using LinearAlgebra
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
@@ -155,6 +156,13 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult1) == DiffResults.hessian(result)
     @test DiffResults.hessian(sresult2) == DiffResults.hessian(result)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
+end
+
+@testset "branches in dot" begin
+    # https://github.com/JuliaDiff/ForwardDiff.jl/issues/551
+    H = [1 2 3; 4 5 6; 7 8 9];
+    @test ForwardDiff.hessian(x->dot(x,H,x), fill(0.00001, 3)) ≈ [2 6 10; 6 10 14; 10 14 18]
+    @test ForwardDiff.hessian(x->dot(x,H,x), zeros(3)) ≈ [2 6 10; 6 10 14; 10 14 18]
 end
 
 end # module

@@ -6,12 +6,13 @@ using Random
 using ForwardDiff
 using ForwardDiff: Partials, Dual, value, partials
 
-using NaNMath, SpecialFunctions
+using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
 
 import Calculus
 
 struct TestTag end
+struct OuterTestTag end
 
 samerng() = MersenneTwister(1)
 
@@ -26,8 +27,10 @@ dual_isapprox(a::Dual{T,T1,T2}, b::Dual{T3,T4,T5}) where {T,T1,T2,T3,T4,T5} = er
 
 ForwardDiff.:≺(::Type{TestTag()}, ::Int) = true
 ForwardDiff.:≺(::Int, ::Type{TestTag()}) = false
+ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
-for N in (0,3), M in (0,4), V in (Int, Float32)
+@testset "Dual{Z,$V,$N} and Dual{Z,Dual{Z,$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
     println("  ...testing Dual{TestTag(),$V,$N} and Dual{TestTag(),Dual{TestTag(),$V,$M},$N}")
 
     PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), N))
@@ -41,6 +44,13 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     PARTIALS3 = Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL3 = intrand(V)
     FDNUM3 = Dual{TestTag()}(PRIMAL3, PARTIALS3)
+
+    if !allunique([PRIMAL, PRIMAL2, PRIMAL3])
+        @info "testing with non-unique primals" PRIMAL PRIMAL2 PRIMAL3
+    end
+    if N > 0 && !allunique([PARTIALS, PARTIALS2, PARTIALS3])
+        @info "testing with non-unique partials" PARTIALS PARTIALS2 PARTIALS3
+    end
 
     M_PARTIALS = Partials{M,V}(ntuple(m -> intrand(V), M))
     NESTED_PARTIALS = convert(Partials{N,Dual{TestTag(),V,M}}, PARTIALS)
@@ -105,6 +115,17 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test eps(NESTED_FDNUM) === eps(PRIMAL)
         @test eps(typeof(NESTED_FDNUM)) === eps(V)
 
+        @test precision(FDNUM) === precision(PRIMAL)
+        @test precision(typeof(FDNUM)) === precision(V)
+        @test precision(NESTED_FDNUM) === precision(PRIMAL)
+        @test precision(typeof(NESTED_FDNUM)) === precision(V)
+        if VERSION >= v"1.8.0-DEV.725" # https://github.com/JuliaLang/julia/pull/42428
+            @test precision(FDNUM; base=10) === precision(PRIMAL; base=10)
+            @test precision(typeof(FDNUM); base=10) === precision(V; base=10)
+            @test precision(NESTED_FDNUM; base=10) === precision(PRIMAL; base=10)
+            @test precision(typeof(NESTED_FDNUM); base=10) === precision(V; base=10)
+        end
+
         @test floor(Int, FDNUM) === floor(Int, PRIMAL)
         @test floor(Int, FDNUM2) === floor(Int, PRIMAL2)
         @test floor(Int, NESTED_FDNUM) === floor(Int, PRIMAL)
@@ -136,6 +157,18 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test round(FDNUM) === round(PRIMAL)
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
+
+        @test fld(FDNUM, FDNUM2) === fld(PRIMAL, PRIMAL2)
+        @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
+        @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
+
+        @test exponent(FDNUM) === exponent(PRIMAL)
+        @test exponent(FDNUM2) === exponent(PRIMAL2)
+        @test exponent(NESTED_FDNUM) === exponent(PRIMAL)
+
+        @test cld(FDNUM, FDNUM2) === cld(PRIMAL, PRIMAL2)
+        @test cld(FDNUM, PRIMAL2) === cld(PRIMAL, PRIMAL2)
+        @test cld(PRIMAL, FDNUM2) === cld(PRIMAL, PRIMAL2)
 
         @test div(FDNUM, FDNUM2) === div(PRIMAL, PRIMAL2)
         @test div(FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
@@ -209,15 +242,27 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test ForwardDiff.isconstant(one(NESTED_FDNUM))
     @test ForwardDiff.isconstant(NESTED_FDNUM) == (N == 0)
 
-    @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2))
-    @test isequal(PRIMAL, PRIMAL2) == isequal(FDNUM, FDNUM2)
+    # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
+    # and FDNUM2 has everything with a 2, and all random numbers nonzero.
+    # M is the length of M_PARTIALS, which affects:
+    # NESTED_FDNUM = Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
-    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2))
-    @test isequal(PRIMAL, PRIMAL2) == isequal(NESTED_FDNUM, NESTED_FDNUM2)
+    @test (FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
+    @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
+    @test isequal(NESTED_FDNUM, Dual{TestTag()}(Dual{TestTag()}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
 
-    @test FDNUM == Dual{TestTag()}(PRIMAL, PARTIALS2)
-    @test (PRIMAL == PRIMAL2) == (FDNUM == FDNUM2)
-    @test (PRIMAL == PRIMAL2) == (NESTED_FDNUM == NESTED_FDNUM2)
+    if PRIMAL == PRIMAL2
+        @test isequal(FDNUM, Dual{TestTag()}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
+        @test isequal(FDNUM, FDNUM2) == (PARTIALS == PARTIALS2)
+        
+        @test (FDNUM == FDNUM2) == (PARTIALS == PARTIALS2)
+        @test (NESTED_FDNUM == NESTED_FDNUM2) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
+    else
+        @test !isequal(FDNUM, FDNUM2)
+        
+        @test FDNUM != FDNUM2
+        @test NESTED_FDNUM != NESTED_FDNUM2
+    end
 
     @test isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(2, PARTIALS2))
     @test !(isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(1, PARTIALS2)))
@@ -322,7 +367,7 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test typeof(WIDE_NESTED_FDNUM) === Dual{TestTag(),Dual{TestTag(),WIDE_T,M},N}
 
     @test value(WIDE_FDNUM) == PRIMAL
-    @test value(WIDE_NESTED_FDNUM) == PRIMAL
+    @test (value(WIDE_NESTED_FDNUM) == PRIMAL) == (M == 0)
 
     @test convert(Dual, FDNUM) === FDNUM
     @test convert(Dual, NESTED_FDNUM) === NESTED_FDNUM
@@ -373,6 +418,8 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     #----------#
 
     if M > 0 && N > 0
+        # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials,
+        # all random numbers nonzero, and FDNUM2 another draw. M only affects NESTED_FDNUM.
         @test Dual{1}(FDNUM) / Dual{1}(PRIMAL) === Dual{1}(FDNUM / PRIMAL)
         @test Dual{1}(PRIMAL) / Dual{1}(FDNUM) === Dual{1}(PRIMAL / FDNUM)
         @test_broken Dual{1}(FDNUM) / FDNUM2 === Dual{1}(FDNUM / FDNUM2)
@@ -392,13 +439,16 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     # Exponentiation #
     #----------------#
 
-    @test dual_isapprox(FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
-    @test dual_isapprox(FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
-    @test dual_isapprox(PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
+    # If V == Int, the LHS terms are Int's. Large inputs cause integer overflow
+    # within the generic fallback of `isapprox`, resulting in a DomainError.
+    # Promote to Float64 to avoid issues.
+    @test dual_isapprox(1.0 * FDNUM^FDNUM2, exp(FDNUM2 * log(FDNUM)))
+    @test dual_isapprox(1.0 * FDNUM^PRIMAL, exp(PRIMAL * log(FDNUM)))
+    @test dual_isapprox(1.0 * PRIMAL^FDNUM, exp(FDNUM * log(PRIMAL)))
 
-    @test dual_isapprox(NESTED_FDNUM^NESTED_FDNUM2, exp(NESTED_FDNUM2 * log(NESTED_FDNUM)))
-    @test dual_isapprox(NESTED_FDNUM^PRIMAL, exp(PRIMAL * log(NESTED_FDNUM)))
-    @test dual_isapprox(PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
+    @test dual_isapprox(1.0 * NESTED_FDNUM^NESTED_FDNUM2, exp(NESTED_FDNUM2 * log(NESTED_FDNUM)))
+    @test dual_isapprox(1.0 * NESTED_FDNUM^PRIMAL, exp(PRIMAL * log(NESTED_FDNUM)))
+    @test dual_isapprox(1.0 * PRIMAL^NESTED_FDNUM, exp(NESTED_FDNUM * log(PRIMAL)))
 
     @test partials(NaNMath.pow(Dual{TestTag()}(-2.0, 1.0), Dual{TestTag()}(2.0, 0.0)), 1) == -4.0
 
@@ -418,37 +468,78 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        for (M, f, arity) in DiffRules.diffrules()
-            in(f, (:hankelh1, :hankelh1x, :hankelh2, :hankelh2x, :/, :rem2pi)) && continue
+        @testset "$f" for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
+            if f in (:/, :rem2pi)
+                continue  # Skip these rules
+            elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
+                continue  # Skip rules for methods not defined in the current scope
+            end
             println("       ...auto-testing $(M).$(f) with $arity arguments")
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
-                modifier = in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth)) ? one(V) : zero(V)
+                modifier = if in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth))
+                    one(V)
+                elseif in(f, (:log1mexp, :log2mexp))
+                    -one(V)
+                else
+                    zero(V)
+                end
                 @eval begin
                     x = rand() + $modifier
-                    dx = $M.$f(Dual{TestTag()}(x, one(x)))
-                    @test value(dx) == $M.$f(x)
-                    @test partials(dx, 1) == $deriv
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)))
+                    actualval = $M.$f(x)
+                    @assert actualval isa Real || actualval isa Complex
+                    if actualval isa Real
+                        @test dx isa Dual{TestTag()}
+                        @test value(dx) == actualval
+                        @test partials(dx, 1) == $deriv
+                    else
+                        @test dx isa Complex{<:Dual{TestTag()}}
+                        @test value(real(dx)) == real(actualval)
+                        @test value(imag(dx)) == imag(actualval)
+                        @test partials(real(dx), 1) == real($deriv)
+                        @test partials(imag(dx), 1) == imag($deriv)
+                    end
                 end
             elseif arity == 2
                 derivs = DiffRules.diffrule(M, f, :x, :y)
+                x, y = if f === :ldexp
+                    rand(), rand(1:10)
+                elseif f === :mod
+                    13 + rand(), 5 + rand() # make sure x/y is not an integer
+                else
+                    rand(1:10), rand()
+                end
                 @eval begin
-                    x, y = rand(1:10), rand()
-                    dx = $M.$f(Dual{TestTag()}(x, one(x)), y)
-                    dy = $M.$f(x, Dual{TestTag()}(y, one(y)))
+                    x, y = $x, $y
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)), y)
+                    dy = @inferred $M.$f(x, Dual{TestTag()}(y, one(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
-                    @test value(dx) == $M.$f(x, y)
-                    @test value(dy) == value(dx)
-                    if isnan(actualdx)
-                        @test isnan(partials(dx, 1))
+                    actualval = $M.$f(x, y)
+                    @assert actualval isa Real || actualval isa Complex
+                    if actualval isa Real
+                        @test dx isa Dual{TestTag()}
+                        @test dy isa Dual{TestTag()}
+                        @test value(dx) == actualval
+                        @test value(dy) == actualval
+                        @test partials(dx, 1) ≈ actualdx nans=true
+                        @test partials(dy, 1) ≈ actualdy nans=true
                     else
-                        @test partials(dx, 1) ≈ actualdx
-                    end
-                    if isnan(actualdy)
-                        @test isnan(partials(dy, 1))
-                    else
-                        @test partials(dy, 1) ≈ actualdy
+                        @test dx isa Complex{<:Dual{TestTag()}}
+                        @test dy isa Complex{<:Dual{TestTag()}}
+                        # @test real(value(dx)) == real(actualval)
+                        # @test real(value(dy)) == real(actualval)
+                        # @test imag(value(dx)) == imag(actualval)
+                        # @test imag(value(dy)) == imag(actualval)
+                        @test value(real(dx)) == real(actualval)
+                        @test value(real(dy)) == real(actualval)
+                        @test value(imag(dx)) == imag(actualval)
+                        @test value(imag(dy)) == imag(actualval)
+                        @test partials(real(dx), 1) ≈ real(actualdx) nans=true
+                        @test partials(real(dy), 1) ≈ real(actualdy) nans=true
+                        @test partials(imag(dx), 1) ≈ imag(actualdx) nans=true
+                        @test partials(imag(dy), 1) ≈ imag(actualdy) nans=true
                     end
                 end
             end
@@ -481,7 +572,35 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test dual_isapprox(f(FDNUM, PRIMAL2, PRIMAL3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PRIMAL2*PARTIALS))
         @test dual_isapprox(f(PRIMAL, PRIMAL2, FDNUM3), Dual{TestTag()}(f(PRIMAL, PRIMAL2, PRIMAL3), PARTIALS3))
     end
+
+    # Functions in Specialfunctions that return tuples and
+    # therefore are not supported by DiffRules
+    @test dual_isapprox(logabsgamma(FDNUM)[1], loggamma(abs(FDNUM)))
+    @test dual_isapprox(logabsgamma(FDNUM)[2], sign(gamma(FDNUM)))
+
+    a = rand(float(V))
+    fdnum = Dual{TestTag()}(1 + PRIMAL, PARTIALS) # 1 + PRIMAL avoids issues with finite differencing close to 0
+    for ind in ((), (0,), (1,), (2,))
+        # Only test if primal method exists
+        # (e.g., older versions of SpecialFunctions don't define `gamma_inc(a, x)` but only `gamma_inc(a, x, ind)`
+        hasmethod(gamma_inc, typeof((a, 1 + PRIMAL, ind...))) || continue
+
+        pq = gamma_inc(a, fdnum, ind...)
+        @test pq isa Tuple{Dual{TestTag()},Dual{TestTag()}}
+        # We have to adjust tolerances if lower accuracy is requested
+        # Therefore we don't use `dual_isapprox`
+        tol = V === Float32 ? 5f-4 : 1e-6
+        tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
+        for i in 1:2
+            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
+            @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
+        end
+    end
 end
+
+#############
+# bug fixes #
+#############
 
 @testset "Exponentiation of zero" begin
     x0 = 0.0
@@ -492,6 +611,9 @@ end
     @test pow(x3, 2) === x3^2 === x3 * x3
     @test pow(x2, 1) === x2^1 === x2
     @test pow(x1, 0) === x1^0 === Dual{:t1}(1.0, 0.0)
+    y = Dual{typeof(TestTag())}(1.0, 0.0, 1.0);
+    x = Dual{typeof(OuterTestTag())}(0*y, 0*y);
+    @test iszero(ForwardDiff.partials(ForwardDiff.partials(x^y)[1]))
 end
 
 @testset "Type min/max" begin

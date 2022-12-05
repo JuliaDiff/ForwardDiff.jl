@@ -3,6 +3,7 @@ module GradientTest
 import Calculus
 
 using Test
+using LinearAlgebra
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
@@ -19,7 +20,7 @@ x = [0.1, 0.2, 0.3]
 v = f(x)
 g = [-9.4, 15.6, 52.0]
 
-for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
+@testset "Rosenbrock, chunk size = $c and tag = $(repr(tag))" for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
     println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
@@ -55,7 +56,7 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
 # test vs. Calculus.jl #
 ########################
 
-for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
+@testset "$f" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
@@ -83,9 +84,9 @@ end
 
 println("  ...testing specialized StaticArray codepaths")
 
-x = rand(3, 3)
+@testset "$T" for T in (StaticArrays.SArray, StaticArrays.MArray)
+    x = rand(3, 3)
 
-for T in (StaticArrays.SArray, StaticArrays.MArray)
     sx = T{Tuple{3,3}}(x)
 
     cfg = ForwardDiff.GradientConfig(nothing, x)
@@ -148,6 +149,10 @@ end
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
 end
 
+#############
+# bug fixes #
+#############
+
 # Issue 399
 @testset "chunk size zero" begin
     f_const(x) = 1.0
@@ -160,6 +165,57 @@ end
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, 2pi) # input
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 2)) # vector_mode_gradient
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 10^6)) # chunk_mode_gradient
+end
+
+# Issue 548
+@testset "ArithmeticStyle" begin
+    function f(p)
+        sum(collect(0.0:p[1]:p[2]))
+    end
+    @test ForwardDiff.gradient(f, [0.2,25.0]) == [7875.0, 0.0]
+end
+
+@testset "det with branches" begin
+    # Issue 197
+    det2(A) = return (
+        A[1,1]*(A[2,2]*A[3,3]-A[2,3]*A[3,2]) -
+        A[1,2]*(A[2,1]*A[3,3]-A[2,3]*A[3,1]) +
+        A[1,3]*(A[2,1]*A[3,2]-A[2,2]*A[3,1])
+    )
+
+    A = [1 0 0; 0 2 0; 0 pi 3]
+    @test det2(A) == det(A) == 6
+    @test istril(A)
+
+    ∇A = [6 0 0; 0 3 -pi; 0 0 2]
+    @test ForwardDiff.gradient(det2, A) ≈ ∇A
+    @test ForwardDiff.gradient(det, A) ≈ ∇A
+
+    # And issue 407
+    @test ForwardDiff.hessian(det, A) ≈ ForwardDiff.hessian(det2, A)
+    
+    # https://discourse.julialang.org/t/forwarddiff-and-zygote-return-wrong-jacobian-for-log-det-l/77961
+    S = [1.0 0.8; 0.8 1.0]
+    L = cholesky(S).L
+    @test ForwardDiff.gradient(L -> log(det(L)), Matrix(L)) ≈ [1.0 -1.3333333333333337; 0.0 1.666666666666667]
+    @test ForwardDiff.gradient(L -> logdet(L), Matrix(L)) ≈ [1.0 -1.3333333333333337; 0.0 1.666666666666667]
+end
+
+@testset "branches in mul!" begin
+    a, b = rand(3,3), rand(3,3)
+
+    # Issue 536, version with 3-arg *, Julia 1.7:
+    @test ForwardDiff.derivative(x -> sum(x*a*b), 0.0) ≈ sum(a * b)
+
+    if VERSION >= v"1.3"
+        # version with just mul!
+        dx = ForwardDiff.derivative(0.0) do x
+            c = similar(a, typeof(x))
+            mul!(c, a, b, x, false)
+            sum(c)
+        end
+        @test dx ≈ sum(a * b)
+    end
 end
 
 end # module

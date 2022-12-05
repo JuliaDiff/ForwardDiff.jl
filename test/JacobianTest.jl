@@ -226,6 +226,10 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.jacobian(sresult3) == DiffResults.jacobian(result)
 end
 
+#########
+# misc. #
+#########
+
 @testset "dimension errors for jacobian" begin
     @test_throws DimensionMismatch ForwardDiff.jacobian(identity, 2pi) # input
     @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 2)) # vector_mode_jacobian
@@ -235,6 +239,19 @@ end
 @testset "eigen" begin
     @test ForwardDiff.jacobian(x -> eigvals(SymTridiagonal(x, x[1:end-1])), [1.,2.]) ≈ [(1 - 3/sqrt(5))/2 (1 - 1/sqrt(5))/2 ; (1 + 3/sqrt(5))/2 (1 + 1/sqrt(5))/2]
     @test ForwardDiff.jacobian(x -> eigvals(Symmetric(x*x')), [1.,2.]) ≈ [0 0; 2 4]
+    
+    x0 = [1.0, 2.0];
+    ev1(x) = eigen(Symmetric(x*x')).vectors[:,1]
+    @test ForwardDiff.jacobian(ev1, x0) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+    ev2(x) = eigen(SymTridiagonal(x, x[1:end-1])).vectors[:,1]
+    @test ForwardDiff.jacobian(ev2, x0) ≈ Calculus.finite_difference_jacobian(ev2, x0)
+    x0_static = SVector{2}(x0)
+    @test ForwardDiff.jacobian(ev1, x0_static) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+end
+
+@testset "type stability" begin
+    g!(dy, y) = dy[1] = y[1]
+    @inferred ForwardDiff.jacobian(g!, [1.0], [0.0])
 end
 
 end # module

@@ -84,6 +84,12 @@ julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg);
   0.281853 seconds (4 allocations: 160 bytes)
 ```
 
+The underlying heuristic will compute a suitable chunk size smaller or equal
+to the `ForwardDiff.DEFAULT_CHUNK_THRESHOLD` constant. As of ForwardDiff
+v0.10.32 and Julia 1.6, this constant can be configured at load time via
+[Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) by setting the
+`default_chunk_threshold` value.
+
 If your input dimension is constant across calls, you should explicitly select a chunk size
 rather than relying on ForwardDiff's heuristic. There are two reasons for this. The first is
 that ForwardDiff's heuristic depends only on the input dimension, whereas in reality the
@@ -138,11 +144,34 @@ decrease performance (~5%-10% on our benchmarks).
 
 In order to preserve performance in the majority of use cases, ForwardDiff disables this
 check by default. If your code is affected by this `NaN` behavior, you can enable
-ForwardDiff's `NaN`-safe mode by setting the `NANSAFE_MODE_ENABLED` constant to `true` in
-ForwardDiff's source. The constant is located in `src\prelude.jl`.
+ForwardDiff's `NaN`-safe mode by using the
+[Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) API to set
+the `nansafe_mode` preference to true, for example via:
+
+```julia
+julia> using ForwardDiff, Preferences
+
+julia> set_preferences!(ForwardDiff, "nansafe_mode" => true)
+```
+
+Note that Julia has to be restarted and ForwardDiff has to be reloaded after changing
+this preference.
+
+Alternatively, you can set the preference before loading ForwardDiff, for example via:
+
+```julia
+julia> using Preferences, UUIDs
+
+julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_mode" => true)
+
+julia> using ForwardDiff
+
+julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
+Dual{:tag}(-Inf,0.0)
+```
 
 In the future, we plan on allowing users and downstream library authors to dynamically
-enable [NaN`-safe mode via the `AbstractConfig`
+enable [`NaN`-safe mode via the `AbstractConfig`
 API](https://github.com/JuliaDiff/ForwardDiff.jl/issues/181).
 
 ## Hessian of a vector-valued function

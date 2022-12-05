@@ -100,4 +100,8 @@ end
     @test_throws DimensionMismatch ForwardDiff.derivative(sum, fill(2pi, 3))
 end
 
+@testset "complex output" begin
+    @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
+end
+
 end # module

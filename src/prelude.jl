@@ -1,10 +1,14 @@
-const NANSAFE_MODE_ENABLED = false
+@static if VERSION >= v"1.6"
+    const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
+    const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
+else
+    const NANSAFE_MODE_ENABLED = false
+    const DEFAULT_CHUNK_THRESHOLD = 12
+end
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
 const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isreal, :isinteger]
-
-const BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 
 const DEFAULT_CHUNK_THRESHOLD = 12
 
@@ -29,7 +33,7 @@ function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
     if input_length <= threshold
         return input_length
     else
-        nchunks = round(Int, input_length / DEFAULT_CHUNK_THRESHOLD, RoundUp)
+        nchunks = round(Int, input_length / threshold, RoundUp)
         return round(Int, input_length / nchunks, RoundUp)
     end
 end
