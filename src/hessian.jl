@@ -11,7 +11,7 @@ This method assumes that `isa(f(x), Real)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function hessian(f, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+function hessian(f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T,CHK}
     CHK && checktag(T, f, x)
     ∇f = y -> gradient(f, y, cfg.gradient_config, Val{false}())
     return jacobian(∇f, x, cfg.jacobian_config, Val{false}())
@@ -27,7 +27,7 @@ This method assumes that `isa(f(x), Real)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     CHK && checktag(T, f, x)
     ∇f = y -> gradient(f, y, cfg.gradient_config, Val{false}())
     jacobian!(result, ∇f, x, cfg.jacobian_config, Val{false}())
@@ -61,25 +61,25 @@ because `isa(result, DiffResult)`, `cfg` is constructed as `HessianConfig(f, res
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     CHK && checktag(T, f, x)
     ∇f! = InnerGradientForHess(result, cfg, f)
     jacobian!(DiffResults.hessian(result), ∇f!, DiffResults.gradient(result), x, cfg.jacobian_config, Val{false}())
     return ∇f!.result
 end
 
-hessian(f, x::StaticArray) = jacobian(y -> gradient(f, y), x)
-hessian(f, x::StaticArray, cfg::HessianConfig) = hessian(f, x)
-hessian(f, x::StaticArray, cfg::HessianConfig, ::Val) = hessian(f, x)
+hessian(f::F, x::StaticArray) where F = jacobian(y -> gradient(f, y), x)
+hessian(f::F, x::StaticArray, cfg::HessianConfig) where F = hessian(f, x)
+hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where F = hessian(f, x)
 
-hessian!(result::AbstractArray, f, x::StaticArray) = jacobian!(result, y -> gradient(f, y), x)
+hessian!(result::AbstractArray, f::F, x::StaticArray) where F = jacobian!(result, y -> gradient(f, y), x)
 
-hessian!(result::MutableDiffResult, f, x::StaticArray) = hessian!(result, f, x, HessianConfig(f, result, x))
+hessian!(result::MutableDiffResult, f::F, x::StaticArray) where F = hessian!(result, f, x, HessianConfig(f, result, x))
 
-hessian!(result::ImmutableDiffResult, f, x::StaticArray, cfg::HessianConfig) = hessian!(result, f, x)
-hessian!(result::ImmutableDiffResult, f, x::StaticArray, cfg::HessianConfig, ::Val) = hessian!(result, f, x)
+hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::HessianConfig) where F = hessian!(result, f, x)
+hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::HessianConfig, ::Val) where F = hessian!(result, f, x)
 
-function hessian!(result::ImmutableDiffResult, f, x::StaticArray)
+function hessian!(result::ImmutableDiffResult, f::F, x::StaticArray) where F
     T = typeof(Tag(f, eltype(x)))
     d1 = dualize(T, x)
     d2 = dualize(T, d1)

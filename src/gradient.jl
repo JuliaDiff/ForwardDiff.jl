@@ -13,7 +13,7 @@ This method assumes that `isa(f(x), Real)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+function gradient(f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
@@ -41,13 +41,13 @@ function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArr
     return result
 end
 
-@inline gradient(f, x::StaticArray)                      = vector_mode_gradient(f, x)
-@inline gradient(f, x::StaticArray, cfg::GradientConfig) = gradient(f, x)
-@inline gradient(f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient(f, x)
+@inline gradient(f::F, x::StaticArray) where F                      = vector_mode_gradient(f, x)
+@inline gradient(f::F, x::StaticArray, cfg::GradientConfig) where F = gradient(f, x)
+@inline gradient(f::F, x::StaticArray, cfg::GradientConfig, ::Val) where F = gradient(f, x)
 
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray) = vector_mode_gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig) = gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray) where F = vector_mode_gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::GradientConfig) where F = gradient!(result, f, x)
+@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::GradientConfig, ::Val) where F = gradient!(result, f, x)
 
 gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is an array. Perhaps you meant derivative(f, x)?"))
 
