@@ -178,10 +178,8 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test div(NESTED_FDNUM, PRIMAL2) === div(PRIMAL, PRIMAL2)
         @test div(PRIMAL, NESTED_FDNUM2) === div(PRIMAL, PRIMAL2)
 
-        if VERSION ≥ v"1.4"
-            @test div(FDNUM, FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
-            @test div(NESTED_FDNUM, NESTED_FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
-        end
+        @test div(FDNUM, FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
+        @test div(NESTED_FDNUM, NESTED_FDNUM2, RoundUp) === div(PRIMAL, PRIMAL2, RoundUp)
 
         @test Base.rtoldefault(typeof(FDNUM)) ≡ Base.rtoldefault(typeof(PRIMAL))
         @test Dual{TestTag()}(PRIMAL-eps(V), PARTIALS) ≈ FDNUM
@@ -554,9 +552,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
-    if VERSION >= v"1.6.0-DEV.292"
-        @test all(map(dual_isapprox, sincospi(FDNUM), (sinpi(FDNUM), cospi(FDNUM))))
-    end
+    @test all(map(dual_isapprox, sincospi(FDNUM), (sinpi(FDNUM), cospi(FDNUM))))
 
     if V === Float32
         @test typeof(sqrt(FDNUM)) === typeof(FDNUM)
@@ -648,13 +644,11 @@ end
     @test length(UnitRange(Dual(1.5,1), Dual(3.5,3))) == 3
 end
 
-if VERSION >= v"1.6.0-rc1"
-    @testset "@printf" begin
-        for T in (Float16, Float32, Float64, BigFloat)
-            d1 = Dual(one(T))
-            @test_nowarn @printf("Testing @printf: %.2e\n", d1)
-            @test @sprintf("Testing @sprintf: %.2e\n", d1) == "Testing @sprintf: 1.00e+00\n"
-        end
+@testset "@printf" begin
+    for T in (Float16, Float32, Float64, BigFloat)
+        d1 = Dual(one(T))
+        @test_nowarn @printf("Testing @printf: %.2e\n", d1)
+        @test @sprintf("Testing @sprintf: %.2e\n", d1) == "Testing @sprintf: 1.00e+00\n"
     end
 end
 
