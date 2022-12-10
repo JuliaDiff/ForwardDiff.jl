@@ -585,7 +585,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test pq isa Tuple{Dual{TestTag()},Dual{TestTag()}}
         # We have to adjust tolerances if lower accuracy is requested
         # Therefore we don't use `dual_isapprox`
-        tol = V === Float32 ? 5f-4 : 1e-6
+        tol = V === Float32 ? 5f-4 : 1e-5
         tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
             @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
