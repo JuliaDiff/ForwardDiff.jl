@@ -155,6 +155,10 @@ for N in (0,3), M in (0,4), V in (Int, Float32)
         @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
         @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
 
+        @test exponent(FDNUM) === exponent(PRIMAL)
+        @test exponent(FDNUM2) === exponent(PRIMAL2)
+        @test exponent(NESTED_FDNUM) === exponent(PRIMAL)
+
         @test cld(FDNUM, FDNUM2) === cld(PRIMAL, PRIMAL2)
         @test cld(FDNUM, PRIMAL2) === cld(PRIMAL, PRIMAL2)
         @test cld(PRIMAL, FDNUM2) === cld(PRIMAL, PRIMAL2)

@@ -3,9 +3,11 @@ on:
   pull_request:
     branches:
       - master
+      - release-0.10
   push:
     branches:
       - master
+      - release-0.10
     tags: '*'
 jobs:
   test:
@@ -17,6 +19,7 @@ jobs:
       matrix:
         version:
           - '1.0'
+          - '1.6'
           - '1'
           - 'nightly'
         os:

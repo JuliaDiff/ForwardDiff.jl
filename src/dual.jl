@@ -332,6 +332,8 @@ Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
 
 Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
 
+Base.exponent(x::Dual) = exponent(value(x))
+
 if VERSION ≥ v"1.4"
     Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
 else
