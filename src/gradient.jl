@@ -56,7 +56,8 @@ gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is
 #####################
 
 @generated function extract_gradient(::Type{T}, y::Real, x::S) where {T,S<:StaticArray}
-    result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
+    N = _static_length(StaticArraysCore.Size(S))
+    result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         V = StaticArraysCore.similar_type(S, valtype($y))

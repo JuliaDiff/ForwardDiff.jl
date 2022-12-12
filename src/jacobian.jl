@@ -96,8 +96,10 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 # result extraction #
 #####################
 
-@generated function extract_jacobian(::Type{T}, ydual::StaticArray, x::S) where {T,S<:StaticArray}
-    M, N = length(ydual), length(x)
+@generated function extract_jacobian(::Type{T}, ydual::Sy, x::S) where {T, Sy<:StaticArray, S<:StaticArray}
+    # M, N = length(ydual), length(x)
+    M = _static_length(StaticArraysCore.Size(Sy))
+    N = _static_length(StaticArraysCore.Size(S))
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))

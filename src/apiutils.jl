@@ -19,7 +19,7 @@ end
 ###################################
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
-    N = length(x)
+    N = _static_length(StaticArraysCore.Size(x))
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
     V = StaticArraysCore.similar_type(x, Dual{T,eltype(x),N})
     return quote
@@ -28,6 +28,9 @@ end
         return $V($(dx))
     end
 end
+
+# This works around length(::Type{StaticArray}) not being defined in this world-age:
+_static_length(::StaticArraysCore.Size{s}) where {s} = StaticArraysCore.tuple_prod(s)
 
 @inline static_dual_eval(::Type{T}, f, x::StaticArray) where T = f(dualize(T, x))
 
