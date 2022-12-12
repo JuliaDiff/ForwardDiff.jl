@@ -18,14 +18,14 @@ end
 # vector mode function evaluation #
 ###################################
 
-@generated function dualize(::Type{T}, x::StaticArray) where T
-    N = _static_length(StaticArraysCore.Size(x))
+@generated function dualize(::Type{T}, x::S) where {T, S<:StaticArray}
+    N = _static_length(StaticArraysCore.Size(S))
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
-    V = StaticArraysCore.similar_type(x, Dual{T,eltype(x),N})
     return quote
+        V = StaticArraysCore.similar_type(S, Dual{$T, $(eltype(x)), $N})
         chunk = Chunk{$N}()
         $(Expr(:meta, :inline))
-        return $V($(dx))
+        return V($(dx))
     end
 end
 
