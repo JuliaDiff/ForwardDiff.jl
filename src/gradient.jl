@@ -33,7 +33,7 @@ This method assumes that `isa(f(x), Real)`.
 
 """
 function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
-    require_one_based_indexing(result, x)
+    result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)

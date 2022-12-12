@@ -70,9 +70,3 @@ function qualified_cse!(expr)
     end
     return cse_expr
 end
-
-# This allows us to call `Base.require_one_based_indexing` in `gradient!` etc:
-Base.has_offset_axes(::DiffResults.DiffResult) = false
-# And this is only needed for VERSION < v"1.2"
-require_one_based_indexing(A...) = !Base.has_offset_axes(A...) || throw(ArgumentError(
-    "offset arrays are not supported but got an array with index other than 1"))
