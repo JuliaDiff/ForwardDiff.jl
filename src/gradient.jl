@@ -14,6 +14,7 @@ This method assumes that `isa(f(x), Real)`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+    require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
@@ -32,6 +33,7 @@ This method assumes that `isa(f(x), Real)`.
 
 """
 function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
+    result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)
