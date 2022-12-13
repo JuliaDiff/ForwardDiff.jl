@@ -3,9 +3,7 @@ module ForwardDiff
 using DiffRules, DiffResults
 using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
 using StaticArrays
-if VERSION >= v"1.6"
-    using Preferences
-end
+using Preferences
 using Random
 using LinearAlgebra
 
