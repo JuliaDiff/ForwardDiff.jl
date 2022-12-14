@@ -659,13 +659,59 @@ end
     @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
 end
 
-@testset "steprange" begin # issue #380
-    @test Dual(1,1) * (0:0.1:1) isa LinRange{Dual{Nothing, Float64, 1}, Int64}
-    @test (0:0.1:1) / Dual(1,1) isa LinRange{Dual{Nothing, Float64, 1}, Int64}
-    @test 0:Dual(1,1):2 isa LinRange{Dual{Nothing, Float64, 1}, Int64}
+function deriv_check(f, x::Real; kw...)
+    fdual = f(ForwardDiff.Dual(x,1))
+    ty = fdual isa AbstractRange || !(f(x) isa AbstractRange)
+    t0 = isapprox(f(x), ForwardDiff.value.(fdual); kw...)
+    t1 = isapprox(ForwardDiff.derivative(f, x), 
+                     Calculus.derivative(f, x); kw...)
+    t1i = isapprox(ForwardDiff.derivative(x -> f(x)[1+end÷2], x), 
+                      Calculus.derivative(x -> f(x)[1+end÷2], x); kw...)
+    ty && t0 && t1 && t1i
 end
 
+@testset "ranges + Calculus" begin 
+    # op(Dual, StepRangeLen) was broken, issue #380
+    @test (0:0.1:1) isa StepRangeLen
 
+    @test deriv_check(x -> (0:0.1:1) * x, 1.0)
+    @test deriv_check(x -> (0:0.1:1) .* x, 1.0)
+    @test deriv_check(x -> x * (0:0.1:1), 1.0)
+    @test deriv_check(x -> x .* (0:0.1:1), 1.0)
+
+    @test deriv_check(x -> (0:0.1:1) / x, 1.0)  # makes a LinRange, after PR#618
+    @test deriv_check(x -> (0:0.1:1) ./ x, 1.0)  # different path, at present a StepRangeLen
+
+    @test deriv_check(x -> (0:0.1:1) .+ x, 1.0)
+    @test deriv_check(x -> x .+ (0:0.1:1), 1.0)
+    @test deriv_check(x -> (0:0.1:1) .- x, 1.0)
+    @test deriv_check(x -> x .- (0:0.1:1), 1.0)
+
+    # op(Dual, StepRange) was never a problem
+    @test (2:3:11) isa StepRange
+
+    @test deriv_check(x -> (2:3:11) * x, 1.0)
+    @test deriv_check(x -> (2:3:11) / x, 1.0)
+    @test deriv_check(x -> (2:3:11) .+ x, 1.0)
+
+    # op(Dual, LinRange) was never a problem
+    @test deriv_check(x -> LinRange(1,2,3) * x, 1.0)
+    @test deriv_check(x -> LinRange(1,2,3) / x, 1.0)
+    @test deriv_check(x -> LinRange(1,2,3) .+ x, 1.0)
+
+    # Construction
+    @test deriv_check(x -> range(x, 3, length=5), 1.0)
+    @test deriv_check(x -> range(x, 3x, length=5), 1.0)
+    @test deriv_check(x -> range(x, step=2, length=5), 1.0)
+    @test deriv_check(x -> range(x, step=2x, length=5), 1.0)
+    @test deriv_check(x -> range(1, step=x, length=5), 1.0)
+
+    @test deriv_check(x -> x:2:6, 1.0)  # perturbing x does not change the length
+    @test deriv_check(x -> 0.5:x:5, 1.0)
+    @test deriv_check(x -> 1:x:6, 2)  # perturbing x does not change the length
+    @test deriv_check(x -> 1:2:x, 6)  # perturbing x has no effect
+    @test deriv_check(x -> 1:2:x, 6.0)  # perturbing x has no effect
+end
 
 
 end # module
