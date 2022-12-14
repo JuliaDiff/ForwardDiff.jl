@@ -15,7 +15,7 @@ This method assumes that `isa(f(x), AbstractArray)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function jacobian(f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+function jacobian(f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
@@ -33,7 +33,7 @@ stored in `y`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function jacobian(f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+function jacobian(f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     require_one_based_indexing(y, x)
     CHK && checktag(T, f!, x)
     if chunksize(cfg) == length(x)
@@ -54,7 +54,7 @@ This method assumes that `isa(f(x), AbstractArray)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+function jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
@@ -75,7 +75,7 @@ This method assumes that `isa(f(x), AbstractArray)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T,CHK}
+function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     result isa DiffResult ? require_one_based_indexing(y, x) : require_one_based_indexing(result, y, x)
     CHK && checktag(T, f!, x)
     if chunksize(cfg) == length(x)
@@ -86,13 +86,13 @@ function jacobian!(result::Union{AbstractArray,DiffResult}, f!, y::AbstractArray
     return result
 end
 
-@inline jacobian(f, x::StaticArray) = vector_mode_jacobian(f, x)
-@inline jacobian(f, x::StaticArray, cfg::JacobianConfig) = jacobian(f, x)
-@inline jacobian(f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian(f, x)
+@inline jacobian(f::F, x::StaticArray) where F = vector_mode_jacobian(f, x)
+@inline jacobian(f::F, x::StaticArray, cfg::JacobianConfig) where F  = jacobian(f, x)
+@inline jacobian(f::F, x::StaticArray, cfg::JacobianConfig, ::Val)  where F = jacobian(f, x)
 
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray) = vector_mode_jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig) = jacobian!(result, f, x)
-@inline jacobian!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray)  where F = vector_mode_jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::JacobianConfig) where F  = jacobian!(result, f, x)
+@inline jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::JacobianConfig, ::Val) where F  = jacobian!(result, f, x)
 
 jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is an array. Perhaps you meant derivative(f, x)?"))
 
