@@ -775,6 +775,17 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
+# StepRange - default to operate with LinRange to avoid TwicePrecision #
+#----------------------------------------------------------------------#
+
+Base.:*(x::Dual, r::StepRangeLen{<:Real,<:Base.TwicePrecision}) =
+    LinRange(x * first(r), x * last(r), length(r))
+
+Base.:/(r::StepRangeLen{<:Real,<:Base.TwicePrecision}, x::Dual) =
+    LinRange(first(r) / x, last(r) / x, length(r))
+
+Base.:(:)(start::T, step::Dual, stop::T) where {T<:Real} = range(start, step, stop)
+
 # Functions in SpecialFunctions which return tuples #
 # Their derivatives are not defined in DiffRules    #
 #---------------------------------------------------#

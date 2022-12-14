@@ -659,4 +659,13 @@ end
     @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
 end
 
+@testset "steprange" begin # issue #380
+    @test Dual(1,1) * (0:0.1:1) isa LinRange{Dual{Nothing, Float64, 1}, Int64}
+    @test (0:0.1:1) / Dual(1,1) isa LinRange{Dual{Nothing, Float64, 1}, Int64}
+    @test 0:Dual(1,1):2 isa LinRange{Dual{Nothing, Float64, 1}, Int64}
+end
+
+
+
+
 end # module
