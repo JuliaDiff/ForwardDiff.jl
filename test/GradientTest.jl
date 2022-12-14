@@ -207,15 +207,13 @@ end
     # Issue 536, version with 3-arg *, Julia 1.7:
     @test ForwardDiff.derivative(x -> sum(x*a*b), 0.0) ≈ sum(a * b)
 
-    if VERSION >= v"1.3"
-        # version with just mul!
-        dx = ForwardDiff.derivative(0.0) do x
-            c = similar(a, typeof(x))
-            mul!(c, a, b, x, false)
-            sum(c)
-        end
-        @test dx ≈ sum(a * b)
+    # version with just mul!
+    dx = ForwardDiff.derivative(0.0) do x
+        c = similar(a, typeof(x))
+        mul!(c, a, b, x, false)
+        sum(c)
     end
+    @test dx ≈ sum(a * b)
 end
 
 end # module

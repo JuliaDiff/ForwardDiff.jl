@@ -16,6 +16,7 @@ This method assumes that `isa(f(x), AbstractArray)`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian(f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
+    require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f, x, cfg)
@@ -33,6 +34,7 @@ stored in `y`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian(f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
+    require_one_based_indexing(y, x)
     CHK && checktag(T, f!, x)
     if chunksize(cfg) == length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
@@ -53,6 +55,7 @@ This method assumes that `isa(f(x), AbstractArray)`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
+    result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f, x, cfg)
@@ -73,6 +76,7 @@ This method assumes that `isa(f(x), AbstractArray)`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
+    result isa DiffResult ? require_one_based_indexing(y, x) : require_one_based_indexing(result, y, x)
     CHK && checktag(T, f!, x)
     if chunksize(cfg) == length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)

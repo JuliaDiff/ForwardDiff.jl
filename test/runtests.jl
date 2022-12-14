@@ -46,12 +46,10 @@ Random.seed!(SEED)
         t = @elapsed include("MiscTest.jl")
         println("##### done (took $t seconds).")
     end
-    if VERSION >= v"1.5-"
-        @testset "Allocations" begin
-            println("##### Testing allocations...")
-            t = @elapsed include("AllocationsTest.jl")
-            println("##### done (took $t seconds).")
-        end
+    @testset "Allocations" begin
+        println("##### Testing allocations...")
+        t = @elapsed include("AllocationsTest.jl")
+        println("##### done (took $t seconds).")
     end
     println("##### Running all ForwardDiff tests took $(time() - t0) seconds.")
 end

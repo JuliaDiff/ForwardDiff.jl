@@ -334,11 +334,7 @@ Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
 
 Base.exponent(x::Dual) = exponent(value(x))
 
-if VERSION ≥ v"1.4"
-    Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
-else
-    Base.div(x::Dual, y::Dual) = div(value(x), value(y))
-end
+Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
 
 Base.hash(d::Dual) = hash(value(d))
 Base.hash(d::Dual, hsh::UInt) = hash(value(d), hsh)
@@ -697,6 +693,7 @@ end
 
 # sin/cos #
 #--------#
+
 function Base.sin(d::Dual{T}) where T
     s, c = sincos(value(d))
     return Dual{T}(s, c * partials(d))
@@ -715,11 +712,9 @@ end
 # sincospi #
 #----------#
 
-if VERSION >= v"1.6.0-DEV.292"
-    @inline function Base.sincospi(d::Dual{T}) where T
-        sd, cd = sincospi(value(d))
-        return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
-    end
+@inline function Base.sincospi(d::Dual{T}) where T
+    sd, cd = sincospi(value(d))
+    return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
 end
 
 # Symmetric eigvals #
@@ -816,6 +811,4 @@ for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
     end
 end
 
-if VERSION >= v"1.6.0-rc1"
-    Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
-end
+Printf.tofloat(d::Dual) = Printf.tofloat(value(d))

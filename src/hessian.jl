@@ -12,6 +12,7 @@ This method assumes that `isa(f(x), Real)`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function hessian(f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T,CHK}
+    require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     ∇f = y -> gradient(f, y, cfg.gradient_config, Val{false}())
     return jacobian(∇f, x, cfg.jacobian_config, Val{false}())
@@ -28,6 +29,7 @@ This method assumes that `isa(f(x), Real)`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
+    require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     ∇f = y -> gradient(f, y, cfg.gradient_config, Val{false}())
     jacobian!(result, ∇f, x, cfg.jacobian_config, Val{false}())
