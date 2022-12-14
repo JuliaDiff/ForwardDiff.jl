@@ -13,7 +13,7 @@ This method assumes that `isa(f(x), Real)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+function gradient(f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
