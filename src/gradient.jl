@@ -80,12 +80,12 @@ function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
 end
 
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
-extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}= copyto!(result, partials(T, dual))
+extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T} =
+    extract_gradient_chunk!(T, result, dual, 1, npartials(dual))
 
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
-    offset = index - 1
-    for i in 1:chunksize
-        result[i + offset] = partials(T, dual, i)
+    map!(view(Base.ReshapedArray(result, (length(result),), ()), index:index+chunksize-1), 1:chunksize) do i
+        @inbounds partials(T, dual, i)
     end
     return result
 end
