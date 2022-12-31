@@ -249,7 +249,7 @@ want to disable this checking.
 1. (preferred) Provide an extra `Val{false}()` argument to the differentiation function, e.g.
    ```julia
    cfg = ForwardDiff.GradientConfig(g, x)
-   ForwarDiff.gradient(f, x, cfg, Val{false}())
+   ForwardDiff.gradient(f, x, cfg, Val{false}())
    ```
    If using as part of a library, the tag can be checked manually via
    ```julia
