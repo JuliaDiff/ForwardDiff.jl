@@ -8,6 +8,8 @@ using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
 using DiffTests
+using JLArrays
+JLArrays.allowscalar(false)
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -148,6 +150,26 @@ end
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
 end
+
+
+##############################################
+# test GPUArray compatibility (via JLArrays) #
+##############################################
+
+println("  ...testing GPUArray compatibility (via JLArrays)")
+
+@testset "size = $(size(x))" for x in JLArray.([
+    rand(1), 
+    rand(DEFAULT_CHUNK_THRESHOLD+1), 
+    rand(1,1), 
+    rand(DEFAULT_CHUNK_THRESHOLD+1,DEFAULT_CHUNK_THRESHOLD+1), 
+    rand(1,1,1)
+])
+    
+    @test ForwardDiff.gradient(prod, x) isa typeof(x)
+
+end
+
 
 #############
 # bug fixes #
