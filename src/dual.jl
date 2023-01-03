@@ -784,7 +784,6 @@ Base.:*(x::Dual, r::StepRangeLen{<:Real,<:Base.TwicePrecision}) =
 Base.:/(r::StepRangeLen{<:Real,<:Base.TwicePrecision}, x::Dual) =
     LinRange(first(r) / x, last(r) / x, length(r))
 
-Base.:(:)(start::T, step::Dual, stop::T) where {T<:Real} = range(start, step, stop)
 
 # Functions in SpecialFunctions which return tuples #
 # Their derivatives are not defined in DiffRules    #
