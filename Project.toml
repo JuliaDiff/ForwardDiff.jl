@@ -19,7 +19,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
-StaticArraysExt = "StaticArrays"
+ForwardDiffStaticArraysExt = "StaticArrays"
 
 [compat]
 Calculus = "0.5"

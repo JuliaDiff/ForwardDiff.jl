@@ -1,4 +1,4 @@
-module StaticArraysExt
+module ForwardDiffStaticArraysExt
 
 using ForwardDiff, StaticArrays, LinearAlgebra, DiffResults
 using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
