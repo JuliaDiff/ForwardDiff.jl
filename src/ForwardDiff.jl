@@ -1,7 +1,7 @@
 module ForwardDiff
 
 using DiffRules, DiffResults
-using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
+using DiffResults: DiffResult, MutableDiffResult
 if VERSION >= v"1.6"
     using Preferences
 end
