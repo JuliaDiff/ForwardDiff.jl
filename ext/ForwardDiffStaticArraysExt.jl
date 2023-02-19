@@ -1,6 +1,8 @@
 module ForwardDiffStaticArraysExt
 
-using ForwardDiff, StaticArrays, LinearAlgebra, DiffResults
+using ForwardDiff, StaticArrays
+using ForwardDiff.LinearAlgebra
+using ForwardDiff.DiffResults
 using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
