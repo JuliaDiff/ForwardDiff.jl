@@ -23,7 +23,7 @@ include("jacobian.jl")
 include("hessian.jl")
 
 if !isdefined(Base, :get_extension)
-    include("../ext/StaticArraysExt.jl")
+    include("../ext/ForwardDiffStaticArraysExt.jl")
 end
 
 export DiffResults
