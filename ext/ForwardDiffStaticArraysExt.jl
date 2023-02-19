@@ -4,6 +4,7 @@ using ForwardDiff, StaticArrays, LinearAlgebra, DiffResults
 using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
+                   vector_mode_gradient, vector_mode_gradient!,
                    vector_mode_jacobian, vector_mode_jacobian!, valtype, value, _lyap_div!
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 
@@ -34,11 +35,11 @@ function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticM
 end
 
 # Gradient
-@inline ForwardDiff.gradient(f, x::StaticArray)                      = ForwardDiff.vector_mode_gradient(f, x)
+@inline ForwardDiff.gradient(f, x::StaticArray)                      = vector_mode_gradient(f, x)
 @inline ForwardDiff.gradient(f, x::StaticArray, cfg::GradientConfig) = gradient(f, x)
 @inline ForwardDiff.gradient(f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient(f, x)
 
-@inline ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray) = ForwardDiff.vector_mode_gradient!(result, f, x)
+@inline ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray) = vector_mode_gradient!(result, f, x)
 @inline ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig) = gradient!(result, f, x)
 @inline ForwardDiff.gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient!(result, f, x)
 
