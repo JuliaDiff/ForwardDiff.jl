@@ -1,12 +1,12 @@
 module ForwardDiffStaticArraysExt
 
-using ForwardDiff
-using ForwardDiff.DiffResults: DiffResults, DiffResult, ImmutableDiffResult, MutableDiffResult
-using ForwardDiff.LinearAlgebra
-import ForwardDiff: Dual, Chunk, value, extract_jacobian!, extract_value!, extract_gradient!, extract_jacobian!,
-                    GradientConfig, JacobianConfig, HessianConfig, vector_mode_gradient, vector_mode_gradient!,
-                    Tag, valtype, partials, gradient, gradient!, jacobian, jacobian!, hessian, hessian!, vector_mode_jacobian,
-                    vector_mode_jacobian!
+using ForwardDiff, StaticArrays, LinearAlgebra, DiffResults
+using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
+                   gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
+                   extract_gradient!, extract_jacobian!, extract_value!,
+                   vector_mode_gradient, vector_mode_gradient!,
+                   vector_mode_jacobian, vector_mode_jacobian!, valtype, value, _lyap_div!
+using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 using StaticArrays
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
@@ -22,6 +22,20 @@ end
 
 @inline static_dual_eval(::Type{T}, f, x::StaticArray) where T = f(dualize(T, x))
 
+function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
+    λ,Q = eigen(Symmetric(value.(parent(A))))
+    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
+    Dual{Tg}.(λ, tuple.(parts...))
+end
+
+function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
+    λ = eigvals(A)
+    _,Q = eigen(Symmetric(value.(parent(A))))
+    parts = ntuple(j -> Q*ForwardDiff._lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
+end
+
+# Gradient
 @inline ForwardDiff.gradient(f, x::StaticArray)                      = vector_mode_gradient(f, x)
 @inline ForwardDiff.gradient(f, x::StaticArray, cfg::GradientConfig) = gradient(f, x)
 @inline ForwardDiff.gradient(f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient(f, x)
@@ -49,6 +63,7 @@ end
     return extract_gradient!(T, result, static_dual_eval(T, f, x))
 end
 
+# Jacobian
 @inline ForwardDiff.jacobian(f, x::StaticArray) = vector_mode_jacobian(f, x)
 @inline ForwardDiff.jacobian(f, x::StaticArray, cfg::JacobianConfig) = jacobian(f, x)
 @inline ForwardDiff.jacobian(f, x::StaticArray, cfg::JacobianConfig, ::Val) = jacobian(f, x)
@@ -93,6 +108,7 @@ end
     return result
 end
 
+# Hessian
 ForwardDiff.hessian(f, x::StaticArray) = jacobian(y -> gradient(f, y), x)
 ForwardDiff.hessian(f, x::StaticArray, cfg::HessianConfig) = hessian(f, x)
 ForwardDiff.hessian(f, x::StaticArray, cfg::HessianConfig, ::Val) = hessian(f, x)
@@ -116,19 +132,6 @@ function ForwardDiff.hessian!(result::ImmutableDiffResult, f, x::StaticArray)
     result = DiffResults.gradient!(result, grad)
     result = DiffResults.value!(result, val)
     return result
-end
-
-function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
-    λ,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
-    Dual{Tg}.(λ, tuple.(parts...))
-end
-
-function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
-    λ = eigvals(A)
-    _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*ForwardDiff._lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
-    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
 end
