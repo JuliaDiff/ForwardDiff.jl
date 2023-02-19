@@ -7,7 +7,6 @@ using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig
                    vector_mode_gradient, vector_mode_gradient!,
                    vector_mode_jacobian, vector_mode_jacobian!, valtype, value, _lyap_div!
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
-using StaticArrays
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
     N = length(x)
