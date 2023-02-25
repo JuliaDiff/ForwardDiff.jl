@@ -18,19 +18,6 @@ end
 # vector mode function evaluation #
 ###################################
 
-@generated function dualize(::Type{T}, x::StaticArray) where T
-    N = length(x)
-    dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
-    V = StaticArrays.similar_type(x, Dual{T,eltype(x),N})
-    return quote
-        chunk = Chunk{$N}()
-        $(Expr(:meta, :inline))
-        return $V($(dx))
-    end
-end
-
-@inline static_dual_eval(::Type{T}, f, x::StaticArray) where T = f(dualize(T, x))
-
 function vector_mode_dual_eval!(f::F, cfg::Union{JacobianConfig,GradientConfig}, x) where {F}
     xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)

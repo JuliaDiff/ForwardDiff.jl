@@ -43,28 +43,11 @@ function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArr
     return result
 end
 
-@inline gradient(f::F, x::StaticArray) where F                      = vector_mode_gradient(f, x)
-@inline gradient(f::F, x::StaticArray, cfg::GradientConfig) where F = gradient(f, x)
-@inline gradient(f::F, x::StaticArray, cfg::GradientConfig, ::Val) where F = gradient(f, x)
-
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray) where F = vector_mode_gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::GradientConfig) where F = gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::GradientConfig, ::Val) where F = gradient!(result, f, x)
-
 gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is an array. Perhaps you meant derivative(f, x)?"))
 
 #####################
 # result extraction #
 #####################
-
-@generated function extract_gradient(::Type{T}, y::Real, x::S) where {T,S<:StaticArray}
-    result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
-    return quote
-        $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype($y))
-        return V($result)
-    end
-end
 
 function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
     result = DiffResults.value!(result, y)
@@ -115,16 +98,6 @@ function vector_mode_gradient!(result, f::F, x, cfg::GradientConfig{T}) where {T
     ydual = vector_mode_dual_eval!(f, cfg, x)
     result = extract_gradient!(T, result, ydual)
     return result
-end
-
-@inline function vector_mode_gradient(f, x::StaticArray)
-    T = typeof(Tag(f, eltype(x)))
-    return extract_gradient(T, static_dual_eval(T, f, x), x)
-end
-
-@inline function vector_mode_gradient!(result, f, x::StaticArray)
-    T = typeof(Tag(f, eltype(x)))
-    return extract_gradient!(T, result, static_dual_eval(T, f, x))
 end
 
 ##############
