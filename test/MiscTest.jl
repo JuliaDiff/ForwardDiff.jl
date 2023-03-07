@@ -158,4 +158,11 @@ end
 @test ForwardDiff.derivative(x -> rem2pi(x, RoundUp), rand()) == 1
 @test ForwardDiff.derivative(x -> rem2pi(x, RoundDown), rand()) == 1
 
+@testset "copy work buffers" begin
+    gc = ForwardDiff.GradientConfig(x -> sum(abs2, x), zeros(3))
+    gc2 = copy(gc)
+    @test typeof(gc) ≡ typeof(gc2)
+    @test gc.duals ≢ gc2.duals
+end
+
 end # module

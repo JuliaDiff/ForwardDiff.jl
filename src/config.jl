@@ -106,7 +106,8 @@ Return a `GradientConfig` instance based on the type of `f` and type/shape of th
 vector `x`.
 
 The returned `GradientConfig` instance contains all the work buffers required by
-`ForwardDiff.gradient` and `ForwardDiff.gradient!`.
+`ForwardDiff.gradient` and `ForwardDiff.gradient!`. For multi-threaded applications, you can
+use `Base.copy` to make a copy with new work buffers.
 
 If `f` is `nothing` instead of the actual target function, then the returned instance can
 be used with any target function. However, this will reduce ForwardDiff's ability to catch
@@ -121,6 +122,12 @@ function GradientConfig(f::F,
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
+end
+
+function Base.copy(gradient_config::GradientConfig{T,V,N,D}) where {T,V,N,D}
+    seeds = construct_seeds(Partials{N,V})
+    duals = similar(gradient_config.duals)
+    GradientConfig{T,V,N,D}(seeds, duals)
 end
 
 checktag(::GradientConfig{T},f,x) where {T} = checktag(T,f,x)
