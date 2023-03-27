@@ -72,7 +72,7 @@ julia> @time gradient!(out, rosenbrock, x, cfg10);
   0.282529 seconds (4 allocations: 160 bytes)
 ```
 
-If you do not explicity provide a chunk size, ForwardDiff will try to guess one for you
+If you do not explicitly provide a chunk size, ForwardDiff will try to guess one for you
 based on your input vector:
 
 ```julia
