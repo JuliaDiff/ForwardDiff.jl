@@ -39,7 +39,7 @@ central feature that allows ForwardDiff to take derivatives.
 
 In order to implement the above property, elementary numerical functions on a `Dual`
 number are overloaded to evaluate both the original function, *and* evaluate the derivative
-of the function, propogating the derivative via multiplication. For example, `Base.sin`
+of the function, propagating the derivative via multiplication. For example, `Base.sin`
 can be overloaded on `Dual` like so:
 
 ```julia
