@@ -18,11 +18,15 @@ jobs:
         version:
           - '1.6'
           - '1'
-          - 'nightly'
         os:
           - ubuntu-latest
         arch:
           - x64
+        include:
+          - version: 'nightly'
+            os: ubuntu-latest
+            arch: x64
+            allow_failure: true
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
