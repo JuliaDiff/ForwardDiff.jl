@@ -340,7 +340,6 @@ else
     Base.div(x::Dual, y::Dual) = div(value(x), value(y))
 end
 
-Base.hash(d::Dual) = hash(value(d))
 Base.hash(d::Dual, hsh::UInt) = hash(value(d), hsh)
 
 function Base.read(io::IO, ::Type{Dual{T,V,N}}) where {T,V,N}
