@@ -824,17 +824,20 @@ end
 # implement ldiv!() of dual vector by a matrix
 LinearAlgebra.ldiv!(y::StridedVector{T},
                     m::Union{LowerTriangular{<:LinearAlgebra.BlasFloat},
-                             UpperTriangular{<:LinearAlgebra.BlasFloat}},
+                             UpperTriangular{<:LinearAlgebra.BlasFloat},
+                             SparseMatrixCSC{<:LinearAlgebra.BlasFloat}},
                     x::StridedVector{T}) where T <: Dual =
     (ldiv!(reinterpret(reshape, valtype(T), y)', m, reinterpret(reshape, valtype(T), x)'); y)
 
 Base.:\(m::Union{LowerTriangular{<:LinearAlgebra.BlasFloat},
-                 UpperTriangular{<:LinearAlgebra.BlasFloat}},
+                 UpperTriangular{<:LinearAlgebra.BlasFloat},
+                 SparseMatrixCSC{<:LinearAlgebra.BlasFloat}},
         x::StridedVector{<:Dual}) = ldiv!(similar(x), m, x)
 
 for MT in (StridedMatrix{<:LinearAlgebra.BlasFloat},
            LowerTriangular{<:LinearAlgebra.BlasFloat},
            UpperTriangular{<:LinearAlgebra.BlasFloat},
+           SparseMatrixCSC{<:LinearAlgebra.BlasFloat},
            )
 @eval begin
 
