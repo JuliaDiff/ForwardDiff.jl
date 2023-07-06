@@ -7,7 +7,7 @@ using ForwardDiff: Partials
 
 samerng() = MersenneTwister(1)
 
-for N in (0, 3), T in (Int, Float32, Float64)
+@testset "Partials{$N,$T}" for N in (0, 3), T in (Int, Float32, Float64)
     println("  ...testing Partials{$N,$T}")
 
     VALUES = (rand(T,N)...,)
@@ -62,7 +62,6 @@ for N in (0, 3), T in (Int, Float32, Float64)
     @test isequal(PARTIALS, copy(PARTIALS))
     @test isequal(PARTIALS, PARTIALS2) == (N == 0)
 
-    @test hash(PARTIALS) == hash(VALUES, ForwardDiff.PARTIALS_HASH)
     @test hash(PARTIALS) == hash(copy(PARTIALS))
     @test hash(PARTIALS, hash(1)) == hash(copy(PARTIALS), hash(1))
     @test hash(PARTIALS, hash(1)) == hash(copy(PARTIALS), hash(1))

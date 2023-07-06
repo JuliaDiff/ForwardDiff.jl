@@ -22,8 +22,9 @@ stored in `y`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-@inline function derivative(f!, y::AbstractArray, x::Real,
-                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+@inline function derivative(f!::F, y::AbstractArray, x::Real,
+                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
+    require_one_based_indexing(y)
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
@@ -42,6 +43,7 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
+    result isa DiffResult || require_one_based_indexing(result)
     T = typeof(Tag(f, R))
     ydual = f(Dual{T}(x, one(x)))
     result = extract_value!(T, result, ydual)
@@ -58,8 +60,9 @@ called as `f!(y, x)` where the result is stored in `y`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
-                             f!, y::AbstractArray, x::Real,
-                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+                             f!::F, y::AbstractArray, x::Real,
+                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
+    result isa DiffResult ? require_one_based_indexing(y) : require_one_based_indexing(result, y)
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
@@ -70,6 +73,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 end
 
 derivative(f, x::AbstractArray) = throw(DimensionMismatch("derivative(f, x) expects that x is a real number. Perhaps you meant gradient(f, x)?"))
+derivative(f, x::Complex) = throw(DimensionMismatch("derivative(f, x) expects that x is a real number (does not support Wirtinger derivatives). Separate real and imaginary parts of the input."))
 
 #####################
 # result extraction #
@@ -78,9 +82,13 @@ derivative(f, x::AbstractArray) = throw(DimensionMismatch("derivative(f, x) expe
 # non-mutating #
 #--------------#
 
-@inline extract_derivative(::Type{T}, y::Dual) where {T}          = partials(T, y, 1)
 @inline extract_derivative(::Type{T}, y::Real) where {T}          = zero(y)
+@inline extract_derivative(::Type{T}, y::Complex) where {T}       = zero(y)
+@inline extract_derivative(::Type{T}, y::Dual) where {T}          = partials(T, y, 1)
 @inline extract_derivative(::Type{T}, y::AbstractArray) where {T} = map(d -> extract_derivative(T,d), y)
+@inline function extract_derivative(::Type{T}, y::Complex{TD}) where {T, TD <: Dual}
+    complex(partials(T, real(y), 1), partials(T, imag(y), 1))
+end
 
 # mutating #
 #----------#

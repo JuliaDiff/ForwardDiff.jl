@@ -195,6 +195,38 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
     return esc(defs)
 end
 
+# Support complex-valued functions such as `hankelh1`
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
+    return Dual{T}(val, deriv * partial)
+end
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
+    return Dual{T}(val, _mul_partials(partial1, partial2, deriv1, deriv2))
+end
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
+    reval, imval = reim(val)
+    if deriv isa Real
+        p = deriv * partial
+        return Complex(Dual{T}(reval, p), Dual{T}(imval, zero(p)))
+    else
+        rederiv, imderiv = reim(deriv)
+        return Complex(Dual{T}(reval, rederiv * partial), Dual{T}(imval, imderiv * partial))
+    end
+end
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
+    reval, imval = reim(val)
+    if deriv1 isa Real && deriv2 isa Real
+        p = _mul_partials(partial1, partial2, deriv1, deriv2)
+        return Complex(Dual{T}(reval, p), Dual{T}(imval, zero(p)))
+    else
+        rederiv1, imderiv1 = reim(deriv1)
+        rederiv2, imderiv2 = reim(deriv2)
+        return Complex(
+            Dual{T}(reval, _mul_partials(partial1, partial2, rederiv1, rederiv2)),
+            Dual{T}(imval, _mul_partials(partial1, partial2, imderiv1, imderiv2)),
+        )
+    end
+end
+
 function unary_dual_definition(M, f)
     FD = ForwardDiff
     Mf = M == :Base ? f : :($M.$f)
@@ -206,7 +238,7 @@ function unary_dual_definition(M, f)
         @inline function $M.$f(d::$FD.Dual{T}) where T
             x = $FD.value(d)
             $work
-            return $FD.Dual{T}(val, deriv * $FD.partials(d))
+            return $FD.dual_definition_retval(Val{T}(), val, deriv, $FD.partials(d))
         end
     end
 end
@@ -236,17 +268,17 @@ function binary_dual_definition(M, f)
             begin
                 vx, vy = $FD.value(x), $FD.value(y)
                 $xy_work
-                return $FD.Dual{Txy}(val, $FD._mul_partials($FD.partials(x), $FD.partials(y), dvx, dvy))
+                return $FD.dual_definition_retval(Val{Txy}(), val, dvx, $FD.partials(x), dvy, $FD.partials(y))
             end,
             begin
                 vx = $FD.value(x)
                 $x_work
-                return $FD.Dual{Tx}(val, dvx * $FD.partials(x))
+                return $FD.dual_definition_retval(Val{Tx}(), val, dvx, $FD.partials(x))
             end,
             begin
                 vy = $FD.value(y)
                 $y_work
-                return $FD.Dual{Ty}(val, dvy * $FD.partials(y))
+                return $FD.dual_definition_retval(Val{Ty}(), val, dvy, $FD.partials(y))
             end
         )
     end
@@ -261,6 +293,18 @@ Base.copy(d::Dual) = d
 
 Base.eps(d::Dual) = eps(value(d))
 Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
+
+# The `base` keyword was added in Julia 1.8:
+# https://github.com/JuliaLang/julia/pull/42428
+if VERSION < v"1.8.0-DEV.725"
+    Base.precision(d::Dual) = precision(value(d))
+    Base.precision(::Type{D}) where {D<:Dual} = precision(valtype(D))
+else
+    Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
+    function Base.precision(::Type{D}; base::Integer=2) where {D<:Dual}
+        precision(valtype(D); base=base)
+    end
+end
 
 function Base.nextfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
     ForwardDiff.Dual{T}(nextfloat(d.value), d.partials)
@@ -284,13 +328,14 @@ Base.trunc(d::Dual) = trunc(value(d))
 Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
 Base.round(d::Dual) = round(value(d))
 
-if VERSION ≥ v"1.4"
-    Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
-else
-    Base.div(x::Dual, y::Dual) = div(value(x), value(y))
-end
+Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
 
-Base.hash(d::Dual) = hash(value(d))
+Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
+
+Base.exponent(x::Dual) = exponent(value(x))
+
+Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
+
 Base.hash(d::Dual, hsh::UInt) = hash(value(d), hsh)
 
 function Base.read(io::IO, ::Type{Dual{T,V,N}}) where {T,V,N}
@@ -336,16 +381,39 @@ for pred in UNARY_PREDICATES
     @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
 end
 
-for pred in BINARY_PREDICATES
+# Before PR#481 this loop ran over this list:
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# Not a minimal set, as Base defines some in terms of others.
+for pred in [:isless, :<, :>, :(<=), :(>=)]
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
             $(pred)(value(x), value(y)),
             $(pred)(value(x), y),
-            $(pred)(x, value(y))
+            $(pred)(x, value(y)),
         )
     end
 end
+
+Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
+
+for pred in [:isequal, :(==)]
+    @eval begin
+        @define_binary_dual_op(
+            Base.$(pred),
+            $(pred)(value(x), value(y)) && $(pred)(partials(x), partials(y)),
+            $(pred)(value(x), y)        && iszero(partials(x)),
+            $(pred)(x, value(y))        && iszero(partials(y)),
+        )
+    end
+end
+
+@define_binary_dual_op(
+    Base.:(!=),
+    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
+    (!=)(value(x), y)        || !iszero(partials(x)),
+    (!=)(x, value(y))        || !iszero(partials(y)),
+)
 
 ########################
 # Promotion/Conversion #
@@ -380,9 +448,9 @@ for R in (Irrational, Real, BigFloat, Bool)
     end
 end
 
-Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(convert(V, value(d)), convert(Partials{N,V}, partials(d)))
-Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(convert(V, x), zero(Partials{N,V}))
-Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(convert(V, x), zero(Partials{N,V}))
+@inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(d)), convert(Partials{N,V}, partials(d)))
+@inline Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
+@inline Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
 Base.float(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T,float(V),N}
@@ -486,7 +554,7 @@ for f in (:(Base.:^), :(NaNMath.pow))
             begin
                 v = value(x)
                 expv = ($f)(v, y)
-                if y == zero(y)
+                if y == zero(y) || iszero(partials(x))
                     new_partials = zero(partials(x))
                 else
                     new_partials = partials(x) * y * ($f)(v, y - 1)
@@ -644,6 +712,7 @@ end
 
 # sin/cos #
 #--------#
+
 function Base.sin(d::Dual{T}) where T
     s, c = sincos(value(d))
     return Dual{T}(s, c * partials(d))
@@ -662,11 +731,9 @@ end
 # sincospi #
 #----------#
 
-if VERSION >= v"1.6.0-DEV.292"
-    @inline function Base.sincospi(d::Dual{T}) where T
-        sd, cd = sincospi(value(d))
-        return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
-    end
+@inline function Base.sincospi(d::Dual{T}) where T
+    sd, cd = sincospi(value(d))
+    return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
 end
 
 # Symmetric eigvals #
@@ -702,7 +769,7 @@ end
 
 function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
-    _,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
+    _,Q = eigen(Symmetric(value.(parent(A))))
     parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
@@ -714,6 +781,23 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
+# Functions in SpecialFunctions which return tuples #
+# Their derivatives are not defined in DiffRules    #
+#---------------------------------------------------#
+
+function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
+    x = value(d)
+    y, s = SpecialFunctions.logabsgamma(x)
+    return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), s)
+end
+
+# Derivatives wrt to first parameter and precision setting are not supported
+function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
+    x = value(d)
+    p, q = SpecialFunctions.gamma_inc(a, x, ind)
+    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
+end
 
 ###################
 # Pretty Printing #
@@ -733,6 +817,4 @@ for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
     end
 end
 
-if VERSION >= v"1.6.0-rc1"
-    Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
-end
+Printf.tofloat(d::Dual) = Printf.tofloat(value(d))

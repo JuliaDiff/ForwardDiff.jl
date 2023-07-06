@@ -158,4 +158,7 @@ end
 @test ForwardDiff.derivative(x -> rem2pi(x, RoundUp), rand()) == 1
 @test ForwardDiff.derivative(x -> rem2pi(x, RoundDown), rand()) == 1
 
+# example from https://github.com/JuliaDiff/DiffRules.jl/pull/98#issuecomment-1574420052
+@test only(ForwardDiff.hessian(t -> abs(t[1])^2, [0.0])) == 2
+
 end # module

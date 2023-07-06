@@ -13,7 +13,8 @@ This method assumes that `isa(f(x), Real)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function gradient(f, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+function gradient(f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
+    require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         return vector_mode_gradient(f, x, cfg)
@@ -32,6 +33,7 @@ This method assumes that `isa(f(x), Real)`.
 
 """
 function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
+    result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == length(x)
         vector_mode_gradient!(result, f, x, cfg)
@@ -41,28 +43,11 @@ function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArr
     return result
 end
 
-@inline gradient(f, x::StaticArray)                      = vector_mode_gradient(f, x)
-@inline gradient(f, x::StaticArray, cfg::GradientConfig) = gradient(f, x)
-@inline gradient(f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient(f, x)
-
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray) = vector_mode_gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig) = gradient!(result, f, x)
-@inline gradient!(result::Union{AbstractArray,DiffResult}, f, x::StaticArray, cfg::GradientConfig, ::Val) = gradient!(result, f, x)
-
 gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is an array. Perhaps you meant derivative(f, x)?"))
 
 #####################
 # result extraction #
 #####################
-
-@generated function extract_gradient(::Type{T}, y::Real, x::S) where {T,S<:StaticArray}
-    result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
-    return quote
-        $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype($y))
-        return V($result)
-    end
-end
 
 function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
     result = DiffResults.value!(result, y)
@@ -113,16 +98,6 @@ function vector_mode_gradient!(result, f::F, x, cfg::GradientConfig{T}) where {T
     ydual = vector_mode_dual_eval!(f, cfg, x)
     result = extract_gradient!(T, result, ydual)
     return result
-end
-
-@inline function vector_mode_gradient(f, x::StaticArray)
-    T = typeof(Tag(f, eltype(x)))
-    return extract_gradient(T, static_dual_eval(T, f, x), x)
-end
-
-@inline function vector_mode_gradient!(result, f, x::StaticArray)
-    T = typeof(Tag(f, eltype(x)))
-    return extract_gradient!(T, result, static_dual_eval(T, f, x))
 end
 
 ##############

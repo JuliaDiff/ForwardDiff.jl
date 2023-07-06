@@ -1,15 +1,13 @@
 module ForwardDiff
 
 using DiffRules, DiffResults
-using DiffResults: DiffResult, MutableDiffResult, ImmutableDiffResult
-using StaticArrays
-if VERSION >= v"1.6"
-    using Preferences
-end
+using DiffResults: DiffResult, MutableDiffResult
+using Preferences
 using Random
 using LinearAlgebra
 import SIMD: Vec
 
+using Base: require_one_based_indexing
 import Printf
 import NaNMath
 import SpecialFunctions
@@ -32,6 +30,10 @@ include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
+
+if !isdefined(Base, :get_extension)
+    include("../ext/ForwardDiffStaticArraysExt.jl")
+end
 
 export DiffResults
 

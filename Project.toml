@@ -1,6 +1,6 @@
 name = "ForwardDiff"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.24"
+version = "0.11-DEV"
 
 [deps]
 CommonSubexpressions = "bbf7d656-a473-5ed7-a52c-81e309532950"
@@ -16,18 +16,24 @@ SIMD = "fdea26ae-647d-5447-a871-4b548cad5224"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
+[weakdeps]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[extensions]
+ForwardDiffStaticArraysExt = "StaticArrays"
+
 [compat]
-Calculus = "0.2, 0.3, 0.4, 0.5"
+Calculus = "0.5"
 CommonSubexpressions = "0.3"
-DiffResults = "0.0.1, 0.0.2, 0.0.3, 0.0.4, 1.0.1"
-DiffRules = "1.4.0"
-DiffTests = "0.0.1, 0.1"
+DiffResults = "1.1"
+DiffRules = "1.4"
+DiffTests = "0.1"
 LogExpFunctions = "0.3"
-NaNMath = "0.2.2, 0.3"
+NaNMath = "1"
 Preferences = "1"
 SIMD = "3"
-SpecialFunctions = "0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.10, 1.0, 2"
-StaticArrays = "0.8.3, 0.9, 0.10, 0.11, 0.12, 1.0"
+SpecialFunctions = "1, 2"
+StaticArrays = "1.5"
 julia = "1.6"
 
 [extras]
@@ -35,7 +41,8 @@ Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 DiffTests = "de460e47-3fe3-5279-bb4a-814414816d5d"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Calculus", "DiffTests", "SparseArrays", "Test", "InteractiveUtils"]
+test = ["Calculus", "DiffTests", "SparseArrays", "StaticArrays", "Test", "InteractiveUtils"]
