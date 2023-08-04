@@ -164,4 +164,4 @@ end # module
 #issue 651, using Measurements
 #one(x::Measurement{T}) where T = one(T) != oneunit(x)
 f651(x) = 2.1*x + 1
-@test ForwardDiff.derivative(f,1.0 ± 0.01) == 2.1
+@test ForwardDiff.derivative(f,Measurements.measurement(1.0, 0.001)) == 2.1
