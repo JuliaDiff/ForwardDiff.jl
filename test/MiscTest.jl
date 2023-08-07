@@ -6,7 +6,7 @@ using Test
 using ForwardDiff
 using DiffTests
 using SparseArrays: sparse
-using Measurements
+using Measurements: Measurements
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -159,9 +159,9 @@ end
 @test ForwardDiff.derivative(x -> rem2pi(x, RoundUp), rand()) == 1
 @test ForwardDiff.derivative(x -> rem2pi(x, RoundDown), rand()) == 1
 
-end # module
-
 #issue 651, using Measurements
 #one(x::Measurement{T}) where T = one(T) != oneunit(x)
 f651(x) = 2.1*x + 1
 @test ForwardDiff.derivative(f651,Measurements.measurement(1.0, 0.001)) == 2.1
+
+end # module
