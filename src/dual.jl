@@ -431,6 +431,7 @@ for R in (Irrational, Real, BigFloat, Bool)
 end
 
 @inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(d)), convert(Partials{N,V}, partials(d)))
+@inline Base.convert(::Type{Dual{T,Dual{T,V,M},N}}, d::Dual{T,V,M}) where {T,V,N,M} = Dual{T}(d, Partials{N,Dual{T,V,M}}(zero_tuple(NTuple{N,Dual{T,V,M}})))
 @inline Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 @inline Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
