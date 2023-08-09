@@ -1,6 +1,6 @@
 name = "ForwardDiff"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.36"
+version = "0.10.37"
 
 [deps]
 CommonSubexpressions = "bbf7d656-a473-5ed7-a52c-81e309532950"
@@ -35,12 +35,13 @@ ForwardDiffStaticArraysExt = "StaticArrays"
 Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 DiffTests = "de460e47-3fe3-5279-bb4a-814414816d5d"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Calculus", "DiffTests", "SparseArrays", "Test", "InteractiveUtils", "StaticArrays"]
+test = ["Calculus", "DiffTests", "SparseArrays", "Test", "InteractiveUtils", "StaticArrays", "Measurements"]
 
 [weakdeps]
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
