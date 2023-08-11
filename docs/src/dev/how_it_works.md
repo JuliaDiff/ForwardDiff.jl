@@ -52,7 +52,7 @@ overloading a plethora of elementary functions, we can differentiate generic fun
 composed of them by passing in a `Dual` number and looking at the output.
 
 We won't discuss higher-order differentiation in detail, but the reader is encouraged to
-learn about [hyper-dual numbers](https://adl.stanford.edu/hyperdual/Fike_AIAA-2011-886.pdf),
+learn about [hyper-dual numbers](https://arc.aiaa.org/doi/abs/10.2514/6.2011-886),
 which extend dual numbers to higher orders by introducing extra ``\epsilon`` terms that can
 cross-multiply. ForwardDiff's `Dual` number implementation naturally supports hyper-dual
 numbers without additional code by allowing instances of the `Dual` type to nest within each
