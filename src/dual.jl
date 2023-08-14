@@ -196,13 +196,13 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
 end
 
 # Support complex-valued functions such as `hankelh1`
-function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
     return Dual{T}(val, deriv * partial)
 end
-function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
     return Dual{T}(val, _mul_partials(partial1, partial2, deriv1, deriv2))
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
     reval, imval = reim(val)
     if deriv isa Real
         p = deriv * partial
@@ -212,7 +212,7 @@ function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Comple
         return Complex(Dual{T}(reval, rederiv * partial), Dual{T}(imval, imderiv * partial))
     end
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
     reval, imval = reim(val)
     if deriv1 isa Real && deriv2 isa Real
         p = _mul_partials(partial1, partial2, deriv1, deriv2)
@@ -592,6 +592,16 @@ end
 # fma #
 #-----#
 
+@inline function calc_fma_xyz(x::Dual{T,V,N},
+                              y::Dual{T,V,N},
+                              z::Dual{T,V,N}) where {T, V<:SIMDFloat,N}
+    xv, yv, zv = value(x), value(y), value(z)
+    rv = fma(xv, yv, zv)
+    N == 0 && return Dual{T}(rv)
+    xp, yp, zp = Vec(partials(x).values), Vec(partials(y).values), Vec(partials(z).values)
+    parts = Tuple(fma(xv, yp, fma(yv, xp, zp)))
+    Dual{T}(rv, parts)
+end
 @generated function calc_fma_xyz(x::Dual{T,<:Any,N},
                                  y::Dual{T,<:Any,N},
                                  z::Dual{T,<:Any,N}) where {T,N}
@@ -634,6 +644,16 @@ end
 # muladd #
 #--------#
 
+@inline function calc_muladd_xyz(x::Dual{T,V,N},
+                                 y::Dual{T,V,N},
+                                 z::Dual{T,V,N}) where {T, V<:SIMDType,N}
+    xv, yv, zv = value(x), value(y), value(z)
+    rv = muladd(xv, yv, zv)
+    N == 0 && return Dual{T}(rv)
+    xp, yp, zp = Vec(partials(x).values), Vec(partials(y).values), Vec(partials(z).values)
+    parts = Tuple(muladd(xv, yp, muladd(yv, xp, zp)))
+    Dual{T}(rv, parts)
+end
 @generated function calc_muladd_xyz(x::Dual{T,<:Any,N},
                                     y::Dual{T,<:Any,N},
                                     z::Dual{T,<:Any,N}) where {T,N}
