@@ -210,10 +210,15 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test zero(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(zero(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
     @test zero(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(zero(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
 
-    @test one(FDNUM) === Dual{TestTag()}(one(PRIMAL), zero(PARTIALS))
-    @test one(typeof(FDNUM)) === Dual{TestTag()}(one(V), zero(Partials{N,V}))
-    @test one(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
-    @test one(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
+    @test one(FDNUM) === one(value(FDNUM))
+    @test one(typeof(FDNUM)) === one(typeof(value(FDNUM)))
+    @test one(NESTED_FDNUM) === one(value(NESTED_FDNUM))
+    @test one(typeof(NESTED_FDNUM)) === one(typeof(value(NESTED_FDNUM)))
+    
+    @test oneunit(FDNUM) === Dual{TestTag()}(one(PRIMAL), zero(PARTIALS))
+    @test oneunit(typeof(FDNUM)) === Dual{TestTag()}(one(V), zero(Partials{N,V}))
+    @test oneunit(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
+    @test oneunit(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
 
     if V <: Integer
         @test rand(samerng(), FDNUM) == rand(samerng(), value(FDNUM))
