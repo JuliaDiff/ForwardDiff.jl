@@ -163,7 +163,11 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
-@generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
+iszero_tuple(tup::NTuple{N,V}) where {N,V} = _iszero_tuple(unwrap_dual(V), tup)
+
+# default implementation; specific number types (e.g., Interval from IntervalArithmetic)
+# can add specializations.
+@generated function _iszero_tuple(::Type{V0}, tup::NTuple{N,V}) where {V0,N,V}
     ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
     return quote
         z = zero(V)
