@@ -21,9 +21,12 @@ include("derivative.jl")
 include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
+include("complex.jl")
 
 if !isdefined(Base, :get_extension)
     include("../ext/ForwardDiffStaticArraysExt.jl")
+    include("../ext/ForwardDiffAbstractFFTsExt.jl")
+    include("../ext/ForwardDiffFFTWExt.jl")
 end
 
 export DiffResults
