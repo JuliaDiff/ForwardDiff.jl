@@ -1,15 +1,8 @@
 module FFTTest
 
-using FastTransformsForwardDiff, FFTW, LinearAlgebra, Test
+using FFTW, LinearAlgebra, Test
 using ForwardDiff: Dual, valtype, value, partials, derivative
 using AbstractFFTs: complexfloat, realfloat
-
-@testset "complex dual" begin
-    x = Dual(1., 2., 3.) + im*Dual(4.,5.,6.)
-    @test value(x) == 1 + 4im
-    @test partials(x,1) == 2 + 5im
-    @test partials(x,2) == 3 + 6im
-end
 
 @testset "fft and rfft" begin
     x1 = Dual.(1:4.0, 2:5, 3:6)

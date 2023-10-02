@@ -1,7 +1,6 @@
 module ForwardDiffFFTWExt
 
-using ForwardDiff, FFTW
-
+using ForwardDiff: Dual, dual2array
 import FFTW: r2r, r2r!, plan_r2r
 
 

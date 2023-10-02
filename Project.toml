@@ -1,6 +1,6 @@
 name = "ForwardDiff"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.11-DEV"
+version = "0.11.0-DEV"
 
 [deps]
 AbstractFFTs = "621f4979-c628-5d54-868e-fcf4e3e8185c"
@@ -23,6 +23,8 @@ FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
+ForwardDiffAbstractFFTsExt = "AbstractFFTs"
+ForwardDiffFFTWExt = "FFTW"
 ForwardDiffStaticArraysExt = "StaticArrays"
 
 [compat]

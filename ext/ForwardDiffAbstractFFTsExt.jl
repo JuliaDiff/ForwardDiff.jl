@@ -3,7 +3,7 @@ module ForwardDiffAbstractFFTsExt
 using ForwardDiff, AbstractFFTs
 
 import AbstractFFTs: plan_fft, plan_ifft, plan_bfft, plan_rfft, plan_brfft, plan_irfft, Plan
-using ForwardDiff: array2dual, dual2array
+using ForwardDiff: array2dual, dual2array, Dual
 import LinearAlgebra: mul!
 
 for P in (:Plan, :ScaledPlan)  # need ScaledPlan to avoid ambiguities
