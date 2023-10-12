@@ -587,11 +587,18 @@ end
 #-------#
 
 @inline function calc_hypot(x, y, z, ::Type{T}) where T
+    pm1(x) = signbit(x) ? -1 : 1
+
     vx = value(x)
     vy = value(y)
     vz = value(z)
     h = hypot(vx, vy, vz)
-    p = (vx / h) * partials(x) + (vy / h) * partials(y) + (vz / h) * partials(z)
+    p = if iszero(h)
+        hp = sqrt(sum(abs2, partials(x)) + sum(abs2, partials(y)) + sum(abs2, partials(z)))
+        pm1(vx) * partials(x) / hp + pm1(vy) * partials(y) / hp + pm1(vz) * partials(z) / hp
+    else
+        (vx / h) * partials(x) + (vy / h) * partials(y) + (vz / h) * partials(z)
+    end
     return Dual{T}(h, p)
 end
 
