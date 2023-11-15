@@ -56,8 +56,9 @@ learn about [hyper-dual numbers](https://arc.aiaa.org/doi/abs/10.2514/6.2011-886
 which extend dual numbers to higher orders by introducing extra ``\epsilon`` terms that can
 cross-multiply. ForwardDiff's `Dual` number implementation naturally supports hyper-dual
 numbers without additional code by allowing instances of the `Dual` type to nest within each
-other. For example, a second-order hyper-dual number has the type `Dual{T,Dual{S,V,M},N}`, a
-third-order hyper-dual number has the type `Dual{T,Dual{S,Dual{R,V,K},M},N}`, and so on.
+other. For example, a second-order hyper-dual number has the type `Dual{T,Dual{S,V,M},N}`,
+and can be formed as follows: `Dual(Dual(x, one(eltype(x))), one(eltype(x)))`. Athird-order
+hyper-dual number has the type `Dual{T,Dual{S,Dual{R,V,K},M},N}`, and so on.
 
 ## ForwardDiff's API
 
