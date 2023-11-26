@@ -52,8 +52,7 @@ Base.:(==)(a::Partials{N}, b::Partials{N}) where {N} = a.values == b.values
 
 const PARTIALS_HASH = hash(Partials)
 
-Base.hash(partials::Partials) = hash(partials.values, PARTIALS_HASH)
-Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials), hsh)
+Base.hash(partials::Partials, hsh::UInt64) = hash(hash(partials.values, PARTIALS_HASH), hsh)
 
 @inline Base.copy(partials::Partials) = partials
 

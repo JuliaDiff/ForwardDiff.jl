@@ -62,7 +62,6 @@ samerng() = MersenneTwister(1)
     @test isequal(PARTIALS, copy(PARTIALS))
     @test isequal(PARTIALS, PARTIALS2) == (N == 0)
 
-    @test hash(PARTIALS) == hash(VALUES, ForwardDiff.PARTIALS_HASH)
     @test hash(PARTIALS) == hash(copy(PARTIALS))
     @test hash(PARTIALS, hash(1)) == hash(copy(PARTIALS), hash(1))
     @test hash(PARTIALS, hash(1)) == hash(copy(PARTIALS), hash(1))
