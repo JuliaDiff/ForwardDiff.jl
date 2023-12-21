@@ -14,12 +14,15 @@ Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [weakdeps]
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [extensions]
 ForwardDiffStaticArraysExt = "StaticArrays"
+ForwardDiffUnitfulExt = "Unitful"
 
 [compat]
 Calculus = "0.5"
@@ -32,6 +35,7 @@ NaNMath = "1"
 Preferences = "1"
 SpecialFunctions = "1, 2"
 StaticArrays = "1.5"
+Unitful = "1"
 julia = "1.6"
 
 [extras]
@@ -41,6 +45,7 @@ InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [targets]
-test = ["Calculus", "DiffTests", "SparseArrays", "StaticArrays", "Test", "InteractiveUtils"]
+test = ["Calculus", "DiffTests", "SparseArrays", "StaticArrays", "Test", "Unitful", "InteractiveUtils"]

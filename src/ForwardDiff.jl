@@ -24,6 +24,7 @@ include("hessian.jl")
 
 if !isdefined(Base, :get_extension)
     include("../ext/ForwardDiffStaticArraysExt.jl")
+    include("../ext/ForwardDiffUnitfulExt.jl")
 end
 
 export DiffResults
