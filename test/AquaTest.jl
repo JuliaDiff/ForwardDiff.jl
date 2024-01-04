@@ -1,3 +1,5 @@
+module AquaTest
+
 using Test
 using ForwardDiff
 using Aqua
@@ -24,4 +26,4 @@ end
     Aqua.test_all(ForwardDiff; ambiguities = false, unbound_args = false)
 end
 
-nothing
+end
