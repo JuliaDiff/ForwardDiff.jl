@@ -60,3 +60,9 @@ ForwardDiff.GradientConfig
 ForwardDiff.JacobianConfig
 ForwardDiff.HessianConfig
 ```
+
+## Other API
+```@docs
+ForwardDiff.can_dual
+ForwardDiff.:≺
+```
