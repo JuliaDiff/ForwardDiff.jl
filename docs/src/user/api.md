@@ -61,7 +61,7 @@ ForwardDiff.JacobianConfig
 ForwardDiff.HessianConfig
 ```
 
-## Other API
+## Internal API
 ```@docs
 ForwardDiff.can_dual
 ForwardDiff.:≺
