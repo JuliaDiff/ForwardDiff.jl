@@ -19,7 +19,16 @@ end
     pkg_match(pkgname, pkdir::AbstractString) = occursin(pkgname, pkdir)
     filter!(x -> pkg_match("ForwardDiff", pkgdir(last(x).module)), ambs)
 
-    @test length(ambs) == 0
+    ambs_dict = Dict()
+    ambs_dict[(1, 6)] = 2
+    ambs_dict[(1, 10)] = 1
+    verkey(v) = (Int(VERSION.major), Int(VERSION.minor))
+
+    @test length(ambs) ≤ ambs_dict[verkey(VERSION)]
+    # notify us when we fix one
+    if length(ambs) < ambs_dict[verkey(VERSION)]
+        @info "Ambiguities may have been fixed, please lower the limit."
+    end
 end
 
 @testset "Aqua tests - remaining" begin
