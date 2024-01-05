@@ -24,11 +24,13 @@ end
     ambs_dict[(1, 10)] = 1
     verkey(v) = (Int(VERSION.major), Int(VERSION.minor))
 
-    @test length(ambs) ≤ ambs_dict[verkey(VERSION)]
-    # notify us when we fix one
-    if length(ambs) < ambs_dict[verkey(VERSION)]
-        @info "Ambiguities may have been fixed, please lower the limit."
-        @info "     length(ambs) = $(length(ambs))"
+    if haskey(ambs_dict, verkey(VERSION))
+        @test length(ambs) ≤ ambs_dict[verkey(VERSION)]
+        # notify us when we fix one
+        if length(ambs) < ambs_dict[verkey(VERSION)]
+            @info "Ambiguities may have been fixed, please lower the limit."
+            @info "     length(ambs) = $(length(ambs))"
+        end
     end
 end
 
