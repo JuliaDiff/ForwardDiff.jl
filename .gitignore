@@ -4,5 +4,6 @@
 *.DS_Store
 /docs/build/
 /docs/site/
+/docs/Manifest.toml
 /benchmark_data/
 /Manifest.toml
