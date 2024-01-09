@@ -6,6 +6,7 @@ using Test
 using Random
 using ForwardDiff
 using DiffTests
+using Unitful
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -102,6 +103,12 @@ end
 
 @testset "complex output" begin
     @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
+end
+
+@testset "Unitful" begin
+    for x in [42, 42u"m"]
+        @test isapprox(ForwardDiff.derivative(x -> 3.14u"m"*x, x), 3.14u"m")
+    end
 end
 
 end # module
