@@ -779,6 +779,91 @@ function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) wh
     return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
 
+# Efficient left multiplication/division of #
+# Dual array by a constant matrix           #
+#-------------------------------------------#
+# creates the copy of x and applies fvalue!(values(y), values(x)) to its values,
+# and fpartial!(partial(y, i), partial(y, i), i) to its partials
+function _map_dual_components!(fvalue!, fpartial!, y::AbstractArray{DT}, x::AbstractArray{DT}) where DT <: Dual{<:Any, T} where T
+    N = npartials(DT)
+    tx = similar(x, T)
+    ty = similar(y, T) # temporary Array{T} for fvalue!/fpartial! application
+    # y allows res to be accessed as Array{T}
+    yarr = reinterpret(reshape, T, y)
+    @assert size(yarr) == (N + 1, size(y)...)
+    ystride = size(yarr, 1)
+
+    # calculate res values
+    @inbounds for (j, v) in enumerate(x)
+        tx[j] = value(v)
+    end
+    fvalue!(ty, tx)
+    k = 1
+    @inbounds for tt in ty
+        yarr[k] = tt
+        k += ystride
+    end
+
+    # calculate each res partial
+    for i in 1:N
+        @inbounds for (j, v) in enumerate(x)
+            tx[j] = partials(v, i)
+        end
+        fpartial!(ty, tx, i)
+        k = i + 1
+        @inbounds for tt in ty
+            yarr[k] = tt
+            k += ystride
+        end
+    end
+
+    return y
+end
+
+# use ldiv!() for matrices of normal numbers to
+# implement ldiv!() of dual vector by a matrix
+LinearAlgebra.ldiv!(y::StridedVector{T},
+                    m::Union{LowerTriangular{<:LinearAlgebra.BlasFloat},
+                             UpperTriangular{<:LinearAlgebra.BlasFloat},
+                             SparseMatrixCSC{<:LinearAlgebra.BlasFloat}},
+                    x::StridedVector{T}) where T <: Dual =
+    (ldiv!(reinterpret(reshape, valtype(T), y)', m, reinterpret(reshape, valtype(T), x)'); y)
+
+Base.:\(m::Union{LowerTriangular{<:LinearAlgebra.BlasFloat},
+                 UpperTriangular{<:LinearAlgebra.BlasFloat},
+                 SparseMatrixCSC{<:LinearAlgebra.BlasFloat}},
+        x::StridedVector{<:Dual}) = ldiv!(similar(x), m, x)
+
+for MT in (StridedMatrix{<:LinearAlgebra.BlasFloat},
+           LowerTriangular{<:LinearAlgebra.BlasFloat},
+           UpperTriangular{<:LinearAlgebra.BlasFloat},
+           SparseMatrixCSC{<:LinearAlgebra.BlasFloat},
+           )
+@eval begin
+
+    LinearAlgebra.ldiv!(y::StridedMatrix{T}, m::$MT, x::StridedMatrix{T}) where T <: Dual =
+        _map_dual_components!((y, x) -> ldiv!(y, m, x), (y, x, _) -> ldiv!(y, m, x), y, x)
+
+    Base.:\(m::$MT, x::StridedMatrix{<:Dual}) = ldiv!(similar(x), m, x)
+
+    LinearAlgebra.mul!(y::StridedVector{T}, m::$MT, x::StridedVector{T}) where T <: Dual =
+        (mul!(reinterpret(reshape, valtype(T), y), reinterpret(reshape, valtype(T), x), m'); y)
+
+    LinearAlgebra.mul!(y::StridedVector{T}, m::$MT, x::StridedVector{T},
+                       α::Union{LinearAlgebra.BlasFloat, Integer},
+                       β::Union{LinearAlgebra.BlasFloat, Integer}) where T <: Dual =
+        (mul!(reinterpret(reshape, valtype(T), y), reinterpret(reshape, valtype(T), x), m', α, β); y)
+
+    Base.:*(m::$MT, x::StridedVector{<:Dual}) = mul!(similar(x, (size(m, 1),)), m, x)
+
+    LinearAlgebra.mul!(y::StridedMatrix{T}, m::$MT, x::StridedMatrix{T}) where T <: Dual =
+        _map_dual_components!((y, x) -> mul!(y, m, x), (y, x, _) -> mul!(y, m, x), y, x)
+
+    Base.:*(m::$MT, x::StridedMatrix{<:Dual}) = mul!(similar(x, (size(m, 1), size(x, 2))), m, x)
+
+end
+end
+
 ###################
 # Pretty Printing #
 ###################

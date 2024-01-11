@@ -17,8 +17,9 @@ Random.seed!(1)
 
 const x = 1
 
-for f in DiffTests.NUMBER_TO_NUMBER_FUNCS
-    println("  ...testing $f")
+@testset "Derivative test vs Calculus.jl" begin
+
+@testset "$f(x::Number)::Number" for f in DiffTests.NUMBER_TO_NUMBER_FUNCS
     v = f(x)
     d = ForwardDiff.derivative(f, x)
     @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
@@ -29,8 +30,7 @@ for f in DiffTests.NUMBER_TO_NUMBER_FUNCS
     @test isapprox(DiffResults.derivative(out), d)
 end
 
-for f in DiffTests.NUMBER_TO_ARRAY_FUNCS
-    println("  ...testing $f")
+@testset "$f(x::Number)::Array" for f in DiffTests.NUMBER_TO_ARRAY_FUNCS
     v = f(x)
     d = ForwardDiff.derivative(f, x)
 
@@ -47,8 +47,7 @@ for f in DiffTests.NUMBER_TO_ARRAY_FUNCS
     @test isapprox(DiffResults.derivative(out), d)
 end
 
-for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
-    println("  ...testing $f!")
+@testset "$f!(y::Vector, x::Number)" for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
     m, n = 3, 2
     y = fill(0.0, m, n)
     f = x -> (tmp = similar(y, promote_type(eltype(y), typeof(x)), m, n); f!(tmp, x); tmp)
@@ -87,6 +86,8 @@ for f! in DiffTests.INPLACE_NUMBER_TO_ARRAY_FUNCS
     @test isapprox(v, y)
     @test isapprox(DiffResults.value(out), v)
     @test isapprox(DiffResults.derivative(out), d)
+end
+
 end
 
 @testset "exponential function at base zero" begin

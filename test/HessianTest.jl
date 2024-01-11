@@ -23,8 +23,9 @@ h = [-66.0  -40.0    0.0;
      -40.0  130.0  -80.0;
        0.0  -80.0  200.0]
 
-for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
-    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
+@testset "hardcoded" begin
+
+@testset "chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
     cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}(), tag)
     resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}(), tag)
 
@@ -54,6 +55,8 @@ for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), elt
     @test isapprox(DiffResults.hessian(out), h)
 end
 
+end
+
 cfgx = ForwardDiff.HessianConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.hessian(f, x, cfgx)
 @test ForwardDiff.hessian(f, x, cfgx, Val{false}()) == ForwardDiff.hessian(f,x)
@@ -63,14 +66,16 @@ cfgx = ForwardDiff.HessianConfig(sin, x)
 # test vs. Calculus.jl #
 ########################
 
-for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
+@testset "Comparison vs Calculus.jl" begin
+
+@testset "$f(x::Vector)::Number" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     h = ForwardDiff.hessian(f, X)
     # finite difference approximation error is really bad for Hessians...
     @test isapprox(h, Calculus.hessian(f, X), atol=0.02)
-    for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
-        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
+
+    @testset "chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
         cfg = ForwardDiff.HessianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
         resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(X), X, ForwardDiff.Chunk{c}(), tag)
 
@@ -89,14 +94,14 @@ for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     end
 end
 
+end
+
 ##########################################
 # test specialized StaticArray codepaths #
 ##########################################
 
-println("  ...testing specialized StaticArray codepaths")
-
 x = rand(3, 3)
-for T in (StaticArrays.SArray, StaticArrays.MArray)
+@testset "Specialized $T codepaths" for T in (StaticArrays.SArray, StaticArrays.MArray)
     sx = T{Tuple{3,3}}(x)
 
     cfg = ForwardDiff.HessianConfig(nothing, x)

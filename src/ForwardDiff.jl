@@ -5,7 +5,9 @@ using DiffResults: DiffResult, MutableDiffResult
 using Preferences
 using Random
 using LinearAlgebra
+using SparseArrays
 using Base: require_one_based_indexing
+
 import Printf
 import NaNMath
 import SpecialFunctions
