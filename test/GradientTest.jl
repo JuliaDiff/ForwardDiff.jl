@@ -168,7 +168,7 @@ end
     function f(p)
         sum(collect(0.0:p[1]:p[2]))
     end
-    @test ForwardDiff.gradient(f, [0.2,25.0]) == [7875.0, 0.0]
+    @test ForwardDiff.gradient(f, [0.3, 25.0]) == [3486.0, 0.0]
 end
 
 @testset "det with branches" begin
