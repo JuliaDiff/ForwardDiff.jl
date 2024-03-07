@@ -21,7 +21,7 @@ jobs:
           - '1.0'
           - '1.6'
           - '1'
-          - 'nightly'
+          # - 'nightly'
         os:
           - ubuntu-latest
         arch:
