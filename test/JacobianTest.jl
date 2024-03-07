@@ -103,11 +103,10 @@ for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag)
+    @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag)
         if tag == Tag
             tag = Tag(f, eltype(X))
         end
-        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
         cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.jacobian(f, X, cfg)
@@ -129,8 +128,7 @@ for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     f!(v, X)
     j = ForwardDiff.jacobian(f!, fill!(similar(Y), 0.0), X)
     @test isapprox(j, Calculus.jacobian(x -> (y = fill!(similar(Y), 0.0); f!(y, x); vec(y)), X, :forward), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
-        println("  ...testing $(f!) with chunk size = $c and tag = $(repr(tag))")
+    @testset "$(f!) with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
         ycfg = JacobianConfig(f!, fill!(similar(Y), 0.0), X, ForwardDiff.Chunk{c}(), tag)
 
         y = fill!(similar(Y), 0.0)
@@ -164,7 +162,7 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
-println("  ...testing specialized StaticArray codepaths")
+@info "testing specialized StaticArray codepaths"
 
 x = rand(3, 3)
 for T in (StaticArrays.SArray, StaticArrays.MArray)

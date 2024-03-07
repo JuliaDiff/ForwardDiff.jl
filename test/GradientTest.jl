@@ -21,7 +21,6 @@ v = f(x)
 g = [-9.4, 15.6, 52.0]
 
 @testset "Rosenbrock, chunk size = $c and tag = $(repr(tag))" for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
-    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
     @test eltype(cfg) == Dual{typeof(tag), eltype(x), c}
@@ -60,8 +59,7 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
-        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
+    @testset "... with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
         cfg = ForwardDiff.GradientConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.gradient(f, X, cfg)
@@ -82,9 +80,7 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
-println("  ...testing specialized StaticArray codepaths")
-
-@testset "$T" for T in (StaticArrays.SArray, StaticArrays.MArray)
+@testset "Specialized StaticArray codepaths: $T" for T in (StaticArrays.SArray, StaticArrays.MArray)
     x = rand(3, 3)
 
     sx = T{Tuple{3,3}}(x)
@@ -193,7 +189,7 @@ end
 
     # And issue 407
     @test ForwardDiff.hessian(det, A) ≈ ForwardDiff.hessian(det2, A)
-    
+
     # https://discourse.julialang.org/t/forwarddiff-and-zygote-return-wrong-jacobian-for-log-det-l/77961
     S = [1.0 0.8; 0.8 1.0]
     L = cholesky(S).L
