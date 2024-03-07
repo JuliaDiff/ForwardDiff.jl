@@ -31,7 +31,7 @@ LogExpFunctions = "0.3"
 NaNMath = "1"
 Preferences = "1"
 SpecialFunctions = "1, 2"
-StaticArrays = "1.5"
+StaticArrays = "1.5 - 1.6"
 julia = "1.6"
 
 [extras]

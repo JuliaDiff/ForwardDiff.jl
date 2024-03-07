@@ -19,7 +19,7 @@ jobs:
         version:
           - '1.6'
           - '1'
-          - 'nightly'
+          # - 'nightly'
         os:
           - ubuntu-latest
         arch:
