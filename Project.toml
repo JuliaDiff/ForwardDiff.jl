@@ -1,6 +1,6 @@
 name = "ForwardDiff"
 uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.11-DEV"
+version = "0.11.0-DEV"
 
 [deps]
 CommonSubexpressions = "bbf7d656-a473-5ed7-a52c-81e309532950"
@@ -27,7 +27,7 @@ CommonSubexpressions = "0.3"
 DiffResults = "1.1"
 DiffRules = "1.4"
 DiffTests = "0.1"
-IrrationalConstants = "0.1"
+IrrationalConstants = "0.1, 0.2"
 LogExpFunctions = "0.3"
 NaNMath = "1"
 Preferences = "1"
