@@ -141,6 +141,22 @@ let i, j
     end
 end
 
+# AbstractIrrational numbers #
+#----------------------------#
+
+for N in (0,3), V in (Int, Float32), I in (Irrational, AbstractIrrational)
+    PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), N))
+    PRIMAL = intrand(V)
+    FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS)
+    
+    @test promote_rule(typeof(FDNUM), I) == promote_rule(I, typeof(FDNUM))
+    # π::Irrational, twoπ::AbstractIrrational
+    for IRR in (π, twoπ)
+        val_dual, val_irr = promote(FDNUM, IRR)
+        @test (val_irr, val_dual) == promote(IRR, FDNUM)
+    end
+end
+
 ########
 # misc #
 ########
