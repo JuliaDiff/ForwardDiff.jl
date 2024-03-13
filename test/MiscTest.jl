@@ -6,6 +6,7 @@ using Test
 using ForwardDiff
 using DiffTests
 using SparseArrays: sparse
+using IrrationalConstants
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -138,6 +139,24 @@ h = ForwardDiff.hessian(y -> sum(hypot.(x, y)), y)
 let i, j
     for i in 1:3, j in 1:3
         i != j && @test h[i, j] ≈ 0.0
+    end
+end
+
+# AbstractIrrational numbers #
+#----------------------------#
+struct TestTag end
+intrand(V) = V == Int ? rand(2:10) : rand(V)
+
+for N in (0,3), V in (Int, Float32), I in (Irrational, AbstractIrrational)
+    PARTIALS = ForwardDiff.Partials{N,V}(ntuple(n -> intrand(V), N))
+    PRIMAL = intrand(V)
+    FDNUM = ForwardDiff.Dual{TestTag()}(PRIMAL, PARTIALS)
+    
+    @test promote_rule(typeof(FDNUM), I) == promote_rule(I, typeof(FDNUM))
+    # π::Irrational, twoπ::AbstractIrrational
+    for IRR in (π, twoπ)
+        val_dual, val_irr = promote(FDNUM, IRR)
+        @test (val_irr, val_dual) == promote(IRR, FDNUM)
     end
 end
 
