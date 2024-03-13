@@ -51,5 +51,15 @@ Random.seed!(SEED)
         t = @elapsed include("AllocationsTest.jl")
         println("##### done (took $t seconds).")
     end
+    @testset "Complex" begin
+        println("##### Testing complex...")
+        t = @elapsed include("ComplexTest.jl")
+        println("##### done (took $t seconds).")
+    end
+    @testset "FFT" begin
+        println("##### Testing fft...")
+        t = @elapsed include("FFTTest.jl")
+        println("##### done (took $t seconds).")
+    end
     println("##### Running all ForwardDiff tests took $(time() - t0) seconds.")
 end
