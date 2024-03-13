@@ -415,7 +415,7 @@ function Base.promote_rule(::Type{Dual{T,A,N}},
     return Dual{T,promote_type(A, B),N}
 end
 
-for R in (Irrational, Real, BigFloat, Bool)
+for R in (AbstractIrrational, Real, BigFloat, Bool)
     if isconcretetype(R) # issue #322
         @eval begin
             Base.promote_rule(::Type{$R}, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T,promote_type($R, V),N}
