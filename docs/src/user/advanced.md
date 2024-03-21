@@ -261,3 +261,47 @@ want to disable this checking.
    cfg = GradientConfig(nothing, x)
    gradient(f, x, cfg)
    ```
+
+## Manually Seeding Dual Numbers
+
+In some cases you may want to manually seed the `Dual` numbers and directly
+send these to a function. This can be useful for example if said function does
+not return a scalar or vector but still has a useful interpretation of a derivative.
+
+Let's say we had a vector `x=[1.0,1.5,3.0,1.0]` and wanted to take the derivative
+of some algorithm with respect to each value. Since we are taking 4 different
+derivatives, we will have 4 separate partials. For each partial, we seed a
+`1.0` at the source of the value, and a zero everywhere else. The Dual seeded
+version of this vector would thus be:
+
+```julia
+using ForwardDiff: Dual
+struct MyTag end # Unique tag for the Duals
+x1dual = Dual{MyTag}(1.0, (1.0, 0.0, 0.0, 0.0))
+x2dual = Dual{MyTag}(1.5, (0.0, 1.0, 0.0, 0.0))
+x3dual = Dual{MyTag}(3.0, (0.0, 0.0, 1.0, 0.0))
+x4dual = Dual{MyTag}(1.0, (0.0, 0.0, 0.0, 1.0))
+xdual = [x1dual, x2dual, x3dual, x4dual]
+```
+
+Calculations using `xdual` instead of `x` will result in `Dual` numbers and the
+partial terms will be the derivative with respect to `x[i]`. Most conversions
+will happen automatically, but you may need to convert other inputs into the
+function to zero-seeded duals, and this can be done by simply calling
+`convert(eltype(p),y)` on a scalar `y` (or broadcasting this conversion).
+
+As a convenience, to seed a vector with unique partials for the size of the
+vector you can use the `seed_duals` function. Thus the following is equivalent
+to the code above:
+
+```julia
+xdual = ForwardDiff.seed_duals(x,MyTag)
+```
+
+After the calculations are done, the value and derivative of the calculation
+can be extracted using the following:
+
+```julia
+y.value # Returns the value, i.e. what would've been produced without Duals
+y.partials[i] # Returns the derivative of the value w.r.t. the ith variable
+```
