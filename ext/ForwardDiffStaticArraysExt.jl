@@ -105,7 +105,7 @@ end
     T = typeof(Tag(f, eltype(x)))
     ydual = static_dual_eval(T, f, x)
     result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
-    result = DiffResults.value!(d -> value(T,d), result, ydual)
+    result = DiffResults.value!(Base.Fix1(value,T), result, ydual)
     return result
 end
 
