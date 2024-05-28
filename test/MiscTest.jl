@@ -8,6 +8,7 @@ using DiffTests
 using SparseArrays: sparse
 using StaticArrays
 using IrrationalConstants
+using LinearAlgebra
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
