@@ -239,8 +239,12 @@ end
     @test ForwardDiff.jacobian(ev1, x0) ≈ Calculus.finite_difference_jacobian(ev1, x0)
     ev2(x) = eigen(SymTridiagonal(x, x[1:end-1])).vectors[:,1]
     @test ForwardDiff.jacobian(ev2, x0) ≈ Calculus.finite_difference_jacobian(ev2, x0)
-    x0_static = SVector{2}(x0)
-    @test ForwardDiff.jacobian(ev1, x0_static) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+
+    x0_svector = SVector{2}(x0)
+    @test ForwardDiff.jacobian(ev1, x0_svector) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+
+    x0_mvector = MVector{2}(x0)
+    @test ForwardDiff.jacobian(ev1, x0_mvector) ≈ Calculus.finite_difference_jacobian(ev1, x0)
 end
 
 @testset "type stability" begin

@@ -702,7 +702,11 @@ end
 # Symmetric eigvals #
 #-------------------#
 
-function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+# To be able to reuse this default definition in the StaticArrays extension
+# (has to be re-defined to avoid method ambiguity issues)
+# we forward the call to an internal method that can be shared and reused
+LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigvals(A)
+function _eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ,Q = eigen(Symmetric(value.(parent(A))))
     parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
     Dual{Tg}.(λ, tuple.(parts...))
@@ -720,8 +724,19 @@ function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:R
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
-# A ./ (λ - λ') but with diag special cased
-function _lyap_div!(A, λ)
+# A ./ (λ' .- λ) but with diag special cased
+# Default out-of-place method
+function _lyap_div!!(A::AbstractMatrix, λ::AbstractVector)
+    return map(
+        (a, b, idx) -> a / (idx[1] == idx[2] ? oneunit(b) : b),
+        A,
+        λ' .- λ,
+        CartesianIndices(A),
+    )
+end
+# For `Matrix` (and e.g. `StaticArrays.MMatrix`) we can use an in-place method
+_lyap_div!!(A::Matrix, λ::AbstractVector) = _lyap_div!(A, λ)
+function _lyap_div!(A::AbstractMatrix, λ::AbstractVector)
     for (j,μ) in enumerate(λ), (k,λ) in enumerate(λ)
         if k ≠ j
             A[k,j] /= μ - λ
@@ -730,17 +745,21 @@ function _lyap_div!(A, λ)
     A
 end
 
-function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+# To be able to reuse this default definition in the StaticArrays extension
+# (has to be re-defined to avoid method ambiguity issues)
+# we forward the call to an internal method that can be shared and reused
+LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen(A)
+function _eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
 function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(SymTridiagonal(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 

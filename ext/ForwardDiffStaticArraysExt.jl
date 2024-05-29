@@ -7,7 +7,7 @@ using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
                    vector_mode_gradient, vector_mode_gradient!,
-                   vector_mode_jacobian, vector_mode_jacobian!, valtype, value, _lyap_div!
+                   vector_mode_jacobian, vector_mode_jacobian!, valtype, value
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
@@ -23,18 +23,16 @@ end
 
 @inline static_dual_eval(::Type{T}, f, x::StaticArray) where T = f(dualize(T, x))
 
+# To fix method ambiguity issues:
 function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
-    λ,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
-    Dual{Tg}.(λ, tuple.(parts...))
+    return ForwardDiff._eigvals(A)
+end
+function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
+    return ForwardDiff._eigen(A)
 end
 
-function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
-    λ = eigvals(A)
-    _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*ForwardDiff._lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
-    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
-end
+# For `MMatrix` we can use the in-place method
+ForwardDiff._lyap_div!!(A::StaticArrays.MMatrix, λ::AbstractVector) = ForwardDiff._lyap_div!(A, λ)
 
 # Gradient
 @inline ForwardDiff.gradient(f::F, x::StaticArray) where F                      = vector_mode_gradient(f, x)
