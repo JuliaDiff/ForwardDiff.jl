@@ -11,7 +11,8 @@ makedocs(modules=[ForwardDiff],
                     "Upgrading from Older Versions" => "user/upgrade.md"],
                   "Developer Documentation" => [
                     "How ForwardDiff Works" => "dev/how_it_works.md",
-                    "How to Contribute" => "dev/contributing.md"]])
+                    "How to Contribute" => "dev/contributing.md"]],
+         checkdocs=:exports)
 
 deploydocs(
     repo = "github.com/JuliaDiff/ForwardDiff.jl.git"
