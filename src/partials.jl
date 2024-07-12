@@ -1,6 +1,10 @@
 struct Partials{N,V} <: AbstractVector{V}
     values::NTuple{N,V}
+    Partials{N,V}(values) where {N,V} = new{N,V}(values)
 end
+
+# `V` is unbound if `values` is empty, so we don't support empty tuples here
+Partials(values::Tuple{V,Vararg{V, N}}) where {N,V} = Partials{N + 1,V}(values)
 
 ##############################
 # Utility/Accessor Functions #
@@ -163,8 +167,8 @@ end
 @inline rand_tuple(::AbstractRNG, ::Type{Tuple{}}) = tuple()
 @inline rand_tuple(::Type{Tuple{}}) = tuple()
 
-@generated function iszero_tuple(tup::NTuple{N,V}) where {N,V}
-    ex = Expr(:&&, [:(z == tup[$i]) for i=1:N]...)
+@generated function iszero_tuple(tup::Tuple{V,Vararg{V,N}}) where {N,V}
+    ex = Expr(:&&, [:(z == tup[$i]) for i=1:(N + 1)]...)
     return quote
         z = zero(V)
         $(Expr(:meta, :inline))
@@ -172,28 +176,28 @@ end
     end
 end
 
-@generated function zero_tuple(::Type{NTuple{N,V}}) where {N,V}
-    ex = tupexpr(i -> :(z), N)
+@generated function zero_tuple(::Type{Tuple{V,Vararg{V,N}}}) where {N,V}
+    ex = tupexpr(i -> :(z), N + 1)
     return quote
         z = zero(V)
         return $ex
     end
 end
 
-@generated function one_tuple(::Type{NTuple{N,V}}) where {N,V}
-    ex = tupexpr(i -> :(z), N)
+@generated function one_tuple(::Type{Tuple{V,Vararg{V,N}}}) where {N,V}
+    ex = tupexpr(i -> :(z), N + 1)
     return quote
         z = one(V)
         return $ex
     end
 end
 
-@generated function rand_tuple(rng::AbstractRNG, ::Type{NTuple{N,V}}) where {N,V}
-    return tupexpr(i -> :(rand(rng, V)), N)
+@generated function rand_tuple(rng::AbstractRNG, ::Type{Tuple{V,Vararg{V,N}}}) where {N,V}
+    return tupexpr(i -> :(rand(rng, V)), N + 1)
 end
 
-@generated function rand_tuple(::Type{NTuple{N,V}}) where {N,V}
-    return tupexpr(i -> :(rand(V)), N)
+@generated function rand_tuple(::Type{Tuple{V,Vararg{V,N}}}) where {N,V}
+    return tupexpr(i -> :(rand(V)), N + 1)
 end
 
 @generated function scale_tuple(tup::NTuple{N}, x) where N

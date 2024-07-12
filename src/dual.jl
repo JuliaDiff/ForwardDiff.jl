@@ -66,17 +66,26 @@ end
 
 @inline Dual{T}(value, partials::Tuple) where {T} = Dual{T}(value, Partials(partials))
 @inline Dual{T}(value, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
-@inline Dual{T}(value) where {T} = Dual{T}(value, ())
+@inline Dual{T}(value::Number) where {T} = Dual{T}(value, ())
 @inline Dual{T}(x::Dual{T}) where {T} = Dual{T}(x, ())
 @inline Dual{T}(value, partial1, partials...) where {T} = Dual{T}(value, tuple(partial1, partials...))
 @inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
-@inline Dual(args...) = Dual{Nothing}(args...)
+
+@inline Dual(x::Dual) = x
+@inline Dual(x::Number, args...) = Dual{Nothing}(x, args...)
 
 # we define these special cases so that the "constructor <--> convert" pun holds for `Dual`
 @inline Dual{T,V,N}(x::Dual{T,V,N}) where {T,V,N} = x
-@inline Dual{T,V,N}(x) where {T,V,N} = convert(Dual{T,V,N}, x)
 @inline Dual{T,V,N}(x::Number) where {T,V,N} = convert(Dual{T,V,N}, x)
-@inline Dual{T,V}(x) where {T,V} = convert(Dual{T,V}, x)
+
+@inline Dual{T,V}(x::Dual{T,V}) where {T,V} = x
+@inline Dual{T,V}(x::Number) where {T,V} = convert(Dual{T,V}, x)
+
+# Complex values are not supported
+Dual(::Complex) = throw(ArgumentError("Dual numbers do not support complex values"))
+Dual{T}(::Complex) where {T} = throw(ArgumentError("Dual numbers do not support complex values"))
+Dual{T,V}(::Complex) where {T,V} = throw(ArgumentError("Dual numbers do not support complex values"))
+Dual{T,V,N}(::Complex) where {T,V,N} = throw(ArgumentError("Dual numbers do not support complex values"))
 
 ##############################
 # Utility/Accessor Functions #
@@ -463,7 +472,6 @@ for R in (AbstractIrrational, Real, BigFloat, Bool)
 end
 
 @inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(d)), convert(Partials{N,V}, partials(d)))
-@inline Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 @inline Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
 
@@ -831,3 +839,8 @@ for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
 end
 
 Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
+
+# Resolve ambiguity issues
+# These definitions are separate to 1) improve on the generic definitions above and 2) reduce the number of method definitions
+Base.:^(::Irrational{:ℯ}, x::Dual{T}) where {T} = exp(x)
+Base.log(::Irrational{:ℯ}, x::Dual{T}) where {T} = log(x)
