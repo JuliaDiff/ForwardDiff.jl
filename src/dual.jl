@@ -353,7 +353,9 @@ end
 @inline Base.zero(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(zero(V), zero(Partials{N,V}))
 
 @inline Base.one(d::Dual) = one(typeof(d))
-@inline Base.one(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(one(V), zero(Partials{N,V}))
+@inline Base.oneunit(d::Dual) = oneunit(typeof(d))
+@inline Base.one(::Type{Dual{T,V,N}}) where {T,V,N} = one(V)
+@inline Base.oneunit(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(oneunit(V), zero(Partials{N,V}))
 
 @inline function Base.Int(d::Dual)
     all(iszero, partials(d)) || throw(InexactError(:Int, Int, d))
