@@ -384,16 +384,30 @@ end
 # Before PR#481 this loop ran over this list:
 # BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
-for pred in [:isless, :<, :>, :(<=), :(>=)]
+for pred in [:<, :>]
+    predeq = Symbol(pred, :(=))
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
-            $(pred)(value(x), value(y)),
-            $(pred)(value(x), y),
-            $(pred)(x, value(y)),
+            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(pred)(partials(x), partials(y))),
+            $(pred)(value(x), y) || (value(x) == y && $(pred)(partials(x), zero(partials(x)))),
+            $(pred)(x, value(y)) || (x == value(y) && $(pred)(zero(partials(y)), partials(y))),
+        )
+        @define_binary_dual_op(
+            Base.$(predeq),
+            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(predeq)(partials(x), partials(y))),
+            $(pred)(value(x), y) || (value(x) == y && $(predeq)(partials(x), zero(partials(x)))),
+            $(pred)(x, value(y)) || (x == value(y) && $(predeq)(zero(partials(y)), partials(y))),
         )
     end
 end
+
+@define_binary_dual_op(
+    Base.isless,
+    isless(value(x), value(y)) || (isequal(value(x), value(y)) && isless(partials(x), partials(y))),
+    isless(value(x), y)        || (isequal(value(x), y) && isless(partials(x), zero(partials(x)))),
+    isless(x, value(y))        || (isequal(x, value(y)) && isless(zero(partials(y)), partials(y))),
+)
 
 Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
 
