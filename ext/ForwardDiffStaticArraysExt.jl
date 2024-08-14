@@ -10,6 +10,10 @@ using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig
                    vector_mode_jacobian, vector_mode_jacobian!, valtype, value
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 
+_chunk(::Length{l}, s::StaticArray) where {l} = Chunk{l}()
+
+ForwardDiff.Chunk(s::StaticArray) = _chunk(Length(s), s)
+
 @generated function dualize(::Type{T}, x::StaticArray) where T
     N = length(x)
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)

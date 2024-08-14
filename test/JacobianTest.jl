@@ -222,6 +222,9 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.jacobian(sresult1) == DiffResults.jacobian(result)
     @test DiffResults.jacobian(sresult2) == DiffResults.jacobian(result)
     @test DiffResults.jacobian(sresult3) == DiffResults.jacobian(result)
+
+    # make sure this is not a source of type instability
+    @inferred ForwardDiff.JacobianConfig(f, sx)
 end
 
 #########
