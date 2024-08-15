@@ -7,11 +7,9 @@ const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isr
 
 struct Chunk{N} end
 
-const CHUNKS = [Chunk{i}() for i in 1:DEFAULT_CHUNK_THRESHOLD]
-
 function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     N = pickchunksize(input_length, threshold)
-    0 < N <= DEFAULT_CHUNK_THRESHOLD && return CHUNKS[N]
+    0 < N <= DEFAULT_CHUNK_THRESHOLD && return Chunk{N}()
     return Chunk{N}()
 end
 
