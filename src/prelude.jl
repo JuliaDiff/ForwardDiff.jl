@@ -9,7 +9,6 @@ struct Chunk{N} end
 
 function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     N = pickchunksize(input_length, threshold)
-    0 < N <= DEFAULT_CHUNK_THRESHOLD && return Chunk{N}()
     return Chunk{N}()
 end
 
