@@ -9,7 +9,7 @@ struct Chunk{N} end
 
 function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     N = pickchunksize(input_length, threshold)
-    return Chunk{N}()
+    Base.@nif 12 d->(N == d) d->(Chunk{d}()) d->(Chunk{N}())
 end
 
 function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
