@@ -160,6 +160,13 @@ end
     @test isempty(g_grad_const(zeros(Float64, 0)))
 end
 
+# chunk now takes Val, but this was added to avoid API breakage
+# the constructor does not otherwise get tested
+@testset "chunk constructor methods" begin
+    @test ForwardDiff.Chunk([1.0], 10) == ForwardDiff.Chunk{1}()
+    @test ForwardDiff.Chunk(ones(10), 4) == ForwardDiff.Chunk{4}()
+end
+
 @testset "dimension errors for gradient" begin
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, 2pi) # input
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 2)) # vector_mode_gradient
