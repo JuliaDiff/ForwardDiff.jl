@@ -17,6 +17,10 @@ function Chunk(::Val{input_length}, ::Val{threshold} = DEFAULT_CHUNK_THRESHOLD) 
     return Chunk{N}()
 end
 
+function Chunk(input_length::Integer, threshold::Integer = _getval(DEFAULT_CHUNK_THRESHOLD))
+    return Chunk(Val(input_length), Val(threshold))
+end
+
 function Chunk(x::AbstractArray, ::Val{threshold} = DEFAULT_CHUNK_THRESHOLD) where {threshold}
     return Chunk(length(x), threshold)
 end
