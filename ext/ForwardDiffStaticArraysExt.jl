@@ -10,16 +10,20 @@ using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig
                    vector_mode_jacobian, vector_mode_jacobian!, valtype, value
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 
-_chunk(::Length{l}, s::StaticArray) where {l} = Chunk{l}()
+_get_length_val(::Length{l}) where {l} = Val(l)
 
-ForwardDiff.Chunk(s::StaticArray) = _chunk(Length(s), s)
+function ForwardDiff.Chunk(x::StaticArray, th::Val{threshold}=ForwardDiff.DEFAULT_CHUNK_THRESHOLD) where {threshold}
+    return Chunk(_get_length_val(Length(x)), th)
+end
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
     N = length(x)
     dx = Expr(:tuple, [:(Dual{T}(x[$i], chunk, Val{$i}())) for i in 1:N]...)
     V = StaticArrays.similar_type(x, Dual{T,eltype(x),N})
     return quote
-        chunk = Chunk{$N}()
+        # if stars all align this should be type stable,
+        # we do this instead of Chunk{N}() because this should respect global limit
+        chunk = Chunk(x)
         $(Expr(:meta, :inline))
         return $V($(dx))
     end

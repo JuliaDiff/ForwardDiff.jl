@@ -1,5 +1,5 @@
 const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
-const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
+const DEFAULT_CHUNK_THRESHOLD = Val(@load_preference("default_chunk_threshold", 12))
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
@@ -7,22 +7,26 @@ const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isr
 
 struct Chunk{N} end
 
-const CHUNKS = [Chunk{i}() for i in 1:DEFAULT_CHUNK_THRESHOLD]
+const CHUNKS = ntuple(j -> Chunk{j}(), DEFAULT_CHUNK_THRESHOLD)
 
-function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
-    N = pickchunksize(input_length, threshold)
-    0 < N <= DEFAULT_CHUNK_THRESHOLD && return CHUNKS[N]
+_getval(::Val{n}) where {n} = n
+
+function Chunk(::Val{input_length}, ::Val{threshold} = DEFAULT_CHUNK_THRESHOLD) where {input_length, threshold}
+    N = pickchunksize(Val(input_length), Val(threshold))
+    0 < N <= _getval(DEFAULT_CHUNK_THRESHOLD) && return CHUNKS[N]
     return Chunk{N}()
 end
 
-function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
+function Chunk(x::AbstractArray, ::Val{threshold} = DEFAULT_CHUNK_THRESHOLD) where {threshold}
     return Chunk(length(x), threshold)
 end
+
+Chunk(x::AbstractArray, threshold::Integer) = Chunk(x, Val(threshold))
 
 # Constrained to `N <= threshold`, minimize (in order of priority):
 #   1. the number of chunks that need to be computed
 #   2. the number of "left over" perturbations in the final chunk
-function pickchunksize(input_length, threshold = DEFAULT_CHUNK_THRESHOLD)
+function pickchunksize(::Val{input_length}, ::Val{threshold} = DEFAULT_CHUNK_THRESHOLD) where {input_length, threshold}
     if input_length <= threshold
         return input_length
     else
