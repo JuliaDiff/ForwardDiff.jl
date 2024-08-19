@@ -135,6 +135,9 @@ end
     @test DiffResults.gradient(sresult1) == DiffResults.gradient(result)
     @test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
     @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
+
+    # make sure this is not a source of type instability
+    @inferred ForwardDiff.GradientConfig(f, sx)
 end
 
 @testset "exponential function at base zero" begin
