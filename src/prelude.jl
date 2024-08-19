@@ -14,12 +14,9 @@ const BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=),
 
 struct Chunk{N} end
 
-const CHUNKS = [Chunk{i}() for i in 1:DEFAULT_CHUNK_THRESHOLD]
-
 function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     N = pickchunksize(input_length, threshold)
-    0 < N <= DEFAULT_CHUNK_THRESHOLD && return CHUNKS[N]
-    return Chunk{N}()
+    Base.@nif 12 d->(N == d) d->(Chunk{d}()) d->(Chunk{N}())
 end
 
 function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)

@@ -224,6 +224,9 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.jacobian(sresult1) == DiffResults.jacobian(result)
     @test DiffResults.jacobian(sresult2) == DiffResults.jacobian(result)
     @test DiffResults.jacobian(sresult3) == DiffResults.jacobian(result)
+
+    # make sure this is not a source of type instability
+    @inferred ForwardDiff.JacobianConfig(f, sx)
 end
 
 @testset "dimension errors for jacobian" begin
@@ -235,7 +238,7 @@ end
 @testset "eigen" begin
     @test ForwardDiff.jacobian(x -> eigvals(SymTridiagonal(x, x[1:end-1])), [1.,2.]) ≈ [(1 - 3/sqrt(5))/2 (1 - 1/sqrt(5))/2 ; (1 + 3/sqrt(5))/2 (1 + 1/sqrt(5))/2]
     @test ForwardDiff.jacobian(x -> eigvals(Symmetric(x*x')), [1.,2.]) ≈ [0 0; 2 4]
-    
+
     x0 = [1.0, 2.0];
     ev1(x) = eigen(Symmetric(x*x')).vectors[:,1]
     @test ForwardDiff.jacobian(ev1, x0) ≈ Calculus.finite_difference_jacobian(ev1, x0)
