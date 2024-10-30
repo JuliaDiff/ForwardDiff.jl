@@ -667,4 +667,8 @@ end
     @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
 end
 
+@testset "TwicePrecision" begin
+    @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
+end
+
 end # module
