@@ -637,6 +637,8 @@ end
     @test typeof(dfmax) === typeof(d1)
     @test isfinite(dfmin)
     @test isfinite(dfmax)
+
+  @test floatmin(Dual{Nothing, ForwardDiff.Dual{Nothing, Float64, 2}, 1}) === Dual{Nothing}(Dual{Nothing}(floatmin(Float64),0.0,0.0),Dual{Nothing}(0.0,0.0,0.0))
 end
 
 @testset "Integer" begin
