@@ -78,6 +78,10 @@ end
 @inline Dual{T,V,N}(x::Number) where {T,V,N} = convert(Dual{T,V,N}, x)
 @inline Dual{T,V}(x) where {T,V} = convert(Dual{T,V}, x)
 
+# Fix method ambiguity issue by adapting the definition in Base to `Dual`s
+Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
+    (Dual{T,V,N}(x.hi) + Dual{T,V,N}(x.lo))::Dual{T,V,N}
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
