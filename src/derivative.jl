@@ -22,8 +22,9 @@ stored in `y`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-@inline function derivative(f!, y::AbstractArray, x::Real,
-                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+@inline function derivative(f!::F, y::AbstractArray, x::Real,
+                            cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
+    require_one_based_indexing(y)
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
@@ -42,6 +43,7 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
+    result isa DiffResult || require_one_based_indexing(result)
     T = typeof(Tag(f, R))
     ydual = f(Dual{T}(x, one(x)))
     result = extract_value!(T, result, ydual)
@@ -58,8 +60,9 @@ called as `f!(y, x)` where the result is stored in `y`.
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
-                             f!, y::AbstractArray, x::Real,
-                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {T, CHK}
+                             f!::F, y::AbstractArray, x::Real,
+                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
+    result isa DiffResult ? require_one_based_indexing(y) : require_one_based_indexing(result, y)
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
     seed!(ydual, y)
