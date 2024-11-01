@@ -552,43 +552,73 @@ end
 # exponentiation #
 #----------------#
 
-for f in (:(Base.:^), :(NaNMath.pow))
-    @eval begin
-        @define_binary_dual_op(
-            $f,
-            begin
-                vx, vy = value(x), value(y)
-                expv = ($f)(vx, vy)
-                powval = vy * ($f)(vx, vy - 1)
-                if isconstant(y)
-                    logval = one(expv)
-                elseif iszero(vx) && vy > 0
-                    logval = zero(vx)
-                else
-                    logval = expv * log(vx)
-                end
-                new_partials = _mul_partials(partials(x), partials(y), powval, logval)
-                return Dual{Txy}(expv, new_partials)
-            end,
-            begin
-                v = value(x)
-                expv = ($f)(v, y)
-                if y == zero(y) || iszero(partials(x))
-                    new_partials = zero(partials(x))
-                else
-                    new_partials = partials(x) * y * ($f)(v, y - 1)
-                end
-                return Dual{Tx}(expv, new_partials)
-            end,
-            begin
-                v = value(y)
-                expv = ($f)(x, v)
-                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*log(x)
-                return Dual{Ty}(expv, deriv * partials(y))
-            end
-        )
+@define_binary_dual_op(
+    Base.:^,
+    begin
+        vx, vy = value(x), value(y)
+        expv = (^)(vx, vy)
+        powval = vy * (^)(vx, vy - 1)
+        if isconstant(y)
+            logval = one(expv)
+        elseif iszero(vx) && vy > 0
+            logval = zero(vx)
+        else
+            logval = expv * log(vx)
+        end
+        new_partials = _mul_partials(partials(x), partials(y), powval, logval)
+        return Dual{Txy}(expv, new_partials)
+    end,
+    begin
+        v = value(x)
+        expv = (^)(v, y)
+        if y == zero(y) || iszero(partials(x))
+            new_partials = zero(partials(x))
+        else
+            new_partials = partials(x) * y * (^)(v, y - 1)
+        end
+        return Dual{Tx}(expv, new_partials)
+    end,
+    begin
+        v = value(y)
+        expv = (^)(x, v)
+        deriv = (iszero(x) && v > 0) ? zero(expv) : expv * log(x)
+        return Dual{Ty}(expv, deriv * partials(y))
     end
-end
+)
+
+@define_binary_dual_op(
+    NaNMath.pow,
+    begin
+        vx, vy = value(x), value(y)
+        expv = NaNMath.pow(vx, vy)
+        powval = vy * NaNMath.pow(vx, vy - 1)
+        if isconstant(y)
+            logval = one(expv)
+        elseif iszero(vx) && vy > 0
+            logval = zero(vx)
+        else
+            logval = expv * NaNMath.log(vx)
+        end
+        new_partials = _mul_partials(partials(x), partials(y), powval, logval)
+        return Dual{Txy}(expv, new_partials)
+    end,
+    begin
+        v = value(x)
+        expv = NaNMath.pow(v, y)
+        if y == zero(y) || iszero(partials(x))
+            new_partials = zero(partials(x))
+        else
+            new_partials = partials(x) * y * NaNMath.pow(v, y - 1)
+        end
+        return Dual{Tx}(expv, new_partials)
+    end,
+    begin
+        v = value(y)
+        expv = NaNMath.pow(x, v)
+        deriv = (iszero(x) && v > 0) ? zero(expv) : expv*NaNMath.log(x)
+        return Dual{Ty}(expv, deriv * partials(y))
+    end
+)
 
 @inline Base.literal_pow(::typeof(^), x::Dual{T}, ::Val{0}) where {T} =
     Dual{T}(one(value(x)), zero(partials(x)))
