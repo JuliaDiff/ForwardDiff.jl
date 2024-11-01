@@ -552,7 +552,7 @@ end
 # exponentiation #
 #----------------#
 
-for (f, log) in ((:(Base.:^), :(NaNMath.pow)), (:(NaNMath.pow), :(NaNMath.log)))
+for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
     @eval begin
         @define_binary_dual_op(
             $f,
