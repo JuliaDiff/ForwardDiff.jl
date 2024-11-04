@@ -201,7 +201,7 @@ end
     @test ForwardDiff.gradient(L -> logdet(L), Matrix(L)) ≈ [1.0 -1.3333333333333337; 0.0 1.666666666666667]
 end
 
-@testset "gradient for exponential with NaNMath"
+@testset "gradient for exponential with NaNMath" begin
     @test isnan(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[1]), [NaN, 1.0])[1])
     @test ForwardDiff.gradient(x -> NaNMath.pow(x[1], x[2]), [1.0, 1.0]) == [1.0, 0.0]
     @test isnan(ForwardDiff.gradient((x) -> NaNMath.pow(x[1], x[2]), [-1.0, 0.5])[1])
@@ -209,7 +209,6 @@ end
     @test isnan(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0])[1])
     @test ForwardDiff.gradient(x -> x[1]^x[2], [1.0, 1.0]) == [1.0, 0.0]
     @test_throws DomainError ForwardDiff.gradient(x -> x[1]^x[2], [-1.0, 0.5])
-
 end
 
 
