@@ -21,7 +21,6 @@ v = f(x)
 g = [-9.4, 15.6, 52.0]
 
 @testset "Rosenbrock, chunk size = $c and tag = $(repr(tag))" for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
-    println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tag))")
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
     @test eltype(cfg) == Dual{typeof(tag), eltype(x), c}
@@ -60,8 +59,7 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
-    for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
-        println("  ...testing $f with chunk size = $c and tag = $(repr(tag))")
+    @testset "... with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
         cfg = ForwardDiff.GradientConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.gradient(f, X, cfg)
@@ -82,9 +80,7 @@ end
 # test specialized StaticArray codepaths #
 ##########################################
 
-println("  ...testing specialized StaticArray codepaths")
-
-@testset "$T" for T in (StaticArrays.SArray, StaticArrays.MArray)
+@testset "Specialized StaticArray codepaths: $T" for T in (StaticArrays.SArray, StaticArrays.MArray)
     x = rand(3, 3)
 
     sx = T{Tuple{3,3}}(x)
@@ -140,6 +136,9 @@ println("  ...testing specialized StaticArray codepaths")
     @test DiffResults.gradient(sresult1) == DiffResults.gradient(result)
     @test DiffResults.gradient(sresult2) == DiffResults.gradient(result)
     @test DiffResults.gradient(sresult3) == DiffResults.gradient(result)
+
+    # make sure this is not a source of type instability
+    @inferred ForwardDiff.GradientConfig(f, sx)
 end
 
 @testset "exponential function at base zero" begin
@@ -172,7 +171,7 @@ end
     function f(p)
         sum(collect(0.0:p[1]:p[2]))
     end
-    @test ForwardDiff.gradient(f, [0.2,25.0]) == [7875.0, 0.0]
+    @test ForwardDiff.gradient(f, [0.3, 25.0]) == [3486.0, 0.0]
 end
 
 @testset "det with branches" begin
@@ -193,7 +192,7 @@ end
 
     # And issue 407
     @test ForwardDiff.hessian(det, A) ≈ ForwardDiff.hessian(det2, A)
-    
+
     # https://discourse.julialang.org/t/forwarddiff-and-zygote-return-wrong-jacobian-for-log-det-l/77961
     S = [1.0 0.8; 0.8 1.0]
     L = cholesky(S).L

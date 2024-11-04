@@ -78,6 +78,10 @@ end
 @inline Dual{T,V,N}(x::Number) where {T,V,N} = convert(Dual{T,V,N}, x)
 @inline Dual{T,V}(x) where {T,V} = convert(Dual{T,V}, x)
 
+# Fix method ambiguity issue by adapting the definition in Base to `Dual`s
+Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
+    (Dual{T,V,N}(x.hi) + Dual{T,V,N}(x.lo))::Dual{T,V,N}
+
 ##############################
 # Utility/Accessor Functions #
 ##############################
@@ -384,16 +388,30 @@ end
 # Before PR#481 this loop ran over this list:
 # BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
-for pred in [:isless, :<, :>, :(<=), :(>=)]
+for pred in [:<, :>]
+    predeq = Symbol(pred, :(=))
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
-            $(pred)(value(x), value(y)),
-            $(pred)(value(x), y),
-            $(pred)(x, value(y)),
+            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(pred)(partials(x), partials(y))),
+            $(pred)(value(x), y) || (value(x) == y && $(pred)(partials(x), zero(partials(x)))),
+            $(pred)(x, value(y)) || (x == value(y) && $(pred)(zero(partials(y)), partials(y))),
+        )
+        @define_binary_dual_op(
+            Base.$(predeq),
+            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(predeq)(partials(x), partials(y))),
+            $(pred)(value(x), y) || (value(x) == y && $(predeq)(partials(x), zero(partials(x)))),
+            $(pred)(x, value(y)) || (x == value(y) && $(predeq)(zero(partials(y)), partials(y))),
         )
     end
 end
+
+@define_binary_dual_op(
+    Base.isless,
+    isless(value(x), value(y)) || (isequal(value(x), value(y)) && isless(partials(x), partials(y))),
+    isless(value(x), y)        || (isequal(value(x), y) && isless(partials(x), zero(partials(x)))),
+    isless(x, value(y))        || (isequal(x, value(y)) && isless(zero(partials(y)), partials(y))),
+)
 
 Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
 
@@ -434,7 +452,7 @@ function Base.promote_rule(::Type{Dual{T,A,N}},
     return Dual{T,promote_type(A, B),N}
 end
 
-for R in (Irrational, Real, BigFloat, Bool)
+for R in (AbstractIrrational, Real, BigFloat, Bool)
     if isconcretetype(R) # issue #322
         @eval begin
             Base.promote_rule(::Type{$R}, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T,promote_type($R, V),N}
@@ -449,6 +467,7 @@ for R in (Irrational, Real, BigFloat, Bool)
 end
 
 @inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(d)), convert(Partials{N,V}, partials(d)))
+@inline Base.convert(::Type{Dual{T,Dual{T,V,M},N}}, d::Dual{T,V,M}) where {T,V,N,M} = Dual{T}(d, Partials{N,Dual{T,V,M}}(zero_tuple(NTuple{N,Dual{T,V,M}})))
 @inline Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 @inline Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d
@@ -719,7 +738,11 @@ end
 # Symmetric eigvals #
 #-------------------#
 
-function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+# To be able to reuse this default definition in the StaticArrays extension
+# (has to be re-defined to avoid method ambiguity issues)
+# we forward the call to an internal method that can be shared and reused
+LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigvals(A)
+function _eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ,Q = eigen(Symmetric(value.(parent(A))))
     parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
     Dual{Tg}.(λ, tuple.(parts...))
@@ -737,8 +760,19 @@ function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:R
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
-# A ./ (λ - λ') but with diag special cased
-function _lyap_div!(A, λ)
+# A ./ (λ' .- λ) but with diag special cased
+# Default out-of-place method
+function _lyap_div!!(A::AbstractMatrix, λ::AbstractVector)
+    return map(
+        (a, b, idx) -> a / (idx[1] == idx[2] ? oneunit(b) : b),
+        A,
+        λ' .- λ,
+        CartesianIndices(A),
+    )
+end
+# For `Matrix` (and e.g. `StaticArrays.MMatrix`) we can use an in-place method
+_lyap_div!!(A::Matrix, λ::AbstractVector) = _lyap_div!(A, λ)
+function _lyap_div!(A::AbstractMatrix, λ::AbstractVector)
     for (j,μ) in enumerate(λ), (k,λ) in enumerate(λ)
         if k ≠ j
             A[k,j] /= μ - λ
@@ -747,17 +781,21 @@ function _lyap_div!(A, λ)
     A
 end
 
-function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+# To be able to reuse this default definition in the StaticArrays extension
+# (has to be re-defined to avoid method ambiguity issues)
+# we forward the call to an internal method that can be shared and reused
+LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen(A)
+function _eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
 function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(SymTridiagonal(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 

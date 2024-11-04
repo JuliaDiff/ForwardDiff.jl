@@ -31,7 +31,6 @@ ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
 ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
 @testset "Dual{Z,$V,$N} and Dual{Z,Dual{Z,$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
-    println("  ...testing Dual{TestTag(),$V,$N} and Dual{TestTag(),Dual{TestTag(),$V,$M},$N}")
 
     PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL = intrand(V)
@@ -263,43 +262,53 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     end
 
     @test isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(2, PARTIALS2))
-    @test !(isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(1, PARTIALS2)))
+    @test isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(1, PARTIALS2)) === isless(PARTIALS, PARTIALS2)
+    @test !(isless(Dual{TestTag()}(1, PARTIALS), Dual{TestTag()}(1, PARTIALS)))
     @test !(isless(Dual{TestTag()}(2, PARTIALS), Dual{TestTag()}(1, PARTIALS2)))
 
     @test isless(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS2), NESTED_PARTIALS2))
-    @test !(isless(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)))
+    @test isless(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS2)) === isless(NESTED_PARTIALS, NESTED_PARTIALS2)
+    @test !(isless(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS)))
     @test !(isless(Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)))
 
     @test Dual{TestTag()}(1, PARTIALS) < Dual{TestTag()}(2, PARTIALS2)
-    @test !(Dual{TestTag()}(1, PARTIALS) < Dual{TestTag()}(1, PARTIALS2))
+    @test (Dual{TestTag()}(1, PARTIALS) < Dual{TestTag()}(1, PARTIALS2)) === (PARTIALS < PARTIALS2)
+    @test !(Dual{TestTag()}(1, PARTIALS) < Dual{TestTag()}(1, PARTIALS))
     @test !(Dual{TestTag()}(2, PARTIALS) < Dual{TestTag()}(1, PARTIALS2))
 
     @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS2), NESTED_PARTIALS2)
-    @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2))
+    @test (Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS < NESTED_PARTIALS2)
+    @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS))
     @test !(Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test Dual{TestTag()}(1, PARTIALS) <= Dual{TestTag()}(2, PARTIALS2)
-    @test Dual{TestTag()}(1, PARTIALS) <= Dual{TestTag()}(1, PARTIALS2)
+    @test (Dual{TestTag()}(1, PARTIALS) <= Dual{TestTag()}(1, PARTIALS2)) === (PARTIALS <= PARTIALS2)
+    @test Dual{TestTag()}(1, PARTIALS) <= Dual{TestTag()}(1, PARTIALS)
     @test !(Dual{TestTag()}(2, PARTIALS) <= Dual{TestTag()}(1, PARTIALS2))
 
     @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS2), NESTED_PARTIALS2)
-    @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)
+    @test (Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS <= NESTED_PARTIALS2)
+    @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS)
     @test !(Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test Dual{TestTag()}(2, PARTIALS) > Dual{TestTag()}(1, PARTIALS2)
-    @test !(Dual{TestTag()}(1, PARTIALS) > Dual{TestTag()}(1, PARTIALS2))
+    @test (Dual{TestTag()}(1, PARTIALS) > Dual{TestTag()}(1, PARTIALS2)) === (PARTIALS > PARTIALS2)
+    @test !(Dual{TestTag()}(1, PARTIALS) > Dual{TestTag()}(1, PARTIALS))
     @test !(Dual{TestTag()}(1, PARTIALS) > Dual{TestTag()}(2, PARTIALS2))
 
     @test Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)
-    @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2))
+    @test (Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS > NESTED_PARTIALS2)
+    @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS))
     @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test Dual{TestTag()}(2, PARTIALS) >= Dual{TestTag()}(1, PARTIALS2)
-    @test Dual{TestTag()}(1, PARTIALS) >= Dual{TestTag()}(1, PARTIALS2)
+    @test (Dual{TestTag()}(1, PARTIALS) >= Dual{TestTag()}(1, PARTIALS2)) === (PARTIALS >= PARTIALS2)
+    @test Dual{TestTag()}(1, PARTIALS) >= Dual{TestTag()}(1, PARTIALS)
     @test !(Dual{TestTag()}(1, PARTIALS) >= Dual{TestTag()}(2, PARTIALS2))
 
     @test Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)
-    @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS2), NESTED_PARTIALS2)
+    @test (Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS >= NESTED_PARTIALS2)
+    @test Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS)
     @test !(Dual{TestTag()}(Dual{TestTag()}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag()}(Dual{TestTag()}(2, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test isnan(Dual{TestTag()}(NaN, PARTIALS))
@@ -466,13 +475,12 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test abs(NESTED_FDNUM) === NESTED_FDNUM
 
     if V != Int
-        @testset "$f" for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
+        @testset "$(M).$(f) with $arity arguments" for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
             if f in (:/, :rem2pi)
                 continue  # Skip these rules
             elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
                 continue  # Skip rules for methods not defined in the current scope
             end
-            println("       ...auto-testing $(M).$(f) with $arity arguments")
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
                 modifier = if in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth))
@@ -629,6 +637,8 @@ end
     @test typeof(dfmax) === typeof(d1)
     @test isfinite(dfmin)
     @test isfinite(dfmax)
+
+  @test floatmin(Dual{Nothing, ForwardDiff.Dual{Nothing, Float64, 2}, 1}) === Dual{Nothing}(Dual{Nothing}(floatmin(Float64),0.0,0.0),Dual{Nothing}(0.0,0.0,0.0))
 end
 
 @testset "Integer" begin
@@ -657,6 +667,10 @@ end
     @test float(Dual(1)) isa Dual{Nothing, Float64, 0}
     @test value.(float.(Dual.(1:4, 2:5, 3:6))) isa Vector{Float64}
     @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
+end
+
+@testset "TwicePrecision" begin
+    @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
 end
 
 end # module
