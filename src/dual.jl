@@ -590,9 +590,6 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
     end
 end
 
-
-
-
 @inline Base.literal_pow(::typeof(^), x::Dual{T}, ::Val{0}) where {T} =
     Dual{T}(one(value(x)), zero(partials(x)))
 
