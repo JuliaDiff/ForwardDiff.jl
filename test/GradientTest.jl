@@ -211,7 +211,6 @@ end
     @test_throws DomainError ForwardDiff.gradient(x -> x[1]^x[2], [-1.0, 0.5])
 end
 
-
 @testset "branches in mul!" begin
     a, b = rand(3,3), rand(3,3)
 
