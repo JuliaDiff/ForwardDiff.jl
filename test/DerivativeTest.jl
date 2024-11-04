@@ -1,6 +1,7 @@
 module DerivativeTest
 
 import Calculus
+import NaNMath
 
 using Test
 using Random

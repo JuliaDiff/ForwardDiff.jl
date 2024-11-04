@@ -1,6 +1,7 @@
 module GradientTest
 
 import Calculus
+import NaNMath
 
 using Test
 using LinearAlgebra
