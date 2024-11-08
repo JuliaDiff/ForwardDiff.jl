@@ -1,6 +1,7 @@
 module GradientTest
 
 import Calculus
+import NaNMath
 
 using Test
 using ForwardDiff
@@ -166,6 +167,16 @@ end
         sum(collect(0.0:p[1]:p[2]))
     end
     @test ForwardDiff.gradient(f, [0.3, 25.0]) == [3486.0, 0.0]
+end
+
+@testset "gradient for exponential with NaNMath" begin
+    @test isnan(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[1]), [NaN, 1.0])[1])
+    @test ForwardDiff.gradient(x -> NaNMath.pow(x[1], x[2]), [1.0, 1.0]) == [1.0, 0.0]
+    @test isnan(ForwardDiff.gradient((x) -> NaNMath.pow(x[1], x[2]), [-1.0, 0.5])[1])
+
+    @test isnan(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0])[1])
+    @test ForwardDiff.gradient(x -> x[1]^x[2], [1.0, 1.0]) == [1.0, 0.0]
+    @test_throws DomainError ForwardDiff.gradient(x -> x[1]^x[2], [-1.0, 0.5])
 end
 
 end # module
