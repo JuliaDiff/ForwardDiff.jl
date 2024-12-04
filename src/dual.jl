@@ -238,12 +238,29 @@ function unary_dual_definition(M, f)
         val = $Mf(x)
         deriv = $(DiffRules.diffrule(M, f, :x))
     end)
-    return quote
+    real_diff_exp = quote
         @inline function $M.$f(d::$FD.Dual{T}) where T
             x = $FD.value(d)
             $work
             return $FD.dual_definition_retval(Val{T}(), val, deriv, $FD.partials(d))
         end
+    end
+    if (M, f) in ((:Base, :abs), (:Base, :abs2))
+        return real_diff_exp
+    else
+        complex_diff_expr = quote
+            @inline function $M.$f(d::Complex{$FD.Dual{T, V, N}}) where{T, V, N}
+                x = complex($FD.value(real(d)), $FD.value(imag(d)))
+                $work
+                re_deriv, im_deriv = reim(deriv)
+                re_partials = $FD.partials(real(d))
+                im_partials = $FD.partials(imag(d))
+                re_retval = $FD.dual_definition_retval(Val{T}(), real(val), re_deriv, re_partials, -im_deriv, im_partials)
+                im_retval = $FD.dual_definition_retval(Val{T}(), imag(val), im_deriv, re_partials, re_deriv, im_partials)
+                return complex(re_retval, im_retval)
+            end
+        end
+        return Expr(:block, real_diff_exp, complex_diff_expr)
     end
 end
 
@@ -725,6 +742,32 @@ end
 @inline function Base.sincos(d::Dual{T}) where T
     sd, cd = sincos(value(d))
     return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
+end
+
+function Base.sin(d::Complex{Dual{T, V, N}}) where{T, V, N}
+    FD = ForwardDiff
+    x = complex(FD.value(real(d)), FD.value(imag(d)))
+    val = sin(x)
+    deriv = cos(x)
+    re_deriv, im_deriv = reim(deriv)
+    re_partials = FD.partials(real(d))
+    im_partials = FD.partials(imag(d))
+    re_retval = FD.dual_definition_retval(Val{T}(), real(val), re_deriv, re_partials, -im_deriv, im_partials)
+    im_retval = FD.dual_definition_retval(Val{T}(), imag(val), im_deriv, re_partials, re_deriv, im_partials)
+    return complex(re_retval, im_retval)
+end
+
+function Base.cos(d::Complex{Dual{T, V, N}}) where{T, V, N}
+    FD = ForwardDiff
+    x = complex(FD.value(real(d)), FD.value(imag(d)))
+    val = cos(x)
+    deriv = -sin(x)
+    re_deriv, im_deriv = reim(deriv)
+    re_partials = FD.partials(real(d))
+    im_partials = FD.partials(imag(d))
+    re_retval = FD.dual_definition_retval(Val{T}(), real(val), re_deriv, re_partials, -im_deriv, im_partials)
+    im_retval = FD.dual_definition_retval(Val{T}(), imag(val), im_deriv, re_partials, re_deriv, im_partials)
+    return complex(re_retval, im_retval)
 end
 
 # sincospi #
