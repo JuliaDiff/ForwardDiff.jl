@@ -726,6 +726,22 @@ end
     Dual{Tz}(muladd(x, y, value(z)), partials(z))      # z_body
 )
 
+# inv(Complex) #
+#--------#
+
+function Base.inv(d::Complex{<:Dual{T}}) where{T}
+    FD = ForwardDiff
+    x = complex(FD.value(real(d)), FD.value(imag(d)))
+    val = inv(x)
+    deriv = - val * val
+    re_deriv, im_deriv = reim(deriv)
+    re_partials = FD.partials(real(d))
+    im_partials = FD.partials(imag(d))
+    re_retval = FD.dual_definition_retval(Val{T}(), real(val), re_deriv, re_partials, -im_deriv, im_partials)
+    im_retval = FD.dual_definition_retval(Val{T}(), imag(val), im_deriv, re_partials, re_deriv, im_partials)
+    return complex(re_retval, im_retval)
+end
+
 # sin/cos #
 #--------#
 
