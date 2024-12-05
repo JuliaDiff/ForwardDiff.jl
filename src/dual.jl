@@ -245,11 +245,11 @@ function unary_dual_definition(M, f)
             return $FD.dual_definition_retval(Val{T}(), val, deriv, $FD.partials(d))
         end
     end
-    if (M, f) in ((:Base, :abs), (:Base, :abs2))
+    if (M, f) in ((:Base, :abs), (:Base, :abs2), (:Base, :inv))
         return real_diff_exp
     else
         complex_diff_expr = quote
-            @inline function $M.$f(d::Complex{$FD.Dual{T, V, N}}) where{T, V, N}
+            @inline function $M.$f(d::Complex{<:$FD.Dual{T}}) where{T}
                 x = complex($FD.value(real(d)), $FD.value(imag(d)))
                 $work
                 re_deriv, im_deriv = reim(deriv)
@@ -760,7 +760,7 @@ end
     return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
 end
 
-function Base.sin(d::Complex{Dual{T, V, N}}) where{T, V, N}
+function Base.sin(d::Complex{<:Dual{T}}) where{T}
     FD = ForwardDiff
     x = complex(FD.value(real(d)), FD.value(imag(d)))
     val = sin(x)
@@ -773,7 +773,7 @@ function Base.sin(d::Complex{Dual{T, V, N}}) where{T, V, N}
     return complex(re_retval, im_retval)
 end
 
-function Base.cos(d::Complex{Dual{T, V, N}}) where{T, V, N}
+function Base.cos(d::Complex{<:Dual{T}}) where{T}
     FD = ForwardDiff
     x = complex(FD.value(real(d)), FD.value(imag(d)))
     val = cos(x)
