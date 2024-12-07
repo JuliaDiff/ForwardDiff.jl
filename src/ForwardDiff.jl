@@ -22,10 +22,6 @@ include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
 
-if !isdefined(Base, :get_extension)
-    include("../ext/ForwardDiffStaticArraysExt.jl")
-end
-
 export DiffResults
 
 end # module
