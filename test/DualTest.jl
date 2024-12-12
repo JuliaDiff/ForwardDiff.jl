@@ -679,6 +679,7 @@ end
     @test partials(x,1) == 2 + 5im
     @test partials(x,2) == 3 + 6im
     @test partials(x) == [2+5im,3+6im]
+    @test partials(x) isa Partials
     @test npartials(x) == npartials(typeof(x)) == 2
 end
 

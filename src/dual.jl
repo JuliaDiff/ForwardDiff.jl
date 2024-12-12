@@ -103,7 +103,7 @@ end
 @inline partials(x) = Partials{0,typeof(x)}(tuple())
 @inline partials(d::Dual) = d.partials
 @inline partials(d::Complex{<:Dual}, i) = complex(partials(real(d), i), partials(imag(d), i))
-@inline partials(d::Complex{<:Dual}) = complex.(partials(real(d)), partials(imag(d)))
+@inline partials(d::Complex{<:Dual}) = Partials(complex.(partials(real(d)).values, partials(imag(d)).values))
 @inline partials(x, i...) = zero(x)
 @inline Base.@propagate_inbounds partials(d::Dual, i) = d.partials[i]
 @inline Base.@propagate_inbounds partials(d::Dual, i, j) = partials(d, i).partials[j]
