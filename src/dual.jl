@@ -88,6 +88,7 @@ Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
 
 @inline value(x) = x
 @inline value(d::Dual) = d.value
+@inline value(d::Complex{<:Dual}) = complex(value(real(d)), value(imag(d)))
 
 @inline value(::Type{T}, x) where T = x
 @inline value(::Type{T}, d::Dual{T}) where T = value(d)
@@ -101,6 +102,8 @@ end
 
 @inline partials(x) = Partials{0,typeof(x)}(tuple())
 @inline partials(d::Dual) = d.partials
+@inline partials(d::Complex{<:Dual}, i) = complex(partials(real(d), i), partials(imag(d), i))
+@inline partials(d::Complex{<:Dual}) = complex.(partials(real(d)), partials(imag(d)))
 @inline partials(x, i...) = zero(x)
 @inline Base.@propagate_inbounds partials(d::Dual, i) = d.partials[i]
 @inline Base.@propagate_inbounds partials(d::Dual, i, j) = partials(d, i).partials[j]
@@ -119,6 +122,8 @@ end
 
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
 @inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
+@inline npartials(::Complex{<:Dual{T,V,N}}) where {T,V,N} = N
+@inline npartials(::Type{<:Complex{<:Dual{T,V,N}}}) where {T,V,N} = N
 
 @inline order(::Type{V}) where {V} = 0
 @inline order(::Type{Dual{T,V,N}}) where {T,V,N} = 1 + order(V)
