@@ -103,16 +103,16 @@ end
     T = typeof(Tag(f, eltype(x)))
     ydual = static_dual_eval(T, f, x)
     result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
-    result = DiffResults.value!(d -> value(T,d), result, ydual)
+    result = DiffResults.value!(Base.Fix1(value, T), result, ydual)
     return result
 end
 
 # Hessian
-ForwardDiff.hessian(f::F, x::StaticArray) where {F} = jacobian(y -> gradient(f, y), x)
+ForwardDiff.hessian(f::F, x::StaticArray) where {F} = jacobian(Base.Fix1(gradient, f), x)
 ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig) where {F} = hessian(f, x)
 ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} = hessian(f, x)
 
-ForwardDiff.hessian!(result::AbstractArray, f::F, x::StaticArray) where {F} = jacobian!(result, y -> gradient(f, y), x)
+ForwardDiff.hessian!(result::AbstractArray, f::F, x::StaticArray) where {F} = jacobian!(result, Base.Fix1(gradient, f), x)
 
 ForwardDiff.hessian!(result::MutableDiffResult, f::F, x::StaticArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
 
