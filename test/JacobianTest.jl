@@ -259,6 +259,24 @@ end
 @testset "type stability" begin
     g!(dy, y) = dy[1] = y[1]
     @inferred ForwardDiff.jacobian(g!, [1.0], [0.0])
+
+    @testset "issue 639" begin
+        f(x) = SA[x[1]^2+x[2]^2, x[2]^2+x[3]^2]
+        x = SA[1.0, 2.0, 3.0]
+        y = f(x)
+        imdr = DiffResults.JacobianResult(y, x)
+        @inferred ForwardDiff.jacobian!(imdr, f, x)
+    end
+
+    @testset "pr 735" begin
+        f(x) = x .^ 2 ./ 2
+        function withjacobian(x)
+            res = DiffResults.JacobianResult(x)
+            res = ForwardDiff.jacobian!(res, f, x)
+            return DiffResults.value(res), DiffResults.jacobian(res)
+        end
+        @inferred withjacobian(SA[1.0, 2.0])
+    end
 end
 
 end # module
