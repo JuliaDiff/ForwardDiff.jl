@@ -87,7 +87,7 @@ the result. For example, to calculate the partial derivatives for the gradient o
                          \vdots \\
                          x_N + \epsilon_N
                      \end{bmatrix}
-\to
+\mapsto
 f(\vec{x}_{\epsilon}) = f(\vec{x}) + \sum_{i=1}^N \frac{\delta f(\vec{x})}{\delta x_i} \epsilon_i
 ```
 
@@ -103,24 +103,28 @@ two calls to ``f`` to evaluate the gradient:
                x_3 \\
                x_4
            \end{bmatrix}
-
-\vec{x}_{\epsilon} = \begin{bmatrix}
+```
+1st call:
+```math
+\to \vec{x}_{\epsilon} = \begin{bmatrix}
                         x_1 + \epsilon_1 \\
                         x_2 + \epsilon_2 \\
                         x_3 \\
                         x_4
                      \end{bmatrix}
-\to
-f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_1} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_2} \epsilon_2
-
-\vec{x}_{\epsilon} = \begin{bmatrix}
+\mapsto
+f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_1} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_2} \epsilon_2,
+```
+2nd call:
+```math
+\to \vec{x}_{\epsilon} = \begin{bmatrix}
                         x_1 \\
                         x_2 \\
                         x_3 + \epsilon_1 \\
                         x_4 + \epsilon_2
                      \end{bmatrix}
-\to
-f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_3} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_4} \epsilon_2
+\mapsto
+f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_3} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_4} \epsilon_2.
 ```
 
 This seeding process is similar for Jacobians, so we won't rehash it here.
