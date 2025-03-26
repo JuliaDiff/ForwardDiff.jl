@@ -6,6 +6,14 @@
 
 # ForwardDiff.jl
 
+## Upgrading to ForwardDiff.jl 1.0
+
+Equality (`==`) on `Dual` numbers now requires both the real and dual part to match (https://github.com/JuliaDiff/ForwardDiff.jl/pull/481).
+This removes a large number of bugs where the "structure" of e.g, non-zero values in an array was inspected, leading to erroneous derivatives.
+This might cause slightly different behavior in programs but should in general be more correct than previously.
+
+---------------------------
+
 ForwardDiff implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
 
 While performance can vary depending on the functions you evaluate, the algorithms implemented by ForwardDiff generally outperform non-AD algorithms (such as finite-differencing) in both speed and accuracy.
