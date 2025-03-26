@@ -64,10 +64,10 @@ struct DerivativeConfig{T,D} <: AbstractConfig{1}
 end
 
 """
-    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::AbstractArray)
+    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::Real)
 
 Return a `DerivativeConfig` instance based on the type of `f!`, and the types/shapes of the
-output vector `y` and the input vector `x`.
+output vector `y` and the input value `x`.
 
 The returned `DerivativeConfig` instance contains all the work buffers required by
 `ForwardDiff.derivative` and `ForwardDiff.derivative!` when the target function takes the form
