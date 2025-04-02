@@ -65,6 +65,14 @@ end
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
 extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}= copyto!(result, partials(T, dual))
 
+# Triangular matrices
+function extract_gradient!(::Type{T}, result::Union{UpperTriangular,LowerTriangular}, dual::Dual) where {T}
+    for (idx, p) in zip(_nonzero_indices(result), partials(T, dual))
+        result[idx] = p
+    end
+    return result
+end
+
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
     offset = index - 1
     for i in 1:chunksize

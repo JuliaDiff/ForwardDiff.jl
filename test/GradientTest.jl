@@ -226,4 +226,13 @@ end
     @test dx ≈ sum(a * b)
 end
 
+# issue #738
+@testset "LowerTriangular and UpperTriangular" begin
+    M = rand(3, 3)
+    for T in (LowerTriangular, UpperTriangular)
+        @test ForwardDiff.gradient(sum, T(randn(3, 3))) == T(ones(3, 3))
+        @test ForwardDiff.gradient(x -> dot(M, x), T(randn(3, 3))) == T(M)
+    end
+end
+
 end # module

@@ -53,6 +53,22 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
     return duals
 end
 
+# Triangular matrices
+function _nonzero_indices(x::UpperTriangular)
+    n = size(x, 1)
+    return (CartesianIndex(i, j) for j in 1:n for i in 1:j)
+end
+function _nonzero_indices(x::LowerTriangular)
+    n = size(x, 1)
+    return (CartesianIndex(i, j) for j in 1:n for i in j:n)
+end
+function seed!(duals::Union{LowerTriangular{Dual{T,V,N}},UpperTriangular{Dual{T,V,N}}}, x, seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
+    for (idx, seed) in zip(_nonzero_indices(duals), seeds)
+        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    end
+    return duals
+end
+
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     offset = index - 1
