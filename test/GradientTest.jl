@@ -226,4 +226,33 @@ end
     @test dx ≈ sum(a * b)
 end
 
+# issue #738
+@testset "LowerTriangular, UpperTriangular and Diagonal" begin
+    for n in (3, 10, 20)
+        M = rand(n, n)
+        for T in (LowerTriangular, UpperTriangular, Diagonal)
+            @test ForwardDiff.gradient(sum, T(randn(n, n))) == T(ones(n, n))
+            @test ForwardDiff.gradient(x -> dot(M, x), T(randn(n, n))) == T(M)
+
+            # Check number of function evaluations and chunk sizes
+            fevals = Ref(0)
+            npartials = Ref(0)
+            y = ForwardDiff.gradient(T(randn(n, n))) do x
+                fevals[] += 1
+                npartials[] += ForwardDiff.npartials(eltype(x))
+                return sum(x)
+            end
+            if npartials[] <= ForwardDiff.DEFAULT_CHUNK_THRESHOLD
+                # Vector mode (single evaluation)
+                @test fevals[] == 1
+                @test npartials[] == sum(y)
+            else
+                # Chunk mode (multiple evaluations)
+                @test fevals[] > 1
+                @test sum(y) <= npartials[] < sum(y) + fevals[]
+            end
+        end
+    end
+end
+
 end # module
