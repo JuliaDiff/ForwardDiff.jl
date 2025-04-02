@@ -40,48 +40,63 @@ end
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
+# Only seed indices that are structurally non-zero
+_structural_nonzero_indices(x::AbstractArray) = eachindex(x)
+function _structural_nonzero_indices(x::UpperTriangular)
+    n = size(x, 1)
+    return (CartesianIndex(i, j) for j in 1:n for i in 1:j)
+end
+function _structural_nonzero_indices(x::LowerTriangular)
+    n = size(x, 1)
+    return (CartesianIndex(i, j) for j in 1:n for i in j:n)
+end
+_structural_nonzero_indices(x::Diagonal) = diagind(x)
+
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    duals .= Dual{T,V,N}.(x, Ref(seed))
+    if eachindex(duals) != eachindex(x)
+        throw(ArgumentError("indices of input array and array of duals are not identical"))
+    end
+    for idx in _structural_nonzero_indices(duals)
+        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    dual_inds = 1:N
-    duals[dual_inds] .= Dual{T,V,N}.(view(x,dual_inds), seeds)
-    return duals
-end
-
-# Triangular matrices
-function _nonzero_indices(x::UpperTriangular)
-    n = size(x, 1)
-    return (CartesianIndex(i, j) for j in 1:n for i in 1:j)
-end
-function _nonzero_indices(x::LowerTriangular)
-    n = size(x, 1)
-    return (CartesianIndex(i, j) for j in 1:n for i in j:n)
-end
-function seed!(duals::Union{LowerTriangular{Dual{T,V,N}},UpperTriangular{Dual{T,V,N}}}, x, seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    for (idx, seed) in zip(_nonzero_indices(duals), seeds)
-        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    if eachindex(duals) != eachindex(x)
+        throw(ArgumentError("indices of input array and array of duals are not identical"))
+    end
+    for (i, idx) in enumerate(_structural_nonzero_indices(duals))
+        duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
     end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
+    if eachindex(duals) != eachindex(x)
+        throw(ArgumentError("indices of input array and array of duals are not identical"))
+    end
     offset = index - 1
-    dual_inds = (1:N) .+ offset
-    duals[dual_inds] .= Dual{T,V,N}.(view(x, dual_inds), Ref(seed))
+    idxs = Iterators.drop(_structural_nonzero_indices(duals), offset)
+    for idx in idxs
+        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
+    if eachindex(duals) != eachindex(x)
+        throw(ArgumentError("indices of input array and array of duals are not identical"))
+    end
     offset = index - 1
-    seed_inds = 1:chunksize
-    dual_inds = seed_inds .+ offset
-    duals[dual_inds] .= Dual{T,V,N}.(view(x, dual_inds), getindex.(Ref(seeds), seed_inds))
+    idxs = Iterators.drop(_structural_nonzero_indices(duals), offset)
+    for (i, idx) in enumerate(idxs)
+        i > chunksize && break
+        duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+    end
     return duals
 end

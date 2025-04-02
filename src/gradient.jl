@@ -63,20 +63,20 @@ function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
 end
 
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
-extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}= copyto!(result, partials(T, dual))
-
-# Triangular matrices
-function extract_gradient!(::Type{T}, result::Union{UpperTriangular,LowerTriangular}, dual::Dual) where {T}
-    for (idx, p) in zip(_nonzero_indices(result), partials(T, dual))
-        result[idx] = p
+function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
+    idxs = _structural_nonzero_indices(result)
+    for (i, idx) in enumerate(idxs)
+        result[idx] = partials(T, dual, i)
     end
     return result
 end
 
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
     offset = index - 1
-    for i in 1:chunksize
-        result[i + offset] = partials(T, dual, i)
+    idxs = Iterators.drop(_structural_nonzero_indices(result), offset)
+    for (i, idx) in enumerate(idxs)
+        i > chunksize && break
+        result[idx] = partials(T, dual, i)
     end
     return result
 end

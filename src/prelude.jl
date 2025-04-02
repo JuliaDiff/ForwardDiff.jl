@@ -12,8 +12,15 @@ function Chunk(input_length::Integer, threshold::Integer = DEFAULT_CHUNK_THRESHO
     Base.@nif 12 d->(N == d) d->(Chunk{d}()) d->(Chunk{N}())
 end
 
+_length_structural_nonzero_indices(x::AbstractArray) = length(x)
+function _length_structural_nonzero_indices(x::Union{LowerTriangular,UpperTriangular})
+    n = size(x, 1)
+    return (n * (n + 1)) >> 1
+end
+_length_structural_nonzero_indices(x::Diagonal) = size(x, 1)
+
 function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
-    return Chunk(length(x), threshold)
+    return Chunk(_length_structural_nonzero_indices(x), threshold)
 end
 
 # Constrained to `N <= threshold`, minimize (in order of priority):

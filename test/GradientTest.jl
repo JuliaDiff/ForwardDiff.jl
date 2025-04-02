@@ -227,11 +227,13 @@ end
 end
 
 # issue #738
-@testset "LowerTriangular and UpperTriangular" begin
-    M = rand(3, 3)
-    for T in (LowerTriangular, UpperTriangular)
-        @test ForwardDiff.gradient(sum, T(randn(3, 3))) == T(ones(3, 3))
-        @test ForwardDiff.gradient(x -> dot(M, x), T(randn(3, 3))) == T(M)
+@testset "LowerTriangular, UpperTriangular and Diagonal" begin
+    for n in (3, 10, 20)
+        M = rand(n, n)
+        for T in (LowerTriangular, UpperTriangular, Diagonal)
+            @test ForwardDiff.gradient(sum, T(randn(n, n))) == T(ones(n, n))
+            @test ForwardDiff.gradient(x -> dot(M, x), T(randn(n, n))) == T(M)
+        end
     end
 end
 
