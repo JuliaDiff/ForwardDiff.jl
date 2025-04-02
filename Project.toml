@@ -13,7 +13,6 @@ Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
-StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [weakdeps]
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
@@ -33,7 +32,7 @@ NaNMath = "1"
 Preferences = "1"
 SpecialFunctions = "1, 2"
 StaticArrays = "1.5"
-julia = "1.6"
+julia = "1.10"
 
 [extras]
 Calculus = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
