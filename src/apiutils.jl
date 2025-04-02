@@ -41,23 +41,38 @@ end
 end
 
 # Only seed indices that are structurally non-zero
-_structural_nonzero_indices(x::AbstractArray) = eachindex(x)
-function _structural_nonzero_indices(x::UpperTriangular)
+structural_eachindex(x::AbstractArray) = structural_eachindex(x, x)
+function structural_eachindex(x::AbstractArray, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    eachindex(x, y)
+end
+function structural_eachindex(x::UpperTriangular, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    if size(x) != size(y)
+        throw(DimensionMismatch())
+    end
     n = size(x, 1)
     return (CartesianIndex(i, j) for j in 1:n for i in 1:j)
 end
-function _structural_nonzero_indices(x::LowerTriangular)
+function structural_eachindex(x::LowerTriangular, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    if size(x) != size(y)
+        throw(DimensionMismatch())
+    end
     n = size(x, 1)
     return (CartesianIndex(i, j) for j in 1:n for i in j:n)
 end
-_structural_nonzero_indices(x::Diagonal) = diagind(x)
+function structural_eachindex(x::Diagonal, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    if size(x) != size(y)
+        throw(DimensionMismatch())
+    end
+    return diagind(x)
+end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    if eachindex(duals) != eachindex(x)
-        throw(ArgumentError("indices of input array and array of duals are not identical"))
-    end
-    for idx in _structural_nonzero_indices(duals)
+    for idx in structural_eachindex(duals, x)
         duals[idx] = Dual{T,V,N}(x[idx], seed)
     end
     return duals
@@ -65,10 +80,7 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    if eachindex(duals) != eachindex(x)
-        throw(ArgumentError("indices of input array and array of duals are not identical"))
-    end
-    for (i, idx) in enumerate(_structural_nonzero_indices(duals))
+    for (i, idx) in zip(1:N, structural_eachindex(duals, x))
         duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
     end
     return duals
@@ -76,11 +88,8 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    if eachindex(duals) != eachindex(x)
-        throw(ArgumentError("indices of input array and array of duals are not identical"))
-    end
     offset = index - 1
-    idxs = Iterators.drop(_structural_nonzero_indices(duals), offset)
+    idxs = Iterators.drop(structural_eachindex(duals, x), offset)
     for idx in idxs
         duals[idx] = Dual{T,V,N}(x[idx], seed)
     end
@@ -89,13 +98,9 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
-    if eachindex(duals) != eachindex(x)
-        throw(ArgumentError("indices of input array and array of duals are not identical"))
-    end
     offset = index - 1
-    idxs = Iterators.drop(_structural_nonzero_indices(duals), offset)
-    for (i, idx) in enumerate(idxs)
-        i > chunksize && break
+    idxs = Iterators.drop(structural_eachindex(duals, x), offset)
+    for (i, idx) in zip(1:chunksize, idxs)
         duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
     end
     return duals
