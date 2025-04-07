@@ -226,6 +226,7 @@ end
                                    ydual, xdual = cfg.duals
                                    seed!(xdual, x)
                                end,
+                               :(f!(ydual, xdual)),
                                :(result = similar(y, length(y), xlen)),
                                :(map!(d -> value(T,d), y, ydual))))
 end
@@ -245,6 +246,7 @@ end
                                    ydual, xdual = cfg.duals
                                    seed!(xdual, x)
                                end,
+                               :(f!(ydual, xdual)),
                                :(),
                                :(extract_value!(T, result, y, ydual))))
 end
