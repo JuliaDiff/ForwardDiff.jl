@@ -27,7 +27,6 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
     require_one_based_indexing(y)
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
-    seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
     map!(value, y, ydual)
     return extract_derivative(T, ydual)
@@ -65,7 +64,6 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
     result isa DiffResult ? require_one_based_indexing(y) : require_one_based_indexing(result, y)
     CHK && checktag(T, f!, x)
     ydual = cfg.duals
-    seed!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
     result = extract_value!(T, result, y, ydual)
     result = extract_derivative!(T, result, ydual)

@@ -27,7 +27,6 @@ end
 function vector_mode_dual_eval!(f!::F, cfg::JacobianConfig, y, x) where {F}
     ydual, xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
-    seed!(ydual, y)
     f!(ydual, xdual)
     return ydual
 end
