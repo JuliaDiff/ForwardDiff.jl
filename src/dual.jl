@@ -830,6 +830,9 @@ function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
 end
 
 for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
+    @eval function $op(::ForwardDiff.Dual{T,V,N}) where {T,V,N}
+        ForwardDiff.Dual{T,V,N}($op(V))
+    end
     @eval function $op(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
         ForwardDiff.Dual{T,V,N}($op(V))
     end
