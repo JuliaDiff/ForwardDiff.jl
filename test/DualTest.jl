@@ -638,6 +638,12 @@ end
     @test isfinite(dfmin)
     @test isfinite(dfmax)
 
+    # Functions can be called with type or value
+    @test typemin(d1) == typemin(typeof(d1))
+    @test typemax(d1) == typemax(typeof(d1))
+    @test floatmin(d1) == floatmin(typeof(d1))
+    @test floatmax(d1) == floatmax(typeof(d1))
+
   @test floatmin(Dual{Nothing, ForwardDiff.Dual{Nothing, Float64, 2}, 1}) === Dual{Nothing}(Dual{Nothing}(floatmin(Float64),0.0,0.0),Dual{Nothing}(0.0,0.0,0.0))
 end
 
