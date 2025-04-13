@@ -151,7 +151,7 @@ the `nansafe_mode` preference to true, for example via:
 ```julia
 julia> using Preferences
 
-julia> set_preferences!(ForwardDiff, "nansafe_mode" => true)
+julia> set_preferences!("ForwardDiff", "nansafe_mode" => true)
 
 julia> using ForwardDiff
 
