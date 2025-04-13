@@ -149,26 +149,19 @@ ForwardDiff's `NaN`-safe mode by using the
 the `nansafe_mode` preference to true, for example via:
 
 ```julia
-julia> using ForwardDiff, Preferences
+julia> using Preferences
 
 julia> set_preferences!(ForwardDiff, "nansafe_mode" => true)
-```
-
-Note that Julia has to be restarted and ForwardDiff has to be reloaded after changing
-this preference.
-
-Alternatively, you can set the preference before loading ForwardDiff, for example via:
-
-```julia
-julia> using Preferences, UUIDs
-
-julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_mode" => true)
 
 julia> using ForwardDiff
 
 julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
 Dual{:tag}(-Inf,0.0)
 ```
+
+!!! warn
+    The preference has to be set **before** loading ForwardDiff.
+    If you change it after loading ForwardDiff, you have to restart your Julia session and reload ForwardDiff for it to become active.
 
 In the future, we plan on allowing users and downstream library authors to dynamically
 enable [`NaN`-safe mode via the `AbstractConfig`
