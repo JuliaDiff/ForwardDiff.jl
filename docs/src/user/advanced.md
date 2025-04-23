@@ -161,7 +161,8 @@ Dual{:tag}(-Inf,0.0)
 
 !!! warn
     The preference has to be set **before** loading ForwardDiff.
-    If you change it after loading ForwardDiff, you have to restart your Julia session and reload ForwardDiff for it to become active.
+    If you change it after loading ForwardDiff, you have to restart your Julia session (using the same environment) 
+    and then reload ForwardDiff for it to become active.
 
 In the future, we plan on allowing users and downstream library authors to dynamically
 enable [`NaN`-safe mode via the `AbstractConfig`
