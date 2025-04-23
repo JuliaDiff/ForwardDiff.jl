@@ -1,6 +1,11 @@
 const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
 const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
 
+# On ≤1.10, the hash of a type cannot be computed at compile-time,
+# making `HashTag(...)` type-unstable, so `Tag(...)` is left as
+# as the default.
+const HASHTAG_MODE_ENABLED = @load_preference("hashtag_mode", VERSION ≥ v"1.11")
+
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
 const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isreal, :isinteger]
