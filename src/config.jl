@@ -20,9 +20,44 @@ end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
-
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
+end
+
+# SmallTag is similar to a Tag, but carries just a small UInt64 hash, instead
+# of the full type, which makes stacktraces / types easier to read while still
+# providing good resilience to perturbation confusion.
+struct SmallTag{H}
+end
+
+@generated function tagcount(::Type{SmallTag{H}}) where {H}
+    :($(Threads.atomic_add!(TAGCOUNT, UInt(1))))
+end
+
+function SmallTag(f::F, ::Type{V}) where {F,V}
+    H = if F <: Tuple
+        # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
+        # see checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V}
+        nothing
+    else
+        hash(F) ⊻ hash(V)
+    end
+    tagcount(SmallTag{H}) # trigger generated function
+    SmallTag{H}()
+end
+
+SmallTag(::Nothing, ::Type{V}) where {V} = nothing
+
+@inline function ≺(::Type{SmallTag{H1}}, ::Type{Tag{F2,V2}}) where {H1,F2,V2}
+    tagcount(SmallTag{H1}) < tagcount(Tag{F2,V2})
+end
+
+@inline function ≺(::Type{Tag{F1,V1}}, ::Type{SmallTag{H2}}) where {F1,V1,H2}
+    tagcount(Tag{F1,V1}) < tagcount(SmallTag{H2})
+end
+
+@inline function ≺(::Type{SmallTag{H1}}, ::Type{SmallTag{H2}}) where {H1,H2}
+    tagcount(SmallTag{H1}) < tagcount(SmallTag{H2})
 end
 
 struct InvalidTagException{E,O} <: Exception
@@ -36,12 +71,21 @@ checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
 
 checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
+# SmallTag is a smaller tag, that only confirms the hash
+function checktag(::Type{SmallTag{HT}}, f::F, x::AbstractArray{V}) where {HT,F,V}
+    H = hash(F) ⊻ hash(V)
+    if HT == H || HT === nothing
+        true
+    else
+        throw(InvalidTagException{SmallTag{H},SmallTag{HT}}())
+    end
+end
+
 # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
 
 # custom tag: you're on your own.
 checktag(z, f, x) = true
-
 
 ##################
 # AbstractConfig #
