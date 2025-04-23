@@ -143,8 +143,13 @@ This constructor does not store/modify `y` or `x`.
                           x::X;
                           tag::Union{Symbol,Nothing} = :default) where {F,X<:Real,Y<:Real}
     # @inline ensures that, e.g., DerivativeConfig(...; tag = :small) will be well-inferred
-    T = @inline maketag(tag, f, X)
-    return @noinline DerivativeConfig(f,y,x,T)
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, X)
+        return @noinline DerivativeConfig(f,y,x,T)
+    else
+        T = maketag(tag, f, X)
+        return DerivativeConfig(f,y,x,T)
+    end
 end
 
 function DerivativeConfig(f::F,
@@ -190,8 +195,13 @@ This constructor does not store/modify `x`.
                         c::Chunk{N} = Chunk(x);
                         tag::Union{Symbol,Nothing} = :default) where {F,V,N}
     # @inline ensures that, e.g., GradientConfig(...; tag = :small) will be well-inferred
-    T = @inline maketag(tag, f, V)
-    return @noinline GradientConfig(f,x,c,T)
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline GradientConfig(f,x,c,T)
+    else
+        T = maketag(tag, f, V)
+        return GradientConfig(f,x,c,T)
+    end
 end
 
 function GradientConfig(f::F,
@@ -239,8 +249,13 @@ This constructor does not store/modify `x`.
                         c::Chunk{N} = Chunk(x);
                         tag::Union{Symbol,Nothing} = :default) where {F,V,N}
     # @inline ensures that, e.g., JacobianConfig(...; tag = :small) will be well-inferred
-    T = @inline maketag(tag, f, V)
-    return @noinline JacobianConfig(f,x,c,T)
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline JacobianConfig(f,x,c,T)
+    else
+        T = maketag(tag, f, V)
+        return JacobianConfig(f,x,c,T)
+    end
 end
 
 function JacobianConfig(f::F,
@@ -277,8 +292,13 @@ This constructor does not store/modify `y` or `x`.
                         c::Chunk{N} = Chunk(x);
                         tag::Union{Symbol,Nothing} = :default) where {F,Y,X,N}
     # @inline ensures that, e.g., JacobianConfig(...; tag = :small) will be well-inferred
-    T = @inline maketag(tag, f, X)
-    return @noinline JacobianConfig(f,y,x,c,T)
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, X)
+        return @noinline JacobianConfig(f,y,x,c,T)
+    else
+        T = maketag(tag, f, X)
+        return JacobianConfig(f,y,x,c,T)
+    end
 end
 
 function JacobianConfig(f::F,
@@ -331,8 +351,13 @@ This constructor does not store/modify `x`.
                        chunk::Chunk = Chunk(x);
                        tag::Union{Symbol,Nothing} = :default) where {F,V}
     # @inline ensures that, e.g., HessianConfig(...; tag = :small) will be well-inferred
-    T = @inline maketag(tag, f, V)
-    return @noinline HessianConfig(f, x, chunk, T)
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline HessianConfig(f, x, chunk, T)
+    else
+        T = maketag(tag, f, V)
+        return HessianConfig(f, x, chunk, T)
+    end
 end
 
 function HessianConfig(f::F,
@@ -368,8 +393,13 @@ This constructor does not store/modify `x`.
                        chunk::Chunk = Chunk(x);
                        tag::Union{Symbol,Nothing} = :default) where {F,V}
     # @inline ensures that, e.g., HessianConfig(...; tag = :small) will be well-inferred
-    T = @inline maketag(tag, f, V)
-    return @noinline HessianConfig(f, result, x, chunk, T)
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline HessianConfig(f, result, x, chunk, T)
+    else
+        T = maketag(tag, f, V)
+        return HessianConfig(f, result, x, chunk, T)
+    end
 end
 
 function HessianConfig(f::F,
