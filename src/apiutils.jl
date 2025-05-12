@@ -72,16 +72,36 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    for idx in structural_eachindex(duals, x)
-        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    if isbitstype(V)
+        for idx in structural_eachindex(duals, x)
+            duals[idx] = Dual{T,V,N}(x[idx], seed)
+        end
+    else
+        for idx in structural_eachindex(duals, x)
+            if isassigned(x, idx)
+                duals[idx] = Dual{T,V,N}(x[idx], seed)
+            else
+                Base._unsetindex!(duals, idx)
+            end
+        end
     end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    for (i, idx) in zip(1:N, structural_eachindex(duals, x))
-        duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+    if isbitstype(V)
+        for (i, idx) in zip(1:N, structural_eachindex(duals, x))
+            duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+        end
+    else
+        for (i, idx) in zip(1:N, structural_eachindex(duals, x))
+            if isassigned(x, idx)
+                duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+            else
+                Base._unsetindex!(duals, idx)
+            end
+        end
     end
     return duals
 end
@@ -90,8 +110,18 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     offset = index - 1
     idxs = Iterators.drop(structural_eachindex(duals, x), offset)
-    for idx in idxs
-        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    if isbitstype(V)
+        for idx in idxs
+            duals[idx] = Dual{T,V,N}(x[idx], seed)
+        end
+    else
+        for idx in idxs
+            if isassigned(x, idx)
+                duals[idx] = Dual{T,V,N}(x[idx], seed)
+            else
+                Base._unsetindex!(duals, idx)
+            end
+        end
     end
     return duals
 end
@@ -100,8 +130,18 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
     offset = index - 1
     idxs = Iterators.drop(structural_eachindex(duals, x), offset)
-    for (i, idx) in zip(1:chunksize, idxs)
-        duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+    if isbitstype(V)
+        for (i, idx) in zip(1:chunksize, idxs)
+            duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+        end
+    else
+        for (i, idx) in zip(1:chunksize, idxs)
+            if isassigned(x, idx)
+                duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+            else
+                Base._unsetindex!(duals, idx)
+            end
+        end
     end
     return duals
 end
