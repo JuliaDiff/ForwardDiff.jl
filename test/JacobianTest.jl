@@ -4,7 +4,7 @@ import Calculus
 
 using Test
 using ForwardDiff
-using ForwardDiff: Dual, Tag, JacobianConfig
+using ForwardDiff: Dual, Tag, SmallTag, JacobianConfig, maketag
 using StaticArrays
 using DiffTests
 using LinearAlgebra
@@ -31,8 +31,8 @@ j = [0.8242369704835132  0.4121184852417566  -10.933563142616123
      0.169076696546684   0.084538348273342   -2.299173530851733
      0.0                 0.0                 1.0]
 
-for c in (1, 2, 3), tags in ((nothing, nothing),
-                             (Tag(f, eltype(x)), Tag(f!, eltype(x))))
+for c in (1, 2, 3), tag in (nothing, :small, :default)
+    tags = (maketag(tag, f, eltype(x)), maketag(tag, f!, eltype(x)))
     println("  ...running hardcoded test with chunk size = $c and tag = $(repr(tags))")
     cfg = JacobianConfig(f, x, ForwardDiff.Chunk{c}(), tags[1])
     ycfg = JacobianConfig(f!, fill(0.0, 4), x, ForwardDiff.Chunk{c}(), tags[2])
@@ -103,9 +103,11 @@ for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
-    @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag)
+    @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag, SmallTag)
         if tag == Tag
             tag = Tag(f, eltype(X))
+        elseif tag == SmallTag
+            tag = SmallTag(f, eltype(X))
         end
         cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
@@ -128,7 +130,8 @@ for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     f!(v, X)
     j = ForwardDiff.jacobian(f!, fill!(similar(Y), 0.0), X)
     @test isapprox(j, Calculus.jacobian(x -> (y = fill!(similar(Y), 0.0); f!(y, x); vec(y)), X, :forward), atol=FINITEDIFF_ERROR)
-    @testset "$(f!) with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
+    @testset "$(f!) with chunk size = $c and tag = $(repr(maketag(tag, f!, eltype(X))))" for c in CHUNK_SIZES, tag in (nothing, :small, :default)
+        tag = maketag(tag, f!, eltype(X))
         ycfg = JacobianConfig(f!, fill!(similar(Y), 0.0), X, ForwardDiff.Chunk{c}(), tag)
 
         y = fill!(similar(Y), 0.0)
@@ -225,6 +228,12 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
 
     # make sure this is not a source of type instability
     @inferred ForwardDiff.JacobianConfig(f, sx)
+    if VERSION ≥ v"1.11"
+        # make sure that `JacobianConfig(...; tag = compile-time-constant)` also
+        # infers well (requires that Base.hash(::Type) is foldable, which is true
+        # in Julia ≥ 1.11)
+        @inferred ((f, sx)->ForwardDiff.JacobianConfig(f, sx; tag=:small))(f, sx)
+    end
 end
 
 #########

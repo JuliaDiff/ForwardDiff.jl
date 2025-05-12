@@ -24,20 +24,12 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     index = 1
     alloc = @allocated ForwardDiff.seed!(duals, x, index, seeds)
     alloc = @allocated ForwardDiff.seed!(duals, x, index, seeds)
-    if VERSION < v"1.9" || VERSION >= v"1.11"
-        @test alloc == 0
-    else
-        @test_broken alloc == 0
-    end
+    @test alloc == 0
 
     index = 1
     alloc = @allocated ForwardDiff.seed!(duals, x, index, seed)
     alloc = @allocated ForwardDiff.seed!(duals, x, index, seed)
-    if VERSION < v"1.9" || VERSION >= v"1.11"
-        @test alloc == 0
-    else
-        @test_broken alloc == 0
-    end
+    @test alloc == 0
 
     alloc = @allocated convert_test_574()
     alloc = @allocated convert_test_574()
