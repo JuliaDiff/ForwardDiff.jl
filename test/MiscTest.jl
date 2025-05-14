@@ -9,6 +9,7 @@ using SparseArrays: sparse
 using StaticArrays
 using IrrationalConstants
 using LinearAlgebra
+using Measurements: Measurements
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -218,5 +219,9 @@ end
     @test B_mmatrix === A_mmatrix
     @test B_mmatrix == B
 end
+
+#issue 651, using Measurements
+f651(x) = 2.1*x + 1
+@test ForwardDiff.derivative(f651,Measurements.measurement(1.0, 0.001)) == 2.1
 
 end # module
