@@ -163,4 +163,12 @@ end
     @test ForwardDiff.hessian(x->dot(x,H,x), zeros(3)) ≈ [2 6 10; 6 10 14; 10 14 18]
 end
 
+@testset "allocation-free hessian with StaticArrays" begin
+    #https://github.com/JuliaDiff/ForwardDiff.jl/issues/720
+    g = r -> (r[1]^2 - 3) * (r[2]^2 - 2)
+    x = SA_F32[0.5, 2.7]
+    hres = DiffResults.HessianResult(x)
+    @test @allocated(ForwardDiff.hessian!(hres, g, x))) == 0
+end
+
 end # module
