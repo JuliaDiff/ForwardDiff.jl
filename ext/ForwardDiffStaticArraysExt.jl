@@ -81,6 +81,16 @@ end
     end
 end
 
+@generated function extract_jacobian(::Type{T}, ydual::Partials{M}, x::S) where {M, T, S<:StaticArray}
+    N = length(x)
+    result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        V = StaticArrays.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
+        return V($result)
+    end
+end
+
 @inline function ForwardDiff.vector_mode_jacobian(f::F, x::StaticArray) where {F}
     T = typeof(Tag(f, eltype(x)))
     return extract_jacobian(T, static_dual_eval(T, f, x), x)
