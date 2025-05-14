@@ -168,6 +168,7 @@ end
     g = r -> (r[1]^2 - 3) * (r[2]^2 - 2)
     x = SA_F32[0.5, 2.7]
     hres = DiffResults.HessianResult(x)
+    ForwardDiff.hessian!(hres, g, x)
     @test @allocated(ForwardDiff.hessian!(hres, g, x)) == 0
 end
 
