@@ -22,6 +22,13 @@ include("gradient.jl")
 include("jacobian.jl")
 include("hessian.jl")
 
+if VERSION >= v"1.11.0-DEV.469"
+    # This list matches /docs/src/user/api.md
+    eval(Meta.parse(
+        "public derivative, derivative!, gradient, gradient!, jacobian, jacobian!, 
+        hessian, hessian!, DerivativeConfig, GradientConfig, JacobianConfig, HessianConfig"))
+end
+
 if !isdefined(Base, :get_extension)
     include("../ext/ForwardDiffStaticArraysExt.jl")
 end
