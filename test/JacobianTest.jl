@@ -279,4 +279,18 @@ end
     end
 end
 
+@testset "BigFloat" begin
+    # issues #436, #740
+    for n in (2, 20)
+        x = BigFloat.(1:n)
+        @test x isa Vector{BigFloat}
+        y = similar(x)
+        @test !isassigned(y, 1)
+        res = ForwardDiff.jacobian(copyto!, y, x)
+        @test y == x
+        @test res isa Matrix{BigFloat}
+        @test res == I
+    end
+end
+
 end # module
