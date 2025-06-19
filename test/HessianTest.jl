@@ -5,7 +5,7 @@ import Calculus
 using Test
 using LinearAlgebra
 using ForwardDiff
-using ForwardDiff: Dual, Tag
+using ForwardDiff: Dual, maketag
 using StaticArrays
 using DiffTests
 
@@ -23,7 +23,8 @@ h = [-66.0  -40.0    0.0;
      -40.0  130.0  -80.0;
        0.0  -80.0  200.0]
 
-@testset "running hardcoded test with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
+@testset "running hardcoded test with chunk size = $c and tag = $(repr(maketag(tag, (f, ForwardDiff.gradient), eltype(x))))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, :default, :small)
+    tag = maketag(tag, (f, ForwardDiff.gradient), eltype(x))
     cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}(), tag)
     resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}(), tag)
 
@@ -68,7 +69,8 @@ for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     h = ForwardDiff.hessian(f, X)
     # finite difference approximation error is really bad for Hessians...
     @test isapprox(h, Calculus.hessian(f, X), atol=0.02)
-    @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
+    @testset "$f with chunk size = $c and tag = $(repr(maketag(tag, (f, ForwardDiff.gradient), eltype(x))))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, :default, :small)
+        tag = maketag(tag, (f, ForwardDiff.gradient), eltype(x))
         cfg = ForwardDiff.HessianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
         resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(X), X, ForwardDiff.Chunk{c}(), tag)
 

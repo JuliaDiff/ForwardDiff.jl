@@ -20,9 +20,44 @@ end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
-
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
+end
+
+# SmallTag is similar to a Tag, but carries just a small UInt64 hash, instead
+# of the full type, which makes stacktraces / types easier to read while still
+# providing good resilience to perturbation confusion.
+struct SmallTag{H}
+end
+
+@generated function tagcount(::Type{SmallTag{H}}) where {H}
+    :($(Threads.atomic_add!(TAGCOUNT, UInt(1))))
+end
+
+function SmallTag(f::F, ::Type{V}) where {F,V}
+    H = if F <: Tuple
+        # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
+        # see checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V}
+        nothing
+    else
+        hash(F) ⊻ hash(V)
+    end
+    tagcount(SmallTag{H}) # trigger generated function
+    SmallTag{H}()
+end
+
+SmallTag(::Nothing, ::Type{V}) where {V} = nothing
+
+@inline function ≺(::Type{SmallTag{H1}}, ::Type{Tag{F2,V2}}) where {H1,F2,V2}
+    tagcount(SmallTag{H1}) < tagcount(Tag{F2,V2})
+end
+
+@inline function ≺(::Type{Tag{F1,V1}}, ::Type{SmallTag{H2}}) where {F1,V1,H2}
+    tagcount(Tag{F1,V1}) < tagcount(SmallTag{H2})
+end
+
+@inline function ≺(::Type{SmallTag{H1}}, ::Type{SmallTag{H2}}) where {H1,H2}
+    tagcount(SmallTag{H1}) < tagcount(SmallTag{H2})
 end
 
 struct InvalidTagException{E,O} <: Exception
@@ -36,12 +71,21 @@ checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
 
 checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
+# SmallTag is a smaller tag, that only confirms the hash
+function checktag(::Type{SmallTag{HT}}, f::F, x::AbstractArray{V}) where {HT,F,V}
+    H = hash(F) ⊻ hash(V)
+    if HT == H || HT === nothing
+        true
+    else
+        throw(InvalidTagException{SmallTag{H},SmallTag{HT}}())
+    end
+end
+
 # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
 
 # custom tag: you're on your own.
 checktag(z, f, x) = true
-
 
 ##################
 # AbstractConfig #
@@ -55,6 +99,18 @@ Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
 
 @inline (chunksize(::AbstractConfig{N})::Int) where {N} = N
 
+function maketag(kind::Union{Symbol,Nothing}, f, X)
+    if kind === :default
+        return Tag(f, X)
+    elseif kind === :small
+        return SmallTag(f, X)
+    elseif kind === nothing
+        return nothing
+    else
+        throw(ArgumentError("tag may be :default, :small, or nothing"))
+    end
+end
+
 ####################
 # DerivativeConfig #
 ####################
@@ -64,7 +120,7 @@ struct DerivativeConfig{T,D} <: AbstractConfig{1}
 end
 
 """
-    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::Real)
+    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::Real; tag::Union{Symbol,Nothing} = :default)
 
 Return a `DerivativeConfig` instance based on the type of `f!`, and the types/shapes of the
 output vector `y` and the input value `x`.
@@ -77,12 +133,29 @@ If `f!` is `nothing` instead of the actual target function, then the returned in
 be used with any target function. However, this will reduce ForwardDiff's ability to catch
 and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
+If `tag` is `:small`, a small hash-based tag is provided. This tracks perturbation confusion
+with similar accuracy, but is much smaller when printing types.
+
 This constructor does not store/modify `y` or `x`.
 """
+@inline function DerivativeConfig(f::F,
+                          y::AbstractArray{Y},
+                          x::X;
+                          tag::Union{Symbol,Nothing} = :default) where {F,X<:Real,Y<:Real}
+    # @inline ensures that, e.g., DerivativeConfig(...; tag = :small) will be well-inferred
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, X)
+        return @noinline DerivativeConfig(f,y,x,T)
+    else
+        T = maketag(tag, f, X)
+        return DerivativeConfig(f,y,x,T)
+    end
+end
+
 function DerivativeConfig(f::F,
                           y::AbstractArray{Y},
                           x::X,
-                          tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
+                          tag::T) where {F,X<:Real,Y<:Real,T}
     duals = similar(y, Dual{T,Y,1})
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
@@ -100,7 +173,7 @@ struct GradientConfig{T,V,N,D} <: AbstractConfig{N}
 end
 
 """
-    ForwardDiff.GradientConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+    ForwardDiff.GradientConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x); tag::Union{Symbol,Nothing} = :default)
 
 Return a `GradientConfig` instance based on the type of `f` and type/shape of the input
 vector `x`.
@@ -108,16 +181,33 @@ vector `x`.
 The returned `GradientConfig` instance contains all the work buffers required by
 `ForwardDiff.gradient` and `ForwardDiff.gradient!`.
 
-If `f` is `nothing` instead of the actual target function, then the returned instance can
-be used with any target function. However, this will reduce ForwardDiff's ability to catch
-and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
+However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
+(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+If `tag` is `:small`, a small hash-based tag is provided. This tracks perturbation confusion
+with similar accuracy, but is much smaller when printing types.
 
 This constructor does not store/modify `x`.
 """
+@inline function GradientConfig(f::F,
+                        x::AbstractArray{V},
+                        c::Chunk{N} = Chunk(x);
+                        tag::Union{Symbol,Nothing} = :default) where {F,V,N}
+    # @inline ensures that, e.g., GradientConfig(...; tag = :small) will be well-inferred
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline GradientConfig(f,x,c,T)
+    else
+        T = maketag(tag, f, V)
+        return GradientConfig(f,x,c,T)
+    end
+end
+
 function GradientConfig(f::F,
                         x::AbstractArray{V},
-                        ::Chunk{N} = Chunk(x),
-                        ::T = Tag(f, V)) where {F,V,N,T}
+                        ::Chunk{N},
+                        ::T) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
@@ -136,7 +226,7 @@ struct JacobianConfig{T,V,N,D} <: AbstractConfig{N}
 end
 
 """
-    ForwardDiff.JacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+    ForwardDiff.JacobianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x); tag::Union{Symbol,Nothing} = :default)
 
 Return a `JacobianConfig` instance based on the type of `f` and type/shape of the input
 vector `x`.
@@ -145,23 +235,40 @@ The returned `JacobianConfig` instance contains all the work buffers required by
 `ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
 `f(x)`.
 
-If `f` is `nothing` instead of the actual target function, then the returned instance can
-be used with any target function. However, this will reduce ForwardDiff's ability to catch
-and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
+However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
+(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+If `tag` is `:small`, a small hash-based tag is provided. This tracks perturbation confusion
+with similar accuracy, but is much smaller when printing types.
 
 This constructor does not store/modify `x`.
 """
+@inline function JacobianConfig(f::F,
+                        x::AbstractArray{V},
+                        c::Chunk{N} = Chunk(x);
+                        tag::Union{Symbol,Nothing} = :default) where {F,V,N}
+    # @inline ensures that, e.g., JacobianConfig(...; tag = :small) will be well-inferred
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline JacobianConfig(f,x,c,T)
+    else
+        T = maketag(tag, f, V)
+        return JacobianConfig(f,x,c,T)
+    end
+end
+
 function JacobianConfig(f::F,
                         x::AbstractArray{V},
-                        ::Chunk{N} = Chunk(x),
-                        ::T = Tag(f, V)) where {F,V,N,T}
+                        ::Chunk{N},
+                        ::T) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
 """
-    ForwardDiff.JacobianConfig(f!, y::AbstractArray, x::AbstractArray, chunk::Chunk = Chunk(x))
+    ForwardDiff.JacobianConfig(f!, y::AbstractArray, x::AbstractArray, chunk::Chunk = Chunk(x); tag::Union{Symbol,Nothing} = :default)
 
 Return a `JacobianConfig` instance based on the type of `f!`, and the types/shapes of the
 output vector `y` and the input vector `x`.
@@ -170,17 +277,35 @@ The returned `JacobianConfig` instance contains all the work buffers required by
 `ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
 `f!(y, x)`.
 
-If `f!` is `nothing` instead of the actual target function, then the returned instance can
-be used with any target function. However, this will reduce ForwardDiff's ability to catch
-and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f!` or `tag` is `nothing`, then the returned instance can be used with any target function.
+However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
+(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+If `tag` is `:small`, a small hash-based tag is provided. This tracks perturbation confusion
+with similar accuracy, but is much smaller when printing types.
 
 This constructor does not store/modify `y` or `x`.
 """
+@inline function JacobianConfig(f::F,
+                        y::AbstractArray{Y},
+                        x::AbstractArray{X},
+                        c::Chunk{N} = Chunk(x);
+                        tag::Union{Symbol,Nothing} = :default) where {F,Y,X,N}
+    # @inline ensures that, e.g., JacobianConfig(...; tag = :small) will be well-inferred
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, X)
+        return @noinline JacobianConfig(f,y,x,c,T)
+    else
+        T = maketag(tag, f, X)
+        return JacobianConfig(f,y,x,c,T)
+    end
+end
+
 function JacobianConfig(f::F,
                         y::AbstractArray{Y},
                         x::AbstractArray{X},
-                        ::Chunk{N} = Chunk(x),
-                        ::T = Tag(f, X)) where {F,Y,X,N,T}
+                        ::Chunk{N},
+                        ::T) where {F,Y,X,N,T}
     seeds = construct_seeds(Partials{N,X})
     yduals = similar(y, Dual{T,Y,N})
     xduals = similar(x, Dual{T,X,N})
@@ -201,7 +326,7 @@ struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
 end
 
 """
-    ForwardDiff.HessianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
+    ForwardDiff.HessianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x); tag::Union{Symbol,Nothing} = :default)
 
 Return a `HessianConfig` instance based on the type of `f` and type/shape of the input
 vector `x`.
@@ -212,23 +337,40 @@ configured for the case where the `result` argument is an `AbstractArray`. If
 it is a `DiffResult`, the `HessianConfig` should instead be constructed via
 `ForwardDiff.HessianConfig(f, result, x, chunk)`.
 
-If `f` is `nothing` instead of the actual target function, then the returned instance can
-be used with any target function. However, this will reduce ForwardDiff's ability to catch
-and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
+However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
+(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+If `tag` is `:small`, a small hash-based tag is provided. This tracks perturbation confusion
+with similar accuracy, but is much smaller when printing types.
 
 This constructor does not store/modify `x`.
 """
+@inline function HessianConfig(f::F,
+                       x::AbstractArray{V},
+                       chunk::Chunk = Chunk(x);
+                       tag::Union{Symbol,Nothing} = :default) where {F,V}
+    # @inline ensures that, e.g., HessianConfig(...; tag = :small) will be well-inferred
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline HessianConfig(f, x, chunk, T)
+    else
+        T = maketag(tag, f, V)
+        return HessianConfig(f, x, chunk, T)
+    end
+end
+
 function HessianConfig(f::F,
                        x::AbstractArray{V},
-                       chunk::Chunk = Chunk(x),
-                       tag = Tag(f, V)) where {F,V}
+                       chunk::Chunk,
+                       tag) where {F,V}
     jacobian_config = JacobianConfig(f, x, chunk, tag)
     gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
 end
 
 """
-    ForwardDiff.HessianConfig(f, result::DiffResult, x::AbstractArray, chunk::Chunk = Chunk(x))
+    ForwardDiff.HessianConfig(f, result::DiffResult, x::AbstractArray, chunk::Chunk = Chunk(x); tag::Union{Symbol,Nothing} = :default)
 
 Return a `HessianConfig` instance based on the type of `f`, types/storage in `result`, and
 type/shape of the input vector `x`.
@@ -236,17 +378,35 @@ type/shape of the input vector `x`.
 The returned `HessianConfig` instance contains all the work buffers required by
 `ForwardDiff.hessian!` for the case where the `result` argument is an `DiffResult`.
 
-If `f` is `nothing` instead of the actual target function, then the returned instance can
-be used with any target function. However, this will reduce ForwardDiff's ability to catch
-and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
+However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
+(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+If `tag` is `:small`, a small hash-based tag is provided. This tracks perturbation confusion
+with similar accuracy, but is much smaller when printing types.
 
 This constructor does not store/modify `x`.
 """
+@inline function HessianConfig(f::F,
+                       result::DiffResult,
+                       x::AbstractArray{V},
+                       chunk::Chunk = Chunk(x);
+                       tag::Union{Symbol,Nothing} = :default) where {F,V}
+    # @inline ensures that, e.g., HessianConfig(...; tag = :small) will be well-inferred
+    @static if VERSION ≥ v"1.8"
+        T = @inline maketag(tag, f, V)
+        return @noinline HessianConfig(f, result, x, chunk, T)
+    else
+        T = maketag(tag, f, V)
+        return HessianConfig(f, result, x, chunk, T)
+    end
+end
+
 function HessianConfig(f::F,
                        result::DiffResult,
                        x::AbstractArray{V},
-                       chunk::Chunk = Chunk(x),
-                       tag = Tag(f, V)) where {F,V}
+                       chunk::Chunk,
+                       tag) where {F,V}
     jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tag)
     gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)

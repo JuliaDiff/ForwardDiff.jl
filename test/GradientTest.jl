@@ -6,7 +6,7 @@ import NaNMath
 using Test
 using LinearAlgebra
 using ForwardDiff
-using ForwardDiff: Dual, Tag
+using ForwardDiff: Dual, maketag
 using StaticArrays
 using DiffTests
 
@@ -21,7 +21,8 @@ x = [0.1, 0.2, 0.3]
 v = f(x)
 g = [-9.4, 15.6, 52.0]
 
-@testset "Rosenbrock, chunk size = $c and tag = $(repr(tag))" for c in (1, 2, 3), tag in (nothing, Tag(f, eltype(x)))
+@testset "Rosenbrock, chunk size = $c and tag = $(repr(maketag(tag, f, eltype(x))))" for c in (1, 2, 3), tag in (nothing, :default, :small)
+    tag = maketag(tag, f, eltype(x))
     cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), tag)
 
     @test eltype(cfg) == Dual{typeof(tag), eltype(x), c}
@@ -60,7 +61,8 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
-    @testset "... with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
+    @testset "... with chunk size = $c and tag = $(repr(maketag(tag, f, eltype(x))))" for c in CHUNK_SIZES, tag in (nothing, :default, :small)
+        tag = maketag(tag, f, eltype(x))
         cfg = ForwardDiff.GradientConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.gradient(f, X, cfg)
@@ -140,6 +142,12 @@ end
 
     # make sure this is not a source of type instability
     @inferred ForwardDiff.GradientConfig(f, sx)
+    if VERSION ≥ v"1.11"
+        # make sure that `GradientConfig(...; tag = compile-time-constant)` also
+        # infers well (requires that Base.hash(::Type) is foldable, which is true
+        # in Julia ≥ 1.11)
+        @inferred ((f, sx)->ForwardDiff.GradientConfig(f, sx; tag=:small))(f, sx)
+    end
 end
 
 @testset "exponential function at base zero" begin
