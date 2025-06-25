@@ -6,6 +6,11 @@ Random.seed!(SEED)
 
 @testset "ForwardDiff.jl" begin
     t0 = time()
+    @testset "Aqua" begin
+        println("##### Testing aqua...")
+        t = @elapsed include("AquaTest.jl")
+        println("##### done (took $t seconds).")
+    end
     @testset "Partials" begin
         println("##### Testing Partials...")
         t = @elapsed include("PartialsTest.jl")
