@@ -8,6 +8,7 @@ using Random
 using ForwardDiff
 using DiffTests
 
+include(joinpath(dirname(@__FILE__), "Furlongs.jl"))
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 Random.seed!(1)
@@ -111,6 +112,18 @@ end
 
 @testset "complex output" begin
     @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
+end
+
+@testset "non-standard numbers" begin
+    Base.exp(f::Furlongs.Furlong) = exp(f.val)
+    Base.cos(f::Furlongs.Furlong) = cos(f.val)
+    Base.sin(f::Furlongs.Furlong) = sin(f.val)
+
+    furlong = Furlongs.Furlong{2}(1.0)
+
+    f(x) = exp(x) + 4*sin(x)*oneunit(x)
+
+    @test ForwardDiff.derivative(f, furlong) == exp(furlong) + 4*cos(furlong)
 end
 
 end # module
