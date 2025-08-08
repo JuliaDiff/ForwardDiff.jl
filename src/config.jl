@@ -109,7 +109,7 @@ Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
     elseif style === :type
         return Tag(f, X)
     elseif style === nothing
-        if HASHTAG_MODE_ENABLED
+        if VERSION ≥ v"1.11"
             return HashTag(f, X)
         else
             return Tag(f, X)
