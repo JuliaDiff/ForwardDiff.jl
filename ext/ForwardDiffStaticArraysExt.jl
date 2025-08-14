@@ -3,7 +3,7 @@ module ForwardDiffStaticArraysExt
 using ForwardDiff, StaticArrays
 using ForwardDiff.LinearAlgebra
 using ForwardDiff.DiffResults
-using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
+using ForwardDiff: Dual, partials, Partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
                    vector_mode_gradient, vector_mode_gradient!,
@@ -73,6 +73,16 @@ end
 
 @generated function extract_jacobian(::Type{T}, ydual::StaticArray, x::S) where {T,S<:StaticArray}
     M, N = length(ydual), length(x)
+    result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
+    return quote
+        $(Expr(:meta, :inline))
+        V = StaticArrays.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
+        return V($result)
+    end
+end
+
+@generated function extract_jacobian(::Type{T}, ydual::Partials{M}, x::S) where {M, T, S<:StaticArray}
+    N = length(x)
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
