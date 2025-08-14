@@ -68,12 +68,12 @@ elseif GROUP == "CUDA"
         activate_gpu_env()
         @testset "CUDA Gradients" begin
             println("##### Testing CUDA gradients...")
-            t = @elapsed include("CUDAGradientTest.jl")
+            t = @elapsed include("gpu/CUDAGradientTest.jl")
             println("##### done (took $t seconds).")
         end
         @testset "CUDA Jacobians" begin
             println("##### Testing CUDA Jacobians...")
-            t = @elapsed include("CUDAJacobianTest.jl")
+            t = @elapsed include("gpu/CUDAJacobianTest.jl")
             println("##### done (took $t seconds).")
         end
     end
