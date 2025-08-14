@@ -6,6 +6,9 @@ steps:
     agents:
       queue: "juliagpu"
       cuda: "*"
+    command: |
+      julia --project=. -e "using Pkg; Pkg.instantiate()"
+      julia --project=. -e "using Pkg; Pkg.test()"
     env:
       GROUP: 'CUDA'
       JULIA_PKG_SERVER: "" # it often struggles with our large artifacts
