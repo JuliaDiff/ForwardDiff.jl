@@ -1,4 +1,4 @@
-[![CI](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml/badge.svg)](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml)
+[![CI](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml?query=branch%3Amaster)
 [![codecov](https://codecov.io/gh/JuliaDiff/ForwardDiff.jl/graph/badge.svg?token=SzHfhyoxUa)](https://codecov.io/gh/JuliaDiff/ForwardDiff.jl)
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliadiff.org/ForwardDiff.jl/stable)
