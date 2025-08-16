@@ -28,8 +28,15 @@ jobs:
           - '1'
         os:
           - ubuntu-latest
+          - windows-latest
+        include:
+          - os: macOS-latest
+            version: 'lts'
+          - os: macOS-latest
+            version: '1'
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
@@ -46,7 +53,7 @@ jobs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
