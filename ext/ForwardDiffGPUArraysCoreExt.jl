@@ -3,6 +3,13 @@ module ForwardDiffGPUArraysCoreExt
 using GPUArraysCore: AbstractGPUArray
 using ForwardDiff: ForwardDiff, Dual, Partials, npartials, partials
 
+struct PartialsFn{T,D<:Dual}
+    dual::D
+end
+PartialsFn{T}(dual::Dual) where {T} = PartialsFn{T,typeof(dual)}(dual)
+
+(f::PartialsFn{T})(i) where {T} = partials(T, f.dual, i)
+
 function ForwardDiff.seed!(duals::AbstractGPUArray{Dual{T,V,N}}, x,
                            seed::Partials{N,V}) where {T,V,N}
     idxs = collect(ForwardDiff.structural_eachindex(duals, x))
@@ -41,19 +48,15 @@ end
 # gradient
 function ForwardDiff.extract_gradient!(::Type{T}, result::AbstractGPUArray,
                                        dual::Dual) where {T}
-    # this closure is needed for gpu compilation
-    partial_fn(dual, i) = partials(T, dual, i)
-
+    fn = PartialsFn{T}(dual)
     idxs = collect(Iterators.take(ForwardDiff.structural_eachindex(result), npartials(dual)))
-    result[idxs] .= partial_fn.(Ref(dual), 1:length(idxs))
+    result[idxs] .= fn.(1:length(idxs))
     return result
 end
 
 function ForwardDiff.extract_gradient_chunk!(::Type{T}, result::AbstractGPUArray, dual,
                                              index, chunksize) where {T}
-    # this closure is needed for gpu compilation
-    partial_fn(dual, i) = partials(T, dual, i)
-
+    fn = PartialsFn{T}(dual)
     offset = index - 1
     idxs = collect(
         Iterators.take(
@@ -61,7 +64,7 @@ function ForwardDiff.extract_gradient_chunk!(::Type{T}, result::AbstractGPUArray
             chunksize,
         )
     )
-    result[idxs] .= partial_fn.(Ref(dual), 1:length(idxs))
+    result[idxs] .= fn.(1:length(idxs))
     return result
 end
 
