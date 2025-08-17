@@ -20,48 +20,9 @@ end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
+
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
-end
-
-"""
-    HashTag{Hash}
-
-HashTag is similar to a Tag, but carries just a small UInt64 hash,
-instead of the full type, which makes stacktraces / types easier to
-read while still providing good resilience to perturbation confusion.
-"""
-struct HashTag{H}
-end
-
-@generated function tagcount(::Type{HashTag{H}}) where {H}
-    :($(Threads.atomic_add!(TAGCOUNT, UInt(1))))
-end
-
-function HashTag(f::F, ::Type{V}) where {F,V}
-    H = if F <: Tuple
-        # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
-        # see checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V}
-        nothing
-    else
-        hash(F) ⊻ hash(V)
-    end
-    tagcount(HashTag{H}) # trigger generated function
-    HashTag{H}()
-end
-
-HashTag(::Nothing, ::Type{V}) where {V} = nothing
-
-@inline function ≺(::Type{HashTag{H1}}, ::Type{Tag{F2,V2}}) where {H1,F2,V2}
-    tagcount(HashTag{H1}) < tagcount(Tag{F2,V2})
-end
-
-@inline function ≺(::Type{Tag{F1,V1}}, ::Type{HashTag{H2}}) where {F1,V1,H2}
-    tagcount(Tag{F1,V1}) < tagcount(HashTag{H2})
-end
-
-@inline function ≺(::Type{HashTag{H1}}, ::Type{HashTag{H2}}) where {H1,H2}
-    tagcount(HashTag{H1}) < tagcount(HashTag{H2})
 end
 
 struct InvalidTagException{E,O} <: Exception
@@ -75,21 +36,12 @@ checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
 
 checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
-# HashTag is a smaller tag, that only confirms the hash
-function checktag(::Type{HashTag{HT}}, f::F, x::AbstractArray{V}) where {HT,F,V}
-    H = hash(F) ⊻ hash(V)
-    if HT == H || HT === nothing
-        true
-    else
-        throw(InvalidTagException{HashTag{H},HashTag{HT}}())
-    end
-end
-
 # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
 
 # custom tag: you're on your own.
 checktag(z, f, x) = true
+
 
 ##################
 # AbstractConfig #
@@ -102,21 +54,6 @@ Base.copy(cfg::AbstractConfig) = deepcopy(cfg)
 Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
 
 @inline (chunksize(::AbstractConfig{N})::Int) where {N} = N
-
-@inline function maketag(f, X; style::Union{Symbol,Nothing} = nothing)
-    if style === :hash
-        return HashTag(f, X)
-    elseif style === :type
-        return Tag(f, X)
-    elseif style === nothing
-        if VERSION ≥ v"1.11"
-            return HashTag(f, X)
-        else
-            return Tag(f, X)
-        end
-    end
-    error("unexpected tag style: $(style)")
-end
 
 ####################
 # DerivativeConfig #
@@ -171,9 +108,9 @@ vector `x`.
 The returned `GradientConfig` instance contains all the work buffers required by
 `ForwardDiff.gradient` and `ForwardDiff.gradient!`.
 
-If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
-However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
-(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `x`.
 """
@@ -208,9 +145,9 @@ The returned `JacobianConfig` instance contains all the work buffers required by
 `ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
 `f(x)`.
 
-If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
-However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
-(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `x`.
 """
@@ -233,9 +170,9 @@ The returned `JacobianConfig` instance contains all the work buffers required by
 `ForwardDiff.jacobian` and `ForwardDiff.jacobian!` when the target function takes the form
 `f!(y, x)`.
 
-If `f!` or `tag` is `nothing`, then the returned instance can be used with any target function.
-However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
-(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f!` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `y` or `x`.
 """
@@ -275,9 +212,9 @@ configured for the case where the `result` argument is an `AbstractArray`. If
 it is a `DiffResult`, the `HessianConfig` should instead be constructed via
 `ForwardDiff.HessianConfig(f, result, x, chunk)`.
 
-If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
-However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
-(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `x`.
 """
@@ -299,9 +236,9 @@ type/shape of the input vector `x`.
 The returned `HessianConfig` instance contains all the work buffers required by
 `ForwardDiff.hessian!` for the case where the `result` argument is an `DiffResult`.
 
-If `f` or `tag` is `nothing`, then the returned instance can be used with any target function.
-However, this will reduce ForwardDiff's ability to catch and prevent perturbation confusion
-(see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
 This constructor does not store/modify `x`.
 """
