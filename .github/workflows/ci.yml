@@ -29,12 +29,7 @@ jobs:
         os:
           - ubuntu-latest
           - windows-latest
-        include:
-          - os: macOS-latest
-            version: 'lts'
-          - os: macOS-latest
-            version: '1'
-
+          - macOS-latest
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
