@@ -16,7 +16,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function gradient(f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         return vector_mode_gradient(f, x, cfg)
     else
         return chunk_mode_gradient(f, x, cfg)
@@ -35,7 +35,7 @@ This method assumes that `isa(f(x), Real)`.
 function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         vector_mode_gradient!(result, f, x, cfg)
     else
         chunk_mode_gradient!(result, f, x, cfg)
@@ -63,12 +63,19 @@ function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
 end
 
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
-extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}= copyto!(result, partials(T, dual))
+function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
+    idxs = structural_eachindex(result)
+    for (i, idx) in zip(1:npartials(dual), idxs)
+        result[idx] = partials(T, dual, i)
+    end
+    return result
+end
 
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
     offset = index - 1
-    for i in 1:chunksize
-        result[i + offset] = partials(T, dual, i)
+    idxs = Iterators.drop(structural_eachindex(result), offset)
+    for (i, idx) in zip(1:chunksize, idxs)
+        result[idx] = partials(T, dual, i)
     end
     return result
 end
@@ -106,10 +113,10 @@ end
 
 function chunk_mode_gradient_expr(result_definition::Expr)
     return quote
-        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
+        @assert structural_length(x) >= N "chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"
 
         # precalculate loop bounds
-        xlen = length(x)
+        xlen = structural_length(x)
         remainder = xlen % N
         lastchunksize = ifelse(remainder == 0, N, remainder)
         lastchunkindex = xlen - lastchunksize + 1

@@ -40,32 +40,68 @@ end
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
+# Only seed indices that are structurally non-zero
+structural_eachindex(x::AbstractArray) = structural_eachindex(x, x)
+function structural_eachindex(x::AbstractArray, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    eachindex(x, y)
+end
+function structural_eachindex(x::UpperTriangular, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    if size(x) != size(y)
+        throw(DimensionMismatch())
+    end
+    n = size(x, 1)
+    return (CartesianIndex(i, j) for j in 1:n for i in 1:j)
+end
+function structural_eachindex(x::LowerTriangular, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    if size(x) != size(y)
+        throw(DimensionMismatch())
+    end
+    n = size(x, 1)
+    return (CartesianIndex(i, j) for j in 1:n for i in j:n)
+end
+function structural_eachindex(x::Diagonal, y::AbstractArray)
+    require_one_based_indexing(x, y)
+    if size(x) != size(y)
+        throw(DimensionMismatch())
+    end
+    return diagind(x)
+end
+
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    duals .= Dual{T,V,N}.(x, Ref(seed))
+    for idx in structural_eachindex(duals, x)
+        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    dual_inds = 1:N
-    duals[dual_inds] .= Dual{T,V,N}.(view(x,dual_inds), seeds)
+    for (i, idx) in zip(1:N, structural_eachindex(duals, x))
+        duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+    end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     offset = index - 1
-    dual_inds = (1:N) .+ offset
-    duals[dual_inds] .= Dual{T,V,N}.(view(x, dual_inds), Ref(seed))
+    idxs = Iterators.drop(structural_eachindex(duals, x), offset)
+    for idx in idxs
+        duals[idx] = Dual{T,V,N}(x[idx], seed)
+    end
     return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
     offset = index - 1
-    seed_inds = 1:chunksize
-    dual_inds = seed_inds .+ offset
-    duals[dual_inds] .= Dual{T,V,N}.(view(x, dual_inds), getindex.(Ref(seeds), seed_inds))
+    idxs = Iterators.drop(structural_eachindex(duals, x), offset)
+    for (i, idx) in zip(1:chunksize, idxs)
+        duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+    end
     return duals
 end

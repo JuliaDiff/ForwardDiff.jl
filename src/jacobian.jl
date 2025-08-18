@@ -18,7 +18,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian(f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         return vector_mode_jacobian(f, x, cfg)
     else
         return chunk_mode_jacobian(f, x, cfg)
@@ -36,7 +36,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian(f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     require_one_based_indexing(y, x)
     CHK && checktag(T, f!, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
         return chunk_mode_jacobian(f!, y, x, cfg)
@@ -57,7 +57,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         vector_mode_jacobian!(result, f, x, cfg)
     else
         chunk_mode_jacobian!(result, f, x, cfg)
@@ -78,7 +78,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     result isa DiffResult ? require_one_based_indexing(y, x) : require_one_based_indexing(result, y, x)
     CHK && checktag(T, f!, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)
     else
         chunk_mode_jacobian!(result, f!, y, x, cfg)
@@ -169,10 +169,10 @@ const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expects that f(x) is an
 function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Expr,
                                   result_definition::Expr, y_definition::Expr)
     return quote
-        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
+        @assert structural_length(x) >= N "chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"
 
         # precalculate loop bounds
-        xlen = length(x)
+        xlen = structural_length(x)
         remainder = xlen % N
         lastchunksize = ifelse(remainder == 0, N, remainder)
         lastchunkindex = xlen - lastchunksize + 1
