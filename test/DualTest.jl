@@ -208,10 +208,15 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test zero(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(zero(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
     @test zero(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(zero(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
 
-    @test one(FDNUM) === Dual{TestTag()}(one(PRIMAL), zero(PARTIALS))
-    @test one(typeof(FDNUM)) === Dual{TestTag()}(one(V), zero(Partials{N,V}))
-    @test one(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
-    @test one(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
+    @test one(FDNUM) === one(value(FDNUM))
+    @test one(typeof(FDNUM)) === one(typeof(value(FDNUM)))
+    @test one(NESTED_FDNUM) === one(value(NESTED_FDNUM))
+    @test one(typeof(NESTED_FDNUM)) === one(typeof(value(NESTED_FDNUM)))
+    
+    @test oneunit(FDNUM) === Dual{TestTag()}(one(PRIMAL), zero(PARTIALS))
+    @test oneunit(typeof(FDNUM)) === Dual{TestTag()}(one(V), zero(Partials{N,V}))
+    @test oneunit(NESTED_FDNUM) === Dual{TestTag()}(Dual{TestTag()}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
+    @test oneunit(typeof(NESTED_FDNUM)) === Dual{TestTag()}(Dual{TestTag()}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag(),V,M}}))
 
     if V <: Integer
         @test rand(samerng(), FDNUM) == rand(samerng(), value(FDNUM))
@@ -231,11 +236,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     #------------#
 
     @test ForwardDiff.isconstant(zero(FDNUM))
-    @test ForwardDiff.isconstant(one(FDNUM))
+    @test ForwardDiff.isconstant(oneunit(FDNUM))
     @test ForwardDiff.isconstant(FDNUM) == (N == 0)
 
     @test ForwardDiff.isconstant(zero(NESTED_FDNUM))
-    @test ForwardDiff.isconstant(one(NESTED_FDNUM))
+    @test ForwardDiff.isconstant(oneunit(NESTED_FDNUM))
     @test ForwardDiff.isconstant(NESTED_FDNUM) == (N == 0)
 
     # Recall that FDNUM = Dual{TestTag()}(PRIMAL, PARTIALS) has N partials, 
@@ -483,15 +488,15 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
             if arity == 1
                 deriv = DiffRules.diffrule(M, f, :x)
                 modifier = if in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth))
-                    one(V)
+                    oneunit(V)
                 elseif in(f, (:log1mexp, :log2mexp))
-                    -one(V)
+                    -oneunit(V)
                 else
                     zero(V)
                 end
                 @eval begin
                     x = rand() + $modifier
-                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)))
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, oneunit(x)))
                     actualval = $M.$f(x)
                     @assert actualval isa Real || actualval isa Complex
                     if actualval isa Real
@@ -517,8 +522,8 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
                 end
                 @eval begin
                     x, y = $x, $y
-                    dx = @inferred $M.$f(Dual{TestTag()}(x, one(x)), y)
-                    dy = @inferred $M.$f(x, Dual{TestTag()}(y, one(y)))
+                    dx = @inferred $M.$f(Dual{TestTag()}(x, oneunit(x)), y)
+                    dy = @inferred $M.$f(x, Dual{TestTag()}(y, oneunit(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
                     actualval = $M.$f(x, y)
