@@ -1,4 +1,4 @@
-module Furlongs
+module Furlongs # Provides a non-standard number type, Furlong, for testing purposes. Adapted from https://github.com/JuliaLang/julia/blob/v1.11.6/test/testhelpers/Furlongs.jl
 
 export Furlong
 
