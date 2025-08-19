@@ -113,4 +113,11 @@ end
     @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
 end
 
+@testset "analytic functions" begin
+    dexp(x) = ForwardDiff.derivative(y -> exp(complex(0, y)), x)
+    @test ForwardDiff.derivative(dexp, 0.0) ≈ -1
+    @test ForwardDiff.derivative(x -> exp(1im*x), 0.7) ≈ im * cis(0.7)
+    @test ForwardDiff.derivative(x -> sqrt(im + (1+im) * x), 1.23) ≈ (1+im) / (2 * sqrt(im + (1+im)*1.23))
+end
+
 end # module
