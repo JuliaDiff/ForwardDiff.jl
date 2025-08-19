@@ -24,15 +24,28 @@ end
 @inline static_dual_eval(::Type{T}, f::F, x::StaticArray) where {T,F} = f(dualize(T, x))
 
 # To fix method ambiguity issues:
-function LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
-    return ForwardDiff._eigvals(A)
+function LinearAlgebra.eigvals(A::Symmetric{Dual{T,V,N}, <:StaticArrays.StaticMatrix}) where {T,V<:Real,N}
+    return ForwardDiff._eigvals_hermitian(A)
 end
-function LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}, <:StaticArrays.StaticMatrix}) where {Tg,T<:Real,N}
-    return ForwardDiff._eigen(A)
+function LinearAlgebra.eigvals(A::Hermitian{Dual{T,V,N}, <:StaticArrays.StaticMatrix}) where {T,V<:Real,N}
+    return ForwardDiff._eigvals_hermitian(A)
+end
+function LinearAlgebra.eigvals(A::Hermitian{Complex{Dual{T,V,N}}, <:StaticArrays.StaticMatrix}) where {T,V<:Real,N}
+    return ForwardDiff._eigvals_hermitian(A)
+end
+
+function LinearAlgebra.eigen(A::Symmetric{Dual{T,V,N}, <:StaticArrays.StaticMatrix}) where {T,V<:Real,N}
+    return ForwardDiff._eigen_hermitian(A)
+end
+function LinearAlgebra.eigen(A::Hermitian{Dual{T,V,N}, <:StaticArrays.StaticMatrix}) where {T,V<:Real,N}
+    return ForwardDiff._eigen_hermitian(A)
+end
+function LinearAlgebra.eigen(A::Hermitian{Complex{Dual{T,V,N}}, <:StaticArrays.StaticMatrix}) where {T,V<:Real,N}
+    return ForwardDiff._eigen_hermitian(A)
 end
 
 # For `MMatrix` we can use the in-place method
-ForwardDiff._lyap_div!!(A::StaticArrays.MMatrix, λ::AbstractVector) = ForwardDiff._lyap_div!(A, λ)
+ForwardDiff._lyap_div_zero_diag!!(A::StaticArrays.MMatrix, λ::AbstractVector) = ForwardDiff._lyap_div_zero_diag!(A, λ)
 
 # Gradient
 @inline ForwardDiff.gradient(f::F, x::StaticArray) where {F} = vector_mode_gradient(f, x)
