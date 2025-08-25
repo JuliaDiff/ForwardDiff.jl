@@ -279,4 +279,33 @@ end
     end
 end
 
+# issues #436, #740
+@testset "BigFloat" begin
+    # Unassigned entries in the output
+    x = BigFloat.(1:9)
+    for chunksize in (1, 2, 9)
+        y = similar(x)
+        @test all(i -> !isassigned(y, i), eachindex(y))
+        cfg = ForwardDiff.JacobianConfig(copyto!, y, x, ForwardDiff.Chunk{chunksize}())
+        res = ForwardDiff.jacobian(copyto!, y, x, cfg)
+        @test y == x
+        @test res isa Matrix{BigFloat}
+        @test res == I
+    end
+
+    # Unassigned (but unused) entry in the input and unassigned entries in the output
+    resize!(x, 10)
+    f = (y, x) -> copyto!(y, 1, x, 1, 9)
+    for chunksize in (1, 2, 10)
+        y = similar(x, 9)
+        @test all(i -> !isassigned(y, i), eachindex(y))
+        cfg = ForwardDiff.JacobianConfig(f, y, x, ForwardDiff.Chunk{chunksize}())
+        res = ForwardDiff.jacobian(f, y, x, cfg)
+        @test y == x[1:(end-1)]
+        @test res isa Matrix{BigFloat}
+        @test res[:, 1:(end-1)] == I
+        @test all(iszero, res[:, end])
+    end
+end
+
 end # module
