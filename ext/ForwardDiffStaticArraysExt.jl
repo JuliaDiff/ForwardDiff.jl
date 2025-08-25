@@ -114,6 +114,8 @@ ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} =
 
 ForwardDiff.hessian!(result::AbstractArray, f::F, x::StaticArray) where {F} = jacobian!(result, Base.Fix1(gradient, f), x)
 
+ForwardDiff.hessian!(result::AbstractArray, f::F, grad::AbstractArray, x::StaticArray) where {F} = hessian!(result, grad, f, x, HessianConfig(f, grad, x))
+
 ForwardDiff.hessian!(result::MutableDiffResult, f::F, x::StaticArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
 
 ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::HessianConfig) where {F} = hessian!(result, f, x)

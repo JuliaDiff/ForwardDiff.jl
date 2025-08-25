@@ -36,6 +36,36 @@ function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianCon
     return result
 end
 
+# Struct for inner gradient in instead of 
+# a closure to avoid allocations
+struct InnerGradientForNallocHess{C,F}
+    cfg::C
+    f::F
+end
+
+function (g::InnerGradientForNallocHess)(y, z)
+    gradient!(y, g.f, z, g.cfg.gradient_config, Val{false}())
+    return y
+end
+
+
+"""
+    ForwardDiff.hessian!(result::AbstractArray, f, grad::AbstractArray, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, grad, x), check=Val{true}())
+
+Compute `H(f)` (i.e. `J(∇(f))`) with no allocations evaluated at `x` and store the result(s) in `result`,
+assuming `f` is called as `f(x)`. `grad` has to be passed as an argument for storing the intermediate gradients.
+
+This method assumes that `isa(f(x), Real)`.
+
+Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
+"""
+function hessian!(result::AbstractArray, f::F, grad::AbstractArray, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, grad, x), ::Val{CHK} = Val{true}()) where {F,T,CHK}
+    require_one_based_indexing(result, grad, x)
+    CHK && checktag(T, f, x)
+    ∇f! = InnerGradientForNallocHess(cfg, f)
+    jacobian!(result, ∇f!, grad, x, cfg.jacobian_config, Val{false}())
+    return result
+end
 
 # We use this struct below instead of an
 # equivalent closure in order to avoid
