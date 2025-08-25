@@ -118,12 +118,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test precision(typeof(FDNUM)) === precision(V)
         @test precision(NESTED_FDNUM) === precision(PRIMAL)
         @test precision(typeof(NESTED_FDNUM)) === precision(V)
-        if VERSION >= v"1.8.0-DEV.725" # https://github.com/JuliaLang/julia/pull/42428
-            @test precision(FDNUM; base=10) === precision(PRIMAL; base=10)
-            @test precision(typeof(FDNUM); base=10) === precision(V; base=10)
-            @test precision(NESTED_FDNUM; base=10) === precision(PRIMAL; base=10)
-            @test precision(typeof(NESTED_FDNUM); base=10) === precision(V; base=10)
-        end
+        
+        @test precision(FDNUM; base=10) === precision(PRIMAL; base=10)
+        @test precision(typeof(FDNUM); base=10) === precision(V; base=10)
+        @test precision(NESTED_FDNUM; base=10) === precision(PRIMAL; base=10)
+        @test precision(typeof(NESTED_FDNUM); base=10) === precision(V; base=10)
 
         @test floor(Int, FDNUM) === floor(Int, PRIMAL)
         @test floor(Int, FDNUM2) === floor(Int, PRIMAL2)
