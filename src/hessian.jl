@@ -36,7 +36,7 @@ function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianCon
     return result
 end
 
-# Struct for inner gradient in instead of 
+# Struct for inner gradient instead of 
 # a closure to avoid allocations
 struct InnerGradientForNallocHess{C,F}
     cfg::C
