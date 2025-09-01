@@ -15,11 +15,9 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [weakdeps]
-GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
-ForwardDiffGPUArraysCoreExt = "GPUArraysCore"
 ForwardDiffStaticArraysExt = "StaticArrays"
 
 [compat]
@@ -28,7 +26,6 @@ CommonSubexpressions = "0.3"
 DiffResults = "1.1"
 DiffRules = "1.4"
 DiffTests = "0.1"
-GPUArraysCore = "0.2"
 IrrationalConstants = "0.1, 0.2"
 LogExpFunctions = "0.3"
 NaNMath = "1"

@@ -277,4 +277,9 @@ end
     @test Array(grad_jl) ≈ grad
 end
 
+@testset "Scalar Indexing Checks" begin
+    @test ForwardDiff.supports_fast_scalar_indexing(UnitLowerTriangular(view(rand(6, 6), 1:3, 1:3)))
+    @test !ForwardDiff.supports_fast_scalar_indexing(UnitLowerTriangular(view(JLArray(rand(6, 6)), 1:3, 1:3)))
+end
+
 end # module
