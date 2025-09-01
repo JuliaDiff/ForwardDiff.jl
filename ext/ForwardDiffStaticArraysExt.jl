@@ -10,7 +10,7 @@ using ForwardDiff: Dual, partials, npartials, Partials, GradientConfig, Jacobian
                    vector_mode_jacobian, vector_mode_jacobian!, valtype, value
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 
-@inline ForwardDiff.supports_fast_scalar_indexing(::StaticArray) = true
+ForwardDiff.supports_fast_scalar_indexing(::StaticArray) = true
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
     N = length(x)
