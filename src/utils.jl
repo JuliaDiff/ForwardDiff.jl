@@ -1,9 +1,8 @@
 # overload for array types that
-@inline supports_fast_scalar_indexing(::Array) = true
+@inline supports_fast_scalar_indexing(::StridedArray) = true
 
 @inline function supports_fast_scalar_indexing(x::AbstractArray)
-    parent(x) === x && return false
-    return supports_fast_scalar_indexing(parent(x))
+    return parent(x) !== x && supports_fast_scalar_indexing(parent(x))
 end
 
 # Helper function for broadcasting
