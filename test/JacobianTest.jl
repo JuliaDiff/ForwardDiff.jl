@@ -11,6 +11,11 @@ using LinearAlgebra
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
+struct TestTag end
+struct OuterTestTag end
+ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{<:Tag}) = true
+
 ##################
 # hardcoded test #
 ##################
@@ -306,6 +311,32 @@ end
         @test res[:, 1:(end-1)] == I
         @test all(iszero, res[:, end])
     end
+end
+
+# issue #769
+@testset "functions with `Dual` output" begin
+    x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
+    f(x) = map(ForwardDiff.value, x)
+    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+
+    # Vector mode
+    jac = ForwardDiff.jacobian(f, x)
+    @test jac isa Matrix{typeof(der)}
+    @test jac == [der;;]
+    jac = ForwardDiff.jacobian(f, SVector{1}(x))
+    @test jac isa SMatrix{1,1,typeof(der)}
+    @test jac == SMatrix{1,1}(der)
+
+    # Chunk mode
+    y = repeat(x, 3)
+    cfg = ForwardDiff.JacobianConfig(f, y, ForwardDiff.Chunk{2}())
+    jac = ForwardDiff.jacobian(f, y, cfg)
+    @test jac isa Matrix{typeof(der)}
+    @test jac == Diagonal([der, der, der])
+    cfg = ForwardDiff.JacobianConfig(f, SVector{3}(y), ForwardDiff.Chunk{2}())
+    jac = ForwardDiff.jacobian(f, SVector{3}(y), cfg)
+    @test jac isa SMatrix{3,3,typeof(der)}
+    @test jac == Diagonal([der, der, der])
 end
 
 end # module
