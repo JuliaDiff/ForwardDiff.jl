@@ -383,23 +383,18 @@ end
 # Before PR#481 this loop ran over this list:
 # BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
-for pred in [:<]
-    predeq = Symbol(pred, :(=))
-    @eval begin
-        @define_binary_dual_op(
-            Base.$(pred),
-            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(pred)(partials(x), partials(y))),
-            $(pred)(value(x), y) || (value(x) == y && $(pred)(partials(x), zero(partials(x)))),
-            $(pred)(x, value(y)) || (x == value(y) && $(pred)(zero(partials(y)), partials(y))),
-        )
-        @define_binary_dual_op(
-            Base.$(predeq),
-            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(predeq)(partials(x), partials(y))),
-            $(pred)(value(x), y) || (value(x) == y && $(predeq)(partials(x), zero(partials(x)))),
-            $(pred)(x, value(y)) || (x == value(y) && $(predeq)(zero(partials(y)), partials(y))),
-        )
-    end
-end
+@define_binary_dual_op(
+    Base.:(<),
+    (value(x) < value(y)) || (value(x) == value(y) && (partials(x) < partials(y))),
+    (value(x) < y) || (value(x) == y && (partials(x) < zero(partials(x)))),
+    (x < value(y)) || (x == value(y) && (zero(partials(y)) < partials(y))),
+)
+@define_binary_dual_op(
+    Base.:(<=),
+    (value(x) < value(y)) || (value(x) == value(y) && (partials(x) <= partials(y))),
+    (value(x) < y) || (value(x) == y && (partials(x) <= zero(partials(x)))),
+    (x < value(y)) || (x == value(y) && (zero(partials(y)) <= partials(y))),
+)
 
 @define_binary_dual_op(
     Base.isless,
