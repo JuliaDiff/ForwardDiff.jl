@@ -383,7 +383,7 @@ end
 # Before PR#481 this loop ran over this list:
 # BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
-for pred in [:<, :>]
+for pred in [:<]
     predeq = Symbol(pred, :(=))
     @eval begin
         @define_binary_dual_op(
