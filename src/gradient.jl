@@ -65,17 +65,29 @@ end
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
 function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
     idxs = structural_eachindex(result)
-    for (i, idx) in zip(1:npartials(dual), idxs)
-        result[idx] = partials(T, dual, i)
+    if supports_fast_scalar_indexing(result)
+        for (i, idx) in zip(1:npartials(dual), idxs)
+            result[idx] = partials(T, dual, i)
+        end
+    else
+        fn = PartialsFn{T}(dual)
+        idxs = collect(Iterators.take(idxs, npartials(dual)))
+        result[idxs] .= fn.(1:length(idxs))
+        return result
     end
     return result
 end
 
 function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
-    offset = index - 1
-    idxs = Iterators.drop(structural_eachindex(result), offset)
-    for (i, idx) in zip(1:chunksize, idxs)
-        result[idx] = partials(T, dual, i)
+    idxs = Iterators.drop(structural_eachindex(result), index - 1)
+    if supports_fast_scalar_indexing(result)
+        for (i, idx) in zip(1:chunksize, idxs)
+            result[idx] = partials(T, dual, i)
+        end
+    else
+        fn = PartialsFn{T}(dual)
+        idxs = collect(Iterators.take(idxs, chunksize))
+        result[idxs] .= fn.(1:length(idxs))
     end
     return result
 end
