@@ -47,7 +47,7 @@ ForwardDiff._lyap_div!!(A::StaticArrays.MMatrix, λ::AbstractVector) = ForwardDi
     result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
     return quote
         $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype($y))
+        V = StaticArrays.similar_type(S, valtype(T, $y))
         return V($result)
     end
 end
@@ -77,7 +77,7 @@ end
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
+        V = StaticArrays.similar_type(S, valtype(T, eltype($ydual)), Size($M, $N))
         return V($result)
     end
 end
@@ -88,7 +88,7 @@ end
 end
 
 function extract_jacobian(::Type{T}, ydual::AbstractArray, x::StaticArray) where T
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), length(x))
+    result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), length(x))
     return extract_jacobian!(T, result, ydual, length(x))
 end
 
