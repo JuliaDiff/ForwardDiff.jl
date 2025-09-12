@@ -128,6 +128,17 @@ end
 @inline valtype(::Dual{T,V,N}) where {T,V,N} = V
 @inline valtype(::Type{Dual{T,V,N}}) where {T,V,N} = V
 
+@inline valtype(::Type{T}, ::V) where {T,V} = valtype(T, V)
+@inline valtype(::Type, ::Type{V}) where {V} = V
+@inline valtype(::Type{T}, ::Type{Dual{T,V,N}}) where {T,V,N} = V
+@inline function valtype(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N}
+    if S ≺ T
+        Dual{S,V,N}
+    else
+        throw(DualMismatchError(T,S))
+    end
+end
+
 @inline tagtype(::V) where {V} = Nothing
 @inline tagtype(::Type{V}) where {V} = Nothing
 @inline tagtype(::Dual{T,V,N}) where {T,V,N} = T
