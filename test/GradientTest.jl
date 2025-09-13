@@ -188,7 +188,7 @@ end
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
     f(x) = sum(ForwardDiff.value, x)
-    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+    der = ForwardDiff.derivative(ForwardDiff.value, first(x))
 
     # Vector mode
     grad = ForwardDiff.gradient(f, x)

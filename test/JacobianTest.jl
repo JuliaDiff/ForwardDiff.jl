@@ -264,12 +264,12 @@ end
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
     f(x) = map(ForwardDiff.value, x)
-    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+    der = ForwardDiff.derivative(ForwardDiff.value, first(x))
 
     # Vector mode
     jac = ForwardDiff.jacobian(f, x)
     @test jac isa Matrix{typeof(der)}
-    @test jac == [der;;]
+    @test jac == fill(der, 1, 1)
     jac = ForwardDiff.jacobian(f, SVector{1}(x))
     @test jac isa SMatrix{1,1,typeof(der)}
     @test jac == SMatrix{1,1}(der)
