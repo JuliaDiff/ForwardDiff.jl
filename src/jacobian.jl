@@ -128,7 +128,7 @@ function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T}) where {F,T}
     N = chunksize(cfg)
     ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa AbstractArray || throw(JACOBIAN_ERROR)
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
+    result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)
     return result
@@ -217,7 +217,7 @@ end
                                    seed!(xdual, x)
                                end,
                                :(ydual = f(xdual)),
-                               :(result = similar(ydual, valtype(eltype(ydual)), length(ydual), xlen)),
+                               :(result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), xlen)),
                                :()))
 end
 
