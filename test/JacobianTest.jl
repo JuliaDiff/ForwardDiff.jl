@@ -8,6 +8,7 @@ using ForwardDiff: Dual, Tag, JacobianConfig
 using StaticArrays
 using DiffTests
 using LinearAlgebra
+using JLArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -311,6 +312,19 @@ end
         @test res[:, 1:(end-1)] == I
         @test all(iszero, res[:, end])
     end
+end
+
+@testset "GPUArraysCore" begin
+    f(x) = x .^ 2 ./ 2
+
+    x = [1.0, 2.0, 3.0]
+    x_jl = JLArray(x)
+
+    jac = ForwardDiff.jacobian(f, x)
+    jac_jl = ForwardDiff.jacobian(f, x_jl)
+
+    @test jac_jl isa JLArray
+    @test Array(jac_jl) ≈ jac
 end
 
 # issue #769

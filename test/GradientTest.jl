@@ -9,6 +9,7 @@ using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
 using DiffTests
+using JLArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -258,6 +259,32 @@ end
             end
         end
     end
+end
+
+@testset "GPUArraysCore" begin
+    fn(x) = sum(x .^ 2 ./ 2)
+
+    x = [1.0, 2.0, 3.0]
+    x_jl = JLArray(x)
+
+    grad = ForwardDiff.gradient(fn, x)
+    grad_jl = ForwardDiff.gradient(fn, x_jl)
+
+    @test grad_jl isa JLArray
+    @test Array(grad_jl) ≈ grad
+
+    cfg = ForwardDiff.GradientConfig(
+        fn, x_jl, ForwardDiff.Chunk{2}(), ForwardDiff.Tag(fn, eltype(x))
+    )
+    grad_jl = ForwardDiff.gradient(fn, x_jl, cfg)
+
+    @test grad_jl isa JLArray
+    @test Array(grad_jl) ≈ grad
+end
+
+@testset "Scalar Indexing Checks" begin
+    @test ForwardDiff.supports_fast_scalar_indexing(UnitLowerTriangular(view(rand(6, 6), 1:3, 1:3)))
+    @test !ForwardDiff.supports_fast_scalar_indexing(UnitLowerTriangular(view(JLArray(rand(6, 6)), 1:3, 1:3)))
 end
 
 # issue #769
