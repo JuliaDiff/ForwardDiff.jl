@@ -101,6 +101,21 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test ForwardDiff.valtype(NESTED_FDNUM) == Dual{TestTag,V,M}
     @test ForwardDiff.valtype(typeof(NESTED_FDNUM)) == Dual{TestTag,V,M}
 
+    @test ForwardDiff.valtype(TestTag, FDNUM) == V
+    @test ForwardDiff.valtype(TestTag, typeof(FDNUM)) == V
+    @test ForwardDiff.valtype(TestTag, NESTED_FDNUM) == Dual{TestTag,V,M}
+    @test ForwardDiff.valtype(TestTag, typeof(NESTED_FDNUM)) == Dual{TestTag,V,M}
+
+    @test ForwardDiff.valtype(OuterTestTag, FDNUM) == Dual{TestTag,V,N}
+    @test ForwardDiff.valtype(OuterTestTag, typeof(FDNUM)) == Dual{TestTag,V,N}
+    @test ForwardDiff.valtype(OuterTestTag, NESTED_FDNUM) == Dual{TestTag,Dual{TestTag,V,M},N}
+    @test ForwardDiff.valtype(OuterTestTag, typeof(NESTED_FDNUM)) == Dual{TestTag,Dual{TestTag,V,M},N}
+
+    @test_throws ForwardDiff.DualMismatchError(TestTag, OuterTestTag) ForwardDiff.valtype(TestTag, Dual{OuterTestTag}(PRIMAL, PARTIALS))
+    @test_throws ForwardDiff.DualMismatchError(TestTag, OuterTestTag) ForwardDiff.valtype(TestTag, typeof(Dual{OuterTestTag}(PRIMAL, PARTIALS)))
+    @test_throws ForwardDiff.DualMismatchError(TestTag, OuterTestTag) ForwardDiff.valtype(TestTag, Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS))
+    @test_throws ForwardDiff.DualMismatchError(TestTag, OuterTestTag) ForwardDiff.valtype(TestTag, typeof(Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)))
+
     #####################
     # Generic Functions #
     #####################

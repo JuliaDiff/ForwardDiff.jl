@@ -109,7 +109,7 @@ const GRAD_ERROR = DimensionMismatch("gradient(f, x) expects that f(x) is a real
 function vector_mode_gradient(f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa Real || throw(GRAD_ERROR)
-    result = similar(x, valtype(ydual))
+    result = similar(x, valtype(T, ydual))
     return extract_gradient!(T, result, ydual)
 end
 
@@ -168,7 +168,7 @@ function chunk_mode_gradient_expr(result_definition::Expr)
 end
 
 @eval function chunk_mode_gradient(f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}
-    $(chunk_mode_gradient_expr(:(result = similar(x, valtype(ydual)))))
+    $(chunk_mode_gradient_expr(:(result = similar(x, valtype(T, ydual)))))
 end
 
 @eval function chunk_mode_gradient!(result, f::F, x, cfg::GradientConfig{T,V,N}) where {F,T,V,N}

@@ -13,6 +13,11 @@ using JLArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
+struct TestTag end
+struct OuterTestTag end
+ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{<:Tag}) = true
+
 ##################
 # hardcoded test #
 ##################
@@ -280,6 +285,32 @@ end
 @testset "Scalar Indexing Checks" begin
     @test ForwardDiff.supports_fast_scalar_indexing(UnitLowerTriangular(view(rand(6, 6), 1:3, 1:3)))
     @test !ForwardDiff.supports_fast_scalar_indexing(UnitLowerTriangular(view(JLArray(rand(6, 6)), 1:3, 1:3)))
+end
+
+# issue #769
+@testset "functions with `Dual` output" begin
+    x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
+    f(x) = sum(ForwardDiff.value, x)
+    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+
+    # Vector mode
+    grad = ForwardDiff.gradient(f, x)
+    @test grad isa Vector{typeof(der)}
+    @test grad == [der]
+    grad = ForwardDiff.gradient(f, SVector{1}(x))
+    @test grad isa SVector{1,typeof(der)}
+    @test grad == SVector{1}(der)
+
+    # Chunk mode
+    y = repeat(x, 3)
+    cfg = ForwardDiff.GradientConfig(f, y, ForwardDiff.Chunk{2}())
+    grad = ForwardDiff.gradient(f, y, cfg)
+    @test grad isa Vector{typeof(der)}
+    @test grad == [der, der, der]
+    cfg = ForwardDiff.GradientConfig(f, SVector{3}(y), ForwardDiff.Chunk{2}())
+    grad = ForwardDiff.gradient(f, SVector{3}(y), cfg)
+    @test grad isa SVector{3,typeof(der)}
+    @test grad == SVector{3}(der, der, der)
 end
 
 end # module
