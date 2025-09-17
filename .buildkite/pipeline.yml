@@ -1,0 +1,18 @@
+steps:
+  - label: "CUDA"
+    plugins:
+      - JuliaCI/julia#v1:
+          version: "1"
+    agents:
+      queue: "juliagpu"
+      cuda: "*"
+    command: |
+      julia --project=. -e "using Pkg; Pkg.instantiate()"
+      julia --project=. -e "using Pkg; Pkg.test()"
+    env:
+      GROUP: 'CUDA'
+      JULIA_PKG_SERVER: "" # it often struggles with our large artifacts
+      # SECRET_CODECOV_TOKEN: "..."
+    timeout_in_minutes: 180
+    # Don't run Buildkite if the commit message includes the text [skip tests]
+    if: build.message !~ /\[skip tests\]/
