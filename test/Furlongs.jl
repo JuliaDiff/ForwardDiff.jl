@@ -107,8 +107,8 @@ Base.muladd(x::TNumber, y::TNumber, z::Furlong) = x*y + z
 Base.muladd(x::TNumber, y::Furlong, z::Furlong) = x*y + z
 Base.muladd(x::Furlong, y::TNumber, z::Furlong) = x*y + z
 
-Base.exp(f::Furlongs.Furlong{0}) = exp(f.val)
-Base.cos(f::Furlongs.Furlong{0}) = cos(f.val)
-Base.sin(f::Furlongs.Furlong{0}) = sin(f.val)
+Base.exp(f::Furlongs.Furlong) = exp(f.val)
+Base.cos(f::Furlongs.Furlong) = cos(f.val)
+Base.sin(f::Furlongs.Furlong) = sin(f.val)
 
 end
