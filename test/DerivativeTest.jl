@@ -135,10 +135,6 @@ end
 end
 
 @testset "non-standard numbers" begin
-    Base.exp(f::Furlongs.Furlong{0}) = exp(f.val)
-    Base.cos(f::Furlongs.Furlong{0}) = cos(f.val)
-    Base.sin(f::Furlongs.Furlong{0}) = sin(f.val)
-
     furlong = Furlongs.Furlong{2}(1.0)
 
     f(x) = exp(x) + 4*sin(x)*oneunit(x)
