@@ -5,6 +5,8 @@ using Random
 using ForwardDiff
 using ForwardDiff: Partials
 
+include(joinpath(dirname(@__FILE__), "Furlongs.jl"))
+
 samerng() = MersenneTwister(1)
 
 @testset "Partials{$N,$T}" for N in (0, 3), T in (Int, Float32, Float64)
@@ -143,6 +145,10 @@ samerng() = MersenneTwister(1)
                 end
             end
         end
+    end
+
+    @testset "non-standard numbers" begin # Will be fixed by changing single_seed to use oneunit rather than one
+        @test_throws MethodError ForwardDiff.construct_seeds(ForwardDiff.Partials{3, Furlongs.Furlong{1, Float64}})
     end
 end
 
