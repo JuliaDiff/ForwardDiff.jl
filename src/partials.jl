@@ -82,6 +82,18 @@ Base.convert(::Type{Partials{N,V}}, partials::Partials{N,V}) where {N,V} = parti
 @inline Base.:-(partials::Partials) = Partials(minus_tuple(partials.values))
 @inline Base.:*(x::Real, partials::Partials) = partials*x
 
+@inline function Base.:*(partials::Partials, x::Real)
+    return Partials(scale_tuple(partials.values, x))
+end
+
+@inline function Base.:/(partials::Partials, x::Real)
+    return Partials(div_tuple_by_scalar(partials.values, x))
+end
+
+@inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
+    return Partials(mul_tuples(a.values, b.values, x_a, x_b))
+end
+
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
     return _mul_partials(a, b, inv(bval), -(aval / (bval*bval)))
 end
@@ -90,33 +102,22 @@ end
 #----------------------#
 
 if NANSAFE_MODE_ENABLED
-    @inline function Base.:*(partials::Partials, x::Real)
-        x = ifelse(!isfinite(x) && iszero(partials), one(x), x)
-        return Partials(scale_tuple(partials.values, x))
+    # A dual number with a zero partial is just an unperturbed non-dual number
+    # Hence when propagated the resulting dual number is unperturbed as well,
+    # ie., its partial is zero as well, regardless of the primal value
+    # However, standard floating point multiplication/division would return `NaN`
+    # if the primal is not-finite/zero
+    @inline function _mul_partial(partial::Real, x::Real)
+        y = partial * x
+        return iszero(partial) ? zero(y) : y
     end
-
-    @inline function Base.:/(partials::Partials, x::Real)
-        x = ifelse(x == zero(x) && iszero(partials), one(x), x)
-        return Partials(div_tuple_by_scalar(partials.values, x))
-    end
-
-    @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
-        x_a = ifelse(!isfinite(x_a) && iszero(a), one(x_a), x_a)
-        x_b = ifelse(!isfinite(x_b) && iszero(b), one(x_b), x_b)
-        return Partials(mul_tuples(a.values, b.values, x_a, x_b))
+    @inline function _div_partial(partial::Real, x::Real)
+        y = partial / x
+        return iszero(partial) ? zero(y) : y
     end
 else
-    @inline function Base.:*(partials::Partials, x::Real)
-        return Partials(scale_tuple(partials.values, x))
-    end
-
-    @inline function Base.:/(partials::Partials, x::Real)
-        return Partials(div_tuple_by_scalar(partials.values, x))
-    end
-
-    @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
-        return Partials(mul_tuples(a.values, b.values, x_a, x_b))
-    end
+    @inline _mul_partial(partial::Real, x::Real) = partial * x
+    @inline _div_partial(partial::Real, x::Real) = partial / x
 end
 
 # edge cases where N == 0 #
@@ -197,11 +198,11 @@ end
 end
 
 @generated function scale_tuple(tup::NTuple{N}, x) where N
-    return tupexpr(i -> :(tup[$i] * x), N)
+    return tupexpr(i -> :(_mul_partial(tup[$i], x)), N)
 end
 
 @generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
-    return tupexpr(i -> :(tup[$i] / x), N)
+    return tupexpr(i -> :(_div_partial(tup[$i], x)), N)
 end
 
 @generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
@@ -217,7 +218,7 @@ end
 end
 
 @generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
-    return tupexpr(i -> :((afactor * a[$i]) + (bfactor * b[$i])), N)
+    return tupexpr(i -> :(_mul_partial(a[$i], afactor) + _mul_partial(b[$i], bfactor)), N)
 end
 
 ###################

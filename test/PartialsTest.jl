@@ -111,24 +111,37 @@ samerng() = MersenneTwister(1)
     @test (PARTIALS / X).values == map(v -> v / X, VALUES)
 
     if N > 0
-        @test ForwardDiff._div_partials(PARTIALS, PARTIALS2, X, Y) == ForwardDiff._mul_partials(PARTIALS, PARTIALS2, inv(Y), -X/(Y^2))
-        @test ForwardDiff._mul_partials(PARTIALS, PARTIALS2, X, Y).values == map((a, b) -> (X * a) + (Y * b), VALUES, VALUES2)
-        @test ForwardDiff._mul_partials(ZERO_PARTIALS, PARTIALS, X, Y) == Y * PARTIALS
-        @test ForwardDiff._mul_partials(PARTIALS, ZERO_PARTIALS, X, Y) == X * PARTIALS
+        # Only zero partials
+        ALLZERO = Partials(ntuple(_ -> zero(T), N))
+        # Mix of zero and non-zero partials
+        FIRSTZERO = Partials(ntuple(i -> i == 1 ? zero(T) : rand(T), N))
+
+        # The following properties should always be satisfied, regardless of whether NaN-safe mode is enabled or disabled
+        # We use `isequal` for comparisons in the presence of `NaN`s
+        for p1 in (PARTIALS, ALLZERO, FIRSTZERO), p2 in (PARTIALS2, ALLZERO, FIRSTZERO), v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
+            @test isequal(ForwardDiff._div_partials(p1, p2, v1, v2), ForwardDiff._mul_partials(p1, p2, inv(v2), -v1/(v2^2)))
+            @test isequal(ForwardDiff._mul_partials(p1, p2, v1, v2), v1 * p1 + v2 * p2)
+        end
+        for v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
+            @test isequal(ForwardDiff._mul_partials(ZERO_PARTIALS, PARTIALS, v1, v2), v2 * PARTIALS)
+            @test isequal(ForwardDiff._mul_partials(PARTIALS, ZERO_PARTIALS, v1, v2), v1 * PARTIALS)
+        end
 
         if ForwardDiff.NANSAFE_MODE_ENABLED
-            ZEROS = Partials((fill(zero(T), N)...,))
+            for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf))
+                # Only zero partials
+                @test iszero(@inferred(f(ALLZERO)))
 
-            @test (NaN * ZEROS).values == ZEROS.values
-            @test (Inf * ZEROS).values == ZEROS.values
-            @test (ZEROS / 0).values == ZEROS.values
-
-            @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, NaN).values == ZEROS.values
-            @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, X).values == ZEROS.values
-            @test ForwardDiff._mul_partials(ZEROS, ZEROS, X, Inf).values == ZEROS.values
-            @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, X).values == ZEROS.values
-            @test ForwardDiff._mul_partials(ZEROS, ZEROS, Inf, NaN).values == ZEROS.values
-            @test ForwardDiff._mul_partials(ZEROS, ZEROS, NaN, Inf).values == ZEROS.values
+                # Mix of zero and non-zero partials
+                z = @inferred(f(FIRSTZERO))
+                for i in 1:N
+                    if iszero(FIRSTZERO[i])
+                        @test iszero(z[i])
+                    else
+                        @test isequal(z[i], f(FIRSTZERO[i]))
+                    end
+                end
+            end
         end
     end
 end
