@@ -1,5 +1,7 @@
 using ForwardDiff, Test, Random
 
+@info "Testing ForwardDiff with NaN-safe mode $(ForwardDiff.NANSAFE_MODE_ENABLED ? "enabled" : "disabled")"
+
 SEED = trunc(Int, time())
 println("##### Random.seed!($SEED), on VERSION == $VERSION")
 Random.seed!(SEED)
