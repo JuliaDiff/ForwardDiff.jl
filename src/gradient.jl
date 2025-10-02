@@ -113,7 +113,9 @@ end
 
 function chunk_mode_gradient_expr(result_definition::Expr)
     return quote
-        @assert structural_length(x) >= N "chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"
+        if structural_length(x) < N
+            throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
+        end
 
         # precalculate loop bounds
         xlen = structural_length(x)
