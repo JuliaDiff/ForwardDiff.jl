@@ -29,7 +29,7 @@ struct InvalidTagException{E,O} <: Exception
 end
 
 Base.showerror(io::IO, e::InvalidTagException{E,O}) where {E,O} =
-    print(io, "Invalid Tag object:\n  Expected $E,\n  Observed $O.")
+    print(io, "Invalid Tag object:\n  Expected ", E, ",\n  Observed ", O, ".")
 
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
     throw(InvalidTagException{Tag{F,V},Tag{FT,VT}}())

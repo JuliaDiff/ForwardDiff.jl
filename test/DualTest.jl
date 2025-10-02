@@ -507,8 +507,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
                 @eval begin
                     x = rand() + $modifier
                     dx = @inferred $M.$f(Dual{TestTag}(x, one(x)))
-                    actualval = $M.$f(x)
-                    @assert actualval isa Real || actualval isa Complex
+                    actualval = $M.$f(x)::Union{Real,Complex}
                     if actualval isa Real
                         @test dx isa Dual{TestTag}
                         @test value(dx) == actualval
@@ -536,8 +535,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
                     dy = @inferred $M.$f(x, Dual{TestTag}(y, one(y)))
                     actualdx = $(derivs[1])
                     actualdy = $(derivs[2])
-                    actualval = $M.$f(x, y)
-                    @assert actualval isa Real || actualval isa Complex
+                    actualval = $M.$f(x, y)::Union{Real,Complex}
                     if actualval isa Real
                         @test dx isa Dual{TestTag}
                         @test dy isa Dual{TestTag}
