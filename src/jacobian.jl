@@ -169,7 +169,9 @@ const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expects that f(x) is an
 function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Expr,
                                   result_definition::Expr, y_definition::Expr)
     return quote
-        @assert structural_length(x) >= N "chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"
+        if structural_length(x) < N
+            throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
+        end
 
         # precalculate loop bounds
         xlen = structural_length(x)
