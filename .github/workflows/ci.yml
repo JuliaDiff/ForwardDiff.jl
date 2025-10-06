@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - NaN-safe mode ${{ matrix.nansafe && 'enabled' || 'disabled' }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -31,12 +31,21 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
+        nansafe:
+          - true
+          - false
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v2
+      - name: Set NaN-safe mode preference
+        run: |
+          open(joinpath(pwd(), "Project.toml"), "a") do io
+            println(io, "\n[preferences.ForwardDiff]\nnansafe_mode = ${{ matrix.nansafe }}\n")
+          end
+        shell: julia --color=yes {0}
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
