@@ -254,6 +254,7 @@ end
     eigen_vec1_symtridiag(x) = eigen(SymTridiagonal(x, x[begin:(end - 1)])).vectors[:,1]
     
     # Note: SymTridiagonal is not supported for StaticArrays
+    x0 = [1.0, 2.0]
     for T in (Int, Float32, Float64), A in (Array, SArray, MArray)
         if A <: StaticArrays.StaticArray
             x = A{Tuple{2},T}(x0)
