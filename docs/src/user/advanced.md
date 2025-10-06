@@ -85,8 +85,8 @@ julia> @time ForwardDiff.gradient!(out, rosenbrock, x, cfg);
 ```
 
 The underlying heuristic will compute a suitable chunk size smaller or equal
-to the `ForwardDiff.DEFAULT_CHUNK_THRESHOLD` constant. As of ForwardDiff
-v0.10.32 and Julia 1.6, this constant can be configured at load time via
+to the `ForwardDiff.DEFAULT_CHUNK_THRESHOLD` constant.
+This constant can be configured at load time via
 [Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) by setting the
 `default_chunk_threshold` value.
 

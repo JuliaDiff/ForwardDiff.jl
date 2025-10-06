@@ -1,5 +1,5 @@
-[![CI](https://github.com/JuliaDiff/ForwardDiff.jl/workflows/CI/badge.svg)](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
+[![CI](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml?query=branch%3Amaster)
+[![codecov](https://codecov.io/gh/JuliaDiff/ForwardDiff.jl/graph/badge.svg?token=SzHfhyoxUa)](https://codecov.io/gh/JuliaDiff/ForwardDiff.jl)
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliadiff.org/ForwardDiff.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliadiff.org/ForwardDiff.jl/dev)

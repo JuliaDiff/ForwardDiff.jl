@@ -3,7 +3,7 @@ module ForwardDiffStaticArraysExt
 using ForwardDiff, StaticArrays
 using ForwardDiff.LinearAlgebra
 using ForwardDiff.DiffResults
-using ForwardDiff: Dual, partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
+using ForwardDiff: Dual, partials, npartials, Partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
                    vector_mode_gradient, vector_mode_gradient!,
@@ -60,7 +60,7 @@ ForwardDiff._lyap_div_zero_diag!!(A::StaticArrays.MMatrix, λ::AbstractVector) =
     result = Expr(:tuple, [:(partials(T, y, $i)) for i in 1:length(x)]...)
     return quote
         $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype($y))
+        V = StaticArrays.similar_type(S, valtype(T, $y))
         return V($result)
     end
 end
@@ -84,12 +84,13 @@ end
 @inline ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::JacobianConfig) where {F} = jacobian!(result, f, x)
 @inline ForwardDiff.jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::StaticArray, cfg::JacobianConfig, ::Val) where {F} = jacobian!(result, f, x)
 
-@generated function extract_jacobian(::Type{T}, ydual::StaticArray, x::S) where {T,S<:StaticArray}
-    M, N = length(ydual), length(x)
+@generated function extract_jacobian(::Type{T}, ydual::Union{StaticArray,Partials}, x::S) where {T,S<:StaticArray}
+    M = ydual <: Partials ? npartials(ydual) : length(ydual)
+    N = length(x)
     result = Expr(:tuple, [:(partials(T, ydual[$i], $j)) for i in 1:M, j in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        V = StaticArrays.similar_type(S, valtype(eltype($ydual)), Size($M, $N))
+        V = StaticArrays.similar_type(S, valtype(T, eltype($ydual)), Size($M, $N))
         return V($result)
     end
 end
@@ -100,7 +101,7 @@ end
 end
 
 function extract_jacobian(::Type{T}, ydual::AbstractArray, x::StaticArray) where T
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), length(x))
+    result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), length(x))
     return extract_jacobian!(T, result, ydual, length(x))
 end
 

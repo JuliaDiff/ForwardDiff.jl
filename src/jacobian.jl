@@ -128,7 +128,7 @@ function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T}) where {F,T}
     N = chunksize(cfg)
     ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa AbstractArray || throw(JACOBIAN_ERROR)
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
+    result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)
     return result
@@ -169,7 +169,9 @@ const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expects that f(x) is an
 function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Expr,
                                   result_definition::Expr, y_definition::Expr)
     return quote
-        @assert structural_length(x) >= N "chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"
+        if structural_length(x) < N
+            throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
+        end
 
         # precalculate loop bounds
         xlen = structural_length(x)
@@ -217,7 +219,7 @@ end
                                    seed!(xdual, x)
                                end,
                                :(ydual = f(xdual)),
-                               :(result = similar(ydual, valtype(eltype(ydual)), length(ydual), xlen)),
+                               :(result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), xlen)),
                                :()))
 end
 

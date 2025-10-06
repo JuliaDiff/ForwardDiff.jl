@@ -152,7 +152,7 @@ intrand(V) = V == Int ? rand(2:10) : rand(V)
 for N in (0,3), V in (Int, Float32), I in (Irrational, AbstractIrrational)
     PARTIALS = ForwardDiff.Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL = intrand(V)
-    FDNUM = ForwardDiff.Dual{TestTag()}(PRIMAL, PARTIALS)
+    FDNUM = ForwardDiff.Dual{TestTag}(PRIMAL, PARTIALS)
     
     @test promote_rule(typeof(FDNUM), I) == promote_rule(I, typeof(FDNUM))
     # π::Irrational, twoπ::AbstractIrrational
