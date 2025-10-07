@@ -148,9 +148,15 @@ end
 end
 
 @testset "exponential function at base zero" begin
-    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [NaN, NaN])
-    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, NaN])
-    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [-Inf, -Inf])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, -Inf])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, 0.0])
+    else
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [NaN, NaN])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, NaN])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
+    end
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
 end
 
@@ -207,11 +213,19 @@ end
 end
 
 @testset "gradient for exponential with NaNMath" begin
-    @test isnan(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[1]), [NaN, 1.0])[1])
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test isequal(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[2]), [NaN, 1.0]), [1.0, NaN])
+    else
+        @test isequal(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[2]), [NaN, 1.0]), [NaN, NaN])
+    end
     @test ForwardDiff.gradient(x -> NaNMath.pow(x[1], x[2]), [1.0, 1.0]) == [1.0, 0.0]
     @test isnan(ForwardDiff.gradient((x) -> NaNMath.pow(x[1], x[2]), [-1.0, 0.5])[1])
 
-    @test isnan(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0])[1])
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test isequal(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0]), [1.0, NaN])
+    else
+        @test isequal(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0]), [NaN, NaN])
+    end
     @test ForwardDiff.gradient(x -> x[1]^x[2], [1.0, 1.0]) == [1.0, 0.0]
     @test_throws DomainError ForwardDiff.gradient(x -> x[1]^x[2], [-1.0, 0.5])
 end
@@ -284,6 +298,36 @@ end
     grad = ForwardDiff.gradient(f, SVector{3}(y), cfg)
     @test grad isa SVector{3,typeof(der)}
     @test grad == SVector{3}(der, der, der)
+end
+
+@testset "NaN-safe mode" begin
+    # issue #774
+    f = x -> log(zero(x[1]) + x[2])
+    x = [1.0, 0.0]
+    y1 = ForwardDiff.gradient(f, x)
+    y2 = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{1}()))
+    y3 = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{2}()))
+    for y in (y1, y2, y3)
+        if ForwardDiff.NANSAFE_MODE_ENABLED
+            @test y == [0.0, Inf]
+        else
+            @test isequal(y, [NaN, Inf])
+        end
+    end
+
+    # issue #745
+    g = a -> a[1] * exp(-a[2])
+    a = [1.0, -1e3]
+    b1 = ForwardDiff.gradient(g, a)
+    b2 = ForwardDiff.gradient(g, a, ForwardDiff.GradientConfig(g, a, ForwardDiff.Chunk{1}()))
+    b3 = ForwardDiff.gradient(g, a, ForwardDiff.GradientConfig(g, a, ForwardDiff.Chunk{2}()))
+    for b in (b1, b2, b3)
+        if ForwardDiff.NANSAFE_MODE_ENABLED
+            @test b == [Inf, -Inf]
+        else
+            @test isequal(b, [NaN, NaN])
+        end
+    end
 end
 
 end # module

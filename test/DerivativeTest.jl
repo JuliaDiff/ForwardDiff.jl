@@ -113,4 +113,13 @@ end
     @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
 end
 
+@testset "NaN-safe mode" begin
+    x = ForwardDiff.derivative(log ∘ zero, 1.0)
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test iszero(x)
+    else
+        @test isnan(x)
+    end
+end
+
 end # module
