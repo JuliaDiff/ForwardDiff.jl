@@ -4,7 +4,7 @@ using Test
 using Printf
 using Random
 using ForwardDiff
-using ForwardDiff: Partials, Dual, value, partials
+using ForwardDiff: Partials, Dual, value, partials, npartials
 
 using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
@@ -683,6 +683,16 @@ end
 
 @testset "TwicePrecision" begin
     @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
+end
+
+@testset "Complex value/partials" begin
+    x = Dual(1,2,3) + im*Dual(4,5,6)
+    @test value(x) == 1+im*4
+    @test partials(x,1) == 2 + 5im
+    @test partials(x,2) == 3 + 6im
+    @test partials(x) == [2+5im,3+6im]
+    @test partials(x) isa Partials
+    @test npartials(x) == npartials(typeof(x)) == 2
 end
 
 end # module
