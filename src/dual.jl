@@ -735,68 +735,86 @@ end
     return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
 end
 
-# Symmetric eigvals #
+# eigen values and vectors of Hermitian matrices #
 #-------------------#
 
-# To be able to reuse this default definition in the StaticArrays extension
-# (has to be re-defined to avoid method ambiguity issues)
-# we forward the call to an internal method that can be shared and reused
-LinearAlgebra.eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigvals(A)
-function _eigvals(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
-    λ,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
-    Dual{Tg}.(λ, tuple.(parts...))
+# Extract structured matrices of primal values and partials
+_structured_value(A::Symmetric{Dual{T,V,N}}) where {T,V,N} = Symmetric(map(value, parent(A)), A.uplo === 'U' ? :U : :L)
+_structured_value(A::Hermitian{Dual{T,V,N}}) where {T,V,N} = Hermitian(map(value, parent(A)), A.uplo === 'U' ? :U : :L)
+_structured_value(A::Hermitian{Complex{Dual{T,V,N}}}) where {T,V,N} = Hermitian(map(z -> splat(complex)(map(value, reim(z))), parent(A)), A.uplo === 'U' ? :U : :L)
+_structured_value(A::SymTridiagonal{Dual{T,V,N}}) where {T,V,N} = SymTridiagonal(map(value, A.dv), map(value, A.ev))
+
+_structured_partials(A::Symmetric{Dual{T,V,N}}, j::Int) where {T,V,N} = Symmetric(partials.(parent(A), j), A.uplo === 'U' ? :U : :L)
+_structured_partials(A::Hermitian{Dual{T,V,N}}, j::Int) where {T,V,N} = Hermitian(partials.(parent(A), j), A.uplo === 'U' ? :U : :L)
+function _structured_partials(A::Hermitian{Complex{Dual{T,V,N}}}, j::Int) where {T,V,N}
+    return Hermitian(complex.(partials.(real.(parent(A)), j), partials.(imag.(parent(A)), j)), A.uplo === 'U' ? :U : :L)
+end
+_structured_partials(A::SymTridiagonal{Dual{T,V,N}}, j::Int) where {T,V,N} = SymTridiagonal(partials.(A.dv, j), partials.(A.ev, j))
+
+# Convert arrays of primal values and partials to arrays of Duals
+function _to_duals(::Val{T}, values::AbstractArray{<:Real}, partials::Tuple{Vararg{AbstractArray{<:Real}}}) where {T}
+    return Dual{T}.(values, tuple.(partials...))
+end
+function _to_duals(::Val{T}, values::AbstractArray{<:Complex}, partials::Tuple{Vararg{AbstractArray{<:Complex}}}) where {T}
+    return complex.(
+        Dual{T}.(real.(values), Base.Fix1(map, real).(tuple.(partials...))),
+        Dual{T}.(imag.(values), Base.Fix1(map, imag).(tuple.(partials...))),
+    )
 end
 
-function LinearAlgebra.eigvals(A::Hermitian{<:Complex{<:Dual{Tg,T,N}}}) where {Tg,T<:Real,N}
-    λ,Q = eigen(Hermitian(value.(real.(parent(A))) .+ im .* value.(imag.(parent(A)))))
-    parts = ntuple(j -> diag(real.(Q' * (getindex.(partials.(real.(A)) .+ im .* partials.(imag.(A)), j)) * Q)), N)
-    Dual{Tg}.(λ, tuple.(parts...))
+# We forward the call to an internal method that can be shared and reused
+LinearAlgebra.eigvals(A::Symmetric{Dual{T,V,N}}) where {T,V<:Real,N} = _eigvals_hermitian(A)
+LinearAlgebra.eigvals(A::Hermitian{Dual{T,V,N}}) where {T,V<:Real,N} = _eigvals_hermitian(A)
+LinearAlgebra.eigvals(A::Hermitian{Complex{Dual{T,V,N}}}) where {T,V<:Real,N} = _eigvals_hermitian(A)
+LinearAlgebra.eigvals(A::SymTridiagonal{Dual{T,V,N}}) where {T,V<:Real,N} = _eigvals_hermitian(A)
+
+# Eigenvalues of Hermitian-structured matrices
+const DualMatrixRealComplex{T,V<:Real,N} = Union{AbstractMatrix{Dual{T,V,N}}, AbstractMatrix{Complex{Dual{T,V,N}}}}
+function _eigvals_hermitian(A::DualMatrixRealComplex{T,<:Real,N}) where {T,N}
+    F = eigen(_structured_value(A))
+    λ = F.values
+    Q = F.vectors
+    parts = ntuple(j -> real(diag(Q' * _structured_partials(A, j) * Q)), N)
+    return _to_duals(Val(T), λ, parts)
 end
 
-function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
-    λ,Q = eigen(SymTridiagonal(value.(parent(A).dv),value.(parent(A).ev)))
-    parts = ntuple(j -> diag(Q' * getindex.(partials.(A), j) * Q), N)
-    Dual{Tg}.(λ, tuple.(parts...))
-end
-
-# A ./ (λ' .- λ) but with diag special cased
+# A ./ (λ' .- λ) but with diagonal elements zeroed out
 # Default out-of-place method
-function _lyap_div!!(A::AbstractMatrix, λ::AbstractVector)
+function _lyap_div_zero_diag!!(A::AbstractMatrix, λ::AbstractVector)
     return map(
-        (a, b, idx) -> a / (idx[1] == idx[2] ? oneunit(b) : b),
+        (a, b, idx) -> idx[1] == idx[2] ? zero(a) / oneunit(b) : a / b,
         A,
         λ' .- λ,
         CartesianIndices(A),
     )
 end
 # For `Matrix` (and e.g. `StaticArrays.MMatrix`) we can use an in-place method
-_lyap_div!!(A::Matrix, λ::AbstractVector) = _lyap_div!(A, λ)
-function _lyap_div!(A::AbstractMatrix, λ::AbstractVector)
+_lyap_div_zero_diag!!(A::Matrix, λ::AbstractVector) = _lyap_div_zero_diag!(A, λ)
+function _lyap_div_zero_diag!(A::AbstractMatrix, λ::AbstractVector)
     for (j,μ) in enumerate(λ), (k,λ) in enumerate(λ)
-        if k ≠ j
+        if k == j
+            A[k, j] = zero(A[k, j])
+        else
             A[k,j] /= μ - λ
         end
     end
     A
 end
 
-# To be able to reuse this default definition in the StaticArrays extension
-# (has to be re-defined to avoid method ambiguity issues)
-# we forward the call to an internal method that can be shared and reused
-LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen(A)
-function _eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
-    λ = eigvals(A)
-    _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
-    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
-end
+# We forward the call to an internal method that can be shared and reused
+LinearAlgebra.eigen(A::Symmetric{Dual{T,V,N}}) where {T,V<:Real,N} = _eigen_hermitian(A)
+LinearAlgebra.eigen(A::Hermitian{Dual{T,V,N}}) where {T,V<:Real,N} = _eigen_hermitian(A)
+LinearAlgebra.eigen(A::Hermitian{Complex{Dual{T,V,N}}}) where {T,V<:Real,N} = _eigen_hermitian(A)
+LinearAlgebra.eigen(A::SymTridiagonal{Dual{T,V,N}}) where {T,V<:Real,N} = _eigen_hermitian(A)
 
-function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
-    λ = eigvals(A)
-    _,Q = eigen(SymTridiagonal(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
-    Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
+function _eigen_hermitian(A::DualMatrixRealComplex{T,<:Real,N}) where {T,N}
+    F = eigen(_structured_value(A))
+    λ = F.values
+    Q = F.vectors
+    Qt_∂A_Q = ntuple(j -> Q' * _structured_partials(A, j) * Q, N)
+    λ_partials = map(real ∘ diag, Qt_∂A_Q)
+    Q_partials = map(Qt_∂Aj_Q -> Q*_lyap_div_zero_diag!!(Qt_∂Aj_Q, λ), Qt_∂A_Q)
+    return Eigen(_to_duals(Val(T), λ, λ_partials), _to_duals(Val(T), Q, Q_partials))
 end
 
 # Functions in SpecialFunctions which return tuples #
