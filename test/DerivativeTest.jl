@@ -1,6 +1,7 @@
 module DerivativeTest
 
 import Calculus
+import LinearAlgebra
 import NaNMath
 
 using Test
@@ -119,6 +120,16 @@ end
         @test iszero(x)
     else
         @test isnan(x)
+    end
+end
+
+@testset "Givens rotations: Derivatives" begin
+    # Test different branches in `LinearAlgebra.givensAlgorithm`
+    for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f], i in 1:3
+        @test ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(x, g)[i], f) ≈
+            Calculus.derivative(x -> LinearAlgebra.givensAlgorithm(x, g)[i], f)
+        @test ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g) ≈
+            Calculus.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g)
     end
 end
 

@@ -735,6 +735,57 @@ end
     return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
 end
 
+# LinearAlgebra.givensAlgorithm #
+#-------------------------------#
+
+# This definition ensures that we match `LinearAlgebra.givensAlgorithm`
+# for non-dual numbers (i.e., `ForwardDiff.Dual` with zero partials)
+# `LinearAlgebra.givensAlgorithm` is derived from LAPACK's dlartg
+# which is [documented](https://netlib.org/lapack/explore-html/da/dd3/group__lartg_ga86f8f877eaea0386cdc2c3c175d9ea88.html) to return
+# three values c, s, u for two arguments x and y with
+# u = sgn(x) sqrt(x^2 + y^2)
+# c = x/u
+# s = y/u
+# The function is discontinuous in u at x=0
+@define_binary_dual_op(
+    LinearAlgebra.givensAlgorithm,
+    begin
+        vx, vy = value(x), value(y)
+        c, s, u = LinearAlgebra.givensAlgorithm(vx, vy)
+        ∂c∂x = s^2 / u
+        ∂c∂y = ∂s∂x = -(c * s / u)
+        ∂s∂y = c^2 / u
+        ∂x = partials(x)
+        ∂y = partials(y)
+        ∂c = _mul_partials(∂x, ∂y, ∂c∂x, ∂c∂y)
+        ∂s = _mul_partials(∂x, ∂y, ∂s∂x, ∂s∂y)
+        ∂u = _mul_partials(∂x, ∂y, c, s)
+        return Dual{Txy}(c, ∂c), Dual{Txy}(s, ∂s), Dual{Txy}(u, ∂u)
+    end,
+    begin
+        vx = value(x)
+        c, s, u = LinearAlgebra.givensAlgorithm(vx, y)
+        ∂c∂x = s^2 / u
+        ∂s∂x = -(c * s / u)
+        ∂x = partials(x)
+        ∂c = ∂c∂x * ∂x
+        ∂s = ∂s∂x * ∂x
+        ∂u = c * ∂x
+        return Dual{Tx}(c, ∂c), Dual{Tx}(s, ∂s), Dual{Tx}(u, ∂u)
+    end,
+    begin
+        vy = value(y)
+        c, s, u = LinearAlgebra.givensAlgorithm(x, vy)
+        ∂c∂y = -(c * s / u)
+        ∂s∂y = c^2 / u
+        ∂y = partials(y)
+        ∂c = ∂c∂y * ∂y
+        ∂s = ∂s∂y * ∂y
+        ∂u = s * ∂y
+        return Dual{Ty}(c, ∂c), Dual{Ty}(s, ∂s), Dual{Ty}(u, ∂u)
+    end,
+)
+
 # Symmetric eigvals #
 #-------------------#
 
