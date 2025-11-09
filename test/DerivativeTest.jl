@@ -1,6 +1,6 @@
 module DerivativeTest
 
-import Calculus
+import FiniteDifferences
 import NaNMath
 
 using Test
@@ -13,7 +13,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 Random.seed!(1)
 
 ########################
-# test vs. Calculus.jl #
+# test vs. FiniteDifferences.jl #
 ########################
 
 const x = 1
@@ -21,7 +21,7 @@ const x = 1
 @testset "$f" for f in DiffTests.NUMBER_TO_NUMBER_FUNCS
     v = f(x)
     d = ForwardDiff.derivative(f, x)
-    @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
+    @test isapprox(d, FiniteDifferences.derivative(FiniteDifferences.central_fdm(5, 1), f, x), atol=FINITEDIFF_ERROR)
 
     out = DiffResults.DiffResult(zero(v), zero(v))
     out = ForwardDiff.derivative!(out, f, x)
@@ -34,7 +34,7 @@ end
     d = ForwardDiff.derivative(f, x)
 
     @test !(eltype(d) <: ForwardDiff.Dual)
-    @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
+    @test isapprox(d, FiniteDifferences.derivative(FiniteDifferences.central_fdm(5, 1), f, x), atol=FINITEDIFF_ERROR)
 
     out = similar(v)
     out = ForwardDiff.derivative!(out, f, x)

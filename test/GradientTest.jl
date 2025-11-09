@@ -1,6 +1,6 @@
 module GradientTest
 
-import Calculus
+import FiniteDifferences
 import NaNMath
 
 using Test
@@ -58,13 +58,13 @@ cfgx = ForwardDiff.GradientConfig(sin, x)
 
 
 ########################
-# test vs. Calculus.jl #
+# test vs. FiniteDifferences.jl #
 ########################
 
 @testset "$f" for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
-    @test isapprox(g, Calculus.gradient(f, X), atol=FINITEDIFF_ERROR)
+    @test isapprox(g, FiniteDifferences.grad(FiniteDifferences.central_fdm(5, 1), f, X)[1], atol=FINITEDIFF_ERROR)
     @testset "... with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f, eltype(x)))
         cfg = ForwardDiff.GradientConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 

@@ -1,6 +1,6 @@
 module JacobianTest
 
-import Calculus
+import FiniteDifferences
 
 using Test
 using ForwardDiff
@@ -101,13 +101,13 @@ cfgx = ForwardDiff.JacobianConfig(sin, x)
 @test ForwardDiff.jacobian(f, x, cfgx, Val{false}()) == ForwardDiff.jacobian(f,x)
 
 ########################
-# test vs. Calculus.jl #
+# test vs. FiniteDifferences.jl #
 ########################
 
 for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     v = f(X)
     j = ForwardDiff.jacobian(f, X)
-    @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
+    @test isapprox(j, FiniteDifferences.jacobian(FiniteDifferences.forward_fdm(5, 1), f, X), atol=1.3FINITEDIFF_ERROR)
     @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag)
         if tag == Tag
             tag = Tag(f, eltype(X))
@@ -132,7 +132,7 @@ for f! in DiffTests.INPLACE_ARRAY_TO_ARRAY_FUNCS
     v = fill!(similar(Y), 0.0)
     f!(v, X)
     j = ForwardDiff.jacobian(f!, fill!(similar(Y), 0.0), X)
-    @test isapprox(j, Calculus.jacobian(x -> (y = fill!(similar(Y), 0.0); f!(y, x); vec(y)), X, :forward), atol=FINITEDIFF_ERROR)
+    @test isapprox(j, FiniteDifferences.jacobian(FiniteDifferences.forward_fdm(5, 1), x -> (y = fill!(similar(Y), 0.0); f!(y, x); y), X), atol=FINITEDIFF_ERROR)
     @testset "$(f!) with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag(f!, eltype(X)))
         ycfg = JacobianConfig(f!, fill!(similar(Y), 0.0), X, ForwardDiff.Chunk{c}(), tag)
 
@@ -248,17 +248,17 @@ end
 
     x0 = [1.0, 2.0];
     ev1(x) = eigen(Symmetric(x*x')).vectors[:,1]
-    @test ForwardDiff.jacobian(ev1, x0) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+    @test ForwardDiff.jacobian(ev1, x0) ≈ FiniteDifferences.jacobian(FiniteDifferences.central_fdm(5, 1), ev1, x0)
     ev2(x) = eigen(SymTridiagonal(x, x[1:end-1])).vectors[:,1]
-    @test ForwardDiff.jacobian(ev2, x0) ≈ Calculus.finite_difference_jacobian(ev2, x0)
+    @test ForwardDiff.jacobian(ev2, x0) ≈ FiniteDifferences.jacobian(FiniteDifferences.central_fdm(5, 1), ev2, x0)
 
     x0_svector = SVector{2}(x0)
     @test ForwardDiff.jacobian(ev1, x0_svector) isa SMatrix{2, 2}
-    @test ForwardDiff.jacobian(ev1, x0_svector) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+    @test ForwardDiff.jacobian(ev1, x0_svector) ≈ FiniteDifferences.jacobian(FiniteDifferences.central_fdm(5, 1), ev1, x0)
 
     x0_mvector = MVector{2}(x0)
     @test ForwardDiff.jacobian(ev1, x0_mvector) isa MMatrix{2, 2}
-    @test ForwardDiff.jacobian(ev1, x0_mvector) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+    @test ForwardDiff.jacobian(ev1, x0_mvector) ≈ FiniteDifferences.jacobian(FiniteDifferences.central_fdm(5, 1), ev1, x0)
 end
 
 @testset "type stability" begin

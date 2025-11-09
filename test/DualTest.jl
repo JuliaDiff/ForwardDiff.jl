@@ -9,7 +9,7 @@ using ForwardDiff: Partials, Dual, value, partials
 using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
 
-import Calculus
+import FiniteDifferences
 
 struct TestTag end
 struct OuterTestTag end
@@ -609,7 +609,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
             @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
-            @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
+            @test partials(pq[i]) ≈ PARTIALS * FiniteDifferences.derivative(FiniteDifferences.central_fdm(5, 1), x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
         end
     end
 end

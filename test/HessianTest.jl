@@ -1,6 +1,6 @@
 module HessianTest
 
-import Calculus
+import FiniteDifferences
 
 using Test
 using LinearAlgebra
@@ -59,15 +59,16 @@ cfgx = ForwardDiff.HessianConfig(sin, x)
 
 
 ########################
-# test vs. Calculus.jl #
+# test vs. FiniteDifferences.jl #
 ########################
 
 for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     v = f(X)
     g = ForwardDiff.gradient(f, X)
     h = ForwardDiff.hessian(f, X)
+    v = randn(eltype(h), size(h, 2))
     # finite difference approximation error is really bad for Hessians...
-    @test isapprox(h, Calculus.hessian(f, X), atol=0.02)
+    @test isapprox(h * v, FiniteDifferences.jvp(FiniteDifferences.central_fdm(5, 1), x -> FiniteDifferences.jacobian(FiniteDifferences.central_fdm(5, 2), f, x), (X, v)), atol=0.02)
     @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
         cfg = ForwardDiff.HessianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
         resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(X), X, ForwardDiff.Chunk{c}(), tag)
