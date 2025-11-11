@@ -1,6 +1,7 @@
 module GradientTest
 
 import Calculus
+import LinearAlgebra
 import NaNMath
 
 using Test
@@ -327,6 +328,22 @@ end
         else
             @test isequal(b, [NaN, NaN])
         end
+    end
+end
+
+@testset "Givens rotations: Gradients" begin
+    # Test different branches in `LinearAlgebra.givensAlgorithm`
+    for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f], i in 1:3
+        # Gradients wrt to a single input argument
+        dydf = only(ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(only(x), g)[i], [f]))
+        @test dydf == ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(x, g)[i], f)
+        dydg = only(ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(f, only(x))[i], [g]))
+        @test dydg == ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g)
+
+        # Gradient with respect to both input arguments
+        grad = ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(x[1], x[2])[i], [f, g])
+        @test grad == [dydf, dydg]
+        @test grad ≈ Calculus.gradient(x -> LinearAlgebra.givensAlgorithm(x[1], x[2])[i], [f, g])
     end
 end
 

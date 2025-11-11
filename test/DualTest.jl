@@ -10,6 +10,7 @@ using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
 
 import Calculus
+import LinearAlgebra
 
 struct TestTag end
 struct OuterTestTag end
@@ -683,6 +684,33 @@ end
 
 @testset "TwicePrecision" begin
     @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
+end
+
+@testset "Givens rotations: consistency with `LinearAlgebra.givensAlgorithm` for zero partials (no duals)" begin
+    # Test different branches in `LinearAlgebra.givensAlgorithm`
+    for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f]
+        # Upstream: Result for non-dual numbers
+        y = LinearAlgebra.givensAlgorithm(f, g)
+        @test y isa NTuple{3,Float64}
+
+        for n in (1, 2, 5)
+            zero_tuple = ntuple(Returns(0.0), n)
+            dual_f = Dual{TestTag}(f, zero_tuple)
+            dual_g = Dual{TestTag}(g, zero_tuple)
+            for (_f, _g) in ((dual_f, dual_g), (dual_f, g), (f, dual_g))
+                ydual = @inferred(LinearAlgebra.givensAlgorithm(_f, _g))
+                @test ydual isa NTuple{3,Dual{TestTag,Float64,n}}
+
+                for (i, yi, yduali) in zip(1:3, y, ydual)
+                    # Primal values must match `LinearAlgebra.givensAlgorithm` with `Float64` inputs
+                    @test ForwardDiff.value(yduali) ≈ yi
+
+                    # Partial derivatives must be zero (zero in - zero out)
+                    @test iszero(ForwardDiff.partials(yduali))
+                end
+            end
+        end
+    end
 end
 
 end # module
