@@ -49,6 +49,8 @@ Base.mightalias(x::AbstractArray, y::Partials) = false
 
 Base.isequal(a::Partials{N}, b::Partials{N}) where {N} = isequal(a.values, b.values)
 Base.:(==)(a::Partials{N}, b::Partials{N}) where {N} = a.values == b.values
+Base.:(<)(a::Partials{N}, b::Partials{N}) where {N} = a.values < b.values
+Base.isless(a::Partials{N}, b::Partials{N}) where {N} = isless(a.values, b.values)
 
 const PARTIALS_HASH = hash(Partials)
 
