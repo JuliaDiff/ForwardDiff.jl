@@ -62,8 +62,7 @@ jobs:
           version: '1'
       - uses: julia-actions/cache@v2
       - name: Set up environment
-        shell: julia --project=docs {0}
-        run: using Pkg; Pkg.instantiate()
+        run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
       - name: Run doctests
         shell: julia --project=docs {0}
         run: |
