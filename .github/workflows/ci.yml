@@ -61,17 +61,20 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v2
-      - run: |
-          julia --project=docs -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
-      - run: |
-          julia --project=docs -e '
-            using Documenter: doctest
-            using ForwardDiff
-            doctest(ForwardDiff)'
-      - run: julia --project=docs docs/make.jl
+      - name: Set up environment
+        shell: julia --project=docs {0}
+        run: |
+          using Pkg
+          Pkg.develop(PackageSpec(path=pwd()))
+          Pkg.instantiate()
+      - name: Run doctests
+        shell: julia --project=docs {0}
+        run: |
+          using Documenter: doctest
+          using ForwardDiff
+          doctest(ForwardDiff)
+      - name: Build and deploy documentation
+        run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
