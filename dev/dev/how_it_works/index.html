@@ -20,27 +20,32 @@ end</code></pre><p>This type represents an <code>N</code>-dimensional <a href="h
                          x_N + \epsilon_N
                      \end{bmatrix}
 \to
-f(\vec{x}_{\epsilon}) = f(\vec{x}) + \sum_{i=1}^N \frac{\delta f(\vec{x})}{\delta x_i} \epsilon_i\]</p><p>In reality, ForwardDiff does this calculation in chunks of the input vector (see <a href="../../user/advanced/#Configuring-Chunk-Size">Configuring Chunk Size</a> for details). To provide a simple example of this, let&#39;s examine the case where the input vector size is 4 and the chunk size is 2. It then takes two calls to <span>$f$</span> to evaluate the gradient:</p><p class="math-container">\[\vec{x} = \begin{bmatrix}
+f(\vec{x}_{\epsilon}) = f(\vec{x}) + \sum_{i=1}^N \frac{\delta f(\vec{x})}{\delta x_i} \epsilon_i\]</p><p>In reality, ForwardDiff does this calculation in chunks of the input vector (see <a href="../../user/advanced/#Configuring-Chunk-Size">Configuring Chunk Size</a> for details). To provide a simple example of this, let&#39;s examine the case where the input vector size is 4 and the chunk size is 2. It then takes two calls to <span>$f$</span> to evaluate the gradient:</p><p class="math-container">\[\begin{align*}
+\vec{x} &amp;= \begin{bmatrix}
                x_1 \\
                x_2 \\
                x_3 \\
                x_4
            \end{bmatrix}
 
-\vec{x}_{\epsilon} = \begin{bmatrix}
-                        x_1 + \epsilon_1 \\
-                        x_2 + \epsilon_2 \\
-                        x_3 \\
-                        x_4
-                     \end{bmatrix}
+\\
+
+\vec{x}_{\epsilon} &amp;= \begin{bmatrix}
+                          x_1 + \epsilon_1 \\
+                          x_2 + \epsilon_2 \\
+                          x_3 \\
+                          x_4
+                      \end{bmatrix}
 \to
 f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_1} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_2} \epsilon_2
+\\
 
-\vec{x}_{\epsilon} = \begin{bmatrix}
-                        x_1 \\
-                        x_2 \\
-                        x_3 + \epsilon_1 \\
-                        x_4 + \epsilon_2
-                     \end{bmatrix}
+\vec{x}_{\epsilon} &amp;= \begin{bmatrix}
+                         x_1 \\
+                         x_2 \\
+                         x_3 + \epsilon_1 \\
+                         x_4 + \epsilon_2
+                      \end{bmatrix}
 \to
-f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_3} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_4} \epsilon_2\]</p><p>This seeding process is similar for Jacobians, so we won&#39;t rehash it here.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../user/upgrade/">« Upgrading from Older Versions</a><a class="docs-footer-nextpage" href="../contributing/">How to Contribute »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Sunday 28 December 2025 20:15">Sunday 28 December 2025</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+f(\vec{x}_{\epsilon}) = f(\vec{x}) + \frac{\delta f(\vec{x})}{\delta x_3} \epsilon_1 + \frac{\delta f(\vec{x})}{\delta x_4} \epsilon_2
+\end{align*}\]</p><p>This seeding process is similar for Jacobians, so we won&#39;t rehash it here.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../user/upgrade/">« Upgrading from Older Versions</a><a class="docs-footer-nextpage" href="../contributing/">How to Contribute »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 2 January 2026 14:19">Friday 2 January 2026</span>. Using Julia version 1.12.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
