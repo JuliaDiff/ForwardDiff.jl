@@ -182,7 +182,7 @@ For example:
 
 ```julia-repl
 julia> ForwardDiff.jacobian(x -> ForwardDiff.jacobian(cumprod, x), [1,2,3])
-9×3 Array{Int64,2}:
+9×3 Matrix{Int64}:
  0  0  0
  0  1  0
  0  3  2
