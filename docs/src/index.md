@@ -8,13 +8,13 @@ While performance can vary depending on the functions you evaluate, the algorith
 
 ForwardDiff is a registered Julia package, so it can be installed by running:
 
-```julia
+```julia-repl
 julia> Pkg.add("ForwardDiff")
 ```
 
 Here's a simple example showing the package in action:
 
-```julia
+```julia-repl
 julia> using ForwardDiff
 
 julia> f(x::Vector) = sin(x[1]) + prod(x[2:end]);  # returns a scalar
@@ -45,7 +45,7 @@ Functions like `f` which map a vector to a scalar are the best case for reverse-
 but ForwardDiff may still be a good choice if `x` is not too large, as it is much simpler.
 The best case for forward-mode differentiation is a function which maps a scalar to a vector, like this `g`:
 
-```julia
+```julia-repl
 julia> g(y::Real) = [sin(y), cos(y), tan(y)];  # returns a vector
 
 julia> ForwardDiff.derivative(g, pi/4)
