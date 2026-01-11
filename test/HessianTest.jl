@@ -24,7 +24,9 @@ h = [-66.0  -40.0    0.0;
        0.0  -80.0  200.0]
 
 @testset "running hardcoded test with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
+    grad = similar(x)
     cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}(), tag)
+    cfg_noalloc = ForwardDiff.HessianConfig(f, grad, x, ForwardDiff.Chunk{c}(), tag)
     resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}(), tag)
 
     @test eltype(resultcfg) == eltype(cfg)
@@ -38,6 +40,15 @@ h = [-66.0  -40.0    0.0;
 
     out = similar(x, 3, 3)
     ForwardDiff.hessian!(out, f, x, cfg)
+    @test isapprox(out, h)
+
+    out = similar(x, 3, 3)
+    ForwardDiff.hessian!(out, f, grad, x, cfg_noalloc)
+    @test isapprox(out, h)
+
+    grad = similar(x)
+    out = similar(x, 3, 3)
+    ForwardDiff.hessian!(out, f, grad, x)
     @test isapprox(out, h)
 
     out = DiffResults.HessianResult(x)
@@ -69,7 +80,9 @@ for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
     # finite difference approximation error is really bad for Hessians...
     @test isapprox(h, Calculus.hessian(f, X), atol=0.02)
     @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
+        grad = similar(X)
         cfg = ForwardDiff.HessianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
+        cfg_noalloc = ForwardDiff.HessianConfig(f, grad, X, ForwardDiff.Chunk{c}(), tag)
         resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(X), X, ForwardDiff.Chunk{c}(), tag)
 
         out = ForwardDiff.hessian(f, X, cfg)
@@ -77,6 +90,10 @@ for f in DiffTests.VECTOR_TO_NUMBER_FUNCS
 
         out = similar(X, length(X), length(X))
         ForwardDiff.hessian!(out, f, X, cfg)
+        @test isapprox(out, h)
+
+        out = similar(X, length(X), length(X))
+        ForwardDiff.hessian!(out, f, grad, X, cfg_noalloc)
         @test isapprox(out, h)
 
         out = DiffResults.HessianResult(X)
@@ -120,6 +137,16 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     ForwardDiff.hessian!(out, prod, sx, scfg)
     @test out == actual
 
+    out = similar(x, 9, 9)
+    grad = similar(x)
+    ForwardDiff.hessian!(out, prod, grad, sx, ForwardDiff.HessianConfig(nothing, grad, x))
+    @test out == actual
+
+    out = similar(x, 9, 9)
+    grad = similar(x)
+    ForwardDiff.hessian!(out, prod, grad, sx, ForwardDiff.HessianConfig(nothing, grad, sx))
+    @test out == actual
+    
     result = DiffResults.HessianResult(x)
     result = ForwardDiff.hessian!(result, prod, x)
 
