@@ -23,11 +23,22 @@ const x = 1
     v = f(x)
     d = ForwardDiff.derivative(f, x)
     @test isapprox(d, Calculus.derivative(f, x), atol=FINITEDIFF_ERROR)
+    d2 = ForwardDiff.derivative(x -> ForwardDiff.derivative(f, x), x)
 
     out = DiffResults.DiffResult(zero(v), zero(v))
     out = ForwardDiff.derivative!(out, f, x)
     @test isapprox(DiffResults.value(out), v)
     @test isapprox(DiffResults.derivative(out), d)
+
+    out = ForwardDiff.value_and_derivative(f, x)
+    @test length(out) == 2
+    @test isapprox(out[1], v)
+    @test isapprox(out[2], d)
+
+    out = ForwardDiff.value_and_derivatives(f, x)
+    @test isapprox(out[1], v)
+    @test isapprox(out[2], d)
+    @test isapprox(out[3], d2)
 end
 
 @testset "$f" for f in DiffTests.NUMBER_TO_ARRAY_FUNCS
