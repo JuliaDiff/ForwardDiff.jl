@@ -19,6 +19,7 @@ include("config.jl")
 include("apiutils.jl")
 include("derivative.jl")
 include("gradient.jl")
+include("pack.jl")
 include("jacobian.jl")
 include("hessian.jl")
 
