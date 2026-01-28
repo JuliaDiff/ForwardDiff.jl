@@ -391,7 +391,7 @@ for pred in UNARY_PREDICATES
 end
 
 # Before PR#481 this loop ran over this list:
-# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
 @define_binary_dual_op(
     Base.:(<),
@@ -425,13 +425,6 @@ for pred in [:isequal, :(==)]
         )
     end
 end
-
-@define_binary_dual_op(
-    Base.:(!=),
-    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
-    (!=)(value(x), y)        || !iszero(partials(x)),
-    (!=)(x, value(y))        || !iszero(partials(y)),
-)
 
 ########################
 # Promotion/Conversion #
