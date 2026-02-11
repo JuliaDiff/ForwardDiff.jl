@@ -272,6 +272,13 @@ end
     end
     x2 = [0.0, -1.0, 1.0, 0.0]
     @test ForwardDiff.jacobian(g, x2) ≈ Calculus.finite_difference_jacobian(g, x2)
+
+    h(x) = begin
+        v = eigen(reshape(x, 2, 2)).vectors[:,1]
+        v = v / norm(v)
+    end
+    x3 = [2.0, 1.0, 0.5, 3.0]
+    @test ForwardDiff.jacobian(h, x3) ≈ Calculus.finite_difference_jacobian(h, x3)
 end
 
 @testset "type stability" begin
