@@ -259,6 +259,19 @@ end
     x0_mvector = MVector{2}(x0)
     @test ForwardDiff.jacobian(ev1, x0_mvector) isa MMatrix{2, 2}
     @test ForwardDiff.jacobian(ev1, x0_mvector) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+
+    # real eigenvalues
+    f(x) = eigvals(reshape(x, 2, 2))
+    x1 = [1.0, 2.0, 3.0, 4.0]
+    @test ForwardDiff.jacobian(f, x1) ≈ Calculus.finite_difference_jacobian(f, x1)
+
+    # complex eigenvalues
+    g(x) = begin
+        vals = eigvals(reshape(x, 2, 2))
+        vcat(real(vals), imag(vals))
+    end
+    x2 = [0.0, -1.0, 1.0, 0.0]
+    @test ForwardDiff.jacobian(g, x2) ≈ Calculus.finite_difference_jacobian(g, x2)
 end
 
 @testset "type stability" begin
