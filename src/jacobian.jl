@@ -93,7 +93,7 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 #####################
 
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, n) where {T}
-    out_reshaped = reshape(result, length(ydual), n)
+    out_reshaped = _maybe_reshape(result, length(ydual), n)
     ydual_reshaped = vec(ydual)
     # Use closure to avoid GPU broadcasting with Type
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
@@ -115,6 +115,16 @@ function extract_jacobian_chunk!(::Type{T}, result, ydual, index, chunksize) whe
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
     result[:, col] .= partials_wrap.(ydual_reshaped, transpose(irange))
     return result
+end
+
+# Avoid allocating a ReshapedArray wrapper when `result` already has the target shape.
+# reshape() always allocates a wrapper that cannot be elided under --check-bounds=yes.
+@inline function _maybe_reshape(result::AbstractArray, m, n)
+    if size(result) == (m, n)
+        return result
+    else
+        return reshape(result, m, n)
+    end
 end
 
 reshape_jacobian(result, ydual, xdual) = reshape(result, length(ydual), length(xdual))
