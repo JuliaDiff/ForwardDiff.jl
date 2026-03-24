@@ -92,19 +92,8 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 # result extraction #
 #####################
 
-# Specialized method for AbstractMatrix: no reshape needed, avoids ReshapedArray allocation
-# that cannot be elided under --check-bounds=yes.
-function extract_jacobian!(::Type{T}, result::AbstractMatrix, ydual::AbstractArray, n) where {T}
-    ydual_reshaped = vec(ydual)
-    # Use closure to avoid GPU broadcasting with Type
-    partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
-    result .= partials_wrap.(ydual_reshaped, transpose(1:n))
-    return result
-end
-
-# General method for non-matrix arrays: reshape unconditionally (type-stable).
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, n) where {T}
-    out_reshaped = reshape(result, length(ydual), n)
+    out_reshaped = result isa AbstractMatrix ? result : reshape(result, length(ydual), n)
     ydual_reshaped = vec(ydual)
     # Use closure to avoid GPU broadcasting with Type
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
