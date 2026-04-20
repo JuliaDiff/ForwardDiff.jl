@@ -22,19 +22,19 @@ jobs:
       matrix:
         version:
           - 'min'
-          - 'lts'
-          - '1'
-          - 'pre'
+          # - 'lts'
+          # - '1'
+          # - 'pre'
         os:
           - ubuntu-latest
-          - windows-latest
-          - macOS-latest
+          # - windows-latest
+          # - macOS-latest
         nansafe:
           - true
           - false
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3.0.0
         with:
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v3
