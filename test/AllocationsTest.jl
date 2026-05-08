@@ -13,36 +13,35 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     seeds = cfg.seeds
     seed = cfg.seeds[1]
 
-    alloc = @allocated ForwardDiff.seed!(duals, x, seeds)
-    alloc = @allocated ForwardDiff.seed!(duals, x, seeds)
-    @test alloc == 0
+    allocs_seed!(args...) = @allocated ForwardDiff.seed!(args...)
+    allocs_seed!(duals, x, seeds)
+    @test iszero(allocs_seed!(duals, x, seeds))
+    allocs_seed!(duals, x, seed)
+    @test iszero(allocs_seed!(duals, x, seed))
+    allocs_seed!(duals, x, 1, seeds)
+    @test iszero(allocs_seed!(duals, x, 1, seeds))
+    allocs_seed!(duals, x, 1, seed)
+    @test iszero(allocs_seed!(duals, x, 1, seed))
 
-    alloc = @allocated ForwardDiff.seed!(duals, x, seed)
-    alloc = @allocated ForwardDiff.seed!(duals, x, seed)
-    @test alloc == 0
+    allocs_convert_test_574() = @allocated convert_test_574()
+    allocs_convert_test_574()
+    @test iszero(allocs_convert_test_574())
+end
 
-    index = 1
-    alloc = @allocated ForwardDiff.seed!(duals, x, index, seeds)
-    alloc = @allocated ForwardDiff.seed!(duals, x, index, seeds)
-    if VERSION < v"1.9" || VERSION >= v"1.11"
-        @test alloc == 0
-    else
-        @test_broken alloc == 0
+@testset "Test jacobian! allocations" begin
+    # jacobian! should not allocate when called with a pre-allocated result Matrix.
+    # Previously, reshape() inside extract_jacobian! allocated a wrapper
+    # object that could not be elided under --check-bounds=yes.
+    function allocs_jacobian!()
+        f!(y, x) = (y .= x .^ 2)
+        x = [1.0, 2.0, 3.0]
+        y = similar(x)
+        result = zeros(3, 3)
+        cfg = ForwardDiff.JacobianConfig(f!, y, x)
+        ForwardDiff.jacobian!(result, f!, y, x, cfg)  # warmup
+        return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
     end
-
-    index = 1
-    alloc = @allocated ForwardDiff.seed!(duals, x, index, seed)
-    alloc = @allocated ForwardDiff.seed!(duals, x, index, seed)
-    if VERSION < v"1.9" || VERSION >= v"1.11"
-        @test alloc == 0
-    else
-        @test_broken alloc == 0
-    end
-
-    alloc = @allocated convert_test_574()
-    alloc = @allocated convert_test_574()
-    @test alloc == 0
-
+    @test iszero(allocs_jacobian!())
 end
 
 end

@@ -1,10 +1,18 @@
-[![CI](https://github.com/JuliaDiff/ForwardDiff.jl/workflows/CI/badge.svg)](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/JuliaDiff/ForwardDiff.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/JuliaDiff/ForwardDiff.jl?branch=master)
+[![CI](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/JuliaDiff/ForwardDiff.jl/actions/workflows/ci.yml?query=branch%3Amaster)
+[![codecov](https://codecov.io/gh/JuliaDiff/ForwardDiff.jl/graph/badge.svg?token=SzHfhyoxUa)](https://codecov.io/gh/JuliaDiff/ForwardDiff.jl)
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliadiff.org/ForwardDiff.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliadiff.org/ForwardDiff.jl/dev)
 
 # ForwardDiff.jl
+
+## Upgrading to ForwardDiff.jl 1.0
+
+Equality (`==`) on `Dual` numbers now requires both the real and dual part to match (https://github.com/JuliaDiff/ForwardDiff.jl/pull/481).
+This removes a large number of bugs where the "structure" of e.g, non-zero values in an array was inspected, leading to erroneous derivatives.
+This might cause slightly different behavior in programs but should in general be more correct than previously.
+
+---------------------------
 
 ForwardDiff implements methods to take **derivatives**, **gradients**, **Jacobians**, **Hessians**, and higher-order derivatives of native Julia functions (or any callable object, really) using **forward mode automatic differentiation (AD)**.
 

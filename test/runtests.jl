@@ -1,5 +1,7 @@
 using ForwardDiff, Test, Random
 
+@info "Testing ForwardDiff with NaN-safe mode $(ForwardDiff.NANSAFE_MODE_ENABLED ? "enabled" : "disabled")"
+
 SEED = trunc(Int, time())
 println("##### Random.seed!($SEED), on VERSION == $VERSION")
 Random.seed!(SEED)
@@ -50,6 +52,11 @@ Random.seed!(SEED)
         println("##### Testing allocations...")
         t = @elapsed include("AllocationsTest.jl")
         println("##### done (took $t seconds).")
+    end
+    @testset "QA" begin
+        println("##### QA testing...")
+        t = @elapsed include("QATest.jl")
+        println("##### done (took ", t, " seconds).")
     end
     println("##### Running all ForwardDiff tests took $(time() - t0) seconds.")
 end

@@ -1,70 +1,76 @@
 name: CI
+
 on:
   pull_request:
-    branches:
-      - master
   push:
     branches:
       - master
     tags: '*'
   workflow_dispatch:
+
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - NaN-safe mode ${{ matrix.nansafe && 'enabled' || 'disabled' }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.version == 'nightly' }}
     strategy:
       fail-fast: false
       matrix:
         version:
-          - '1.6'
+          - 'min-patch'
+          - 'lts'
           - '1'
-          # - 'nightly'
+          - 'pre'
         os:
           - ubuntu-latest
-        arch:
-          - x64
+          - windows-latest
+          - macOS-latest
+        nansafe:
+          - true
+          - false
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
-      - uses: actions/cache@v4
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
+      - uses: julia-actions/cache@v3
+      - name: Set NaN-safe mode preference
+        run: |
+          open(joinpath(pwd(), "Project.toml"), "a") do io
+            println(io, "\n[preferences.ForwardDiff]\nnansafe_mode = ${{ matrix.nansafe }}\n")
+          end
+        shell: julia --color=yes {0}
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v4
+      - uses: codecov/codecov-action@v6
         with:
-          file: lcov.info
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
   docs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v2
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
-      - run: |
-          julia --project=docs -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.instantiate()'
-      - run: |
-          julia --project=docs -e '
-            using Documenter: doctest
-            using ForwardDiff
-            doctest(ForwardDiff)'
-      - run: julia --project=docs docs/make.jl
+      - uses: julia-actions/cache@v3
+      - name: Set up environment
+        run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+      - name: Run doctests
+        shell: julia --project=docs {0}
+        run: |
+          using Documenter: doctest
+          using ForwardDiff
+          doctest(ForwardDiff)
+      - name: Build and deploy documentation
+        run: julia --project=docs docs/make.jl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}

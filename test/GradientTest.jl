@@ -1,6 +1,7 @@
 module GradientTest
 
 import Calculus
+import LinearAlgebra
 import NaNMath
 
 using Test
@@ -11,6 +12,11 @@ using StaticArrays
 using DiffTests
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
+
+struct TestTag end
+struct OuterTestTag end
+ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{<:Tag}) = true
 
 ##################
 # hardcoded test #
@@ -143,9 +149,15 @@ end
 end
 
 @testset "exponential function at base zero" begin
-    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [NaN, NaN])
-    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, NaN])
-    @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [-Inf, -Inf])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, -Inf])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, 0.0])
+    else
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [NaN, NaN])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, NaN])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
+    end
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
 end
 
@@ -202,11 +214,19 @@ end
 end
 
 @testset "gradient for exponential with NaNMath" begin
-    @test isnan(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[1]), [NaN, 1.0])[1])
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test isequal(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[2]), [NaN, 1.0]), [1.0, NaN])
+    else
+        @test isequal(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[2]), [NaN, 1.0]), [NaN, NaN])
+    end
     @test ForwardDiff.gradient(x -> NaNMath.pow(x[1], x[2]), [1.0, 1.0]) == [1.0, 0.0]
     @test isnan(ForwardDiff.gradient((x) -> NaNMath.pow(x[1], x[2]), [-1.0, 0.5])[1])
 
-    @test isnan(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0])[1])
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test isequal(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0]), [1.0, NaN])
+    else
+        @test isequal(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0]), [NaN, NaN])
+    end
     @test ForwardDiff.gradient(x -> x[1]^x[2], [1.0, 1.0]) == [1.0, 0.0]
     @test_throws DomainError ForwardDiff.gradient(x -> x[1]^x[2], [-1.0, 0.5])
 end
@@ -224,6 +244,107 @@ end
         sum(c)
     end
     @test dx ≈ sum(a * b)
+end
+
+# issue #738
+@testset "LowerTriangular, UpperTriangular and Diagonal" begin
+    for n in (3, 10, 20)
+        M = rand(n, n)
+        for T in (LowerTriangular, UpperTriangular, Diagonal)
+            @test ForwardDiff.gradient(sum, T(randn(n, n))) == T(ones(n, n))
+            @test ForwardDiff.gradient(x -> dot(M, x), T(randn(n, n))) == T(M)
+
+            # Check number of function evaluations and chunk sizes
+            fevals = Ref(0)
+            npartials = Ref(0)
+            y = ForwardDiff.gradient(T(randn(n, n))) do x
+                fevals[] += 1
+                npartials[] += ForwardDiff.npartials(eltype(x))
+                return sum(x)
+            end
+            if npartials[] <= ForwardDiff.DEFAULT_CHUNK_THRESHOLD
+                # Vector mode (single evaluation)
+                @test fevals[] == 1
+                @test npartials[] == sum(y)
+            else
+                # Chunk mode (multiple evaluations)
+                @test fevals[] > 1
+                @test sum(y) <= npartials[] < sum(y) + fevals[]
+            end
+        end
+    end
+end
+
+# issue #769
+@testset "functions with `Dual` output" begin
+    x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
+    f(x) = sum(ForwardDiff.value, x)
+    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+
+    # Vector mode
+    grad = ForwardDiff.gradient(f, x)
+    @test grad isa Vector{typeof(der)}
+    @test grad == [der]
+    grad = ForwardDiff.gradient(f, SVector{1}(x))
+    @test grad isa SVector{1,typeof(der)}
+    @test grad == SVector{1}(der)
+
+    # Chunk mode
+    y = repeat(x, 3)
+    cfg = ForwardDiff.GradientConfig(f, y, ForwardDiff.Chunk{2}())
+    grad = ForwardDiff.gradient(f, y, cfg)
+    @test grad isa Vector{typeof(der)}
+    @test grad == [der, der, der]
+    cfg = ForwardDiff.GradientConfig(f, SVector{3}(y), ForwardDiff.Chunk{2}())
+    grad = ForwardDiff.gradient(f, SVector{3}(y), cfg)
+    @test grad isa SVector{3,typeof(der)}
+    @test grad == SVector{3}(der, der, der)
+end
+
+@testset "NaN-safe mode" begin
+    # issue #774
+    f = x -> log(zero(x[1]) + x[2])
+    x = [1.0, 0.0]
+    y1 = ForwardDiff.gradient(f, x)
+    y2 = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{1}()))
+    y3 = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{2}()))
+    for y in (y1, y2, y3)
+        if ForwardDiff.NANSAFE_MODE_ENABLED
+            @test y == [0.0, Inf]
+        else
+            @test isequal(y, [NaN, Inf])
+        end
+    end
+
+    # issue #745
+    g = a -> a[1] * exp(-a[2])
+    a = [1.0, -1e3]
+    b1 = ForwardDiff.gradient(g, a)
+    b2 = ForwardDiff.gradient(g, a, ForwardDiff.GradientConfig(g, a, ForwardDiff.Chunk{1}()))
+    b3 = ForwardDiff.gradient(g, a, ForwardDiff.GradientConfig(g, a, ForwardDiff.Chunk{2}()))
+    for b in (b1, b2, b3)
+        if ForwardDiff.NANSAFE_MODE_ENABLED
+            @test b == [Inf, -Inf]
+        else
+            @test isequal(b, [NaN, NaN])
+        end
+    end
+end
+
+@testset "Givens rotations: Gradients" begin
+    # Test different branches in `LinearAlgebra.givensAlgorithm`
+    for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f], i in 1:3
+        # Gradients wrt to a single input argument
+        dydf = only(ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(only(x), g)[i], [f]))
+        @test dydf == ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(x, g)[i], f)
+        dydg = only(ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(f, only(x))[i], [g]))
+        @test dydg == ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g)
+
+        # Gradient with respect to both input arguments
+        grad = ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(x[1], x[2])[i], [f, g])
+        @test grad == [dydf, dydg]
+        @test grad ≈ Calculus.gradient(x -> LinearAlgebra.givensAlgorithm(x[1], x[2])[i], [f, g])
+    end
 end
 
 end # module

@@ -11,6 +11,11 @@ using LinearAlgebra
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
+struct TestTag end
+struct OuterTestTag end
+ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{<:Tag}) = true
+
 ##################
 # hardcoded test #
 ##################
@@ -259,6 +264,79 @@ end
 @testset "type stability" begin
     g!(dy, y) = dy[1] = y[1]
     @inferred ForwardDiff.jacobian(g!, [1.0], [0.0])
+
+    @testset "issue 639" begin
+        f(x) = SA[x[1]^2+x[2]^2, x[2]^2+x[3]^2]
+        x = SA[1.0, 2.0, 3.0]
+        y = f(x)
+        imdr = DiffResults.JacobianResult(y, x)
+        @inferred ForwardDiff.jacobian!(imdr, f, x)
+    end
+
+    @testset "pr 735" begin
+        f(x) = x .^ 2 ./ 2
+        function withjacobian(x)
+            res = DiffResults.JacobianResult(x)
+            res = ForwardDiff.jacobian!(res, f, x)
+            return DiffResults.value(res), DiffResults.jacobian(res)
+        end
+        @inferred withjacobian(SA[1.0, 2.0])
+    end
+end
+
+# issues #436, #740
+@testset "BigFloat" begin
+    # Unassigned entries in the output
+    x = BigFloat.(1:9)
+    for chunksize in (1, 2, 9)
+        y = similar(x)
+        @test all(i -> !isassigned(y, i), eachindex(y))
+        cfg = ForwardDiff.JacobianConfig(copyto!, y, x, ForwardDiff.Chunk{chunksize}())
+        res = ForwardDiff.jacobian(copyto!, y, x, cfg)
+        @test y == x
+        @test res isa Matrix{BigFloat}
+        @test res == I
+    end
+
+    # Unassigned (but unused) entry in the input and unassigned entries in the output
+    resize!(x, 10)
+    f = (y, x) -> copyto!(y, 1, x, 1, 9)
+    for chunksize in (1, 2, 10)
+        y = similar(x, 9)
+        @test all(i -> !isassigned(y, i), eachindex(y))
+        cfg = ForwardDiff.JacobianConfig(f, y, x, ForwardDiff.Chunk{chunksize}())
+        res = ForwardDiff.jacobian(f, y, x, cfg)
+        @test y == x[1:(end-1)]
+        @test res isa Matrix{BigFloat}
+        @test res[:, 1:(end-1)] == I
+        @test all(iszero, res[:, end])
+    end
+end
+
+# issue #769
+@testset "functions with `Dual` output" begin
+    x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
+    f(x) = map(ForwardDiff.value, x)
+    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+
+    # Vector mode
+    jac = ForwardDiff.jacobian(f, x)
+    @test jac isa Matrix{typeof(der)}
+    @test jac == [der;;]
+    jac = ForwardDiff.jacobian(f, SVector{1}(x))
+    @test jac isa SMatrix{1,1,typeof(der)}
+    @test jac == SMatrix{1,1}(der)
+
+    # Chunk mode
+    y = repeat(x, 3)
+    cfg = ForwardDiff.JacobianConfig(f, y, ForwardDiff.Chunk{2}())
+    jac = ForwardDiff.jacobian(f, y, cfg)
+    @test jac isa Matrix{typeof(der)}
+    @test jac == Diagonal([der, der, der])
+    cfg = ForwardDiff.JacobianConfig(f, SVector{3}(y), ForwardDiff.Chunk{2}())
+    jac = ForwardDiff.jacobian(f, SVector{3}(y), cfg)
+    @test jac isa SMatrix{3,3,typeof(der)}
+    @test jac == Diagonal([der, der, der])
 end
 
 end # module

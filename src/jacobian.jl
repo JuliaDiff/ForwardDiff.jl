@@ -18,7 +18,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian(f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         return vector_mode_jacobian(f, x, cfg)
     else
         return chunk_mode_jacobian(f, x, cfg)
@@ -36,7 +36,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian(f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     require_one_based_indexing(y, x)
     CHK && checktag(T, f!, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         return vector_mode_jacobian(f!, y, x, cfg)
     else
         return chunk_mode_jacobian(f!, y, x, cfg)
@@ -57,7 +57,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         vector_mode_jacobian!(result, f, x, cfg)
     else
         chunk_mode_jacobian!(result, f, x, cfg)
@@ -78,7 +78,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     result isa DiffResult ? require_one_based_indexing(y, x) : require_one_based_indexing(result, y, x)
     CHK && checktag(T, f!, x)
-    if chunksize(cfg) == length(x)
+    if chunksize(cfg) == structural_length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)
     else
         chunk_mode_jacobian!(result, f!, y, x, cfg)
@@ -93,7 +93,7 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 #####################
 
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, n) where {T}
-    out_reshaped = reshape(result, length(ydual), n)
+    out_reshaped = result isa AbstractMatrix ? result : reshape(result, length(ydual), n)
     ydual_reshaped = vec(ydual)
     # Use closure to avoid GPU broadcasting with Type
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
@@ -128,7 +128,7 @@ function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T}) where {F,T}
     N = chunksize(cfg)
     ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa AbstractArray || throw(JACOBIAN_ERROR)
-    result = similar(ydual, valtype(eltype(ydual)), length(ydual), N)
+    result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), N)
     extract_jacobian!(T, result, ydual, N)
     extract_value!(T, result, ydual)
     return result
@@ -169,10 +169,12 @@ const JACOBIAN_ERROR = DimensionMismatch("jacobian(f, x) expects that f(x) is an
 function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Expr,
                                   result_definition::Expr, y_definition::Expr)
     return quote
-        @assert length(x) >= N "chunk size cannot be greater than length(x) ($(N) > $(length(x)))"
+        if structural_length(x) < N
+            throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
+        end
 
         # precalculate loop bounds
-        xlen = length(x)
+        xlen = structural_length(x)
         remainder = xlen % N
         lastchunksize = ifelse(remainder == 0, N, remainder)
         lastchunkindex = xlen - lastchunksize + 1
@@ -217,7 +219,7 @@ end
                                    seed!(xdual, x)
                                end,
                                :(ydual = f(xdual)),
-                               :(result = similar(ydual, valtype(eltype(ydual)), length(ydual), xlen)),
+                               :(result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), xlen)),
                                :()))
 end
 

@@ -31,7 +31,7 @@ struct InvalidTagException{E,O} <: Exception
 end
 
 Base.showerror(io::IO, e::InvalidTagException{E,O}) where {E,O} =
-    print(io, "Invalid Tag object:\n  Expected $E,\n  Observed $O.")
+    print(io, "Invalid Tag object:\n  Expected ", E, ",\n  Observed ", O, ".")
 
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
     throw(InvalidTagException{Tag{F,V},Tag{FT,VT}}())
@@ -66,10 +66,10 @@ struct DerivativeConfig{T,D} <: AbstractConfig{1}
 end
 
 """
-    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::AbstractArray)
+    ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::Real)
 
 Return a `DerivativeConfig` instance based on the type of `f!`, and the types/shapes of the
-output vector `y` and the input vector `x`.
+output vector `y` and the input value `x`.
 
 The returned `DerivativeConfig` instance contains all the work buffers required by
 `ForwardDiff.derivative` and `ForwardDiff.derivative!` when the target function takes the form

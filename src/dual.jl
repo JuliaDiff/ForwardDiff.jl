@@ -35,11 +35,10 @@ struct DualMismatchError{A,B} <: Exception
 end
 
 Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
-    print(io, "Cannot determine ordering of Dual tags $(e.a) and $(e.b)")
+    print(io, "Cannot determine ordering of Dual tags ", e.a, " and ", e.b)
 
 @noinline function throw_cannot_dual(V::Type)
-    throw(ArgumentError("Cannot create a dual over scalar type $V." *
-        " If the type behaves as a scalar, define ForwardDiff.can_dual(::Type{$V}) = true."))
+    throw(ArgumentError(lazy"Cannot create a dual over scalar type $V. If the type behaves as a scalar, define ForwardDiff.can_dual(::Type{$V}) = true."))
 end
 
 """
@@ -127,6 +126,17 @@ end
 @inline valtype(::Type{V}) where {V} = V
 @inline valtype(::Dual{T,V,N}) where {T,V,N} = V
 @inline valtype(::Type{Dual{T,V,N}}) where {T,V,N} = V
+
+@inline valtype(::Type{T}, ::V) where {T,V} = valtype(T, V)
+@inline valtype(::Type, ::Type{V}) where {V} = V
+@inline valtype(::Type{T}, ::Type{Dual{T,V,N}}) where {T,V,N} = V
+@inline function valtype(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N}
+    if S ≺ T
+        Dual{S,V,N}
+    else
+        throw(DualMismatchError(T,S))
+    end
+end
 
 @inline tagtype(::V) where {V} = Nothing
 @inline tagtype(::Type{V}) where {V} = Nothing
@@ -300,14 +310,9 @@ Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
 
 # The `base` keyword was added in Julia 1.8:
 # https://github.com/JuliaLang/julia/pull/42428
-if VERSION < v"1.8.0-DEV.725"
-    Base.precision(d::Dual) = precision(value(d))
-    Base.precision(::Type{D}) where {D<:Dual} = precision(valtype(D))
-else
-    Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
-    function Base.precision(::Type{D}; base::Integer=2) where {D<:Dual}
-        precision(valtype(D); base=base)
-    end
+Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
+function Base.precision(::Type{D}; base::Integer=2) where {D<:Dual}
+    precision(valtype(D); base=base)
 end
 
 function Base.nextfloat(d::ForwardDiff.Dual{T,V,N}) where {T,V,N}
@@ -386,25 +391,20 @@ for pred in UNARY_PREDICATES
 end
 
 # Before PR#481 this loop ran over this list:
-# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
-for pred in [:<, :>]
-    predeq = Symbol(pred, :(=))
-    @eval begin
-        @define_binary_dual_op(
-            Base.$(pred),
-            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(pred)(partials(x), partials(y))),
-            $(pred)(value(x), y) || (value(x) == y && $(pred)(partials(x), zero(partials(x)))),
-            $(pred)(x, value(y)) || (x == value(y) && $(pred)(zero(partials(y)), partials(y))),
-        )
-        @define_binary_dual_op(
-            Base.$(predeq),
-            $(pred)(value(x), value(y)) || (value(x) == value(y) && $(predeq)(partials(x), partials(y))),
-            $(pred)(value(x), y) || (value(x) == y && $(predeq)(partials(x), zero(partials(x)))),
-            $(pred)(x, value(y)) || (x == value(y) && $(predeq)(zero(partials(y)), partials(y))),
-        )
-    end
-end
+@define_binary_dual_op(
+    Base.:(<),
+    (value(x) < value(y)) || (value(x) == value(y) && (partials(x) < partials(y))),
+    (value(x) < y) || (value(x) == y && (partials(x) < zero(partials(x)))),
+    (x < value(y)) || (x == value(y) && (zero(partials(y)) < partials(y))),
+)
+@define_binary_dual_op(
+    Base.:(<=),
+    (value(x) < value(y)) || (value(x) == value(y) && (partials(x) <= partials(y))),
+    (value(x) < y) || (value(x) == y && (partials(x) <= zero(partials(x)))),
+    (x < value(y)) || (x == value(y) && (zero(partials(y)) <= partials(y))),
+)
 
 @define_binary_dual_op(
     Base.isless,
@@ -425,13 +425,6 @@ for pred in [:isequal, :(==)]
         )
     end
 end
-
-@define_binary_dual_op(
-    Base.:(!=),
-    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
-    (!=)(value(x), y)        || !iszero(partials(x)),
-    (!=)(x, value(y))        || !iszero(partials(y)),
-)
 
 ########################
 # Promotion/Conversion #
@@ -734,6 +727,57 @@ end
     sd, cd = sincospi(value(d))
     return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
 end
+
+# LinearAlgebra.givensAlgorithm #
+#-------------------------------#
+
+# This definition ensures that we match `LinearAlgebra.givensAlgorithm`
+# for non-dual numbers (i.e., `ForwardDiff.Dual` with zero partials)
+# `LinearAlgebra.givensAlgorithm` is derived from LAPACK's dlartg
+# which is [documented](https://netlib.org/lapack/explore-html/da/dd3/group__lartg_ga86f8f877eaea0386cdc2c3c175d9ea88.html) to return
+# three values c, s, u for two arguments x and y with
+# u = sgn(x) sqrt(x^2 + y^2)
+# c = x/u
+# s = y/u
+# The function is discontinuous in u at x=0
+@define_binary_dual_op(
+    LinearAlgebra.givensAlgorithm,
+    begin
+        vx, vy = value(x), value(y)
+        c, s, u = LinearAlgebra.givensAlgorithm(vx, vy)
+        ∂c∂x = s^2 / u
+        ∂c∂y = ∂s∂x = -(c * s / u)
+        ∂s∂y = c^2 / u
+        ∂x = partials(x)
+        ∂y = partials(y)
+        ∂c = _mul_partials(∂x, ∂y, ∂c∂x, ∂c∂y)
+        ∂s = _mul_partials(∂x, ∂y, ∂s∂x, ∂s∂y)
+        ∂u = _mul_partials(∂x, ∂y, c, s)
+        return Dual{Txy}(c, ∂c), Dual{Txy}(s, ∂s), Dual{Txy}(u, ∂u)
+    end,
+    begin
+        vx = value(x)
+        c, s, u = LinearAlgebra.givensAlgorithm(vx, y)
+        ∂c∂x = s^2 / u
+        ∂s∂x = -(c * s / u)
+        ∂x = partials(x)
+        ∂c = ∂c∂x * ∂x
+        ∂s = ∂s∂x * ∂x
+        ∂u = c * ∂x
+        return Dual{Tx}(c, ∂c), Dual{Tx}(s, ∂s), Dual{Tx}(u, ∂u)
+    end,
+    begin
+        vy = value(y)
+        c, s, u = LinearAlgebra.givensAlgorithm(x, vy)
+        ∂c∂y = -(c * s / u)
+        ∂s∂y = c^2 / u
+        ∂y = partials(y)
+        ∂c = ∂c∂y * ∂y
+        ∂s = ∂s∂y * ∂y
+        ∂u = s * ∂y
+        return Dual{Ty}(c, ∂c), Dual{Ty}(s, ∂s), Dual{Ty}(u, ∂u)
+    end,
+)
 
 # Symmetric eigvals #
 #-------------------#
