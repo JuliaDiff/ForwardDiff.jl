@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - 'min'
+          - 'min-patch'
           - 'lts'
           - '1'
           - 'pre'
@@ -34,10 +34,10 @@ jobs:
           - false
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: ${{ matrix.version }}
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - name: Set NaN-safe mode preference
         run: |
           open(joinpath(pwd(), "Project.toml"), "a") do io
@@ -47,7 +47,7 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
       - uses: julia-actions/julia-processcoverage@v1
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -57,10 +57,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/setup-julia@v3
         with:
           version: '1'
-      - uses: julia-actions/cache@v2
+      - uses: julia-actions/cache@v3
       - name: Set up environment
         run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
       - name: Run doctests

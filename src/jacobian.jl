@@ -93,7 +93,7 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 #####################
 
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, n) where {T}
-    out_reshaped = reshape(result, length(ydual), n)
+    out_reshaped = result isa AbstractMatrix ? result : reshape(result, length(ydual), n)
     ydual_reshaped = vec(ydual)
     # Use closure to avoid GPU broadcasting with Type
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
