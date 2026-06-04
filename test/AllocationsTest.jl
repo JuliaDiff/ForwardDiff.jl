@@ -48,7 +48,7 @@ end
 @testset "allocation-free nested StaticArray jacobian" begin
     # test that nested jacobians of StaticArrays do not allocate. 
     # This is a regression test for issue #798, where the inner jacobian was allocating
-    @inline toy_f(x) = SVector(x[1]^2 * x[2], sin(x[1]) + x[2]^3)
+    toy_f(x) = SVector(x[1]^2 * x[2], sin(x[1]) + x[2]^3)
 
     function toy_J_flat(x)
         y = ForwardDiff.jacobian(toy_f, x)
