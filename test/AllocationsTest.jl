@@ -60,7 +60,6 @@ end
     end
 
     x0 = SVector(1.0, 2.0)
-    toy_nested_jacobian(x0)
     @test iszero(@allocated toy_nested_jacobian(x0))
 end
 
