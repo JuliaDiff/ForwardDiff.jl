@@ -1,6 +1,7 @@
 module AllocationsTest
 
 using ForwardDiff
+using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
@@ -42,6 +43,27 @@ end
         return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
     end
     @test iszero(allocs_jacobian!())
+end
+
+@testset "allocation-free nested StaticArray jacobian" begin
+    # test that nested jacobians of StaticArrays do not allocate. 
+    # This is a regression test for issue #798, where the inner jacobian was allocating
+    toy_f(x) = SVector(x[1]^2 * x[2], sin(x[1]) + x[2]^3)
+
+    function toy_J_flat(x::SVector{2,T}) where {T}
+        y = ForwardDiff.jacobian(toy_f, x)
+        return SVector{2,T}(y[1], y[2])
+    end
+
+    function toy_nested_jacobian(x0::SVector{2,T}) where {T}
+        return ForwardDiff.jacobian(toy_J_flat, x0)
+    end
+
+    function allocs_jacobian()
+        x0 = SVector(1.0, 2.0)
+        return @allocated toy_nested_jacobian(x0)
+    end
+    @test iszero(allocs_jacobian())
 end
 
 end
