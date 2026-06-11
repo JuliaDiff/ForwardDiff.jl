@@ -18,7 +18,6 @@ abstract type AbstractTag{F,V} end
 # Tag #
 #######
 struct Tag{F,V} <: AbstractTag{F,V} end
-end
 
 const TAGCOUNT = Threads.Atomic{UInt}(0)
 
