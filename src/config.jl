@@ -39,7 +39,7 @@ Tag(::Nothing, ::Type{V}) where {V} = nothing
 end
 
 @inline maketagtype(f::F,::Type{V}) where {F,V} = Tag{F,V}
-@inline maketagtype(f::Nothing,::Type{V}) where {F,V} = Nothing
+@inline maketagtype(f::Nothing,::Type{V}) where {V} = Nothing
 
 @inline maketag(f::F,::Type{V}) where {F,V} = maketagtype(f,V)()
 
@@ -59,7 +59,7 @@ checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V}
 checktag(::Type{AbstractTag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
 
 #AbstractTag support
-checktag(T::Type{AbstractTag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
+function checktag(T::Type{AbstractTag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V}
     T2 = maketagtype(f,V) #maketag(f::F,type{V})::AbstractTag{F2,V2} is not equivalent to Tag{F,V}
     T2 !== T && throw(InvalidTagException{T,T2}())
     return true
