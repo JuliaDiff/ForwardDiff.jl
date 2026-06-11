@@ -3,7 +3,7 @@ module ForwardDiffStaticArraysExt
 using ForwardDiff, StaticArrays
 using ForwardDiff.LinearAlgebra
 using ForwardDiff.DiffResults
-using ForwardDiff: Dual, partials, npartials, Partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk, maketag
+using ForwardDiff: Dual, partials, npartials, Partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk, maketagtype,
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
                    vector_mode_gradient, vector_mode_gradient!,
