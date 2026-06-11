@@ -42,6 +42,9 @@ checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V}
 # custom tag: you're on your own.
 checktag(z, f, x) = true
 
+#Tag maker function
+maketag(f::F,::Type{V}) where {F,V} = maketag(f, V)
+maketag(::Nothing,::Type{V}) where {V} = nothing
 
 ##################
 # AbstractConfig #
@@ -82,7 +85,7 @@ This constructor does not store/modify `y` or `x`.
 function DerivativeConfig(f::F,
                           y::AbstractArray{Y},
                           x::X,
-                          tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
+                          tag::T = maketag(f, X)) where {F,X<:Real,Y<:Real,T}
     duals = similar(y, Dual{T,Y,1})
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
@@ -117,7 +120,7 @@ This constructor does not store/modify `x`.
 function GradientConfig(f::F,
                         x::AbstractArray{V},
                         ::Chunk{N} = Chunk(x),
-                        ::T = Tag(f, V)) where {F,V,N,T}
+                        ::T = maketag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
@@ -154,7 +157,7 @@ This constructor does not store/modify `x`.
 function JacobianConfig(f::F,
                         x::AbstractArray{V},
                         ::Chunk{N} = Chunk(x),
-                        ::T = Tag(f, V)) where {F,V,N,T}
+                        ::T = maketag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
@@ -180,7 +183,7 @@ function JacobianConfig(f::F,
                         y::AbstractArray{Y},
                         x::AbstractArray{X},
                         ::Chunk{N} = Chunk(x),
-                        ::T = Tag(f, X)) where {F,Y,X,N,T}
+                        ::T = maketag(f, X)) where {F,Y,X,N,T}
     seeds = construct_seeds(Partials{N,X})
     yduals = similar(y, Dual{T,Y,N})
     xduals = similar(x, Dual{T,X,N})
@@ -221,7 +224,7 @@ This constructor does not store/modify `x`.
 function HessianConfig(f::F,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tag = Tag(f, V)) where {F,V}
+                       tag = maketag(f, V)) where {F,V}
     jacobian_config = JacobianConfig(f, x, chunk, tag)
     gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
@@ -246,7 +249,7 @@ function HessianConfig(f::F,
                        result::DiffResult,
                        x::AbstractArray{V},
                        chunk::Chunk = Chunk(x),
-                       tag = Tag(f, V)) where {F,V}
+                       tag = maketag(f, V)) where {F,V}
     jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tag)
     gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
     return HessianConfig(jacobian_config, gradient_config)
