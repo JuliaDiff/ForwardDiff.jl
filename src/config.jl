@@ -1,19 +1,3 @@
-#= 
-######
-# AbstractTag interface
-
-Required definitions: 
-- ≺ (between two AbstractTags of the same type)
-- maketagtype(f,::Type{V}) where {V <: Real}
-
-Optional definitions:
-- ≺ (between two AbstractTags of the of different type)
-- maketag(f,::Type{V}) where {V <: Real} (default: defined in terms of maketagtype)
-- checktag(tag::MyTagType,f,x)
-###### 
-=#
-abstract type AbstractTag{F,V} end
-
 #######
 # Tag #
 #######
@@ -38,10 +22,8 @@ Tag(::Nothing, ::Type{V}) where {V} = nothing
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
 
+#default implementation of maketagtyp
 @inline maketagtype(f::F,::Type{V}) where {F,V} = Tag{F,V}
-@inline maketagtype(f::Nothing,::Type{V}) where {V} = Nothing
-
-@inline maketag(f::F,::Type{V}) where {F,V} = maketagtype(f,V)()
 
 struct InvalidTagException{E,O} <: Exception
 end
