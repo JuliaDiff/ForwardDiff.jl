@@ -38,10 +38,10 @@ Tag(::Nothing, ::Type{V}) where {V} = nothing
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
 
-@inline maketagtype(f::F,::Type{V}) = Tag{F,V}
-@inline maketagtype(f::Nothing,::Type{V}) = Nothing
+@inline maketagtype(f::F,::Type{V}) where {F,V} = Tag{F,V}
+@inline maketagtype(f::Nothing,::Type{V}) where {F,V} = Nothing
 
-@inline maketag(f::F,::Type{V}) = maketagtype(f,V)()
+@inline maketag(f::F,::Type{V}) where {F,V} = maketagtype(f,V)()
 
 struct InvalidTagException{E,O} <: Exception
 end
