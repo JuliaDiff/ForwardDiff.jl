@@ -110,7 +110,7 @@ for f in DiffTests.ARRAY_TO_ARRAY_FUNCS
     @test isapprox(j, Calculus.jacobian(x -> vec(f(x)), X, :forward), atol=1.3FINITEDIFF_ERROR)
     @testset "$f with chunk size = $c and tag = $(repr(tag))" for c in CHUNK_SIZES, tag in (nothing, Tag)
         if tag == Tag
-            tag = maketag(f, eltype(X))
+            tag = Tag(f, eltype(X))
         end
         cfg = JacobianConfig(f, X, ForwardDiff.Chunk{c}(), tag)
 
