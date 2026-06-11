@@ -20,10 +20,16 @@ end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
+@inline tagdepth(::Type) = 0
+@inline tagdepth(::Type{<:Dual{T,V,N}}) where {T,V,N} = 1 + tagdepth(V)
+@inline tagdepth(::Type{<:Tag{F,V}}) where {F,V} = 1 + tagdepth(V)
 
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
-    tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
-end
+      d1 = tagdepth(Tag{F1,V1})
+      d2 = tagdepth(Tag{F2,V2})
+      d1 != d2 && return d1 < d2
+      return tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
+  end
 
 struct InvalidTagException{E,O} <: Exception
 end
