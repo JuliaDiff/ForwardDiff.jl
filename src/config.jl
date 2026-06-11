@@ -1,8 +1,23 @@
+#= 
+######
+# AbstractTag interface
+
+Required definitions: 
+- ≺ (between two AbstractTags of the same type)
+- maketagtype(f,::Type{V}) where {V <: Real}
+
+Optional definitions:
+- ≺ (between two AbstractTags of the of different type)
+- maketag(f,::Type{V}) where {V <: Real} (default: defined in terms of maketagtype)
+- checktag(tag::MyTagType,f,x)
+###### 
+=#
+abstract type AbstractTag{F,V} end
+
 #######
 # Tag #
 #######
-
-struct Tag{F,V}
+struct Tag{F,V} <: AbstractTag{F,V} end
 end
 
 const TAGCOUNT = Threads.Atomic{UInt}(0)
@@ -20,10 +35,14 @@ end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
-
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
+
+@inline maketagtype(f::F,::Type{V}) = Tag{F,V}
+@inline maketagtype(f::Nothing,::Type{V}) = Nothing
+
+@inline maketag(f::F,::Type{V}) = maketagtype(f,V)()
 
 struct InvalidTagException{E,O} <: Exception
 end
@@ -38,13 +57,18 @@ checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
 # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
+checktag(::Type{AbstractTag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
 
-# custom tag: you're on your own.
+#AbstractTag support
+checktag(T::Type{AbstractTag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT,VT,F,V} =
+    T2 = maketagtype(f,V) #maketag(f::F,type{V})::AbstractTag{F2,V2} is not equivalent to Tag{F,V}
+    T2 !== T && throw(InvalidTagException{T,T2}())
+    return true
+end
+
+# custom tag not in the tag API: you're on your own.
 checktag(z, f, x) = true
 
-#Tag maker function
-maketag(f::F,::Type{V}) where {F,V} = maketag(f, V)
-maketag(::Nothing,::Type{V}) where {V} = nothing
 
 ##################
 # AbstractConfig #

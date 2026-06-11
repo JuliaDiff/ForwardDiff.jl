@@ -51,12 +51,12 @@ ForwardDiff._lyap_div!!(A::StaticArrays.MMatrix, λ::AbstractVector) = ForwardDi
 end
 
 @inline function ForwardDiff.vector_mode_gradient(f::F, x::StaticArray) where {F}
-    T = typeof(maketag(f,eltype(x)))
+    T = maketagtype(f,eltype(x))
     return extract_gradient(T, f(dualize(T, x)), x)
 end
 
 @inline function ForwardDiff.vector_mode_gradient!(result, f::F, x::StaticArray) where {F}
-    T = typeof(maketag(f,eltype(x)))
+    T = maketagtype(f,eltype(x))
     return extract_gradient!(T, result, f(dualize(T, x)))
 end
 
@@ -81,7 +81,7 @@ end
 end
 
 @inline function ForwardDiff.vector_mode_jacobian(f::F, x::StaticArray) where {F}
-    T = typeof(maketag(f,eltype(x)))
+    T = maketagtype(f,eltype(x))
     return extract_jacobian(T, f(dualize(T, x)), x)
 end
 
@@ -91,7 +91,7 @@ function extract_jacobian(::Type{T}, ydual::AbstractArray, x::StaticArray) where
 end
 
 @inline function ForwardDiff.vector_mode_jacobian!(result, f::F, x::StaticArray) where {F}
-    T = typeof(maketag(f,eltype(x)))
+    T = maketagtype(f,eltype(x))
     ydual = f(dualize(T, x))
     result = extract_jacobian!(T, result, ydual, length(x))
     result = extract_value!(T, result, ydual)
@@ -99,7 +99,7 @@ end
 end
 
 @inline function ForwardDiff.vector_mode_jacobian!(result::ImmutableDiffResult, f::F, x::StaticArray) where {F}
-    T = typeof(maketag(f,eltype(x)))
+    T = maketagtype(f,eltype(x))
     ydual = f(dualize(T, x))
     result = DiffResults.jacobian!(result, extract_jacobian(T, ydual, x))
     result = DiffResults.value!(Base.Fix1(value, T), result, ydual)
@@ -119,7 +119,7 @@ ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::Hes
 ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} = hessian!(result, f, x)
 
 function ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray) where {F}
-    T = typeof(maketag(f,eltype(x)))
+    T = maketagtype(f,eltype(x))
     d1 = dualize(T, x)
     d2 = dualize(T, d1)
     fd2 = f(d2)
