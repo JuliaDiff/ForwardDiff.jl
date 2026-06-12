@@ -7,7 +7,7 @@ end
 ##############################
 
 @generated function single_seed(::Type{Partials{N,V}}, ::Val{i}) where {N,V,i}
-    ex = Expr(:tuple, [ifelse(i === j, :(one(V)), :(zero(V))) for j in 1:N]...)
+    ex = Expr(:tuple, [ifelse(i === j, :(oneunit(V)), :(zero(V))) for j in 1:N]...)
     return :(Partials($(ex)))
 end
 
