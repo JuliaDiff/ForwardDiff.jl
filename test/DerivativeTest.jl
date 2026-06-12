@@ -9,6 +9,7 @@ using Random
 using ForwardDiff
 using DiffTests
 
+include(joinpath(dirname(@__FILE__), "Furlongs.jl"))
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 Random.seed!(1)
@@ -131,6 +132,14 @@ end
         @test ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g) ≈
             Calculus.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g)
     end
+end
+
+@testset "non-standard numbers" begin
+    furlong = Furlongs.Furlong{2}(1.0)
+
+    f(x) = exp(x) + 4*sin(x)*oneunit(x)
+
+    @test ForwardDiff.derivative(f, furlong) == exp(furlong) + 4*cos(furlong)
 end
 
 end # module
