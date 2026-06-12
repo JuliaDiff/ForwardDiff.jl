@@ -22,8 +22,13 @@ Tag(::Nothing, ::Type{V}) where {V} = nothing
     tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
 
-#default implementation of maketagtyp
+#default implementation of maketagtype
 @inline maketagtype(f::F,::Type{V}) where {F,V} = Tag{F,V}
+
+#default implementation of maketag.
+#Tag needs the two-arg form to register the tagcount
+maketag(f::F,::Type{V}) where {F,V} = Tag(f,V)
+#@inline maketag(f::F,::Type{V}) where {F,V} = maketagtype(f,V)()
 
 struct InvalidTagException{E,O} <: Exception
 end

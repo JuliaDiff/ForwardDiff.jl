@@ -85,4 +85,4 @@ Optional definitions:
 abstract type AbstractTag{F,V} end
 
 @inline maketagtype(f::Nothing,::Type{V}) where {V} = Nothing
-@inline maketag(f::F,::Type{V}) where {F,V} = maketagtype(f,V)()
+function maketag end
