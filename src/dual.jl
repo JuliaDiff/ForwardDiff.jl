@@ -843,6 +843,38 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
+# General eigvals #
+function make_eigen_dual(val::Real, partial)
+    Dual{tagtype(partial)}(val, partial.partials)
+end
+
+function make_eigen_dual(val::Complex, partial::Complex)
+    Complex(Dual{tagtype(real(partial))}(real(val), real(partial).partials),
+            Dual{tagtype(imag(partial))}(imag(val), imag(partial).partials))
+end
+
+function LinearAlgebra.eigen(A::StridedMatrix{<:Dual})
+    A_values = map(d -> d.value, A)
+    A_values_eig = eigen(A_values)
+    UinvAU = A_values_eig.vectors \ A * A_values_eig.vectors
+    vals_diff = diag(UinvAU)
+    F = similar(A_values, eltype(A_values_eig.values))
+    for i in axes(A_values, 1), j in axes(A_values, 2)
+        if i == j
+            F[i, j] = 0
+        else
+            F[i, j] = inv(A_values_eig.values[j] - A_values_eig.values[i])
+        end
+    end
+    vectors_diff = A_values_eig.vectors * (F .* UinvAU)
+    for i in eachindex(vectors_diff)
+        vectors_diff[i] = make_eigen_dual(A_values_eig.vectors[i], vectors_diff[i])
+    end
+    Eigen(vals_diff, vectors_diff)
+end
+
+LinearAlgebra.eigvals(A::StridedMatrix{<:Dual}) = eigen(A).values
+
 # Functions in SpecialFunctions which return tuples #
 # Their derivatives are not defined in DiffRules    #
 #---------------------------------------------------#
