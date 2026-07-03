@@ -5,13 +5,14 @@ using Test
 
 using JET: @test_opt
 
-# On Julia 1.13, JET produces false-positive runtime-dispatch reports for
-# concrete Base broadcast/view/CartesianIndex code reached by these calls:
-# native inference of every flagged frame is concrete and the kernels are
-# allocation-free, so nothing is actually mis-inferred in ForwardDiff.
-# Re-enable once JET supports Julia 1.13; tracked in
-# https://github.com/aviatesk/JET.jl/issues/839
-if VERSION < v"1.13.0-"
+# On Julia prereleases JET's analysis lags the compiler and produces
+# false-positive runtime-dispatch reports (e.g. on 1.13.0-rc1 for concrete
+# Base broadcast/view/CartesianIndex code reached by these calls: native
+# inference of every flagged frame is concrete and the kernels are
+# allocation-free, so nothing is actually mis-inferred in ForwardDiff;
+# https://github.com/aviatesk/JET.jl/issues/839). Only run the JET tests on
+# released Julia versions.
+if isempty(VERSION.prerelease)
     @testset "JET" begin
         # issue #778
         @test_opt ForwardDiff.derivative(identity, 1.0)
