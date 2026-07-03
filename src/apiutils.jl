@@ -70,9 +70,21 @@ function structural_eachindex(x::Diagonal, y::AbstractArray)
     return diagind(x)
 end
 
+# Dense arrays with isbits values need no structural-index or unset-element
+# handling, so they can be seeded with broadcast/`map!` over contiguous views.
+# This keeps GPU arrays (`AbstractGPUArray <: DenseArray`) free of scalar
+# indexing and avoids the O(index) `Iterators.drop` walk of the structural
+# path. Broadcast is fastest for the bulk writes; the chunk writes use `map!`
+# with an index range because slicing the seeds tuple at runtime allocates.
+@inline function dense_seedable(duals, x, ::Type{V}) where {V}
+    duals isa DenseArray && isbitstype(V) && !Base.has_offset_axes(duals, x)
+end
+
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
-    if isbitstype(V)
+    if dense_seedable(duals, x, V) && axes(duals) == axes(x)
+        duals .= Dual{T,V,N}.(x, Ref(seed))
+    elseif isbitstype(V)
         for idx in structural_eachindex(duals, x)
             duals[idx] = Dual{T,V,N}(x[idx], seed)
         end
@@ -90,7 +102,12 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    if isbitstype(V)
+    if dense_seedable(duals, x, V)
+        length(duals) == length(x) || throw(DimensionMismatch())
+        dual_inds = 1:min(N, length(duals))
+        map!((xi, i) -> Dual{T,V,N}(xi, seeds[i]),
+             view(duals, dual_inds), view(x, dual_inds), dual_inds)
+    elseif isbitstype(V)
         for (i, idx) in zip(1:N, structural_eachindex(duals, x))
             duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
         end
@@ -108,6 +125,14 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
+    if dense_seedable(duals, x, V)
+        length(duals) == length(x) || throw(DimensionMismatch())
+        dual_inds = index:length(duals)
+        # map! rather than broadcast: the dotview allocates under
+        # --check-bounds=yes on Julia 1.10
+        map!(xi -> Dual{T,V,N}(xi, seed), view(duals, dual_inds), view(x, dual_inds))
+        return duals
+    end
     offset = index - 1
     idxs = Iterators.drop(structural_eachindex(duals, x), offset)
     if isbitstype(V)
@@ -128,6 +153,14 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
+    if dense_seedable(duals, x, V)
+        length(duals) == length(x) || throw(DimensionMismatch())
+        shift = index - 1
+        dual_inds = (1 + shift):min(shift + chunksize, length(duals))
+        map!((xi, i) -> Dual{T,V,N}(xi, seeds[i - shift]),
+             view(duals, dual_inds), view(x, dual_inds), dual_inds)
+        return duals
+    end
     offset = index - 1
     idxs = Iterators.drop(structural_eachindex(duals, x), offset)
     if isbitstype(V)
