@@ -635,14 +635,6 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         tolval = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
             @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tolval
-            # ForwardDiff computes the analytic derivative (independent of
-            # `ind`), so compare against a finite difference of the
-            # full-accuracy (`ind = 0`) Float64 evaluation: differencing the
-            # reduced-accuracy `ind` variants (or the V-precision function for
-            # V === Float32) puts the reference's own error at or above `tol`,
-            # which makes this test flake for random `a`/`PRIMAL`.
-            # Float64(1 + PRIMAL) keeps the evaluation point exactly the
-            # primal of `fdnum` (convert after the V-precision addition).
             der = Calculus.derivative(x -> gamma_inc(Float64(a), x, 0)[i], Float64(1 + PRIMAL))
             @test partials(pq[i]) ≈ PARTIALS * der rtol=tol
         end
