@@ -499,6 +499,14 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test partials(NaNMath.pow(Dual{TestTag}(-2.0, 1.0), Dual{TestTag}(2.0, 0.0)), 1) == -4.0
 
+    # differentiating must not widen the primal: `2^x` is Float32 for a Float32 `x`
+    @testset "$f: real base keeps $W exponent" for f in (^, NaNMath.pow),
+                                                   W in (Float16, Float32, Float64)
+        w = W(4)/W(3)
+        @test typeof(value(f(2, Dual{TestTag}(w, one(W))))) === typeof(f(2, w))
+        @test typeof(value(f(2.0f0, Dual{TestTag}(w, one(W))))) === typeof(f(2.0f0, w))
+    end
+
     ###################################
     # General Mathematical Operations #
     ###################################
