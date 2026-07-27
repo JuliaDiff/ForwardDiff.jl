@@ -24,4 +24,8 @@ include("hessian.jl")
 
 export DiffResults
 
+@static if VERSION >= v"1.11.0-DEV.469"
+    eval(Expr(:public, :derivative, :derivative!, :gradient, :gradient!, :jacobian, :jacobian!, :hessian, :hessian!, :GradientConfig, :JacobianConfig, :HessianConfig, :DerivativeConfig, :Chunk, :Dual, :value, :can_dual))
+end
+
 end # module
