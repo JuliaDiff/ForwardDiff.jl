@@ -576,7 +576,7 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
             begin
                 v = value(y)
                 expv = ($f)(x, v)
-                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(x)
+                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(oftype(expv, x))
                 return Dual{Ty}(expv, deriv * partials(y))
             end
         )
