@@ -640,10 +640,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         # We have to adjust tolerances if lower accuracy is requested
         # Therefore we don't use `dual_isapprox`
         tol = V === Float32 ? 5f-4 : 1e-5
-        tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
+        tolval = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
-            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
-            @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
+            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tolval
+            der = Calculus.derivative(x -> gamma_inc(Float64(a), x, 0)[i], Float64(1 + PRIMAL))
+            @test partials(pq[i]) ≈ PARTIALS * der rtol=tol
         end
     end
 end
