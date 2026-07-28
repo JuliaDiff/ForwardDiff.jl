@@ -191,7 +191,7 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
         $(result_definition)
         out_reshaped = reshape_jacobian(result, ydual, xdual)
         extract_jacobian_chunk!(T, out_reshaped, ydual, 1, N)
-        seed!(xdual, x, 1)
+        unseed!(xdual, x, 1)
 
         # do middle chunks
         for c in middlechunks
@@ -199,7 +199,7 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
             seed!(xdual, x, i, seeds)
             $(compute_ydual)
             extract_jacobian_chunk!(T, out_reshaped, ydual, i, N)
-            seed!(xdual, x, i)
+            unseed!(xdual, x, i)
         end
 
         # do final chunk
@@ -216,7 +216,7 @@ end
 @eval function chunk_mode_jacobian(f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    xdual = cfg.duals
-                                   seed!(xdual, x)
+                                   unseed!(xdual, x)
                                end,
                                :(ydual = f(xdual)),
                                :(result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), xlen)),
@@ -226,9 +226,9 @@ end
 @eval function chunk_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    ydual, xdual = cfg.duals
-                                   seed!(xdual, x)
+                                   unseed!(xdual, x)
                                end,
-                               :(f!(seed!(ydual, y), xdual)),
+                               :(f!(unseed!(ydual, y), xdual)),
                                :(result = similar(y, length(y), xlen)),
                                :(map!(d -> value(T,d), y, ydual))))
 end
@@ -236,7 +236,7 @@ end
 @eval function chunk_mode_jacobian!(result, f::F, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    xdual = cfg.duals
-                                   seed!(xdual, x)
+                                   unseed!(xdual, x)
                                end,
                                :(ydual = f(xdual)),
                                :(),
@@ -246,9 +246,9 @@ end
 @eval function chunk_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(quote
                                    ydual, xdual = cfg.duals
-                                   seed!(xdual, x)
+                                   unseed!(xdual, x)
                                end,
-                               :(f!(seed!(ydual, y), xdual)),
+                               :(f!(unseed!(ydual, y), xdual)),
                                :(),
                                :(extract_value!(T, result, y, ydual))))
 end

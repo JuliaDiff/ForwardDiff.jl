@@ -127,14 +127,14 @@ function chunk_mode_gradient_expr(result_definition::Expr)
         # seed work vectors
         xdual = cfg.duals
         seeds = cfg.seeds
-        seed!(xdual, x)
+        unseed!(xdual, x)
 
         # do first chunk manually to calculate output type
         seed!(xdual, x, 1, seeds)
         ydual = f(xdual)
         $(result_definition)
         extract_gradient_chunk!(T, result, ydual, 1, N)
-        seed!(xdual, x, 1)
+        unseed!(xdual, x, 1)
 
         # do middle chunks
         for c in middlechunks
@@ -142,7 +142,7 @@ function chunk_mode_gradient_expr(result_definition::Expr)
             seed!(xdual, x, i, seeds)
             ydual = f(xdual)
             extract_gradient_chunk!(T, result, ydual, i, N)
-            seed!(xdual, x, i)
+            unseed!(xdual, x, i)
         end
 
         # do final chunk
