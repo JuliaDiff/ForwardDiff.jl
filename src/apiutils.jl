@@ -106,10 +106,13 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
     return duals
 end
 
+# Writes at most N elements starting at `index`: chunk mode only ever needs to
+# clear the N-wide chunk it just seeded, so writing through to the end of the
+# array would be O(n) redundant work per chunk (O(n^2) per sweep).
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seed::Partials{N,V} = zero(Partials{N,V})) where {T,V,N}
     offset = index - 1
-    idxs = Iterators.drop(structural_eachindex(duals, x), offset)
+    idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), offset), N)
     if isbitstype(V)
         for idx in idxs
             duals[idx] = Dual{T,V,N}(x[idx], seed)
