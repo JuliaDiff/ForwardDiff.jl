@@ -216,7 +216,7 @@ end
 @inline function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
     return Dual{T}(val, _mul_partials(partial1, partial2, deriv1, deriv2))
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
     reval, imval = reim(val)
     if deriv isa Real
         p = deriv * partial
@@ -226,7 +226,7 @@ function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Comple
         return Complex(Dual{T}(reval, rederiv * partial), Dual{T}(imval, imderiv * partial))
     end
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
     reval, imval = reim(val)
     if deriv1 isa Real && deriv2 isa Real
         p = _mul_partials(partial1, partial2, deriv1, deriv2)
