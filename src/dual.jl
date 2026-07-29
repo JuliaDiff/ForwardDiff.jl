@@ -210,13 +210,13 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
 end
 
 # Support complex-valued functions such as `hankelh1`
-function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
     return Dual{T}(val, deriv * partial)
 end
-function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
     return Dual{T}(val, _mul_partials(partial1, partial2, deriv1, deriv2))
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
     reval, imval = reim(val)
     if deriv isa Real
         p = deriv * partial
@@ -226,7 +226,7 @@ function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Comple
         return Complex(Dual{T}(reval, rederiv * partial), Dual{T}(imval, imderiv * partial))
     end
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
     reval, imval = reim(val)
     if deriv1 isa Real && deriv2 isa Real
         p = _mul_partials(partial1, partial2, deriv1, deriv2)
@@ -576,7 +576,7 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
             begin
                 v = value(y)
                 expv = ($f)(x, v)
-                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(x)
+                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(oftype(expv, x))
                 return Dual{Ty}(expv, deriv * partials(y))
             end
         )

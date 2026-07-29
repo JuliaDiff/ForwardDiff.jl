@@ -499,6 +499,14 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test partials(NaNMath.pow(Dual{TestTag}(-2.0, 1.0), Dual{TestTag}(2.0, 0.0)), 1) == -4.0
 
+    # differentiating must not widen the primal: `2^x` is Float32 for a Float32 `x`
+    @testset "$f: real base keeps $W exponent" for f in (^, NaNMath.pow),
+                                                   W in (Float16, Float32, Float64)
+        w = W(4)/W(3)
+        @test typeof(value(f(2, Dual{TestTag}(w, one(W))))) === typeof(f(2, w))
+        @test typeof(value(f(2.0f0, Dual{TestTag}(w, one(W))))) === typeof(f(2.0f0, w))
+    end
+
     ###################################
     # General Mathematical Operations #
     ###################################
@@ -632,10 +640,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         # We have to adjust tolerances if lower accuracy is requested
         # Therefore we don't use `dual_isapprox`
         tol = V === Float32 ? 5f-4 : 1e-5
-        tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
+        tolval = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
-            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
-            @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
+            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tolval
+            der = Calculus.derivative(x -> gamma_inc(Float64(a), x, 0)[i], Float64(1 + PRIMAL))
+            @test partials(pq[i]) ≈ PARTIALS * der rtol=tol
         end
     end
 end
