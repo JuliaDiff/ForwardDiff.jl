@@ -27,7 +27,7 @@ end
 function vector_mode_dual_eval!(f!::F, cfg::JacobianConfig, y, x) where {F}
     ydual, xdual = cfg.duals
     seed!(xdual, x, cfg.seeds)
-    unseed!(ydual, y)
+    seed_zero_partials!(ydual, y)
     f!(ydual, xdual)
     return ydual
 end
@@ -70,32 +70,24 @@ function structural_eachindex(x::Diagonal, y::AbstractArray)
     return diagind(x)
 end
 
-# Copies the values of `x` into `duals` with zero partials, i.e. removes any seeds
-# `duals` is currently carrying.
-function unseed!(duals::AbstractArray{Dual{T,V,N}}, x) where {T,V,N}
-    seed = zero(Partials{N,V})
-    if isbitstype(V)
-        for idx in structural_eachindex(duals, x)
-            duals[idx] = Dual{T,V,N}(x[idx], seed)
-        end
-    else
-        for idx in structural_eachindex(duals, x)
-            if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seed)
-            else
-                Base._unsetindex!(duals, idx)
-            end
-        end
-    end
-    return duals
+# Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
+# currently carrying and to initialize a freshly allocated work buffer, whose elements must all be
+# written before the target function reads them.
+seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x) where {T,V,N} =
+    _seed_zero_partials!(duals, x, structural_eachindex(duals, x))
+
+# Zeroes the partials of `count` elements starting at structural position `index`. Chunk mode only
+# needs to clear the chunk it just seeded, so writing through to the end of the array would be O(n)
+# redundant work per chunk, i.e. O(n^2/N) per sweep. `count` mirrors the `chunksize` argument of
+# `seed!(duals, x, index, seeds, chunksize)`.
+function seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, index,
+                             count = N) where {T,V,N}
+    idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), count)
+    return _seed_zero_partials!(duals, x, idxs)
 end
 
-# Unseeds at most `N` elements starting at `index`: chunk mode only ever needs to clear
-# the N-wide chunk it just seeded, so writing through to the end of the array would be
-# O(n) redundant work per chunk (O(n^2) per sweep).
-function unseed!(duals::AbstractArray{Dual{T,V,N}}, x, index) where {T,V,N}
+function _seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {T,V,N}
     seed = zero(Partials{N,V})
-    idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), N)
     if isbitstype(V)
         for idx in idxs
             duals[idx] = Dual{T,V,N}(x[idx], seed)

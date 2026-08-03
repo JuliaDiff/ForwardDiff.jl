@@ -48,6 +48,11 @@ Random.seed!(SEED)
         t = @elapsed include("MiscTest.jl")
         println("##### done (took $t seconds).")
     end
+    @testset "Seeding" begin
+        println("##### Testing seeding...")
+        t = @elapsed include("SeedTest.jl")
+        println("##### done (took $t seconds).")
+    end
     @testset "Allocations" begin
         println("##### Testing allocations...")
         t = @elapsed include("AllocationsTest.jl")

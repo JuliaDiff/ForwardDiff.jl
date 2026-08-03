@@ -7,7 +7,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,Float64,8},4},2}, 1.3)
 
-@testset "Test seed!/unseed! allocations" begin
+@testset "Test seed!/seed_zero_partials! allocations" begin
     x = rand(1000)
     cfg = ForwardDiff.GradientConfig(nothing, x)
     duals = cfg.duals
@@ -19,11 +19,15 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     allocs_seed!(duals, x, 1, seeds)
     @test iszero(allocs_seed!(duals, x, 1, seeds))
 
-    allocs_unseed!(args...) = @allocated ForwardDiff.unseed!(args...)
-    allocs_unseed!(duals, x)
-    @test iszero(allocs_unseed!(duals, x))
-    allocs_unseed!(duals, x, 1)
-    @test iszero(allocs_unseed!(duals, x, 1))
+    # the 4-arg form passes `count` as a runtime value, so it catches an inference regression at the
+    # `_seed_zero_partials!` boundary that the forms defaulting `count` to `N` could hide
+    allocs_szp!(args...) = @allocated ForwardDiff.seed_zero_partials!(args...)
+    allocs_szp!(duals, x)
+    @test iszero(allocs_szp!(duals, x))
+    allocs_szp!(duals, x, 1)
+    @test iszero(allocs_szp!(duals, x, 1))
+    allocs_szp!(duals, x, 1, 4)
+    @test iszero(allocs_szp!(duals, x, 1, 4))
 
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()
