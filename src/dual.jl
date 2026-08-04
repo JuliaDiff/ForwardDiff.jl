@@ -325,17 +325,18 @@ end
 
 Base.rtoldefault(::Type{D}) where {D<:Dual} = Base.rtoldefault(valtype(D))
 
-Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
-Base.floor(d::Dual) = floor(value(d))
+# Base derives floor/ceil/trunc/round from `round(x, ::RoundingMode)`:
+# https://docs.julialang.org/en/v1/manual/interfaces/#man-rounding-interface
+Base.round(d::Dual, r::RoundingMode) = round(value(d), r)
 
-Base.ceil(::Type{R}, d::Dual) where {R<:Real} = ceil(R, value(d))
-Base.ceil(d::Dual) = ceil(value(d))
-
-Base.trunc(::Type{R}, d::Dual) where {R<:Real} = trunc(R, value(d))
-Base.trunc(d::Dual) = trunc(value(d))
-
-Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
-Base.round(d::Dual) = round(value(d))
+# Julia 1.11 added the generic `f(::Type{T}, x)` fallbacks, so these can be
+# dropped once 1.11 is the minimum supported version.
+if VERSION < v"1.11"
+    Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
+    Base.ceil(::Type{R}, d::Dual) where {R<:Real} = ceil(R, value(d))
+    Base.trunc(::Type{R}, d::Dual) where {R<:Real} = trunc(R, value(d))
+    Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
+end
 
 Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
 

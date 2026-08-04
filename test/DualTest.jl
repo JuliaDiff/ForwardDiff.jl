@@ -172,6 +172,20 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
 
+        for r in (RoundDown, RoundUp, RoundToZero, RoundNearest,
+                  RoundNearestTiesAway, RoundNearestTiesUp, RoundFromZero)
+            @test round(FDNUM, r) === round(PRIMAL, r)
+            @test round(FDNUM2, r) === round(PRIMAL2, r)
+            @test round(NESTED_FDNUM, r) === round(PRIMAL, r)
+        end
+
+        if VERSION >= v"1.11"
+            @test floor(Float32, FDNUM) === floor(Float32, PRIMAL)
+            @test ceil(Float32, FDNUM) === ceil(Float32, PRIMAL)
+            @test trunc(Float32, FDNUM) === trunc(Float32, PRIMAL)
+            @test round(Float32, FDNUM) === round(Float32, PRIMAL)
+        end
+
         @test fld(FDNUM, FDNUM2) === fld(PRIMAL, PRIMAL2)
         @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
         @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
