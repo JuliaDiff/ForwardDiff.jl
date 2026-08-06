@@ -72,5 +72,56 @@ end
     end
 end == 0.0
 
+# Nested differentiation must not depend on tagcount instantiation order (#714) #
+#-------------------------------------------------------------------------------#
+
+# containstag: nesting through the seeded value type V
+struct TagOrderOuterMarker end
+struct TagOrderInnerMarker end
+let Tag = ForwardDiff.Tag, Dual = ForwardDiff.Dual
+    Touter = Tag{TagOrderOuterMarker, Float64}
+    Tinner = Tag{TagOrderInnerMarker, Dual{Touter, Float64, 1}}
+    @test ForwardDiff.containstag(Tinner, Touter)
+    @test !ForwardDiff.containstag(Touter, Tinner)
+    # bake tagcounts in inverted order: containment must win regardless
+    ForwardDiff.tagcount(Tinner)
+    ForwardDiff.tagcount(Touter)
+    @test ForwardDiff.:(≺)(Touter, Tinner)
+    @test !ForwardDiff.:(≺)(Tinner, Touter)
+end
+
+# Second derivative with tagcount baked in inverted order, as precompilation can
+# do: the inner tag nests the outer through V, so ordering must not consult
+# tagcount at all.
+struct TagOrderInnerV end
+(::TagOrderInnerV)(y) = y^3
+struct TagOrderOuterV end
+(::TagOrderOuterV)(x) = ForwardDiff.derivative(TagOrderInnerV(), x)
+ForwardDiff.tagcount(ForwardDiff.Tag{TagOrderInnerV, ForwardDiff.Dual{ForwardDiff.Tag{TagOrderOuterV, Float64}, Float64, 1}})
+ForwardDiff.tagcount(ForwardDiff.Tag{TagOrderOuterV, Float64})
+@test ForwardDiff.derivative(TagOrderOuterV(), 2.0) ≈ 12.0
+
+# Same with the outer perturbation entering through a capture in F (both tags
+# have V === Float64): nesting is only visible through the callable's fields.
+struct TagOrderOuterF end
+struct TagOrderInnerF
+    x_dual::ForwardDiff.Dual{ForwardDiff.Tag{TagOrderOuterF, Float64}, Float64, 1}
+end
+(c::TagOrderInnerF)(y) = sin(c.x_dual * y)
+(::TagOrderOuterF)(x_dual::ForwardDiff.Dual{ForwardDiff.Tag{TagOrderOuterF, Float64}, Float64, 1}) =
+    ForwardDiff.derivative(TagOrderInnerF(x_dual), 1.0)
+ForwardDiff.tagcount(ForwardDiff.Tag{TagOrderInnerF, Float64})
+ForwardDiff.tagcount(ForwardDiff.Tag{TagOrderOuterF, Float64})
+@test ForwardDiff.derivative(TagOrderOuterF(), 0.5) ≈ cos(0.5) - 0.5 * sin(0.5)
+
+# Three-level nesting where the innermost derivative is seeded with a plain
+# Float64 while the outer perturbations enter through closure captures. A
+# depth-only fast path mis-orders this case; it must keep working.
+let
+    inner_deriv(d) = ForwardDiff.derivative(y -> y^2 * d, 1.0)
+    middle_grad(v) = ForwardDiff.gradient(u -> sum(inner_deriv(ui) * ui for ui in u), v)
+    outer_fn(x) = sum(middle_grad([x, 2x]))
+    @test ForwardDiff.derivative(outer_fn, 0.5) ≈ 12.0
+end
 
 end # module
