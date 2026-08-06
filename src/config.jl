@@ -63,6 +63,11 @@ struct DerivativeConfig{T,D} <: AbstractConfig{1}
     duals::D
 end
 
+# Work-buffer element type for an output whose scalar type is `Y`; see `DualBuffer`.
+@inline dual_buffer_eltype(::Type{T}, ::Type{Y}, ::Val{N}) where {T,Y<:Real,N} = Dual{T,Y,N}
+@inline dual_buffer_eltype(::Type{T}, ::Type{Y}, ::Val{N}) where {T,Y<:Complex,N} =
+    Complex{Dual{T,real(Y),N}}
+
 """
     ForwardDiff.DerivativeConfig(f!, y::AbstractArray, x::Real)
 
@@ -82,8 +87,8 @@ This constructor does not store/modify `y` or `x`.
 function DerivativeConfig(f::F,
                           y::AbstractArray{Y},
                           x::X,
-                          tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
-    duals = similar(y, Dual{T,Y,1})
+                          tag::T = Tag(f, X)) where {F,X<:Real,Y<:Union{Real,Complex},T}
+    duals = similar(y, dual_buffer_eltype(T, Y, Val(1)))
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
