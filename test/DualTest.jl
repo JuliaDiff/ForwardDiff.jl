@@ -603,6 +603,14 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM), sqrt(2*(FDNUM^2) + FDNUM2^2))
     @test dual_isapprox(hypot(FDNUM, FDNUM2, FDNUM3), sqrt(FDNUM^2 + FDNUM2^2 + FDNUM3^2))
+    # every argument position has to be checked: only the arguments carrying the tag may
+    # be unwrapped, so each case needs its own body
+    @test dual_isapprox(hypot(FDNUM, FDNUM2, PRIMAL3),  sqrt(FDNUM^2 + FDNUM2^2 + PRIMAL3^2))
+    @test dual_isapprox(hypot(FDNUM, PRIMAL2, FDNUM3),  sqrt(FDNUM^2 + PRIMAL2^2 + FDNUM3^2))
+    @test dual_isapprox(hypot(PRIMAL, FDNUM2, FDNUM3),  sqrt(PRIMAL^2 + FDNUM2^2 + FDNUM3^2))
+    @test dual_isapprox(hypot(FDNUM, PRIMAL2, PRIMAL3), sqrt(FDNUM^2 + PRIMAL2^2 + PRIMAL3^2))
+    @test dual_isapprox(hypot(PRIMAL, FDNUM2, PRIMAL3), sqrt(PRIMAL^2 + FDNUM2^2 + PRIMAL3^2))
+    @test dual_isapprox(hypot(PRIMAL, PRIMAL2, FDNUM3), sqrt(PRIMAL^2 + PRIMAL2^2 + FDNUM3^2))
 
     @test all(map(dual_isapprox, ForwardDiff.sincos(FDNUM), (sin(FDNUM), cos(FDNUM))))
 
@@ -718,6 +726,35 @@ end
 
 @testset "TwicePrecision" begin
     @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
+end
+
+@testset "ternary hypot" begin # issue #834
+    # Arguments carrying an inner tag must not be unwrapped: their perturbations have
+    # to stay nested inside the returned `Dual` instead of being flattened into (and
+    # summed with) the outer tag's partials. `sqrt` of the sum of squares is built
+    # from binary operations only and hence serves as a reference.
+    # `hypot` is symmetric, so every argument position has to be checked. Both tag layouts
+    # have to be checked as well: dispatch settles on one tag, and a different body runs
+    # depending on whether one or two of the arguments carry it.
+    for i in 1:3, args in ((x, y) -> ntuple(j -> j == i ? y : j * x, 3),     # one `y`, two `x`
+                           (x, y) -> ntuple(j -> j == i ? j * x : j * y, 3)) # one `x`, two `y`
+        f(x) = ForwardDiff.derivative(y -> hypot(args(x, y)...), 2.0)
+        g(x) = ForwardDiff.derivative(y -> sqrt(sum(a -> a^2, args(x, y))), 2.0)
+        @test f(3.0) ≈ g(3.0)
+        @test ForwardDiff.derivative(f, 3.0) ≈ ForwardDiff.derivative(g, 3.0)
+        @test ForwardDiff.derivative(f, 3.0) != 0
+    end
+
+    # all three tags distinct, so dispatch has to single out the outermost one
+    d3(f) = ForwardDiff.derivative(
+        x -> ForwardDiff.derivative(y -> ForwardDiff.derivative(z -> f(x, y, z), 4.0), 3.0),
+        2.0,
+    )
+    @test d3(hypot) ≈ d3((x, y, z) -> sqrt(x^2 + y^2 + z^2))
+    @test d3(hypot) != 0
+
+    # `hypot` must not form squares, otherwise the partials overflow
+    @test ForwardDiff.gradient(v -> hypot(v[1], v[2], v[3]), fill(1e200, 3)) ≈ fill(1 / sqrt(3), 3)
 end
 
 @testset "Givens rotations: consistency with `LinearAlgebra.givensAlgorithm` for zero partials (no duals)" begin
