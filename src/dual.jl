@@ -599,24 +599,39 @@ end
 # hypot #
 #-------#
 
-@inline function calc_hypot(x, y, z, ::Type{T}) where T
-    vx = value(x)
-    vy = value(y)
-    vz = value(z)
+# Only the arguments that carry the tag `T` may be unwrapped with `value`/`partials`.
+# The remaining ones are constants with respect to `T`, and since `Dual <: Real` they
+# are simply passed on to the recursive `hypot` call, which keeps the perturbations of
+# their (necessarily inner) tags nested inside the returned `Dual{T}`.
+@inline function calc_hypot_xyz(x::Dual{T}, y::Dual{T}, z::Dual{T}) where T
+    vx, vy, vz = value(x), value(y), value(z)
     h = hypot(vx, vy, vz)
     p = (vx / h) * partials(x) + (vy / h) * partials(y) + (vz / h) * partials(z)
     return Dual{T}(h, p)
 end
 
+@inline function calc_hypot_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
+    vx, vy = value(x), value(y)
+    h = hypot(vx, vy, z)
+    return Dual{T}(h, (vx / h) * partials(x) + (vy / h) * partials(y))
+end
+
+@inline function calc_hypot_x(x::Dual{T}, y::Real, z::Real) where T
+    vx = value(x)
+    h = hypot(vx, y, z)
+    return Dual{T}(h, (vx / h) * partials(x))
+end
+
+# `hypot` is symmetric in its arguments, so the remaining cases are permutations
 @define_ternary_dual_op(
     Base.hypot,
-    calc_hypot(x, y, z, Txyz),
-    calc_hypot(x, y, z, Txy),
-    calc_hypot(x, y, z, Txz),
-    calc_hypot(x, y, z, Tyz),
-    calc_hypot(x, y, z, Tx),
-    calc_hypot(x, y, z, Ty),
-    calc_hypot(x, y, z, Tz),
+    calc_hypot_xyz(x, y, z),
+    calc_hypot_xy(x, y, z),
+    calc_hypot_xy(x, z, y),
+    calc_hypot_xy(y, z, x),
+    calc_hypot_x(x, y, z),
+    calc_hypot_x(y, x, z),
+    calc_hypot_x(z, x, y),
 )
 
 # fma #
