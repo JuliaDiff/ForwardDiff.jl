@@ -273,22 +273,44 @@ end
     x2 = [0.0, -1.0, 1.0, 0.0]
     @test ForwardDiff.jacobian(g, x2) ≈ Calculus.finite_difference_jacobian(g, x2)
 
-    h(x) = begin
-        v = eigen(reshape(x, 2, 2)).vectors[:,1]
-        v = v / norm(v)
-    end
+    # eigenvectors, deliberately without renormalizing: the derivatives have to belong to
+    # the normalization `eigen` itself returns, i.e. unit 2-norm with largest entry real
+    h(x) = vec(eigen(reshape(x, 2, 2)).vectors)
     x3 = [2.0, 1.0, 0.5, 3.0]
     @test ForwardDiff.jacobian(h, x3) ≈ Calculus.finite_difference_jacobian(h, x3)
+
+    # complex eigenvectors
+    hc(x) = begin
+        V = eigen(reshape(x, 2, 2)).vectors
+        vcat(real(vec(V)), imag(vec(V)))
+    end
+    x3c = vec([0.3 -1.2; 1.7 0.5])
+    @test ForwardDiff.jacobian(hc, x3c) ≈ Calculus.finite_difference_jacobian(hc, x3c)
 
     # larger than 2x2, non-symmetric with real eigenvalues
     f3(x) = eigvals(reshape(x, 3, 3))
     x4 = vec([2.0 1.0 0.5; 0.5 3.0 1.5; 0.25 0.75 4.0])
     @test ForwardDiff.jacobian(f3, x4) ≈ Calculus.finite_difference_jacobian(f3, x4)
-    h3(x) = begin
-        v = eigen(reshape(x, 3, 3)).vectors[:,2]
-        v = v / norm(v)
-    end
+    h3(x) = vec(eigen(reshape(x, 3, 3)).vectors)
     @test ForwardDiff.jacobian(h3, x4) ≈ Calculus.finite_difference_jacobian(h3, x4)
+
+    # 3x3 with one real and one complex conjugate pair of eigenvalues
+    g3(x) = begin
+        vals = eigvals(reshape(x, 3, 3))
+        vcat(real(vals), imag(vals))
+    end
+    hc3(x) = begin
+        V = eigen(reshape(x, 3, 3)).vectors
+        vcat(real(vec(V)), imag(vec(V)))
+    end
+    x4c = vec([0.5 -1.3 0.2; 1.1 0.4 -0.6; 0.3 0.7 2.0])
+    @test ForwardDiff.jacobian(g3, x4c) ≈ Calculus.finite_difference_jacobian(g3, x4c)
+    @test ForwardDiff.jacobian(hc3, x4c) ≈ Calculus.finite_difference_jacobian(hc3, x4c)
+
+    # the eigenvector derivatives used to belong to the normalization
+    # `diag(inv(U) * U̇) == 0` instead, which differs for a non-normal matrix
+    A_gauge = Dual{TestTag}.([1.0 1.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])
+    @test ForwardDiff.partials.(eigen(A_gauge).vectors, 1) ≈ [0.0 1/(2*sqrt(2)); 0.0 -1/(2*sqrt(2))]
 
     # eltypes of the general path
     A_dual = Dual{TestTag}.([1.0 2.0; 3.0 4.0], [1.0 0.0; 0.0 0.0])

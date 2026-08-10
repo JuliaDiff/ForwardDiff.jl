@@ -864,6 +864,47 @@ _make_eigen_dual(D::Type, val::Complex, parts::NTuple{N,Number}) where {N} =
 # with `A = U * Diagonal(λ) * inv(U)` and `M = inv(U) * Ȧ * U`, we have `λ̇ = diag(M)`
 # and `U̇ = U * (F .* M)`, where `F[i,j] = inv(λ[j] - λ[i])` off the diagonal and zero on it.
 
+# Index of the entry of largest magnitude among the real entries of `v`. LAPACK normalizes
+# the eigenvectors it returns to unit 2-norm with their largest entry real, so this is the
+# entry that carries the phase convention. Modelled after `_findrealmaxabs2` in ChainRules.
+function _findrealmaxabs2(v)
+    imax = firstindex(v)
+    amax = abs2(zero(eltype(v)))
+    for i in eachindex(v)
+        vi = v[i]
+        isreal(vi) || continue
+        a = abs2(vi)
+        a < amax && continue
+        amax, imax = a, i
+    end
+    return imax
+end
+
+# The diagonal of `F` is a free gauge parameter: `U̇ + U * Diagonal(ċ)` solves the same
+# differentiated eigenvalue equation for any `ċ`. Setting it to zero, as `U̇ = U * (F .* M)`
+# does, normalizes the eigenvectors by `diag(inv(U) * U̇) == 0`, which for a non-normal `A`
+# is not the convention `eigen` itself returns. Choose `ċ` instead such that the derivatives
+# belong to LAPACK's convention, i.e. differentiate its two constraints at `t = 0`:
+#
+#   `u' * u == 1`             ⇒  `real(ċ) = -real(u' * u̇)`
+#   `imag(u[k]) == 0`         ⇒  `imag(ċ) = -imag(u̇[k]) / real(u[k])`,  `k = _findrealmaxabs2(u)`
+#
+# This mirrors `_eigen_norm_phase_fwd!` in ChainRules, so that both agree on `eigen`.
+function _eigen_norm_phase!(U̇, U)
+    for i in axes(U, 2)
+        u, u̇ = view(U, :, i), view(U̇, :, i)
+        ċ_norm = -real(dot(u, u̇))
+        if eltype(U) <: Real
+            ċ = ċ_norm
+        else
+            k = _findrealmaxabs2(u)
+            ċ = complex(ċ_norm, -imag(u̇[k]) / real(u[k]))
+        end
+        u̇ .+= u .* ċ
+    end
+    return U̇
+end
+
 LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigvals_general(A)
 function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ, U = eigen(value.(A))
@@ -878,7 +919,7 @@ function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     luU = lu(U)
     M = ntuple(j -> luU \ (getindex.(partials.(A), j) * U), N)
     λ_parts = map(diag, M)
-    U_parts = ntuple(j -> U * _lyap_div!!(M[j] - Diagonal(λ_parts[j]), λ), N)
+    U_parts = ntuple(j -> _eigen_norm_phase!(U * _lyap_div!!(M[j] - Diagonal(λ_parts[j]), λ), U), N)
     λ_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(λ_parts...))
     U_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), U, tuple.(U_parts...))
     return Eigen(λ_dual, U_dual)

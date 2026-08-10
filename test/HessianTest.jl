@@ -184,12 +184,11 @@ end
     w111 = [0.9, 1.4, 0.3]
     @test ForwardDiff.hessian(g, w111) ≈ ForwardDiff.hessian(gsym, w111)
 
-    # eigenvectors: renormalising removes the difference between the eigenvector
-    # convention of `eigen` and the one the derivatives are derived for
+    # eigenvectors
     A0 = [2.0 1.0 0.5; 0.5 3.0 1.5; 0.25 0.75 4.0]
     function v1(x)
         v = eigen(reshape(x, 3, 3)).vectors[:, 1]
-        return sum(abs2, v / norm(v) .- [1.0, 0.5, -0.2])
+        return sum(abs2, v .- [1.0, 0.5, -0.2])
     end
     x0 = vec(A0)
     @test ForwardDiff.hessian(v1, x0) ≈ ForwardDiff.jacobian(x -> ForwardDiff.gradient(v1, x), x0)
