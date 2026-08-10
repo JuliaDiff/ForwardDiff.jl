@@ -312,6 +312,21 @@ end
     A_gauge = Dual{TestTag}.([1.0 1.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])
     @test ForwardDiff.partials.(eigen(A_gauge).vectors, 1) ≈ [0.0 1/(2*sqrt(2)); 0.0 -1/(2*sqrt(2))]
 
+    # keyword arguments are forwarded to the decomposition of the values
+    A_kw = reshape(x4, 3, 3)
+    A_kw_dual = Dual{TestTag}.(A_kw, Matrix(1.0I, 3, 3))
+    for kwargs in ((), (sortby = nothing,), (permute = false,), (scale = false,),
+                   (permute = false, scale = false), (sortby = λ -> -real(λ),))
+        @test ForwardDiff.value.(eigvals(A_kw_dual; kwargs...)) ≈ eigvals(A_kw; kwargs...)
+        @test eigvals(A_kw_dual; kwargs...) ≈ eigen(A_kw_dual; kwargs...).values
+        f_kw(x) = eigvals(reshape(x, 3, 3); kwargs...)
+        @test ForwardDiff.jacobian(f_kw, x4) ≈ Calculus.finite_difference_jacobian(f_kw, x4)
+    end
+    # and the derivatives follow the ordering they produce: `A_kw` has a real spectrum, so
+    # sorting by `-real` reverses the order `LinearAlgebra.eigsortby` gives
+    @test ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3); sortby = λ -> -real(λ)), x4) ≈
+          ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3)), x4)[3:-1:1, :]
+
     # eltypes of the general path
     A_dual = Dual{TestTag}.([1.0 2.0; 3.0 4.0], [1.0 0.0; 0.0 0.0])
     @test eigvals(A_dual) isa Vector{Dual{TestTag,Float64,1}}

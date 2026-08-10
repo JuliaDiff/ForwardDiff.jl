@@ -173,6 +173,10 @@ end
     # sum(eigvals(B(w)) .^ 2) == tr(B(w)^2) is quadratic in `w`
     @test ForwardDiff.hessian(w -> sum(eigvals(B(w)) .^ 2), w) ≈ [10 0; 0 4]
 
+    # keyword arguments reach every level of the nesting
+    @test ForwardDiff.hessian(w -> sum(eigvals(B(w); sortby = nothing)), w) ≈ zeros(2, 2) atol=1e-12
+    @test ForwardDiff.hessian(w -> sum(eigvals(B(w); permute = false, scale = false) .^ 2), w) ≈ [10 0; 0 4]
+
     # complex eigenvalues: λ = w[1] ± im*(1 + w[2]), i.e. sum(abs2, λ) == 2*(w[1]^2 + (1 + w[2])^2)
     C(w) = [w[1] -1.0-w[2]; 1.0+w[2] w[1]]
     @test ForwardDiff.hessian(w -> sum(abs2, eigvals(C(w))), [0.3, 0.2]) ≈ [4 0; 0 4]

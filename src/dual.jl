@@ -905,17 +905,24 @@ function _eigen_norm_phase!(U̇, U)
     return U̇
 end
 
-LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigvals_general(A)
-function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N}
-    λ, U = eigen(value.(A))
+# `permute`, `scale` and `sortby` are forwarded to the underlying decomposition of
+# `value.(A)`; the derivatives are assembled in whatever order it returns, and for nested
+# `Dual`s every level is decomposed with the same keyword arguments
+function LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    return _eigvals_general(A; kwargs...)
+end
+function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    λ, U = eigen(value.(A); kwargs...)
     luU = lu(U)
     parts = ntuple(j -> diag(luU \ (getindex.(partials.(A), j) * U)), N)
     return map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(parts...))
 end
 
-LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen_general(A)
-function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N}
-    λ, U = eigen(value.(A))
+function LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    return _eigen_general(A; kwargs...)
+end
+function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    λ, U = eigen(value.(A); kwargs...)
     luU = lu(U)
     M = ntuple(j -> luU \ (getindex.(partials.(A), j) * U), N)
     λ_parts = map(diag, M)
