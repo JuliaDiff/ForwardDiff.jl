@@ -945,6 +945,12 @@ function _use_symmetric(A; permute::Bool=true, scale::Bool=true,
     return (sortby === nothing || sortby === LinearAlgebra.eigsortby) && ishermitian(A)
 end
 
+# `value.(A)` is a temporary of our own, so the decomposition may consume it. `eigen!` only
+# exists for BLAS element types, which is the innermost level of the nesting; above it the
+# recursion goes through the copying `eigen` below. `!!` as in `_lyap_div!!`: may mutate.
+_eigen!!(B::StridedMatrix{<:LinearAlgebra.BlasFloat}; kwargs...) = eigen!(B; kwargs...)
+_eigen!!(B::AbstractMatrix; kwargs...) = eigen(B; kwargs...)
+
 # `permute`, `scale` and `sortby` are forwarded to the underlying decomposition of
 # `value.(A)`; the derivatives are assembled in whatever order it returns, and for nested
 # `Dual`s every level is decomposed with the same keyword arguments
@@ -953,9 +959,10 @@ function LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where 
     return _eigvals_general(A; kwargs...)
 end
 function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
-    λ, U = eigen(value.(A); kwargs...)
+    λ, U = _eigen!!(value.(A); kwargs...)
     luU = lu(U)
-    parts = ntuple(j -> diag(luU \ (getindex.(partials.(A), j) * U)), N)
+    # `Ȧ * U` is a temporary as well, so the solve can overwrite it
+    parts = ntuple(j -> diag(ldiv!(luU, getindex.(partials.(A), j) * U)), N)
     return map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(parts...))
 end
 
@@ -964,9 +971,9 @@ function LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {T
     return _eigen_general(A; kwargs...)
 end
 function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
-    λ, U = eigen(value.(A); kwargs...)
+    λ, U = _eigen!!(value.(A); kwargs...)
     luU = lu(U)
-    M = ntuple(j -> luU \ (getindex.(partials.(A), j) * U), N)
+    M = ntuple(j -> ldiv!(luU, getindex.(partials.(A), j) * U), N)
     λ_parts = map(diag, M)
     U_parts = ntuple(j -> _eigen_norm_phase!(U * _lyap_div!!(M[j] - Diagonal(λ_parts[j]), λ), U), N)
     λ_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(λ_parts...))
