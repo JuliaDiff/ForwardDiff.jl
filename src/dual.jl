@@ -805,9 +805,34 @@ function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:R
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
+# Strip every `Dual` level, so that eigenvalues can be compared by their primal value alone
+_primalvalue(x::Real) = x
+_primalvalue(d::Dual) = _primalvalue(value(d))
+_primalvalue(z::Complex) = complex(_primalvalue(real(z)), _primalvalue(imag(z)))
+
+@noinline function _throw_repeated_eigvals(i, j, λ)
+    throw(ArgumentError(
+        "eigenvector derivatives are not defined for repeated eigenvalues, but " *
+        "λ[$i] == λ[$j] == $λ"
+    ))
+end
+
+# `_lyap_div!!` divides by `λ[j] - λ[i]`, which vanishes for repeated eigenvalues: there the
+# eigenvectors are not unique and hence not differentiable. Comparing the primal values
+# catches the cases in which the quotient would silently come out as `NaN`.
+function _check_distinct_eigvals(λ::AbstractVector)
+    for j in eachindex(λ), i in eachindex(λ)
+        i < j || continue
+        vi, vj = _primalvalue(λ[i]), _primalvalue(λ[j])
+        vi == vj && _throw_repeated_eigvals(i, j, vi)
+    end
+    return nothing
+end
+
 # A ./ (λ' .- λ) but with diag special cased
 # Default out-of-place method
 function _lyap_div!!(A::AbstractMatrix, λ::AbstractVector)
+    _check_distinct_eigvals(λ)
     return map(
         (a, b, idx) -> a / (idx[1] == idx[2] ? oneunit(b) : b),
         A,
@@ -818,6 +843,7 @@ end
 # For `Matrix` (and e.g. `StaticArrays.MMatrix`) we can use an in-place method
 _lyap_div!!(A::Matrix, λ::AbstractVector) = _lyap_div!(A, λ)
 function _lyap_div!(A::AbstractMatrix, λ::AbstractVector)
+    _check_distinct_eigvals(λ)
     for (j,μ) in enumerate(λ), (k,λ) in enumerate(λ)
         if k ≠ j
             A[k,j] /= μ - λ

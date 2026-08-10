@@ -327,6 +327,23 @@ end
     @test ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3); sortby = λ -> -real(λ)), x4) ≈
           ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3)), x4)[3:-1:1, :]
 
+    # repeated eigenvalues: the eigenvectors are not unique, so their derivatives do not
+    # exist. This used to be a silent `NaN` in `.vectors`.
+    for A_rep in (Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]),   # diagonalizable
+                  Dual{TestTag}.([2.0 1.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]))   # defective
+        @test_throws ArgumentError eigen(A_rep)
+    end
+    @test_throws ArgumentError eigen(Symmetric(Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])))
+    @test_throws ArgumentError eigen(SymTridiagonal(Dual{TestTag}.([2.0, 2.0], [1.0, 0.0]),
+                                                    Dual{TestTag}.([0.0], [0.0])))
+    # `eigvals` never divides by the eigenvalue gaps and is unaffected
+    @test eigvals(Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])) ==
+          Dual{TestTag}.([2.0, 2.0], [1.0, 0.0])
+    # equal values with differing partials would divide by a `Dual` with a zero value
+    A_nested = Dual{TestTag}.(Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]),
+                              Dual{TestTag}.([0.0 1.0; 1.0 0.0], [0.0 0.0; 0.0 0.0]))
+    @test_throws ArgumentError eigen(A_nested)
+
     # eltypes of the general path
     A_dual = Dual{TestTag}.([1.0 2.0; 3.0 4.0], [1.0 0.0; 0.0 0.0])
     @test eigvals(A_dual) isa Vector{Dual{TestTag,Float64,1}}
