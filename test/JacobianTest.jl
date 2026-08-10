@@ -279,6 +279,24 @@ end
     end
     x3 = [2.0, 1.0, 0.5, 3.0]
     @test ForwardDiff.jacobian(h, x3) ≈ Calculus.finite_difference_jacobian(h, x3)
+
+    # larger than 2x2, non-symmetric with real eigenvalues
+    f3(x) = eigvals(reshape(x, 3, 3))
+    x4 = vec([2.0 1.0 0.5; 0.5 3.0 1.5; 0.25 0.75 4.0])
+    @test ForwardDiff.jacobian(f3, x4) ≈ Calculus.finite_difference_jacobian(f3, x4)
+    h3(x) = begin
+        v = eigen(reshape(x, 3, 3)).vectors[:,2]
+        v = v / norm(v)
+    end
+    @test ForwardDiff.jacobian(h3, x4) ≈ Calculus.finite_difference_jacobian(h3, x4)
+
+    # eltypes of the general path
+    A_dual = Dual{TestTag}.([1.0 2.0; 3.0 4.0], [1.0 0.0; 0.0 0.0])
+    @test eigvals(A_dual) isa Vector{Dual{TestTag,Float64,1}}
+    @test eigen(A_dual).vectors isa Matrix{Dual{TestTag,Float64,1}}
+    A_dual_complex = Dual{TestTag}.([0.0 -1.0; 1.0 0.0], [1.0 0.0; 0.0 0.0])
+    @test eigvals(A_dual_complex) isa Vector{Complex{Dual{TestTag,Float64,1}}}
+    @test eigen(A_dual_complex).vectors isa Matrix{Complex{Dual{TestTag,Float64,1}}}
 end
 
 @testset "type stability" begin

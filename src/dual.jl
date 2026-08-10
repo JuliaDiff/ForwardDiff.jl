@@ -844,37 +844,45 @@ function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Rea
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
-# General eigvals #
-function make_eigen_dual(val::Real, partial)
-    Dual{tagtype(partial)}(val, partial.partials)
+# General eigvals and eigen #
+#---------------------------#
+
+# Assemble a value and its `N` partials into a `Dual` of type `D = Dual{Tg}`. Eigenvalues
+# and eigenvectors of a real matrix can be complex, in which case real and imaginary part
+# each become a `Dual` of their own.
+_make_eigen_dual(D::Type, val::Real, parts::NTuple{N,Real}) where {N} = D(val, parts...)
+_make_eigen_dual(D::Type, val::Complex, parts::NTuple{N,Number}) where {N} =
+    Complex(D(real(val), real.(parts)...), D(imag(val), imag.(parts)...))
+
+# The derivatives are computed entirely from the values of `A`, i.e. one `Dual` level
+# below the entries of `A`, and are only assembled into `Dual`s at the very end. Mixing
+# the two levels in a single expression (e.g. multiplying the eigenvectors of `value.(A)`
+# by `A` itself) would make the same-tag product rule apply at the outer level and hence
+# give wrong results for nested `Dual`s, as in `ForwardDiff.hessian`.
+#
+# The formulas are the ones of https://people.maths.ox.ac.uk/gilesm/files/NA-08-01.pdf:
+# with `A = U * Diagonal(λ) * inv(U)` and `M = inv(U) * Ȧ * U`, we have `λ̇ = diag(M)`
+# and `U̇ = U * (F .* M)`, where `F[i,j] = inv(λ[j] - λ[i])` off the diagonal and zero on it.
+
+LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigvals_general(A)
+function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+    λ, U = eigen(value.(A))
+    luU = lu(U)
+    parts = ntuple(j -> diag(luU \ (getindex.(partials.(A), j) * U)), N)
+    return map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(parts...))
 end
 
-function make_eigen_dual(val::Complex, partial::Complex)
-    Complex(Dual{tagtype(real(partial))}(real(val), real(partial).partials),
-            Dual{tagtype(imag(partial))}(imag(val), imag(partial).partials))
+LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen_general(A)
+function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}) where {Tg,T<:Real,N}
+    λ, U = eigen(value.(A))
+    luU = lu(U)
+    M = ntuple(j -> luU \ (getindex.(partials.(A), j) * U), N)
+    λ_parts = map(diag, M)
+    U_parts = ntuple(j -> U * _lyap_div!!(M[j] - Diagonal(λ_parts[j]), λ), N)
+    λ_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(λ_parts...))
+    U_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), U, tuple.(U_parts...))
+    return Eigen(λ_dual, U_dual)
 end
-
-function LinearAlgebra.eigen(A::StridedMatrix{<:Dual})
-    A_values = map(d -> d.value, A)
-    A_values_eig = eigen(A_values)
-    UinvAU = A_values_eig.vectors \ A * A_values_eig.vectors
-    vals_diff = diag(UinvAU)
-    F = similar(A_values, eltype(A_values_eig.values))
-    for i in axes(A_values, 1), j in axes(A_values, 2)
-        if i == j
-            F[i, j] = 0
-        else
-            F[i, j] = inv(A_values_eig.values[j] - A_values_eig.values[i])
-        end
-    end
-    vectors_diff = A_values_eig.vectors * (F .* UinvAU)
-    for i in eachindex(vectors_diff)
-        vectors_diff[i] = make_eigen_dual(A_values_eig.vectors[i], vectors_diff[i])
-    end
-    Eigen(vals_diff, vectors_diff)
-end
-
-LinearAlgebra.eigvals(A::StridedMatrix{<:Dual}) = eigen(A).values
 
 # Functions in SpecialFunctions which return tuples #
 # Their derivatives are not defined in DiffRules    #

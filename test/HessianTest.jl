@@ -163,6 +163,39 @@ end
     @test ForwardDiff.hessian(x->dot(x,H,x), zeros(3)) ≈ [2 6 10; 6 10 14; 10 14 18]
 end
 
+@testset "nested duals in general eigen" begin
+    # The eigenvalue derivatives have to be computed from `value.(A)` alone; mixing that
+    # level with `A` itself applies the product rule at the wrong level for nested `Dual`s
+    B(w) = [3.0+w[1] 1.0+w[2]; 0.4+w[2] 2.0-2*w[1]]
+    w = [0.11, -0.07]
+    # sum(eigvals(B(w))) == tr(B(w)) == 5 - w[1] is linear in `w`
+    @test ForwardDiff.hessian(w -> sum(eigvals(B(w))), w) ≈ zeros(2, 2) atol=1e-12
+    # sum(eigvals(B(w)) .^ 2) == tr(B(w)^2) is quadratic in `w`
+    @test ForwardDiff.hessian(w -> sum(eigvals(B(w)) .^ 2), w) ≈ [10 0; 0 4]
+
+    # complex eigenvalues: λ = w[1] ± im*(1 + w[2]), i.e. sum(abs2, λ) == 2*(w[1]^2 + (1 + w[2])^2)
+    C(w) = [w[1] -1.0-w[2]; 1.0+w[2] w[1]]
+    @test ForwardDiff.hessian(w -> sum(abs2, eigvals(C(w))), [0.3, 0.2]) ≈ [4 0; 0 4]
+
+    # https://github.com/JuliaDiff/ForwardDiff.jl/issues/111
+    S(w) = [w[1]^2 w[1]*w[2]*w[3]; w[1]*w[2]*w[3] w[2]^2]
+    g(w) = sum(log, eigvals(S(w)))
+    gsym(w) = sum(log, eigvals(Symmetric(S(w))))
+    w111 = [0.9, 1.4, 0.3]
+    @test ForwardDiff.hessian(g, w111) ≈ ForwardDiff.hessian(gsym, w111)
+
+    # eigenvectors: renormalising removes the difference between the eigenvector
+    # convention of `eigen` and the one the derivatives are derived for
+    A0 = [2.0 1.0 0.5; 0.5 3.0 1.5; 0.25 0.75 4.0]
+    function v1(x)
+        v = eigen(reshape(x, 3, 3)).vectors[:, 1]
+        return sum(abs2, v / norm(v) .- [1.0, 0.5, -0.2])
+    end
+    x0 = vec(A0)
+    @test ForwardDiff.hessian(v1, x0) ≈ ForwardDiff.jacobian(x -> ForwardDiff.gradient(v1, x), x0)
+    @test ForwardDiff.hessian(v1, x0) ≈ Calculus.finite_difference_jacobian(x -> ForwardDiff.gradient(v1, x), x0) atol=1e-5
+end
+
 #https://github.com/JuliaDiff/ForwardDiff.jl/issues/720
 @testset "allocation-free hessian with StaticArrays" begin
     function hessian_allocs()
