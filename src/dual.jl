@@ -931,10 +931,25 @@ function _eigen_norm_phase!(U̇, U)
     return U̇
 end
 
+# A matrix that is Hermitian in both its values and its partials is handled by the
+# `Symmetric` methods, which is what `LinearAlgebra.eigen!` and `eigvals!` do for the
+# values as well. Their eigenvalues are real, so the eltype no longer depends on whether
+# `geevx!` happens to produce a nonzero imaginary part.
+#
+# Those methods take no keyword arguments. `permute` and `scale` only control the balancing
+# that the symmetric algorithm does not use, so they can be ignored the way
+# `LinearAlgebra.eigen!` ignores them, but any `sortby` other than the ascending order that
+# is returned anyway has to go through the general path.
+function _use_symmetric(A; permute::Bool=true, scale::Bool=true,
+                        sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby)
+    return (sortby === nothing || sortby === LinearAlgebra.eigsortby) && ishermitian(A)
+end
+
 # `permute`, `scale` and `sortby` are forwarded to the underlying decomposition of
 # `value.(A)`; the derivatives are assembled in whatever order it returns, and for nested
 # `Dual`s every level is decomposed with the same keyword arguments
 function LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    _use_symmetric(A; kwargs...) && return _eigvals(Symmetric(A))
     return _eigvals_general(A; kwargs...)
 end
 function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
@@ -945,6 +960,7 @@ function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T
 end
 
 function LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    _use_symmetric(A; kwargs...) && return _eigen(Symmetric(A))
     return _eigen_general(A; kwargs...)
 end
 function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}

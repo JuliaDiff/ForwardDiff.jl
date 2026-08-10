@@ -327,6 +327,27 @@ end
     @test ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3); sortby = λ -> -real(λ)), x4) ≈
           ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3)), x4)[3:-1:1, :]
 
+    # a plain `Matrix` that is Hermitian in its values *and* its partials goes through the
+    # `Symmetric` methods, so both agree exactly
+    S0 = [2.0 1.0 0.5; 1.0 3.0 1.5; 0.5 1.5 4.0]
+    Ṡ = [0.5 -1.0 0.25; -1.0 2.0 0.75; 0.25 0.75 -0.5]
+    A_herm = Dual{TestTag}.(S0, Ṡ)
+    @test ishermitian(A_herm)
+    @test eigvals(A_herm) == eigvals(Symmetric(A_herm))
+    @test eigen(A_herm).values == eigen(Symmetric(A_herm)).values
+    @test eigen(A_herm).vectors == eigen(Symmetric(A_herm)).vectors
+    @test eigvals(A_herm) isa Vector{Dual{TestTag,Float64,1}}
+    # but a `sortby` the `Symmetric` methods cannot honour has to stay on the general path
+    @test ForwardDiff.partials.(eigvals(A_herm; sortby = λ -> -real(λ)), 1) ≈
+          reverse(ForwardDiff.partials.(eigvals(A_herm), 1))
+
+    # Hermitian values with non-Hermitian partials must *not* take the `Symmetric` path,
+    # which would symmetrize the perturbation and give a different derivative
+    A_asym = Dual{TestTag}.([1.0 2.0; 2.0 1.0], [0.0 1.0; 0.0 0.0])
+    @test !ishermitian(A_asym)
+    @test ForwardDiff.partials.(eigvals(A_asym), 1) ≈ [-0.5, 0.5]
+    @test ForwardDiff.partials.(eigvals(Symmetric(A_asym)), 1) ≈ [-1.0, 1.0]
+
     # repeated eigenvalues: the eigenvectors are not unique, so their derivatives do not
     # exist. This used to be a silent `NaN` in `.vectors`.
     for A_rep in (Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]),   # diagonalizable
