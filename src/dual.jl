@@ -805,26 +805,23 @@ function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:R
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
-# Strip every `Dual` level, so that eigenvalues can be compared by their primal value alone
-_primalvalue(x::Real) = x
-_primalvalue(d::Dual) = _primalvalue(value(d))
-_primalvalue(z::Complex) = complex(_primalvalue(real(z)), _primalvalue(imag(z)))
-
 @noinline function _throw_repeated_eigvals(i, j, λ)
-    throw(ArgumentError(
-        "eigenvector derivatives are not defined for repeated eigenvalues, but " *
-        "λ[$i] == λ[$j] == $λ"
-    ))
+    throw(ArgumentError(lazy"eigenvector derivatives are not defined for repeated eigenvalues, but λ[$i] == λ[$j] == $λ"))
 end
 
-# `_lyap_div!!` divides by `λ[j] - λ[i]`, which vanishes for repeated eigenvalues: there the
-# eigenvectors are not unique and hence not differentiable. Comparing the primal values
-# catches the cases in which the quotient would silently come out as `NaN`.
+# `_lyap_div!!` special cases only the diagonal, where `λ[j] - λ[i]` vanishes by
+# construction. Two equal eigenvalues make an off-diagonal denominator vanish as well, and
+# the eigenvector partials come out as `Inf` or `NaN`: the eigenvectors of a repeated
+# eigenvalue are not unique and hence not differentiable.
+#
+# The eigenvalues are compared as they are, without extracting primal values: for nested
+# `Dual`s two of them can be `!=` here and still divide to `Inf`, but then their primals
+# coincide, and the decomposition of the values -- which every method computes first, one
+# `Dual` level down -- has already seen them as exact duplicates and thrown.
 function _check_distinct_eigvals(λ::AbstractVector)
     for j in eachindex(λ), i in eachindex(λ)
         i < j || continue
-        vi, vj = _primalvalue(λ[i]), _primalvalue(λ[j])
-        vi == vj && _throw_repeated_eigvals(i, j, vi)
+        λ[i] == λ[j] && _throw_repeated_eigvals(i, j, λ[i])
     end
     return nothing
 end
