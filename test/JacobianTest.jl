@@ -312,6 +312,29 @@ end
             @test ForwardDiff.jacobian(eigvals, x) ≈ ForwardDiff.jacobian(eigen_vals, x)
         end
     end
+
+    # The matrices above are all of the form `x*x'` and hence symmetric, so `:U` and `:L` wrap the
+    # same matrix. Here the raw storage is deliberately not symmetric/Hermitian: the values and the
+    # partials both have to be read from the triangle that `uplo` selects.
+    @testset "uplo = :$uplo" for uplo in (:U, :L)
+        # `2*x[1]+x[2]^2` rather than something proportional to the off-diagonal entry, so that the
+        # eigenvector direction actually depends on `x` and the eigenvector test is not vacuous
+        raw_real(x) = [x[1] x[2]; 3*x[2] 2*x[1]+x[2]^2]
+        raw_complex(x) = complex.(raw_real(x), [0 x[1]; -2*x[2] 0])
+        x0 = [1.0, 2.0]
+
+        @testset "$name" for (name, wrap) in (
+            ("Symmetric{<:Real}", x -> Symmetric(raw_real(x), uplo)),
+            ("Hermitian{<:Real}", x -> Hermitian(raw_real(x), uplo)),
+            ("Hermitian{<:Complex}", x -> Hermitian(raw_complex(x), uplo)),
+        )
+            for ev in (x -> eigvals(wrap(x)),
+                       x -> eigen(wrap(x)).values,
+                       x -> map(abs2, eigen(wrap(x)).vectors[:, 1]))
+                @test ForwardDiff.jacobian(ev, x0) ≈ Calculus.finite_difference_jacobian(ev, x0)
+            end
+        end
+    end
 end
 
 @testset "type stability" begin
