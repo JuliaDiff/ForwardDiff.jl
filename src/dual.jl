@@ -210,13 +210,13 @@ macro define_ternary_dual_op(f, xyz_body, xy_body, xz_body, yz_body, x_body, y_b
 end
 
 # Support complex-valued functions such as `hankelh1`
-function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv::Real, partial::Partials) where {T}
     return Dual{T}(val, deriv * partial)
 end
-function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Real, deriv1::Real, partial1::Partials, deriv2::Real, partial2::Partials) where {T}
     return Dual{T}(val, _mul_partials(partial1, partial2, deriv1, deriv2))
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Complex}, partial::Partials) where {T}
     reval, imval = reim(val)
     if deriv isa Real
         p = deriv * partial
@@ -226,7 +226,7 @@ function dual_definition_retval(::Val{T}, val::Complex, deriv::Union{Real,Comple
         return Complex(Dual{T}(reval, rederiv * partial), Dual{T}(imval, imderiv * partial))
     end
 end
-function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
+@inline function dual_definition_retval(::Val{T}, val::Complex, deriv1::Union{Real,Complex}, partial1::Partials, deriv2::Union{Real,Complex}, partial2::Partials) where {T}
     reval, imval = reim(val)
     if deriv1 isa Real && deriv2 isa Real
         p = _mul_partials(partial1, partial2, deriv1, deriv2)
@@ -325,17 +325,18 @@ end
 
 Base.rtoldefault(::Type{D}) where {D<:Dual} = Base.rtoldefault(valtype(D))
 
-Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
-Base.floor(d::Dual) = floor(value(d))
+# Base derives floor/ceil/trunc/round from `round(x, ::RoundingMode)`:
+# https://docs.julialang.org/en/v1/manual/interfaces/#man-rounding-interface
+Base.round(d::Dual, r::RoundingMode) = round(value(d), r)
 
-Base.ceil(::Type{R}, d::Dual) where {R<:Real} = ceil(R, value(d))
-Base.ceil(d::Dual) = ceil(value(d))
-
-Base.trunc(::Type{R}, d::Dual) where {R<:Real} = trunc(R, value(d))
-Base.trunc(d::Dual) = trunc(value(d))
-
-Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
-Base.round(d::Dual) = round(value(d))
+# Julia 1.11 added the generic `f(::Type{T}, x)` fallbacks, so these can be
+# dropped once 1.11 is the minimum supported version.
+if VERSION < v"1.11"
+    Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
+    Base.ceil(::Type{R}, d::Dual) where {R<:Real} = ceil(R, value(d))
+    Base.trunc(::Type{R}, d::Dual) where {R<:Real} = trunc(R, value(d))
+    Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
+end
 
 Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
 
@@ -391,7 +392,7 @@ for pred in UNARY_PREDICATES
 end
 
 # Before PR#481 this loop ran over this list:
-# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(!=), :(<=), :(>=)]
+# BINARY_PREDICATES = Symbol[:isequal, :isless, :<, :>, :(==), :(<=), :(>=)]
 # Not a minimal set, as Base defines some in terms of others.
 @define_binary_dual_op(
     Base.:(<),
@@ -425,13 +426,6 @@ for pred in [:isequal, :(==)]
         )
     end
 end
-
-@define_binary_dual_op(
-    Base.:(!=),
-    (!=)(value(x), value(y)) || (!=)(partials(x), partials(y)),
-    (!=)(value(x), y)        || !iszero(partials(x)),
-    (!=)(x, value(y))        || !iszero(partials(y)),
-)
 
 ########################
 # Promotion/Conversion #
@@ -583,7 +577,7 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
             begin
                 v = value(y)
                 expv = ($f)(x, v)
-                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(x)
+                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(oftype(expv, x))
                 return Dual{Ty}(expv, deriv * partials(y))
             end
         )
@@ -735,8 +729,59 @@ end
     return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
 end
 
+# LinearAlgebra.givensAlgorithm #
+#-------------------------------#
+
+# This definition ensures that we match `LinearAlgebra.givensAlgorithm`
+# for non-dual numbers (i.e., `ForwardDiff.Dual` with zero partials)
+# `LinearAlgebra.givensAlgorithm` is derived from LAPACK's dlartg
+# which is [documented](https://netlib.org/lapack/explore-html/da/dd3/group__lartg_ga86f8f877eaea0386cdc2c3c175d9ea88.html) to return
+# three values c, s, u for two arguments x and y with
+# u = sgn(x) sqrt(x^2 + y^2)
+# c = x/u
+# s = y/u
+# The function is discontinuous in u at x=0
+@define_binary_dual_op(
+    LinearAlgebra.givensAlgorithm,
+    begin
+        vx, vy = value(x), value(y)
+        c, s, u = LinearAlgebra.givensAlgorithm(vx, vy)
+        ∂c∂x = s^2 / u
+        ∂c∂y = ∂s∂x = -(c * s / u)
+        ∂s∂y = c^2 / u
+        ∂x = partials(x)
+        ∂y = partials(y)
+        ∂c = _mul_partials(∂x, ∂y, ∂c∂x, ∂c∂y)
+        ∂s = _mul_partials(∂x, ∂y, ∂s∂x, ∂s∂y)
+        ∂u = _mul_partials(∂x, ∂y, c, s)
+        return Dual{Txy}(c, ∂c), Dual{Txy}(s, ∂s), Dual{Txy}(u, ∂u)
+    end,
+    begin
+        vx = value(x)
+        c, s, u = LinearAlgebra.givensAlgorithm(vx, y)
+        ∂c∂x = s^2 / u
+        ∂s∂x = -(c * s / u)
+        ∂x = partials(x)
+        ∂c = ∂c∂x * ∂x
+        ∂s = ∂s∂x * ∂x
+        ∂u = c * ∂x
+        return Dual{Tx}(c, ∂c), Dual{Tx}(s, ∂s), Dual{Tx}(u, ∂u)
+    end,
+    begin
+        vy = value(y)
+        c, s, u = LinearAlgebra.givensAlgorithm(x, vy)
+        ∂c∂y = -(c * s / u)
+        ∂s∂y = c^2 / u
+        ∂y = partials(y)
+        ∂c = ∂c∂y * ∂y
+        ∂s = ∂s∂y * ∂y
+        ∂u = s * ∂y
+        return Dual{Ty}(c, ∂c), Dual{Ty}(s, ∂s), Dual{Ty}(u, ∂u)
+    end,
+)
+
 # eigen values and vectors of Hermitian matrices #
-#-------------------#
+#------------------------------------------------#
 
 # Extract structured matrices of primal values and partials
 _structured_value(A::Symmetric{Dual{T,V,N}}) where {T,V,N} = Symmetric(map(value, parent(A)), A.uplo === 'U' ? :U : :L)

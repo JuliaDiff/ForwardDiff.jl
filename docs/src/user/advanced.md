@@ -29,7 +29,7 @@ bandwidth.
 
 For example:
 
-```julia
+```julia-repl
 julia> using ForwardDiff: GradientConfig, Chunk, gradient!
 
 # let's use a Rosenbrock function as our target function
@@ -75,7 +75,7 @@ julia> @time gradient!(out, rosenbrock, x, cfg10);
 If you do not explicitly provide a chunk size, ForwardDiff will try to guess one for you
 based on your input vector:
 
-```julia
+```julia-repl
 # The GradientConfig constructor will automatically select a
 # chunk size in one is not explicitly provided
 julia> cfg = ForwardDiff.GradientConfig(rosenbrock, x);
@@ -125,7 +125,7 @@ usually the correct thing to do, but in some cases can erroneously "poison" valu
 aren't sensitive to the input and thus cause ForwardDiff to incorrectly return `NaN` or
 `Inf` derivatives. For example:
 
-```julia
+```julia-repl
 # the dual number's perturbation component is zero, so this
 # variable should not propagate derivative information
 julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
@@ -148,7 +148,7 @@ ForwardDiff's `NaN`-safe mode by using the
 [Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) API to set
 the `nansafe_mode` preference to true, for example via:
 
-```julia
+```julia-repl
 julia> using ForwardDiff, Preferences
 
 julia> set_preferences!(ForwardDiff, "nansafe_mode" => true)
@@ -159,7 +159,7 @@ this preference.
 
 Alternatively, you can set the preference before loading ForwardDiff, for example via:
 
-```julia
+```julia-repl
 julia> using Preferences, UUIDs
 
 julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_mode" => true)
@@ -180,9 +180,9 @@ While ForwardDiff does not have a built-in function for taking Hessians of vecto
 functions, you can easily compose calls to `ForwardDiff.jacobian` to accomplish this.
 For example:
 
-```julia
+```julia-repl
 julia> ForwardDiff.jacobian(x -> ForwardDiff.jacobian(cumprod, x), [1,2,3])
-9×3 Array{Int64,2}:
+9×3 Matrix{Int64}:
  0  0  0
  0  1  0
  0  3  2
@@ -200,12 +200,12 @@ example, if you require the shape of the output to be a tensor rather than a blo
 you can do so with a `reshape` (note that `reshape` does not copy data, so it's not an
 expensive operation):
 
-```julia
+```julia-repl
 julia> function vector_hessian(f, x)
-       n = length(x)
-       out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
-       return reshape(out, n, n, n)
-   end
+           n = length(x)
+           out = ForwardDiff.jacobian(x -> ForwardDiff.jacobian(f, x), x)
+           return reshape(out, n, n, n)
+       end
 vector_hessian (generic function with 1 method)
 
 julia> vector_hessian(cumprod, [1, 2, 3])

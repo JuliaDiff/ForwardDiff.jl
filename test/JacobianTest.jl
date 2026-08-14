@@ -351,18 +351,27 @@ end
         @test res == I
     end
 
-    # Unassigned (but unused) entry in the input and unassigned entries in the output
-    resize!(x, 10)
-    f = (y, x) -> copyto!(y, 1, x, 1, 9)
-    for chunksize in (1, 2, 10)
-        y = similar(x, 9)
-        @test all(i -> !isassigned(y, i), eachindex(y))
-        cfg = ForwardDiff.JacobianConfig(f, y, x, ForwardDiff.Chunk{chunksize}())
-        res = ForwardDiff.jacobian(f, y, x, cfg)
-        @test y == x[1:(end-1)]
-        @test res isa Matrix{BigFloat}
-        @test res[:, 1:(end-1)] == I
-        @test all(iszero, res[:, end])
+    # Unassigned (but unused) entry in the input and unassigned entries in the output. `hole` is
+    # varied so the unassigned entry lands in a middle chunk as well as in the last one: only the
+    # former reaches the `Base._unsetindex!` branch of the windowed seeding path, since the last
+    # chunk is never cleared.
+    @testset "unassigned input entry at $hole" for hole in (5, 10)
+        x = Vector{BigFloat}(undef, 10)
+        for i in eachindex(x)
+            i == hole || (x[i] = BigFloat(i))
+        end
+        used = [i for i in eachindex(x) if i != hole]
+        f = (y, x) -> (for (k, i) in enumerate(used); y[k] = x[i]; end; y)
+        for chunksize in (1, 2, 10)
+            y = similar(x, 9)
+            @test all(i -> !isassigned(y, i), eachindex(y))
+            cfg = ForwardDiff.JacobianConfig(f, y, x, ForwardDiff.Chunk{chunksize}())
+            res = ForwardDiff.jacobian(f, y, x, cfg)
+            @test y == x[used]
+            @test res isa Matrix{BigFloat}
+            @test res[:, used] == I
+            @test all(iszero, res[:, hole])
+        end
     end
 end
 

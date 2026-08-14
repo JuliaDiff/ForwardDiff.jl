@@ -10,6 +10,7 @@ using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
 
 import Calculus
+import LinearAlgebra
 
 struct TestTag end
 struct OuterTestTag end
@@ -171,6 +172,20 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test round(FDNUM2) === round(PRIMAL2)
         @test round(NESTED_FDNUM) === round(PRIMAL)
 
+        for r in (RoundDown, RoundUp, RoundToZero, RoundNearest,
+                  RoundNearestTiesAway, RoundNearestTiesUp, RoundFromZero)
+            @test round(FDNUM, r) === round(PRIMAL, r)
+            @test round(FDNUM2, r) === round(PRIMAL2, r)
+            @test round(NESTED_FDNUM, r) === round(PRIMAL, r)
+        end
+
+        if VERSION >= v"1.11"
+            @test floor(Float32, FDNUM) === floor(Float32, PRIMAL)
+            @test ceil(Float32, FDNUM) === ceil(Float32, PRIMAL)
+            @test trunc(Float32, FDNUM) === trunc(Float32, PRIMAL)
+            @test round(Float32, FDNUM) === round(Float32, PRIMAL)
+        end
+
         @test fld(FDNUM, FDNUM2) === fld(PRIMAL, PRIMAL2)
         @test fld(FDNUM, PRIMAL2) === fld(PRIMAL, PRIMAL2)
         @test fld(PRIMAL, FDNUM2) === fld(PRIMAL, PRIMAL2)
@@ -258,6 +273,8 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     # M is the length of M_PARTIALS, which affects:
     # NESTED_FDNUM = Dual{TestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
+    NAN_PARTIALS = Partials{N,float(V)}(map(x -> oftype(float(x), NaN), PARTIALS.values))
+
     @test (FDNUM == Dual{TestTag}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
     @test isequal(FDNUM, Dual{TestTag}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
     @test isequal(NESTED_FDNUM, Dual{TestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
@@ -275,10 +292,17 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test NESTED_FDNUM != NESTED_FDNUM2
     end
 
+    @test (Dual{TestTag}(PRIMAL, NAN_PARTIALS) == Dual{TestTag}(PRIMAL, NAN_PARTIALS)) === (N == 0)
+    @test isequal(Dual{TestTag}(PRIMAL, NAN_PARTIALS), Dual{TestTag}(PRIMAL, NAN_PARTIALS))
+
     @test isless(Dual{TestTag}(1, PARTIALS), Dual{TestTag}(2, PARTIALS2))
     @test isless(Dual{TestTag}(1, PARTIALS), Dual{TestTag}(1, PARTIALS2)) === isless(PARTIALS, PARTIALS2)
     @test !(isless(Dual{TestTag}(1, PARTIALS), Dual{TestTag}(1, PARTIALS)))
     @test !(isless(Dual{TestTag}(2, PARTIALS), Dual{TestTag}(1, PARTIALS2)))
+    @test isless(Dual{TestTag}(1, PARTIALS), Dual{TestTag}(2, NAN_PARTIALS))
+    @test isless(Dual{TestTag}(1, PARTIALS), Dual{TestTag}(1, NAN_PARTIALS)) === (N > 0)
+    @test !isless(Dual{TestTag}(1, NAN_PARTIALS), Dual{TestTag}(1, PARTIALS))
+    @test !(isless(Dual{TestTag}(2, PARTIALS), Dual{TestTag}(1, NAN_PARTIALS)))
 
     @test isless(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
     @test isless(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === isless(NESTED_PARTIALS, NESTED_PARTIALS2)
@@ -289,6 +313,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test (Dual{TestTag}(1, PARTIALS) < Dual{TestTag}(1, PARTIALS2)) === (PARTIALS < PARTIALS2)
     @test !(Dual{TestTag}(1, PARTIALS) < Dual{TestTag}(1, PARTIALS))
     @test !(Dual{TestTag}(2, PARTIALS) < Dual{TestTag}(1, PARTIALS2))
+    @test Dual{TestTag}(1, PARTIALS) < Dual{TestTag}(2, NAN_PARTIALS)
+    @test !(Dual{TestTag}(1, PARTIALS) < Dual{TestTag}(1, NAN_PARTIALS))
+    @test !(Dual{TestTag}(1, NAN_PARTIALS) < Dual{TestTag}(1, PARTIALS))
+    @test !(Dual{TestTag}(2, PARTIALS) < Dual{TestTag}(1, NAN_PARTIALS))
 
     @test Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2)
     @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS < NESTED_PARTIALS2)
@@ -299,6 +327,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test (Dual{TestTag}(1, PARTIALS) <= Dual{TestTag}(1, PARTIALS2)) === (PARTIALS <= PARTIALS2)
     @test Dual{TestTag}(1, PARTIALS) <= Dual{TestTag}(1, PARTIALS)
     @test !(Dual{TestTag}(2, PARTIALS) <= Dual{TestTag}(1, PARTIALS2))
+    @test Dual{TestTag}(1, PARTIALS) <= Dual{TestTag}(2, NAN_PARTIALS)
+    @test (Dual{TestTag}(1, PARTIALS) <= Dual{TestTag}(1, NAN_PARTIALS)) === (N == 0)
+    @test (Dual{TestTag}(1, NAN_PARTIALS) <= Dual{TestTag}(1, PARTIALS)) === (N == 0)
+    @test !(Dual{TestTag}(2, PARTIALS) <= Dual{TestTag}(1, NAN_PARTIALS))
 
     @test Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2)
     @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS <= NESTED_PARTIALS2)
@@ -309,6 +341,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test (Dual{TestTag}(1, PARTIALS) > Dual{TestTag}(1, PARTIALS2)) === (PARTIALS > PARTIALS2)
     @test !(Dual{TestTag}(1, PARTIALS) > Dual{TestTag}(1, PARTIALS))
     @test !(Dual{TestTag}(1, PARTIALS) > Dual{TestTag}(2, PARTIALS2))
+    @test !(Dual{TestTag}(1, PARTIALS) > Dual{TestTag}(2, NAN_PARTIALS))
+    @test !(Dual{TestTag}(1, PARTIALS) > Dual{TestTag}(1, NAN_PARTIALS))
+    @test !(Dual{TestTag}(1, NAN_PARTIALS) > Dual{TestTag}(1, PARTIALS))
+    @test Dual{TestTag}(2, PARTIALS) > Dual{TestTag}(1, NAN_PARTIALS)
 
     @test Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)
     @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS > NESTED_PARTIALS2)
@@ -319,6 +355,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test (Dual{TestTag}(1, PARTIALS) >= Dual{TestTag}(1, PARTIALS2)) === (PARTIALS >= PARTIALS2)
     @test Dual{TestTag}(1, PARTIALS) >= Dual{TestTag}(1, PARTIALS)
     @test !(Dual{TestTag}(1, PARTIALS) >= Dual{TestTag}(2, PARTIALS2))
+    @test !(Dual{TestTag}(1, PARTIALS) >= Dual{TestTag}(2, NAN_PARTIALS))
+    @test ((Dual{TestTag}(1, PARTIALS) >= Dual{TestTag}(1, NAN_PARTIALS))) === (N == 0)
+    @test ((Dual{TestTag}(1, NAN_PARTIALS) >= Dual{TestTag}(1, PARTIALS))) === (N == 0)
+    @test Dual{TestTag}(2, PARTIALS) >= Dual{TestTag}(1, NAN_PARTIALS)
 
     @test Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)
     @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS >= NESTED_PARTIALS2)
@@ -473,6 +513,14 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test partials(NaNMath.pow(Dual{TestTag}(-2.0, 1.0), Dual{TestTag}(2.0, 0.0)), 1) == -4.0
 
+    # differentiating must not widen the primal: `2^x` is Float32 for a Float32 `x`
+    @testset "$f: real base keeps $W exponent" for f in (^, NaNMath.pow),
+                                                   W in (Float16, Float32, Float64)
+        w = W(4)/W(3)
+        @test typeof(value(f(2, Dual{TestTag}(w, one(W))))) === typeof(f(2, w))
+        @test typeof(value(f(2.0f0, Dual{TestTag}(w, one(W))))) === typeof(f(2.0f0, w))
+    end
+
     ###################################
     # General Mathematical Operations #
     ###################################
@@ -606,10 +654,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         # We have to adjust tolerances if lower accuracy is requested
         # Therefore we don't use `dual_isapprox`
         tol = V === Float32 ? 5f-4 : 1e-5
-        tol = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
+        tolval = tol^(one(tol) / 2^(isempty(ind) ? 0 : first(ind)))
         for i in 1:2
-            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tol
-            @test partials(pq[i]) ≈ PARTIALS * Calculus.derivative(x -> gamma_inc(a, x, ind...)[i], 1 + PRIMAL) rtol=tol
+            @test value(pq[i]) ≈ gamma_inc(a, 1 + PRIMAL, ind...)[i] rtol=tolval
+            der = Calculus.derivative(x -> gamma_inc(Float64(a), x, 0)[i], Float64(1 + PRIMAL))
+            @test partials(pq[i]) ≈ PARTIALS * der rtol=tol
         end
     end
 end
@@ -683,6 +732,33 @@ end
 
 @testset "TwicePrecision" begin
     @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
+end
+
+@testset "Givens rotations: consistency with `LinearAlgebra.givensAlgorithm` for zero partials (no duals)" begin
+    # Test different branches in `LinearAlgebra.givensAlgorithm`
+    for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f]
+        # Upstream: Result for non-dual numbers
+        y = LinearAlgebra.givensAlgorithm(f, g)
+        @test y isa NTuple{3,Float64}
+
+        for n in (1, 2, 5)
+            zero_tuple = ntuple(Returns(0.0), n)
+            dual_f = Dual{TestTag}(f, zero_tuple)
+            dual_g = Dual{TestTag}(g, zero_tuple)
+            for (_f, _g) in ((dual_f, dual_g), (dual_f, g), (f, dual_g))
+                ydual = @inferred(LinearAlgebra.givensAlgorithm(_f, _g))
+                @test ydual isa NTuple{3,Dual{TestTag,Float64,n}}
+
+                for (i, yi, yduali) in zip(1:3, y, ydual)
+                    # Primal values must match `LinearAlgebra.givensAlgorithm` with `Float64` inputs
+                    @test ForwardDiff.value(yduali) ≈ yi
+
+                    # Partial derivatives must be zero (zero in - zero out)
+                    @test iszero(ForwardDiff.partials(yduali))
+                end
+            end
+        end
+    end
 end
 
 end # module

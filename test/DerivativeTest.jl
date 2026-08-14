@@ -1,6 +1,7 @@
 module DerivativeTest
 
 import Calculus
+import LinearAlgebra
 import NaNMath
 
 using Test
@@ -111,6 +112,25 @@ end
 
 @testset "complex output" begin
     @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
+end
+
+@testset "NaN-safe mode" begin
+    x = ForwardDiff.derivative(log ∘ zero, 1.0)
+    if ForwardDiff.NANSAFE_MODE_ENABLED
+        @test iszero(x)
+    else
+        @test isnan(x)
+    end
+end
+
+@testset "Givens rotations: Derivatives" begin
+    # Test different branches in `LinearAlgebra.givensAlgorithm`
+    for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f], i in 1:3
+        @test ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(x, g)[i], f) ≈
+            Calculus.derivative(x -> LinearAlgebra.givensAlgorithm(x, g)[i], f)
+        @test ForwardDiff.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g) ≈
+            Calculus.derivative(x -> LinearAlgebra.givensAlgorithm(f, x)[i], g)
+    end
 end
 
 end # module
