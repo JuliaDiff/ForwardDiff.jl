@@ -812,7 +812,9 @@ end
 # `_lyap_div!!` special cases only the diagonal, where `λ[j] - λ[i]` vanishes by
 # construction. Two equal eigenvalues make an off-diagonal denominator vanish as well, and
 # the eigenvector partials come out as `Inf` or `NaN`: the eigenvectors of a repeated
-# eigenvalue are not unique and hence not differentiable.
+# eigenvalue are not unique and hence not differentiable. The `eigen` methods below call
+# this once, right after the decomposition and before anything can fail for another reason,
+# rather than from inside `_lyap_div!!`, which runs once per partial direction.
 #
 # The eigenvalues are compared as they are, without extracting primal values: for nested
 # `Dual`s two of them can be `!=` here and still divide to `Inf`, but then their primals
@@ -829,7 +831,6 @@ end
 # A ./ (λ' .- λ) but with diag special cased
 # Default out-of-place method
 function _lyap_div!!(A::AbstractMatrix, λ::AbstractVector)
-    _check_distinct_eigvals(λ)
     return map(
         (a, b, idx) -> a / (idx[1] == idx[2] ? oneunit(b) : b),
         A,
@@ -840,7 +841,6 @@ end
 # For `Matrix` (and e.g. `StaticArrays.MMatrix`) we can use an in-place method
 _lyap_div!!(A::Matrix, λ::AbstractVector) = _lyap_div!(A, λ)
 function _lyap_div!(A::AbstractMatrix, λ::AbstractVector)
-    _check_distinct_eigvals(λ)
     for (j,μ) in enumerate(λ), (k,λ) in enumerate(λ)
         if k ≠ j
             A[k,j] /= μ - λ
@@ -856,14 +856,18 @@ LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen(
 function _eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    λvals = value.(λ)
+    _check_distinct_eigvals(λvals)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), λvals), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
 function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(SymTridiagonal(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    λvals = value.(λ)
+    _check_distinct_eigvals(λvals)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), λvals), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
@@ -984,6 +988,9 @@ function LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {T
 end
 function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
     λ, U = _eigen!!(value.(A); kwargs...)
+    # before `lu`, so that a repeated eigenvalue is reported as such rather than surfacing
+    # as a `SingularException` from the factorization of a defective `U`
+    _check_distinct_eigvals(λ)
     luU = lu(U)
     M = ntuple(j -> ldiv!(luU, getindex.(partials.(A), j) * U), N)
     λ_parts = map(diag, M)
