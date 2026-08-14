@@ -181,12 +181,27 @@ end
     C(w) = [w[1] -1.0-w[2]; 1.0+w[2] w[1]]
     @test ForwardDiff.hessian(w -> sum(abs2, eigvals(C(w))), [0.3, 0.2]) ≈ [4 0; 0 4]
 
-    # https://github.com/JuliaDiff/ForwardDiff.jl/issues/111
+    # https://github.com/JuliaDiff/ForwardDiff.jl/issues/111. `S(w)` is Hermitian in its
+    # values *and* its partials, so both sides take the `Symmetric` shortcut: this pins the
+    # dispatch, not the general path, and the two Hessians are bitwise identical.
     S(w) = [w[1]^2 w[1]*w[2]*w[3]; w[1]*w[2]*w[3] w[2]^2]
     g(w) = sum(log, eigvals(S(w)))
     gsym(w) = sum(log, eigvals(Symmetric(S(w))))
     w111 = [0.9, 1.4, 0.3]
-    @test ForwardDiff.hessian(g, w111) ≈ ForwardDiff.hessian(gsym, w111)
+    @test ishermitian(S(w111))
+    @test ForwardDiff.hessian(g, w111) == ForwardDiff.hessian(gsym, w111)
+
+    # The same log-determinant Hessian on a matrix that is *not* Hermitian, so that the
+    # general path is what is under test. `det(Bgen(w)) == w[1]^2 * (1 + w[2]^2 / 2)`, which
+    # gives a closed-form reference that never goes through `eigen`.
+    Bgen(w) = [w[1]^2 w[1]*w[2]; 0.5*w[1]*w[2] w[2]^2+1]
+    hgen(w) = sum(log, eigvals(Bgen(w)))
+    wgen = [0.9, 1.4]
+    @test !ishermitian(Bgen(wgen))
+    @test isreal(eigvals(Bgen(wgen)))
+    @test ForwardDiff.hessian(hgen, wgen) ≈
+          [-2/wgen[1]^2 0; 0 (1 - wgen[2]^2/2)/(1 + wgen[2]^2/2)^2]
+    @test ForwardDiff.hessian(hgen, wgen) ≈ ForwardDiff.hessian(w -> log(det(Bgen(w))), wgen)
 
     # eigenvectors
     A0 = [2.0 1.0 0.5; 0.5 3.0 1.5; 0.25 0.75 4.0]

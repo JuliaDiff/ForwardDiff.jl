@@ -307,6 +307,22 @@ end
     @test ForwardDiff.jacobian(g3, x4c) ≈ Calculus.finite_difference_jacobian(g3, x4c)
     @test ForwardDiff.jacobian(hc3, x4c) ≈ Calculus.finite_difference_jacobian(hc3, x4c)
 
+    # 4x4 with two complex conjugate pairs. At 2x2 and 3x3 the entry that carries the phase
+    # convention can come out right by accident, so the complex eigenvector derivatives need
+    # to be pinned at a larger size as well.
+    g4(x) = begin
+        vals = eigvals(reshape(x, 4, 4))
+        vcat(real(vals), imag(vals))
+    end
+    hc4(x) = begin
+        V = eigen(reshape(x, 4, 4)).vectors
+        vcat(real(vec(V)), imag(vec(V)))
+    end
+    x5c = vec([1.0 -2.0 0.5 0.0; 2.0 1.0 0.0 0.5; 0.0 0.5 2.0 -1.0; 0.5 0.0 1.0 2.0])
+    @test !isreal(eigvals(reshape(x5c, 4, 4)))
+    @test ForwardDiff.jacobian(g4, x5c) ≈ Calculus.finite_difference_jacobian(g4, x5c)
+    @test ForwardDiff.jacobian(hc4, x5c) ≈ Calculus.finite_difference_jacobian(hc4, x5c)
+
     # the eigenvector derivatives used to belong to the normalization
     # `diag(inv(U) * U̇) == 0` instead, which differs for a non-normal matrix
     A_gauge = Dual{TestTag}.([1.0 1.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])
