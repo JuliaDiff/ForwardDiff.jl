@@ -819,7 +819,7 @@ function _eigvals_hermitian(A::DualMatrixRealComplex{T,<:Real,N}) where {T,N}
     F = eigen(_structured_value(A))
     λ = F.values
     Q = F.vectors
-    parts = ntuple(j -> real(diag(Q' * _structured_partials(A, j) * Q)), N)
+    parts = ntuple(j -> real(diag(Q' * (_structured_partials(A, j) * Q))), N)
     return _to_duals(Val(T), λ, parts)
 end
 
@@ -856,7 +856,9 @@ function _eigen_hermitian(A::DualMatrixRealComplex{T,<:Real,N}) where {T,N}
     F = eigen(_structured_value(A))
     λ = F.values
     Q = F.vectors
-    Qt_∂A_Q = ntuple(j -> Q' * _structured_partials(A, j) * Q, N)
+    # `Q' * (∂A * Q)`, not `(Q' * ∂A) * Q`: the latter hits `Adjoint * Symmetric`, which has no BLAS
+    # specialization and so allocates an extra temporary and skips `symm`/`hemm`
+    Qt_∂A_Q = ntuple(j -> Q' * (_structured_partials(A, j) * Q), N)
     λ_partials = map(real ∘ diag, Qt_∂A_Q)
     Q_partials = map(Qt_∂Aj_Q -> Q*_lyap_div_zero_diag!!(Qt_∂Aj_Q, λ), Qt_∂A_Q)
     return Eigen(_to_duals(Val(T), λ, λ_partials), _to_duals(Val(T), Q, Q_partials))
