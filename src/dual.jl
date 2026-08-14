@@ -887,19 +887,28 @@ _make_eigen_dual(D::Type, val::Complex, parts::NTuple{N,Number}) where {N} =
 # with `A = U * Diagonal(λ) * inv(U)` and `M = inv(U) * Ȧ * U`, we have `λ̇ = diag(M)`
 # and `U̇ = U * (F .* M)`, where `F[i,j] = inv(λ[j] - λ[i])` off the diagonal and zero on it.
 
+@noinline function _throw_no_real_eigvec_entry()
+    throw(ArgumentError("no entry of an eigenvector is real, so the entry that carries the phase convention cannot be identified; the derivatives assume the normalization of `eigen`, whose eigenvectors have a real entry of largest magnitude"))
+end
+
 # Index of the entry of largest magnitude among the real entries of `v`. LAPACK normalizes
 # the eigenvectors it returns to unit 2-norm with their largest entry real, so this is the
-# entry that carries the phase convention. Modelled after `_findrealmaxabs2` in ChainRules.
+# entry that carries the phase convention. Modelled after `_findrealmaxabs2` in ChainRules,
+# except that reaching the end without a real entry is an error rather than a silent
+# fallback: it means the assumed normalization does not hold.
 function _findrealmaxabs2(v)
     imax = firstindex(v)
     amax = abs2(zero(eltype(v)))
+    found = false
     for i in eachindex(v)
         vi = v[i]
         isreal(vi) || continue
         a = abs2(vi)
         a < amax && continue
         amax, imax = a, i
+        found = true
     end
+    found || _throw_no_real_eigvec_entry()
     return imax
 end
 
@@ -918,12 +927,18 @@ function _eigen_norm_phase!(U̇, U)
         u, u̇ = view(U, :, i), view(U̇, :, i)
         ċ_norm = -real(dot(u, u̇))
         if eltype(U) <: Real
-            ċ = ċ_norm
+            u̇ .+= u .* ċ_norm
         else
             k = _findrealmaxabs2(u)
-            ċ = complex(ċ_norm, -imag(u̇[k]) / real(u[k]))
+            u̇ .+= u .* complex(ċ_norm, -imag(u̇[k]) / real(u[k]))
+            # `imag(u[k]) == 0` holds identically along the curve, so `imag(u̇[k])` is exactly
+            # zero. Leaving it as the cancellation `q + fl(r * fl(-q / r))` keeps a rounding
+            # residue instead, and one differentiation level up that residue sits in the
+            # partials, where `isreal` sees it: `_findrealmaxabs2` then finds no real entry
+            # in the column and fixes the phase at the wrong one. Being exact rather than
+            # approximate, this also keeps third and higher derivatives right.
+            u̇[k] = complex(real(u̇[k]), zero(real(u̇[k])))
         end
-        u̇ .+= u .* ċ
     end
     return U̇
 end

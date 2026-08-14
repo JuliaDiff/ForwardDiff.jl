@@ -199,6 +199,105 @@ end
     @test ForwardDiff.hessian(v1, x0) ≈ Calculus.finite_difference_jacobian(x -> ForwardDiff.gradient(v1, x), x0) atol=1e-5
 end
 
+# Helpers for the eigenvector phase gauge tests below
+struct GaugeTag end
+
+# A deterministic `n x n` matrix with a complex spectrum and well separated eigenvalues
+function complex_spectrum_matrix(n)
+    A = zeros(n, n)
+    for b in 1:(n ÷ 2)
+        i = 2b - 1
+        A[i, i] = A[i+1, i+1] = 0.5 + b / 4
+        A[i, i+1] = -1.0 - b / 8
+        A[i+1, i] = 1.0 + b / 8
+    end
+    isodd(n) && (A[n, n] = 2.0)
+    for i in 1:n, j in 1:n
+        A[i, j] += 0.15 * sinpi((i + 2j) / (n + 1))
+    end
+    return A
+end
+
+seed_matrix(n, i, j) = (S = zeros(n, n); S[i, j] = 1.0; S)
+
+# `A` lifted to a `Dual` of nesting depth `k` with vanishing partials
+lift_dual(A, k) = k == 0 ? A : Dual{GaugeTag}.(lift_dual(A, k - 1), lift_dual(zero(A), k - 1))
+# `A` seeded with one partial per level, innermost seed first, the way `hessian` nests them
+function nest_dual(A, seeds...)
+    M = A
+    for (k, seed) in enumerate(seeds)
+        M = Dual{GaugeTag}.(M, lift_dual(seed, k - 1))
+    end
+    return M
+end
+
+# The entry `eigen` made real, i.e. the one of largest magnitude
+phase_index(v) = argmax(j -> abs2(v[j]), eachindex(v))
+
+# All components of a (possibly nested) `Dual`: its value and every partial, recursively
+function dual_components!(out, x)
+    if x isa Dual
+        dual_components!(out, ForwardDiff.value(x))
+        for i in 1:ForwardDiff.npartials(x)
+            dual_components!(out, ForwardDiff.partials(x, i))
+        end
+    else
+        push!(out, x)
+    end
+    return out
+end
+dual_components(x) = dual_components!(Float64[], x)
+
+# The eigenvectors and their first derivative in direction `seed`, with the columns flipped
+# to match the signs of `Vref`
+function eigvecs_and_derivative(X, seed, Vref)
+    V = eigen(Dual{GaugeTag}.(X, seed)).vectors
+    V0 = map(z -> complex(ForwardDiff.value(real(z)), ForwardDiff.value(imag(z))), V)
+    V1 = map(z -> complex(ForwardDiff.partials(real(z), 1), ForwardDiff.partials(imag(z), 1)), V)
+    for i in axes(V0, 2)
+        k = phase_index(view(Vref, :, i))
+        if real(V0[k, i]) * real(Vref[k, i]) < 0
+            V0[:, i] .*= -1
+            V1[:, i] .*= -1
+        end
+    end
+    return V0, V1
+end
+
+@testset "eigenvector phase gauge under nesting, n = $n" for n in 2:6
+    A = complex_spectrum_matrix(n)
+    # otherwise the phase convention never comes up
+    @test !isreal(eigvals(A))
+    seeds = (seed_matrix(n, 1, 1), seed_matrix(n, 2, min(3, n)), seed_matrix(n, min(3, n), 1))
+
+    # `eigen` returns eigenvectors of unit 2-norm whose largest-magnitude entry is real, so
+    # `imag(u[k]) == 0` and `u' * u == 1` hold identically along the curve and every
+    # derivative of them has to vanish. A rounding residue in the first is invisible at
+    # first order, but one level up it sits in the partials, where `isreal` sees it, and
+    # `_findrealmaxabs2` then fixes the phase at the wrong entry.
+    @testset "nesting depth $depth" for depth in 1:3
+        V = eigen(nest_dual(A, seeds[1:depth]...)).vectors
+        for i in axes(V, 2)
+            v = view(V, :, i)
+            @test iszero(imag(V[phase_index(v), i]))
+            @test all(x -> abs(x) < 1e-12, dual_components(real(dot(v, v)) - 1))
+        end
+    end
+
+    # second derivatives of the eigenvectors, against central differences of the first
+    # derivatives. `eigen` does not pin the sign of the real entry, so the columns have to
+    # be realigned before differencing; plain central differences are off by `O(1)`.
+    Ea, Eb = seeds[1], seeds[2]
+    Vref = eigen(A).vectors
+    V = eigen(nest_dual(A, Ea, Eb)).vectors
+    ad = map(z -> complex(ForwardDiff.partials(ForwardDiff.partials(real(z), 1), 1),
+                          ForwardDiff.partials(ForwardDiff.partials(imag(z), 1), 1)), V)
+    h = 1e-5
+    _, Dp = eigvecs_and_derivative(A .+ h .* Eb, Ea, Vref)
+    _, Dm = eigvecs_and_derivative(A .- h .* Eb, Ea, Vref)
+    @test maximum(abs, ad .- (Dp .- Dm) ./ (2h)) < 1e-6
+end
+
 #https://github.com/JuliaDiff/ForwardDiff.jl/issues/720
 @testset "allocation-free hessian with StaticArrays" begin
     function hessian_allocs()
