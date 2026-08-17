@@ -6,6 +6,8 @@
     ForwardDiff.hessian(f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())
 
 Return `H(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
+The returned Hessian is exactly symmetric: its two triangles are filled from the same
+derivative values.
 
 This method assumes that `isa(f(x), Real)`.
 
@@ -21,8 +23,9 @@ end
 """
     ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())
 
-Compute `H(f)` (i.e. `J(∇(f))`) evaluated at `x` and store the result(s) in `result`,
-assuming `f` is called as `f(x)`.
+Compute `H(f)` evaluated at `x` and store the result(s) in `result`, assuming `f` is
+called as `f(x)`. The stored Hessian is exactly symmetric: its two triangles are filled
+from the same derivative values.
 
 This method assumes that `isa(f(x), Real)`.
 
@@ -32,7 +35,7 @@ function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianCon
     require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     xlen = structural_length(x)
-    H = result isa AbstractMatrix && size(result) == (xlen, xlen) ? result : reshape(result, xlen, xlen)
+    H = result isa AbstractMatrix ? result : reshape(result, xlen, xlen)
     symmetric_hessian!(H, f, x, cfg, nothing)
     return result
 end
@@ -40,9 +43,10 @@ end
 """
     ForwardDiff.hessian!(result::DiffResult, f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, result, x), check=Val{true}())
 
-Exactly like `ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig)`, but
-because `isa(result, DiffResult)`, `cfg` is constructed as `HessianConfig(f, result, x)` instead of
-`HessianConfig(f, x)`.
+Exactly like `ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig)`,
+but also stores the value and gradient in `result`. The default `cfg` is constructed as
+`HessianConfig(f, result, x)`, though a config constructed as `HessianConfig(f, x)` may also
+be used.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
@@ -51,7 +55,7 @@ function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig
     CHK && checktag(T, f, x)
     xlen = structural_length(x)
     hess = DiffResults.hessian(result)
-    H = hess isa AbstractMatrix && size(hess) == (xlen, xlen) ? hess : reshape(hess, xlen, xlen)
+    H = hess isa AbstractMatrix ? hess : reshape(hess, xlen, xlen)
     _, ydual = symmetric_hessian!(H, f, x, cfg, DiffResults.gradient(result))
     result = DiffResults.value!(result, value(T, value(T, ydual)))
     return result
@@ -62,32 +66,6 @@ end
 ############################
 
 const HESSIAN_ERROR = DimensionMismatch("hessian(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?")
-
-# Seed a chunk in either layer of the nested duals. A `nothing` seed clears that layer.
-function seed_hessian_chunk!(duals::AbstractArray{Dual{T,Dual{T,V,N},N}}, x, index,
-                             iseeds::Union{Nothing,NTuple{N,Partials{N,V}}},
-                             oseeds::Union{Nothing,NTuple{N,Partials{N,Dual{T,V,N}}}},
-                             chunksize = N) where {T,V,N}
-    izero = zero(Partials{N,V})
-    ozero = zero(Partials{N,Dual{T,V,N}})
-    idxs = Iterators.drop(structural_eachindex(duals, x), index - 1)
-    if isbitstype(V)
-        for (i, idx) in zip(1:chunksize, idxs)
-            inner = Dual{T,V,N}(x[idx], iseeds === nothing ? izero : iseeds[i])
-            duals[idx] = Dual{T,Dual{T,V,N},N}(inner, oseeds === nothing ? ozero : oseeds[i])
-        end
-    else
-        for (i, idx) in zip(1:chunksize, idxs)
-            if isassigned(x, idx)
-                inner = Dual{T,V,N}(x[idx], iseeds === nothing ? izero : iseeds[i])
-                duals[idx] = Dual{T,Dual{T,V,N},N}(inner, oseeds === nothing ? ozero : oseeds[i])
-            else
-                Base._unsetindex!(duals, idx)
-            end
-        end
-    end
-    return duals
-end
 
 # Copy a block from the nested partials and fill its transpose. On diagonal blocks, read
 # only the upper triangle so the result is exactly symmetric.
@@ -118,38 +96,39 @@ function symmetric_hessian_expr(result_definition::Expr)
             throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
         end
 
-        nblocks = xlen == 0 ? 1 : div(xlen + N - 1, N)
+        # `N == 0` only for empty inputs, which still need one evaluation to determine the
+        # output type and value.
+        nblocks = xlen == 0 ? 1 : cld(xlen, N)
 
         xdual = cfg.gradient_config.duals
         iseeds = cfg.jacobian_config.seeds
         oseeds = cfg.gradient_config.seeds
 
-        # Keep all unseeded blocks at zero between evaluations.
-        seed_hessian_chunk!(xdual, x, 1, nothing, nothing, xlen)
-
-        # The first evaluation determines the output type.
+        # The first evaluation determines the output type. Seeding the first block and clearing
+        # the untouched tail partitions the fresh buffer, so every element is initialized once.
         seed_hessian_chunk!(xdual, x, 1, iseeds, oseeds)
+        seed_hessian_chunk!(xdual, x, N + 1, nothing, nothing, xlen - N)
         ydual1 = f(xdual)
         ydual1 isa Real || throw(HESSIAN_ERROR)
         $(result_definition)
         extract_hessian_chunk!(T, H, ydual1, 0, 0, N, N)
         extract_hessian_gradient_chunk!(T, grad, ydual1, 1, N)
-        seed_hessian_chunk!(xdual, x, 1, nothing, nothing)
+        nblocks > 1 && seed_hessian_chunk!(xdual, x, 1, nothing, nothing)
 
         for q in 2:nblocks
             qoffset = (q - 1) * N
             qsize = min(N, xlen - qoffset)
-            # Off-diagonal blocks: p seeds columns and q seeds rows.
+            # Off-diagonal blocks: p seeds columns and q seeds rows. The outer seeds for q
+            # remain unchanged throughout this loop.
+            seed_hessian_chunk!(xdual, x, qoffset + 1, nothing, oseeds, qsize)
             for p in 1:(q - 1)
                 poffset = (p - 1) * N
                 seed_hessian_chunk!(xdual, x, poffset + 1, iseeds, nothing)
-                seed_hessian_chunk!(xdual, x, qoffset + 1, nothing, oseeds, qsize)
                 ydual = f(xdual)
                 extract_hessian_chunk!(T, H, ydual, qoffset, poffset, qsize, N)
                 seed_hessian_chunk!(xdual, x, poffset + 1, nothing, nothing)
-                seed_hessian_chunk!(xdual, x, qoffset + 1, nothing, nothing, qsize)
             end
-            # Diagonal blocks seed both layers.
+            # The diagonal block adds q's inner seeds while retaining its outer seeds.
             seed_hessian_chunk!(xdual, x, qoffset + 1, iseeds, oseeds, qsize)
             ydual = f(xdual)
             extract_hessian_chunk!(T, H, ydual, qoffset, qoffset, qsize, qsize)
@@ -162,7 +141,7 @@ function symmetric_hessian_expr(result_definition::Expr)
 end
 
 @eval function symmetric_hessian(f::F, x, cfg::HessianConfig{T,V,N}, grad) where {F,T,V,N}
-    $(symmetric_hessian_expr(:(H = similar(x, typeof(value(T, value(T, ydual1))), xlen, xlen))))
+    $(symmetric_hessian_expr(:(H = similar(x, valtype(T, valtype(T, typeof(ydual1))), xlen, xlen))))
 end
 
 @eval function symmetric_hessian!(H, f::F, x, cfg::HessianConfig{T,V,N}, grad) where {F,T,V,N}
