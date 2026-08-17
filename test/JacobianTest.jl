@@ -340,7 +340,7 @@ end
     expected[2, sidx] .= 2 .* x[sidx]
     val = g(x)
 
-    @testset "chunk size = $c" for c in unique((1, 2, ForwardDiff.structural_length(x)))
+    @testset "chunk size = $c" for c in unique((1, 2, length(sidx)))
         cfg = ForwardDiff.JacobianConfig(g, x, ForwardDiff.Chunk{c}())
         J = ForwardDiff.jacobian(g, x, cfg)
         @test size(J) == (2, length(x))
@@ -349,6 +349,11 @@ end
         out = fill(NaN, 2, length(x))
         @test ForwardDiff.jacobian!(out, g, x, cfg) === out
         @test out == expected
+
+        # a result that is not a matrix is reshaped to one
+        out = fill(NaN, 2 * length(x))
+        @test ForwardDiff.jacobian!(out, g, x, cfg) === out
+        @test reshape(out, 2, length(x)) == expected
 
         # `DiffResults.JacobianResult` allocates `length(x)` columns, which is what is needed
         result = DiffResults.JacobianResult(similar(val), x)
@@ -366,6 +371,11 @@ end
         ForwardDiff.jacobian!(out, g!, y, x, cfg!)
         @test out == expected
         @test y ≈ val
+        result = DiffResults.JacobianResult(similar(val), x)
+        y = fill(NaN, 2)
+        result = ForwardDiff.jacobian!(result, g!, y, x, cfg!)
+        @test DiffResults.jacobian(result) == expected
+        @test DiffResults.value(result) ≈ val
     end
 end
 

@@ -294,6 +294,11 @@ end
         @testset "chunk size = $c" for c in unique((1, 2, nstruct))
             cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())
 
+            # the allocated result is shaped like `x`, so its zeros are the structural ones
+            grad = ForwardDiff.gradient(f, x, cfg)
+            @test grad isa T
+            @test grad == expected
+
             out = fill(NaN, n, n)
             @test ForwardDiff.gradient!(out, f, x, cfg) === out
             @test out == dense_expected
@@ -317,6 +322,11 @@ end
             # the result has to be shaped like `x`, packing into the structural positions is not
             # supported since their order is an implementation detail
             @test_throws DimensionMismatch ForwardDiff.gradient!(fill(NaN, nstruct), f, x, cfg)
+
+            # every entry of a dense `x` is seeded, so a structured result cannot hold its gradient
+            dense_x = Matrix(x)
+            dense_cfg = ForwardDiff.GradientConfig(f, dense_x, ForwardDiff.Chunk{c}())
+            @test_throws ArgumentError ForwardDiff.gradient!(T(fill(NaN, n, n)), f, dense_x, dense_cfg)
         end
     end
 end
