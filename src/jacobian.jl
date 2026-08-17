@@ -97,7 +97,7 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 # structurally zero ones are zeroed instead. See #839.
 
 function extract_jacobian!(::Type{T}, result::AbstractArray, x, ydual::AbstractArray) where {T}
-    out_reshaped = result isa AbstractMatrix ? result : reshape(result, length(ydual), length(x))
+    out_reshaped = reshape_jacobian(result, ydual, x)
     ydual_reshaped = vec(ydual)
     # Use closure to avoid GPU broadcasting with Type
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
@@ -138,8 +138,15 @@ function extract_jacobian_chunk!(::Type{T}, result, x, ydual, index, chunksize) 
     return result
 end
 
-reshape_jacobian(result, ydual, xdual) = reshape(result, length(ydual), length(xdual))
-reshape_jacobian(result::DiffResult, ydual, xdual) = reshape_jacobian(DiffResults.jacobian(result), ydual, xdual)
+# A matrix is used as is: reshaping it would allocate a wrapper on Julia >= 1.11, where `reshape`
+# can no longer return its argument. The size is checked instead, as `reshape` did on the way past.
+function reshape_jacobian(result::AbstractMatrix, ydual, x)
+    size(result) == (length(ydual), length(x)) || throw(DimensionMismatch(
+        lazy"cannot store the $(length(ydual))x$(length(x)) Jacobian in a result of size $(size(result))"))
+    return result
+end
+reshape_jacobian(result::AbstractArray, ydual, x) = reshape(result, length(ydual), length(x))
+reshape_jacobian(result::DiffResult, ydual, x) = reshape_jacobian(DiffResults.jacobian(result), ydual, x)
 
 ###############
 # vector mode #
@@ -208,7 +215,7 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
         $(compute_ydual)
         ydual isa AbstractArray || throw(JACOBIAN_ERROR)
         $(result_definition)
-        out_reshaped = reshape_jacobian(result, ydual, xdual)
+        out_reshaped = reshape_jacobian(result, ydual, x)
         extract_jacobian_chunk!(T, out_reshaped, x, ydual, 1, N)
         seed_zero_partials!(xdual, x, 1)
 
