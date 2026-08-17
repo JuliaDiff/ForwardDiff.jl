@@ -70,6 +70,15 @@ function structural_eachindex(x::Diagonal, y::AbstractArray)
     return diagind(x)
 end
 
+# The linear indices of the seeded entries of `x`, in seeding order. Results that are not shaped like
+# `x`, such as the columns of a Jacobian, are indexed by these.
+structural_linearindices(x::AbstractArray) = eachindex(IndexLinear(), x)
+structural_linearindices(x::Diagonal) = diagind(x)
+function structural_linearindices(x::Union{LowerTriangular,UpperTriangular})
+    lin = LinearIndices(x)
+    return (lin[idx] for idx in structural_eachindex(x))
+end
+
 # Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
 # currently carrying and to initialize a freshly allocated work buffer, whose elements must all be
 # written before the target function reads them.

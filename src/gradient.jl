@@ -49,44 +49,64 @@ gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is
 # result extraction #
 #####################
 
-function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
+# Derivatives are only computed with respect to the structurally non-zero entries of `x`, since only
+# those are seeded. The positions to write to therefore have to be taken from `x`, not from `result`:
+# the two may have different structure, e.g. `DiffResults.HessianResult` allocates a dense gradient
+# buffer even for a structured `x`. The remaining entries of `result` are zeroed, their derivative
+# being zero, unless every index of `x` is structural. See #838.
+
+function extract_gradient!(::Type{T}, result::DiffResult, x, y::Real) where {T}
     result = DiffResults.value!(result, y)
     grad = DiffResults.gradient(result)
     fill!(grad, zero(y))
     return result
 end
 
-function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
+function extract_gradient!(::Type{T}, result::MutableDiffResult, x, dual::Dual) where {T}
+    result = DiffResults.value!(result, value(T, dual))
+    extract_gradient!(T, DiffResults.gradient(result), x, dual)
+    return result
+end
+
+# Immutable results cannot be written to entry by entry. They only occur for `StaticArray` inputs,
+# all of whose entries are structural, so copying the partials wholesale is correct.
+function extract_gradient!(::Type{T}, result::ImmutableDiffResult, x, dual::Dual) where {T}
     result = DiffResults.value!(result, value(T, dual))
     result = DiffResults.gradient!(result, partials(T, dual))
     return result
 end
 
-extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
-function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
-    idxs = structural_eachindex(result)
+extract_gradient!(::Type{T}, result::AbstractArray, x, y::Real) where {T} = fill!(result, zero(y))
+function extract_gradient!(::Type{T}, result::AbstractArray, x, dual::Dual) where {T}
+    structural_length(x) == length(x) || fill!(result, zero(valtype(T, dual)))
+    idxs = structural_eachindex(x, result)
     for (i, idx) in zip(1:npartials(dual), idxs)
         result[idx] = partials(T, dual, i)
     end
     return result
 end
 
-function extract_gradient_chunk!(::Type{T}, result, dual, index, chunksize) where {T}
+# The first chunk zeroes `result`; the entries it does not fill are written by the later chunks. In
+# chunk mode `structural_length(x) > chunksize`, so `index == 1` only for the first chunk.
+function extract_gradient_chunk!(::Type{T}, result, x, dual, index, chunksize) where {T}
     offset = index - 1
-    idxs = Iterators.drop(structural_eachindex(result), offset)
+    if iszero(offset) && structural_length(x) != length(x)
+        fill!(result, zero(valtype(T, dual)))
+    end
+    idxs = Iterators.drop(structural_eachindex(x, result), offset)
     for (i, idx) in zip(1:chunksize, idxs)
         result[idx] = partials(T, dual, i)
     end
     return result
 end
 
-function extract_gradient_chunk!(::Type{T}, result::DiffResult, dual, index, chunksize) where {T}
-    extract_gradient_chunk!(T, DiffResults.gradient(result), dual, index, chunksize)
+function extract_gradient_chunk!(::Type{T}, result::DiffResult, x, dual, index, chunksize) where {T}
+    extract_gradient_chunk!(T, DiffResults.gradient(result), x, dual, index, chunksize)
     return result
 end
 
-extract_gradient_chunk!(::Type, result, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
-extract_gradient_chunk!(::Type, result::DiffResult, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
+extract_gradient_chunk!(::Type, result, x, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
+extract_gradient_chunk!(::Type, result::DiffResult, x, dual::AbstractArray, index, chunksize) = throw(GRAD_ERROR)
 
 const GRAD_ERROR = DimensionMismatch("gradient(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?")
 
@@ -98,12 +118,12 @@ function vector_mode_gradient(f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa Real || throw(GRAD_ERROR)
     result = similar(x, valtype(T, ydual))
-    return extract_gradient!(T, result, ydual)
+    return extract_gradient!(T, result, x, ydual)
 end
 
 function vector_mode_gradient!(result, f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval!(f, cfg, x)
-    result = extract_gradient!(T, result, ydual)
+    result = extract_gradient!(T, result, x, ydual)
     return result
 end
 
@@ -134,7 +154,7 @@ function chunk_mode_gradient_expr(result_definition::Expr)
         seed_zero_partials!(xdual, x, N + 1, xlen - N)
         ydual = f(xdual)
         $(result_definition)
-        extract_gradient_chunk!(T, result, ydual, 1, N)
+        extract_gradient_chunk!(T, result, x, ydual, 1, N)
         seed_zero_partials!(xdual, x, 1)
 
         # do middle chunks
@@ -142,14 +162,14 @@ function chunk_mode_gradient_expr(result_definition::Expr)
             i = ((c - 1) * N + 1)
             seed!(xdual, x, i, seeds)
             ydual = f(xdual)
-            extract_gradient_chunk!(T, result, ydual, i, N)
+            extract_gradient_chunk!(T, result, x, ydual, i, N)
             seed_zero_partials!(xdual, x, i)
         end
 
         # do final chunk
         seed!(xdual, x, lastchunkindex, seeds, lastchunksize)
         ydual = f(xdual)
-        extract_gradient_chunk!(T, result, ydual, lastchunkindex, lastchunksize)
+        extract_gradient_chunk!(T, result, x, ydual, lastchunkindex, lastchunksize)
 
         # get the value, this is a no-op unless result is a DiffResult
         extract_value!(T, result, ydual)

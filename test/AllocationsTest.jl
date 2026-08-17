@@ -1,6 +1,7 @@
 module AllocationsTest
 
 using ForwardDiff
+using LinearAlgebra
 using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
@@ -48,6 +49,41 @@ end
         return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
     end
     @test iszero(allocs_jacobian!())
+end
+
+# `extract_gradient!`/`extract_jacobian!` take their positions from `x`, so mapping a structural
+# position to an index of `x` must not allocate, whether or not `x` has structurally zero entries.
+function allocs_gradient!(x, chunk)
+    f(z) = sum(abs2, z)
+    result = fill!(similar(x, Float64), false)
+    cfg = ForwardDiff.GradientConfig(f, x, chunk)
+    ForwardDiff.gradient!(result, f, x, cfg)  # warmup
+    return @allocated ForwardDiff.gradient!(result, f, x, cfg)
+end
+
+function allocs_jacobian!(x, chunk)
+    f!(y, z) = (y[1] = sum(z); y[2] = sum(abs2, z); y)
+    y = zeros(2)
+    result = zeros(2, length(x))
+    cfg = ForwardDiff.JacobianConfig(f!, y, x, chunk)
+    ForwardDiff.jacobian!(result, f!, y, x, cfg)  # warmup
+    return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
+end
+
+@testset "Test gradient!/jacobian! allocations for $(nameof(typeof(x)))" for x in (rand(6, 6),
+                                                                                  LowerTriangular(rand(6, 6)),
+                                                                                  UpperTriangular(rand(6, 6)),
+                                                                                  Diagonal(rand(6, 6)))
+    # vector mode
+    chunk = ForwardDiff.Chunk{ForwardDiff.structural_length(x)}()
+    @test iszero(allocs_gradient!(x, chunk))
+    @test iszero(allocs_jacobian!(x, chunk))
+
+    # chunk mode, where `jacobian!` allocates a fixed-size `reshape` wrapper for every input, so
+    # compare against a dense input of the same size instead of asserting zero
+    chunk = ForwardDiff.Chunk{2}()
+    @test iszero(allocs_gradient!(x, chunk))
+    @test allocs_jacobian!(x, chunk) == allocs_jacobian!(rand(6, 6), chunk)
 end
 
 @testset "allocation-free nested StaticArray jacobian" begin

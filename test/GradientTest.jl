@@ -275,6 +275,52 @@ end
     end
 end
 
+# issue #838
+@testset "structured inputs: extraction positions" begin
+    # The seeds are laid out along `structural_eachindex(x)`, so the derivatives have to be written to
+    # the corresponding entries of the result and every other entry has to end up at zero. In
+    # particular this must not be read off `result`, which carries no structure to read it off of when
+    # it is dense -- as the gradient buffer of a `DiffResults.HessianResult` is even for a structured
+    # `x`. All results are prefilled with `NaN` so that entries left untouched are caught.
+    @testset "$T, n = $n" for T in (LowerTriangular, UpperTriangular, Diagonal), n in (3, 10)
+        M = rand(n, n)
+        x = T(randn(n, n))
+        f = z -> dot(M, z)
+        expected = T(M)                     # zero derivative for the structurally zero entries
+        dense_expected = Matrix(expected)
+        val = f(x)
+        nstruct = ForwardDiff.structural_length(x)
+
+        @testset "chunk size = $c" for c in unique((1, 2, nstruct))
+            cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())
+
+            out = fill(NaN, n, n)
+            @test ForwardDiff.gradient!(out, f, x, cfg) === out
+            @test out == dense_expected
+
+            out = T(fill(NaN, n, n))
+            ForwardDiff.gradient!(out, f, x, cfg)
+            @test out == expected
+
+            # gradient buffer shaped like `x`, cf. `DiffResults.GradientResult`
+            result = DiffResults.GradientResult(x)
+            result = ForwardDiff.gradient!(result, f, x, cfg)
+            @test DiffResults.gradient(result) == expected
+            @test DiffResults.value(result) ≈ val
+
+            # dense gradient buffer, cf. `DiffResults.HessianResult`
+            result = DiffResults.DiffResult(NaN, fill(NaN, n, n))
+            result = ForwardDiff.gradient!(result, f, x, cfg)
+            @test DiffResults.gradient(result) == dense_expected
+            @test DiffResults.value(result) ≈ val
+
+            # the result has to be shaped like `x`, packing into the structural positions is not
+            # supported since their order is an implementation detail
+            @test_throws DimensionMismatch ForwardDiff.gradient!(fill(NaN, nstruct), f, x, cfg)
+        end
+    end
+end
+
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
