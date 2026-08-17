@@ -127,9 +127,6 @@ function extract_jacobian_chunk!(::Type{T}, result, x, ydual, index, chunksize) 
     if structural_length(x) == length(x)
         result[:, irange .+ offset] .= partials_wrap.(ydual_reshaped, transpose(irange))
     else
-        # The first chunk zeroes the columns of the structurally zero entries, which no chunk writes.
-        # In chunk mode `structural_length(x) > chunksize`, so `index == 1` only for the first chunk.
-        iszero(offset) && fill!(result, zero(valtype(T, eltype(ydual))))
         idxs = Iterators.drop(structural_linearindices(x), offset)
         for (i, col) in zip(irange, idxs)
             result[:, col] .= partials_wrap.(ydual_reshaped, i)
@@ -163,7 +160,6 @@ end
 
 function vector_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T}) where {F,T}
     ydual = vector_mode_dual_eval!(f!, cfg, y, x)
-    map!(d -> value(T,d), y, ydual)
     result = similar(y, length(y), length(x))
     extract_jacobian!(T, result, x, ydual)
     map!(d -> value(T,d), y, ydual)
@@ -216,6 +212,8 @@ function jacobian_chunk_mode_expr(work_array_definition::Expr, compute_ydual::Ex
         ydual isa AbstractArray || throw(JACOBIAN_ERROR)
         $(result_definition)
         out_reshaped = reshape_jacobian(result, ydual, x)
+        # zero the columns of the structurally zero entries of `x`, which no chunk of the sweep writes
+        structural_length(x) == length(x) || fill!(out_reshaped, zero(valtype(T, eltype(ydual))))
         extract_jacobian_chunk!(T, out_reshaped, x, ydual, 1, N)
         seed_zero_partials!(xdual, x, 1)
 

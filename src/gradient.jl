@@ -53,7 +53,8 @@ gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is
 # those are seeded. The positions to write to therefore have to be taken from `x`, not from `result`:
 # the two may have different structure, e.g. `DiffResults.HessianResult` allocates a dense gradient
 # buffer even for a structured `x`. The remaining entries of `result` are zeroed, their derivative
-# being zero, unless every index of `x` is structural. See #838.
+# being zero, unless the seeded entries of `x` already account for every entry `result` stores. See
+# #838.
 
 function extract_gradient!(::Type{T}, result::DiffResult, x, y::Real) where {T}
     result = DiffResults.value!(result, y)
@@ -68,17 +69,29 @@ function extract_gradient!(::Type{T}, result::MutableDiffResult, x, dual::Dual) 
     return result
 end
 
-# Immutable results cannot be written to entry by entry. They only occur for `StaticArray` inputs,
-# all of whose entries are structural, so copying the partials wholesale is correct.
+# Immutable results cannot be written to entry by entry. Copying the partials wholesale is correct
+# as long as every entry of `x` is seeded, which holds for the `StaticArray` gradient buffers that
+# are the only source of such results; anything else throws on the length mismatch.
 function extract_gradient!(::Type{T}, result::ImmutableDiffResult, x, dual::Dual) where {T}
     result = DiffResults.value!(result, value(T, dual))
     result = DiffResults.gradient!(result, partials(T, dual))
     return result
 end
 
+# Zeroes the entries that receive no derivative. In chunk mode the sweep calls this once up front,
+# since the entries that no chunk writes belong to none of them in particular.
+function zero_unseeded!(::Type{T}, result::AbstractArray, x, dual) where {T}
+    structural_length(x) == structural_length(result) || fill!(result, zero(valtype(T, dual)))
+    return result
+end
+function zero_unseeded!(::Type{T}, result::MutableDiffResult, x, dual) where {T}
+    zero_unseeded!(T, DiffResults.gradient(result), x, dual)
+    return result
+end
+
 extract_gradient!(::Type{T}, result::AbstractArray, x, y::Real) where {T} = fill!(result, zero(y))
 function extract_gradient!(::Type{T}, result::AbstractArray, x, dual::Dual) where {T}
-    structural_length(x) == length(x) || fill!(result, zero(valtype(T, dual)))
+    zero_unseeded!(T, result, x, dual)
     idxs = structural_eachindex(x, result)
     for (i, idx) in zip(1:npartials(dual), idxs)
         result[idx] = partials(T, dual, i)
@@ -86,13 +99,8 @@ function extract_gradient!(::Type{T}, result::AbstractArray, x, dual::Dual) wher
     return result
 end
 
-# The first chunk zeroes `result`; the entries it does not fill are written by the later chunks. In
-# chunk mode `structural_length(x) > chunksize`, so `index == 1` only for the first chunk.
 function extract_gradient_chunk!(::Type{T}, result, x, dual, index, chunksize) where {T}
     offset = index - 1
-    if iszero(offset) && structural_length(x) != length(x)
-        fill!(result, zero(valtype(T, dual)))
-    end
     idxs = Iterators.drop(structural_eachindex(x, result), offset)
     for (i, idx) in zip(1:chunksize, idxs)
         result[idx] = partials(T, dual, i)
@@ -154,6 +162,7 @@ function chunk_mode_gradient_expr(result_definition::Expr)
         seed_zero_partials!(xdual, x, N + 1, xlen - N)
         ydual = f(xdual)
         $(result_definition)
+        zero_unseeded!(T, result, x, ydual)
         extract_gradient_chunk!(T, result, x, ydual, 1, N)
         seed_zero_partials!(xdual, x, 1)
 
