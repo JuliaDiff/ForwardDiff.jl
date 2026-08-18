@@ -79,17 +79,31 @@ const HESSIAN_ERROR = DimensionMismatch("hessian(f, x) expects that f(x) is a re
 # Copy a block from the nested partials and fill its transpose. On diagonal blocks, read
 # only the upper triangle so the result is exactly symmetric. `positions` maps a seeding position to
 # the row and column of `H` it belongs to, i.e. to the linear index of `x` it was seeded from.
+#
+# It is walked, not indexed, so that the lazy positions of the triangular wrappers never have to be
+# materialized. Walking to the start of a block costs what `seed_hessian_chunk!` already pays to
+# seed the same block, and no more, since each row resumes the column walk from a saved state
+# instead of restarting it.
 function extract_hessian_chunk!(::Type{T}, H, positions, ydual, roffset, coffset, rsize, csize) where {T}
+    diagonal = roffset == coffset
+    rows = Iterators.drop(positions, roffset)
+    cols = Iterators.drop(positions, coffset)
+    rnext = iterate(rows)
+    cfirst = iterate(cols)
     for r in 1:rsize
-        i = positions[roffset + r]
+        i, rstate = something(rnext)
         drow = partials(T, ydual, r)
-        cstart = roffset == coffset ? r : 1
+        # A diagonal block reads only the upper triangle, whose row `r` begins at column `r` — the
+        # position the row walk has just reached. Any other block begins at its first column.
+        cstart, cnext = diagonal ? (r, (i, rstate)) : (1, something(cfirst))
         for c in cstart:csize
-            j = positions[coffset + c]
+            j, cstate = cnext
             h = partials(T, drow, c)
             H[i, j] = h
             H[j, i] = h
+            c == csize || (cnext = something(iterate(cols, cstate)))
         end
+        r == rsize || (rnext = something(iterate(rows, rstate)))
     end
     return H
 end
@@ -112,9 +126,6 @@ reshape_hessian(result::DiffResult, x) = reshape_hessian(DiffResults.hessian(res
 function symmetric_hessian_expr(result_definition::Expr)
     return quote
         xlen = structural_length(x)
-        # Only the structurally non-zero entries of `x` are seeded, but both axes of the result are
-        # indexed by the linear indices of `x`, as the columns of a Jacobian are. See #839.
-        hlen = length(x)
         if xlen < N
             throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
         end
@@ -134,13 +145,15 @@ function symmetric_hessian_expr(result_definition::Expr)
         ydual1 = f(xdual)
         ydual1 isa Real || throw(HESSIAN_ERROR)
         $(result_definition)
-        # `H` is square and both its axes are indexed by the entries of `x`, so the columns a
-        # Jacobian would receive derivatives in are also the rows and columns this sweep writes.
-        positions = _indexable(structural_columns(H, x))
+        # Only the structurally non-zero entries of `x` are seeded, but both axes of `H` are indexed
+        # by the linear indices of `x`, as the columns of a Jacobian are, so the columns a Jacobian
+        # would receive derivatives in are the rows and columns this sweep writes. See #839.
+        positions = structural_columns(H, x)
         # The entries that no block of the sweep writes belong to none of them in particular: for
         # `H` the rows and columns of the structurally zero entries of `x`, for `grad` their
-        # entries. `value(T, ydual1)` is passed for its value type, which unlike `eltype` is a
-        # number type even for a result that stores `Any`.
+        # entries. Both take `value(T, ydual1)` for its value type rather than reading `eltype` off
+        # the result, which is no number type at all for a result that stores `Any` — a scalar dual
+        # is as good an argument as the array of them `zero_unseeded_columns!` usually gets.
         zero_unseeded_columns!(T, H, value(T, ydual1), x)
         grad === nothing || zero_unseeded!(T, grad, value(T, ydual1), x)
         extract_hessian_chunk!(T, H, positions, ydual1, 0, 0, N, N)
@@ -150,9 +163,10 @@ function symmetric_hessian_expr(result_definition::Expr)
         for q in 2:nblocks
             qoffset = (q - 1) * N
             qsize = min(N, xlen - qoffset)
-            # Off-diagonal blocks: q seeds columns and p seeds rows. Every block of the sweep is
-            # read from the same triangle of the nested partials, so that the result does not
-            # depend on the chunk size. The inner seeds for q remain unchanged throughout this loop.
+            # Off-diagonal blocks: q seeds columns and p seeds rows. Every block reads the nested
+            # partials with the earlier of its two seeding positions in the outer layer, so an entry
+            # of `H` is read at the same nesting order at every chunk size. The inner seeds for q
+            # remain unchanged throughout this loop.
             seed_hessian_chunk!(xdual, x, qoffset + 1, iseeds, nothing, qsize)
             for p in 1:(q - 1)
                 poffset = (p - 1) * N
@@ -174,7 +188,7 @@ function symmetric_hessian_expr(result_definition::Expr)
 end
 
 @eval function symmetric_hessian(f::F, x, cfg::HessianConfig{T,V,N}, grad) where {F,T,V,N}
-    $(symmetric_hessian_expr(:(H = similar(x, valtype(T, valtype(T, typeof(ydual1))), hlen, hlen))))
+    $(symmetric_hessian_expr(:(H = similar(x, valtype(T, valtype(T, typeof(ydual1))), length(x), length(x)))))
 end
 
 @eval function symmetric_hessian!(H, f::F, x, cfg::HessianConfig{T,V,N}, grad) where {F,T,V,N}

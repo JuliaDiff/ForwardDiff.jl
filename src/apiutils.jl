@@ -104,14 +104,6 @@ function check_matching_columns(out::AbstractMatrix, x::AbstractArray)
     return nothing
 end
 
-# `structural_columns` is lazy, since walking it once from the front is all `jacobian!` ever needs.
-# The Hessian sweep reads the positions of two blocks at once and re-reads each row block once per
-# column block, so it indexes into them instead, and materializes them first. The ranges of
-# unstructured inputs and of `Diagonal` are already indexable and pass through unchanged; only the
-# triangular wrappers pay, one `structural_length(x)`-element vector against an n²-entry result.
-_indexable(idxs::AbstractArray) = idxs
-_indexable(idxs) = collect(idxs)
-
 # Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
 # currently carrying and to initialize a freshly allocated work buffer, whose elements must all be
 # written before the target function reads them.

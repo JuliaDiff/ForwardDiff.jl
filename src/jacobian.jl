@@ -98,7 +98,9 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 
 # Zeroes the whole Jacobian unless every column is going to be written; the written ones are
 # overwritten immediately after. In chunk mode the sweep calls this once up front, since the columns
-# that no chunk writes belong to none of them in particular.
+# that no chunk writes belong to none of them in particular. `ydual` is only read for the type its
+# values have, so the Hessian sweep, which zeroes rows as well as columns, passes a single dual
+# rather than the array of them a Jacobian has.
 function zero_unseeded_columns!(::Type{T}, out::AbstractArray, ydual, x) where {T}
     structural_length(x) == length(x) || fill!(out, zero(valtype(T, eltype(ydual))))
     return out
