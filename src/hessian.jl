@@ -46,8 +46,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    hlen = length(x)
-    H = result isa AbstractMatrix ? result : reshape(result, hlen, hlen)
+    H = reshape_hessian(result, x)
     symmetric_hessian!(H, f, x, cfg, nothing)
     return result
 end
@@ -65,9 +64,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    hlen = length(x)
-    hess = DiffResults.hessian(result)
-    H = hess isa AbstractMatrix ? hess : reshape(hess, hlen, hlen)
+    H = reshape_hessian(result, x)
     _, ydual = symmetric_hessian!(H, f, x, cfg, DiffResults.gradient(result))
     result = DiffResults.value!(result, value(T, value(T, ydual)))
     return result
@@ -101,6 +98,14 @@ end
 extract_hessian_gradient_chunk!(::Type{T}, ::Nothing, ydual, x, index, chunksize) where {T} = nothing
 extract_hessian_gradient_chunk!(::Type{T}, grad, ydual, x, index, chunksize) where {T} =
     extract_gradient_chunk!(T, grad, value(T, ydual), x, index, chunksize)
+
+function reshape_hessian(result::AbstractMatrix, x)
+    size(result) == (length(x), length(x)) || throw(DimensionMismatch(
+        lazy"cannot store the $(length(x))×$(length(x)) Hessian in a result of size $(size(result))"))
+    return result
+end
+reshape_hessian(result::AbstractArray, x) = reshape(result, length(x), length(x))
+reshape_hessian(result::DiffResult, x) = reshape_hessian(DiffResults.hessian(result), x)
 
 # Evaluate one pair of chunks at a time using nested duals. Only one triangle of block
 # pairs is evaluated; the other is filled by symmetry (see #836).
