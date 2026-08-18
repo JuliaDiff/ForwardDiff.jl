@@ -48,35 +48,60 @@ function structural_eachindex(x::AbstractArray, y::AbstractArray)
 end
 function structural_eachindex(x::UpperTriangular, y::AbstractArray)
     require_one_based_indexing(x, y)
-    if size(x) != size(y)
-        throw(DimensionMismatch())
-    end
+    check_matching_size(x, y)
     n = size(x, 1)
     return (CartesianIndex(i, j) for j in 1:n for i in 1:j)
 end
 function structural_eachindex(x::LowerTriangular, y::AbstractArray)
     require_one_based_indexing(x, y)
-    if size(x) != size(y)
-        throw(DimensionMismatch())
-    end
+    check_matching_size(x, y)
     n = size(x, 1)
     return (CartesianIndex(i, j) for j in 1:n for i in j:n)
 end
 function structural_eachindex(x::Diagonal, y::AbstractArray)
     require_one_based_indexing(x, y)
-    if size(x) != size(y)
-        throw(DimensionMismatch())
-    end
+    check_matching_size(x, y)
     return diagind(x)
 end
 
-# The linear indices of the seeded entries of `x`, in seeding order. Results that are not shaped like
-# `x`, such as the columns of a Jacobian, are indexed by these.
-structural_linearindices(x::AbstractArray) = eachindex(IndexLinear(), x)
-structural_linearindices(x::Diagonal) = diagind(x)
-function structural_linearindices(x::Union{LowerTriangular,UpperTriangular})
+# The two arrays are indexed by the same indices, so they have to have the same size. This is the
+# error a `gradient!` into a container that is not shaped like `x` aborts with, so it names the sizes.
+function check_matching_size(x::AbstractArray, y::AbstractArray)
+    size(x) == size(y) || throw(DimensionMismatch(
+        lazy"expected an array of size $(size(x)), got an array of size $(size(y))"))
+    return nothing
+end
+
+# The columns of the Jacobian `out` that receive derivatives, in seeding order. Column `j` holds the
+# derivatives with respect to `x[j]`, so a seeded entry writes to the column at its position in the
+# linear order of `x`. Every entry of an array is seeded unless one of the methods below applies.
+function structural_columns(out::AbstractMatrix, x::AbstractArray)
+    require_one_based_indexing(out, x)
+    check_matching_columns(out, x)
+    return axes(out, 2)
+end
+# The seeded columns are runs of increasing length, so they are no range. Deriving their order from
+# `structural_eachindex` rather than recomputing it keeps a single source of truth: the two have to
+# agree entry by entry, or the derivatives land in the wrong columns.
+function structural_columns(out::AbstractMatrix, x::Union{LowerTriangular,UpperTriangular})
+    require_one_based_indexing(out, x)
+    check_matching_columns(out, x)
+    cols = axes(out, 2)
     lin = LinearIndices(x)
-    return (lin[idx] for idx in structural_eachindex(x))
+    return (cols[lin[idx]] for idx in structural_eachindex(x))
+end
+# `diagind` is already a range of linear positions, so it can select the columns directly.
+function structural_columns(out::AbstractMatrix, x::Diagonal)
+    require_one_based_indexing(out, x)
+    check_matching_columns(out, x)
+    return axes(out, 2)[diagind(x)]
+end
+
+# A column of the Jacobian belongs to an entry of `x`, so there have to be as many as `x` has entries.
+function check_matching_columns(out::AbstractMatrix, x::AbstractArray)
+    size(out, 2) == length(x) || throw(DimensionMismatch(
+        lazy"expected a matrix with $(length(x)) columns, got a matrix with $(size(out, 2)) columns"))
+    return nothing
 end
 
 # Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
