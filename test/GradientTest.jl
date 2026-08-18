@@ -331,6 +331,30 @@ end
     end
 end
 
+@testset "result not shaped like x" begin
+    # The extraction positions are indices of `x`, which a result of a different shape cannot be
+    # indexed by, dense `x` included.
+    x = randn(4)
+    f = z -> dot(z, z)
+    @testset "chunk size = $c" for c in (2, 4)
+        cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.gradient!(fill(NaN, 5), f, x, cfg)
+        result = DiffResults.DiffResult(NaN, fill(NaN, 5))
+        @test_throws DimensionMismatch ForwardDiff.gradient!(result, f, x, cfg)
+    end
+end
+
+@testset "mutable gradient buffer in an immutable result" begin
+    # A `StaticArray` buffer makes the result immutable, but an `MVector` can still be written to
+    # entry by entry, which is how the chunk mode sweep fills it.
+    x = randn(6)
+    f = z -> dot(z, z)
+    result = DiffResults.DiffResult(NaN, @MVector fill(NaN, 6))
+    @test result isa DiffResults.ImmutableDiffResult
+    ForwardDiff.gradient!(result, f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{2}()))
+    @test DiffResults.gradient(result) ≈ 2 .* x
+end
+
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]

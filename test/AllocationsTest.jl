@@ -53,9 +53,9 @@ end
 
 # `extract_gradient!`/`extract_jacobian!` take their positions from `x`, so mapping a structural
 # position to an index of `x` must not allocate, whether or not `x` has structurally zero entries.
-function allocs_structured_gradient!(x, chunk)
+function allocs_structured_gradient!(result, x, chunk)
     f(z) = sum(abs2, z)
-    result = fill!(similar(x, Float64), false)
+    fill!(result, false)
     cfg = ForwardDiff.GradientConfig(f, x, chunk)
     ForwardDiff.gradient!(result, f, x, cfg)  # warmup
     return @allocated ForwardDiff.gradient!(result, f, x, cfg)
@@ -70,19 +70,19 @@ function allocs_structured_jacobian!(x, chunk)
     return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
 end
 
-@testset "Test gradient!/jacobian! allocations for $(nameof(typeof(x)))" for x in (rand(6, 6),
-                                                                                  LowerTriangular(rand(6, 6)),
-                                                                                  UpperTriangular(rand(6, 6)),
-                                                                                  Diagonal(rand(6, 6)))
-    # vector mode
-    chunk = ForwardDiff.Chunk{ForwardDiff.structural_length(x)}()
-    @test iszero(allocs_structured_gradient!(x, chunk))
-    @test iszero(allocs_structured_jacobian!(x, chunk))
-
-    # chunk mode
-    chunk = ForwardDiff.Chunk{2}()
-    @test iszero(allocs_structured_gradient!(x, chunk))
-    @test iszero(allocs_structured_jacobian!(x, chunk))
+@testset "Test gradient!/jacobian! allocations for $(nameof(typeof(x)))" for (x, nstruct) in (
+        (rand(6, 6),                  36),
+        (LowerTriangular(rand(6, 6)), 21),
+        (UpperTriangular(rand(6, 6)), 21),
+        (Diagonal(rand(6, 6)),         6),
+    )
+    # A result shaped like `x` receives a derivative in every entry it stores, a dense one has the
+    # entries off the structure of `x` zeroed as well. The chunk sizes cover chunk and vector mode.
+    for result in (similar(x), zeros(size(x))), chunk_size in (2, nstruct)
+        chunk = ForwardDiff.Chunk{chunk_size}()
+        @test iszero(allocs_structured_gradient!(result, x, chunk))
+        @test iszero(allocs_structured_jacobian!(x, chunk))
+    end
 end
 
 @testset "allocation-free nested StaticArray jacobian" begin

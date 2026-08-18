@@ -177,7 +177,8 @@ end
     grad = zeros(3, 3)
     grad[sidx] .= x[sidx] .+ sum(x)
 
-    @testset "chunk size = $c" for c in unique((1, 2, length(sidx)))
+    # one chunk size below the full length, so that the final chunk is a partial one
+    @testset "chunk size = $c" for c in unique((1, 2, length(sidx) - 1, length(sidx)))
         cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
 
         H = ForwardDiff.hessian(f, x, cfg)

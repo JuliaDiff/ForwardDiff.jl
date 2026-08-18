@@ -340,7 +340,8 @@ end
     expected[2, sidx] .= 2 .* x[sidx]
     val = g(x)
 
-    @testset "chunk size = $c" for c in unique((1, 2, length(sidx)))
+    # `length(sidx)` is 10 or 4, so a chunk size of 3 leaves a partial final chunk
+    @testset "chunk size = $c" for c in unique((1, 2, 3, length(sidx)))
         cfg = ForwardDiff.JacobianConfig(g, x, ForwardDiff.Chunk{c}())
         J = ForwardDiff.jacobian(g, x, cfg)
         @test size(J) == (2, length(x))
@@ -376,6 +377,24 @@ end
         result = ForwardDiff.jacobian!(result, g!, y, x, cfg!)
         @test DiffResults.jacobian(result) == expected
         @test DiffResults.value(result) ≈ val
+    end
+end
+
+@testset "wrongly shaped result" begin
+    # A matrix result is used as is, so it has to have the shape of the Jacobian and not merely as
+    # many entries. Results of other shapes are reshaped and only have to match in length.
+    x = randn(4)
+    g = z -> [sum(z), sum(abs2, z)]
+    g! = (y, z) -> (y[1] = sum(z); y[2] = sum(abs2, z); y)
+    @testset "chunk size = $c" for c in (2, 4)
+        cfg = ForwardDiff.JacobianConfig(g, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.jacobian!(fill(NaN, 4, 2), g, x, cfg)
+        result = DiffResults.DiffResult(fill(NaN, 2), fill(NaN, 4, 2))
+        @test_throws DimensionMismatch ForwardDiff.jacobian!(result, g, x, cfg)
+
+        y = fill(NaN, 2)
+        cfg! = ForwardDiff.JacobianConfig(g!, y, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.jacobian!(fill(NaN, 4, 2), g!, y, x, cfg!)
     end
 end
 
