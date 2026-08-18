@@ -132,7 +132,9 @@ ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} =
     ydual = f(dualize(T, dualize(T, x)))
     ydual isa Real || throw(HESSIAN_ERROR)
     H = result isa AbstractMatrix ? result : reshape(result, length(x), length(x))
-    ForwardDiff.extract_hessian_chunk!(T, H, ydual, 0, 0, length(x), length(x))
+    # a `StaticArray` has no structurally zero entries, so the positions are the columns of `H`
+    positions = ForwardDiff.structural_columns(H, x)
+    ForwardDiff.extract_hessian_chunk!(T, H, positions, ydual, 0, 0, length(x), length(x))
     return result
 end
 
