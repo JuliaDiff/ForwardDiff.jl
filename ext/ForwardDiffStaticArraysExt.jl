@@ -57,7 +57,7 @@ end
 
 @inline function ForwardDiff.vector_mode_gradient!(result, f::F, x::StaticArray) where {F}
     T = typeof(Tag(f, eltype(x)))
-    return extract_gradient!(T, result, f(dualize(T, x)))
+    return extract_gradient!(T, result, f(dualize(T, x)), x)
 end
 
 # Jacobian
@@ -87,13 +87,13 @@ end
 
 function extract_jacobian(::Type{T}, ydual::AbstractArray, x::StaticArray) where T
     result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), length(x))
-    return extract_jacobian!(T, result, ydual, length(x))
+    return extract_jacobian!(T, result, ydual, x)
 end
 
 @inline function ForwardDiff.vector_mode_jacobian!(result, f::F, x::StaticArray) where {F}
     T = typeof(Tag(f, eltype(x)))
     ydual = f(dualize(T, x))
-    result = extract_jacobian!(T, result, ydual, length(x))
+    result = extract_jacobian!(T, result, ydual, x)
     result = extract_value!(T, result, ydual)
     return result
 end

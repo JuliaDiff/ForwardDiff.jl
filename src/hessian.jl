@@ -83,9 +83,9 @@ function extract_hessian_chunk!(::Type{T}, H, ydual, roffset, coffset, rsize, cs
 end
 
 # The inner partials of a diagonal block contain the corresponding gradient chunk.
-extract_hessian_gradient_chunk!(::Type{T}, ::Nothing, ydual, index, chunksize) where {T} = nothing
-extract_hessian_gradient_chunk!(::Type{T}, grad, ydual, index, chunksize) where {T} =
-    extract_gradient_chunk!(T, grad, value(T, ydual), index, chunksize)
+extract_hessian_gradient_chunk!(::Type{T}, ::Nothing, ydual, x, index, chunksize) where {T} = nothing
+extract_hessian_gradient_chunk!(::Type{T}, grad, ydual, x, index, chunksize) where {T} =
+    extract_gradient_chunk!(T, grad, value(T, ydual), x, index, chunksize)
 
 # Evaluate one pair of chunks at a time using nested duals. Only one triangle of block
 # pairs is evaluated; the other is filled by symmetry (see #836).
@@ -111,8 +111,10 @@ function symmetric_hessian_expr(result_definition::Expr)
         ydual1 = f(xdual)
         ydual1 isa Real || throw(HESSIAN_ERROR)
         $(result_definition)
+        # the entries that no chunk of the sweep writes belong to none of them in particular
+        grad === nothing || zero_unseeded!(T, grad, value(T, ydual1), x)
         extract_hessian_chunk!(T, H, ydual1, 0, 0, N, N)
-        extract_hessian_gradient_chunk!(T, grad, ydual1, 1, N)
+        extract_hessian_gradient_chunk!(T, grad, ydual1, x, 1, N)
         nblocks > 1 && seed_hessian_chunk!(xdual, x, 1, nothing, nothing)
 
         for q in 2:nblocks
@@ -132,7 +134,7 @@ function symmetric_hessian_expr(result_definition::Expr)
             seed_hessian_chunk!(xdual, x, qoffset + 1, iseeds, oseeds, qsize)
             ydual = f(xdual)
             extract_hessian_chunk!(T, H, ydual, qoffset, qoffset, qsize, qsize)
-            extract_hessian_gradient_chunk!(T, grad, ydual, qoffset + 1, qsize)
+            extract_hessian_gradient_chunk!(T, grad, ydual, x, qoffset + 1, qsize)
             seed_hessian_chunk!(xdual, x, qoffset + 1, nothing, nothing, qsize)
         end
 

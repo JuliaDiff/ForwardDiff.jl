@@ -326,6 +326,82 @@ end
     end
 end
 
+# issue #839
+@testset "structured inputs: $(nameof(typeof(x)))" for (x, sidx) in (
+        # The Jacobian is indexed by the linear indices of `x`: column `j` holds the derivatives with
+        # respect to `x[j]`, and the columns of the structurally zero entries are zero. The nonzero
+        # columns are written out by hand so that a bug in the position mapping cannot hide inside the
+        # reference. Only the full-length chunk worked before, the others threw.
+        (LowerTriangular(randn(4, 4)), [i + 4 * (j - 1) for j in 1:4 for i in j:4]),
+        (UpperTriangular(randn(4, 4)), [i + 4 * (j - 1) for j in 1:4 for i in 1:j]),
+        (Diagonal(randn(4, 4)),        collect(1:5:16)),
+    )
+    g = z -> [sum(z), sum(abs2, z)]
+    g! = (y, z) -> (y[1] = sum(z); y[2] = sum(abs2, z); y)
+
+    expected = zeros(2, length(x))
+    expected[1, sidx] .= 1
+    expected[2, sidx] .= 2 .* x[sidx]
+    val = g(x)
+
+    # `length(sidx)` is 10 or 4, so a chunk size of 3 leaves a partial final chunk
+    @testset "chunk size = $c" for c in unique((1, 2, 3, length(sidx)))
+        cfg = ForwardDiff.JacobianConfig(g, x, ForwardDiff.Chunk{c}())
+        J = ForwardDiff.jacobian(g, x, cfg)
+        @test size(J) == (2, length(x))
+        @test J == expected
+
+        out = fill(NaN, 2, length(x))
+        @test ForwardDiff.jacobian!(out, g, x, cfg) === out
+        @test out == expected
+
+        # a result that is not a matrix is reshaped to one
+        out = fill(NaN, 2 * length(x))
+        @test ForwardDiff.jacobian!(out, g, x, cfg) === out
+        @test reshape(out, 2, length(x)) == expected
+
+        # `DiffResults.JacobianResult` allocates `length(x)` columns, which is what is needed
+        result = DiffResults.JacobianResult(similar(val), x)
+        result = ForwardDiff.jacobian!(result, g, x, cfg)
+        @test DiffResults.jacobian(result) == expected
+        @test DiffResults.value(result) ≈ val
+
+        # in-place target function
+        cfg! = ForwardDiff.JacobianConfig(g!, similar(val), x, ForwardDiff.Chunk{c}())
+        y = fill(NaN, 2)
+        @test ForwardDiff.jacobian(g!, y, x, cfg!) == expected
+        @test y ≈ val
+        out = fill(NaN, 2, length(x))
+        y = fill(NaN, 2)
+        ForwardDiff.jacobian!(out, g!, y, x, cfg!)
+        @test out == expected
+        @test y ≈ val
+        result = DiffResults.JacobianResult(similar(val), x)
+        y = fill(NaN, 2)
+        result = ForwardDiff.jacobian!(result, g!, y, x, cfg!)
+        @test DiffResults.jacobian(result) == expected
+        @test DiffResults.value(result) ≈ val
+    end
+end
+
+@testset "wrongly shaped result" begin
+    # A matrix result is used as is, so it has to have the shape of the Jacobian and not merely as
+    # many entries. Results of other shapes are reshaped and only have to match in length.
+    x = randn(4)
+    g = z -> [sum(z), sum(abs2, z)]
+    g! = (y, z) -> (y[1] = sum(z); y[2] = sum(abs2, z); y)
+    @testset "chunk size = $c" for c in (2, 4)
+        cfg = ForwardDiff.JacobianConfig(g, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.jacobian!(fill(NaN, 4, 2), g, x, cfg)
+        result = DiffResults.DiffResult(fill(NaN, 2), fill(NaN, 4, 2))
+        @test_throws DimensionMismatch ForwardDiff.jacobian!(result, g, x, cfg)
+
+        y = fill(NaN, 2)
+        cfg! = ForwardDiff.JacobianConfig(g!, y, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.jacobian!(fill(NaN, 4, 2), g!, y, x, cfg!)
+    end
+end
+
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]

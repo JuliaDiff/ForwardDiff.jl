@@ -53,6 +53,10 @@ end
     @test collect(ForwardDiff.structural_eachindex(duals, x)) == sidx
     @test ForwardDiff.structural_length(x) == nstruct
 
+    # the columns a Jacobian receives derivatives in, in the order the seeds are laid out in
+    @test collect(ForwardDiff.structural_columns(zeros(2, length(x)), x)) == LinearIndices(x)[sidx]
+    @test_throws DimensionMismatch ForwardDiff.structural_columns(zeros(2, length(x) + 1), x)
+
     # `count` defaults to N
     fill_marker!(duals, x, sidx, marker)
     ForwardDiff.seed_zero_partials!(duals, x, 4)
