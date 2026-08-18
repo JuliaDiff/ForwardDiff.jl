@@ -110,6 +110,25 @@ end
     ForwardDiff.seed_hessian_chunk!(duals, x, 4, nothing, nothing)
     @test all(idx -> iszero(ForwardDiff.partials(ForwardDiff.value(duals[idx]))), sidx)
     @test all(idx -> iszero(ForwardDiff.partials(duals[idx])), sidx)
+
+    # The off-diagonal blocks of the sweep seed one layer at a time, so check that each seed lands
+    # in the layer it was asked for and that the other one is left cleared, rather than only that
+    # something was written.
+    izero = zero(eltype(iseeds))
+    ozero = zero(eltype(oseeds))
+    @testset "$(iseeds === nothing ? "outer" : "inner") layer only" for (is, os) in
+            ((iseeds, nothing), (nothing, oseeds))
+        ForwardDiff.seed_hessian_chunk!(duals, x, 4, is, os)
+        for (i, idx) in enumerate(sidx)
+            chunkpos = i - 3
+            inner = ForwardDiff.partials(ForwardDiff.value(duals[idx]))
+            outer = ForwardDiff.partials(duals[idx])
+            wanted = 1 <= chunkpos <= 3
+            @test inner == (wanted && is !== nothing ? is[chunkpos] : izero)
+            @test outer == (wanted && os !== nothing ? os[chunkpos] : ozero)
+        end
+        ForwardDiff.seed_hessian_chunk!(duals, x, 4, nothing, nothing)
+    end
 end
 
 end # module

@@ -171,16 +171,20 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
     end
 end
 
-# Seed a chunk in either layer of nested duals. A `nothing` seed clears that layer.
+# Seed a chunk in either layer of nested duals. A `nothing` seed clears that layer. This is not
+# `seed_zero_partials!` with both layers cleared: that builds the inner value at the exact type of
+# the array's `V`, which the nested buffer's `Dual{T,V,N}` is not, so it would be a `MethodError`.
 function seed_hessian_chunk!(duals::AbstractArray{Dual{T,Dual{T,V,N},N}}, x, index,
                              iseeds::Union{Nothing,NTuple{N,Partials{N,V}}},
                              oseeds::Union{Nothing,NTuple{N,Partials{N,Dual{T,V,N}}}},
                              chunksize = N) where {T,V,N}
-    izero = zero(Partials{N,V})
-    ozero = zero(Partials{N,Dual{T,V,N}})
+    # `iseeds === nothing` is a compile-time constant here, so building each layer's accessor in its
+    # own branch means the zero partials it does not need are never constructed. That is free for an
+    # isbits `V` but not, say, for `BigFloat`.
+    ipartials = iseeds === nothing ? Returns(zero(Partials{N,V})) : Base.Fix1(getindex, iseeds)
+    opartials = oseeds === nothing ? Returns(zero(Partials{N,Dual{T,V,N}})) : Base.Fix1(getindex, oseeds)
     idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), chunksize)
     return _seed!(duals, x, idxs) do value, i
-        inner = Dual{T,V,N}(value, iseeds === nothing ? izero : iseeds[i])
-        Dual{T,Dual{T,V,N},N}(inner, oseeds === nothing ? ozero : oseeds[i])
+        Dual{T,Dual{T,V,N},N}(Dual{T,V,N}(value, ipartials(i)), opartials(i))
     end
 end

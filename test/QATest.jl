@@ -19,6 +19,8 @@ using JET: @test_opt
                                               Diagonal(rand(3, 3)))
         @test_opt ForwardDiff.gradient(first, x, ForwardDiff.GradientConfig(first, x, ForwardDiff.Chunk{2}()))
         @test_opt ForwardDiff.jacobian(vec, x, ForwardDiff.JacobianConfig(vec, x, ForwardDiff.Chunk{2}()))
+        # the Hessian sweep materializes those positions, so `_indexable` has to stay concrete
+        @test_opt ForwardDiff.hessian(first, x, ForwardDiff.HessianConfig(first, x, ForwardDiff.Chunk{2}()))
     end
 end
 

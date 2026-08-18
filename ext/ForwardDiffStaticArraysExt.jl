@@ -112,6 +112,8 @@ end
     return typeof(H)(Symmetric(H, :U))
 end
 
+# `partials` is empty both for an empty `x` and for an `f` that ignores its argument, and neither
+# reaches `extract_jacobian`, whose generated method would build a matrix with no columns to fill.
 @inline function extract_hessian(::Type{T}, ydual::Partials{0}, x::S) where {T,S<:StaticArray}
     R = StaticArrays.similar_type(S, valtype(T, eltype(ydual)), Size(length(x), length(x)))
     return zero(R)

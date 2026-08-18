@@ -211,6 +211,16 @@ end
         @test ForwardDiff.hessian!(out, f, x, cfg) === out
         @test out == expected
 
+        # a result that is not a matrix is reshaped, so it only has to match in length
+        flat = fill(NaN, L^2)
+        @test ForwardDiff.hessian!(flat, f, x, cfg) === flat
+        @test reshape(flat, L, L) == expected
+
+        # a wrongly shaped result is rejected rather than partially filled, the structural shape
+        # this used to have included
+        @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, L + 1, L + 1), f, x, cfg)
+        @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, length(sidx), length(sidx)), f, x, cfg)
+
         # `DiffResults.HessianResult` allocates a dense gradient buffer even for a structured `x`
         result = DiffResults.HessianResult(x)
         result = ForwardDiff.hessian!(result, f, x,
@@ -219,6 +229,61 @@ end
         @test DiffResults.gradient(result) == grad
         @test DiffResults.hessian(result) == expected
     end
+end
+
+@testset "chunk size independence" begin
+    # Every block of the sweep reads the same triangle of the nested partials, so the result is not
+    # merely close across chunk sizes but bitwise equal, and equal to the vector mode of the
+    # `StaticArray` path, which reads that triangle too.
+    n = 16
+    f = z -> sum(sin(z[i]) * exp(z[mod1(i + 1, n)]) / (1 + z[mod1(i + 2, n)]^2) for i in eachindex(z))
+    x = collect(range(0.1, 0.9; length=n))
+    reference = ForwardDiff.hessian(f, SVector{n}(x))
+    @test reference == transpose(reference)
+    @testset "chunk size = $c" for c in (1, 2, 3, 5, 7, 11, n)
+        H = ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}()))
+        @test H == reference
+    end
+end
+
+@testset "wrongly shaped result" begin
+    # A matrix result is written to as is, so it has to have the shape of the Hessian and not merely
+    # as many entries. Results of other shapes are reshaped and only have to match in length.
+    x = randn(3)
+    f = z -> sum(abs2, z)
+    sx = SVector{3}(x)
+    @testset "chunk size = $c" for c in (2, 3)
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 4, 4), f, x, cfg)
+        @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 10), f, x, cfg)
+        result = DiffResults.DiffResult(NaN, fill(NaN, 3), fill(NaN, 4, 4))
+        @test_throws DimensionMismatch ForwardDiff.hessian!(result, f, x, cfg)
+    end
+    # the `StaticArray` methods bypass the sweep and reshape the result themselves
+    @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 4, 4), f, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 10), f, sx)
+    # a result that is not a matrix goes through `reshape`
+    flat = fill(NaN, 9)
+    @test ForwardDiff.hessian!(flat, f, sx) === flat
+    @test reshape(flat, 3, 3) == 2I(3)
+end
+
+@testset "empty input" begin
+    f = z -> 1.0 + sum(z)
+    @test ForwardDiff.hessian(f, Float64[]) == zeros(0, 0)
+    @test ForwardDiff.hessian(f, SVector{0,Float64}()) == zeros(0, 0)
+    # `DiffResults.HessianResult` cannot be built from an empty `x`, so assemble one by hand
+    result = DiffResults.DiffResult(NaN, Float64[], Matrix{Float64}(undef, 0, 0))
+    result = ForwardDiff.hessian!(result, f, Float64[])
+    @test DiffResults.value(result) == 1.0
+    @test isempty(DiffResults.hessian(result))
+end
+
+@testset "f(x) is not a real number" begin
+    x = randn(3)
+    sx = SVector{3}(x)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 3, 3), identity, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.HessianResult(sx), identity, sx)
 end
 
 @testset "BigFloat with an unassigned input entry" begin

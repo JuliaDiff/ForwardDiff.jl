@@ -8,7 +8,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,Float64,8},4},2}, 1.3)
 
-@testset "Test seed!/seed_zero_partials! allocations" begin
+@testset "Test seed!/seed_zero_partials!/seed_hessian_chunk! allocations" begin
     x = rand(1000)
     cfg = ForwardDiff.GradientConfig(nothing, x)
     duals = cfg.duals
@@ -35,8 +35,11 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     iseeds = hcfg.jacobian_config.seeds
     oseeds = hcfg.gradient_config.seeds
     allocs_hseed!(args...) = @allocated ForwardDiff.seed_hessian_chunk!(args...)
-    allocs_hseed!(hduals, x, 1, iseeds, oseeds)
-    @test iszero(allocs_hseed!(hduals, x, 1, iseeds, oseeds))
+    # all four seed combinations, since each builds the zero partials of a different set of layers
+    for (is, os) in ((iseeds, oseeds), (iseeds, nothing), (nothing, oseeds), (nothing, nothing))
+        allocs_hseed!(hduals, x, 1, is, os)
+        @test iszero(allocs_hseed!(hduals, x, 1, is, os))
+    end
     allocs_hseed!(hduals, x, 1, nothing, nothing, 4)
     @test iszero(allocs_hseed!(hduals, x, 1, nothing, nothing, 4))
 
@@ -80,7 +83,20 @@ function allocs_structured_jacobian!(x, chunk)
     return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
 end
 
-@testset "Test gradient!/jacobian! allocations for $(nameof(typeof(x)))" for (x, nstruct) in (
+# Unlike `gradient!`/`jacobian!`, which walk the structural positions once from the front, the
+# Hessian sweep indexes into them, so it materializes them first and cannot be allocation-free for
+# the inputs whose positions are lazy. Pin what that costs rather than dropping the check.
+function allocs_structured_hessian!(H, x, chunk)
+    f(z) = sum(abs2, z)
+    fill!(H, false)
+    cfg = ForwardDiff.HessianConfig(f, x, chunk)
+    ForwardDiff.hessian!(H, f, x, cfg)  # warmup
+    return @allocated ForwardDiff.hessian!(H, f, x, cfg)
+end
+
+allocs_positions(H, x) = @allocated ForwardDiff._indexable(ForwardDiff.structural_columns(H, x))
+
+@testset "Test gradient!/jacobian!/hessian! allocations for $(nameof(typeof(x)))" for (x, nstruct) in (
         (rand(6, 6),                  36),
         (LowerTriangular(rand(6, 6)), 21),
         (UpperTriangular(rand(6, 6)), 21),
@@ -92,6 +108,14 @@ end
         chunk = ForwardDiff.Chunk{chunk_size}()
         @test iszero(allocs_structured_gradient!(result, x, chunk))
         @test iszero(allocs_structured_jacobian!(x, chunk))
+    end
+
+    # zero for the inputs whose positions are a range already, and otherwise exactly the one vector
+    # they are collected into: nothing else in the sweep may allocate
+    H = zeros(length(x), length(x))
+    allocs_positions(H, x)  # warmup
+    for chunk_size in (2, nstruct)
+        @test allocs_structured_hessian!(H, x, ForwardDiff.Chunk{chunk_size}()) == allocs_positions(H, x)
     end
 end
 
