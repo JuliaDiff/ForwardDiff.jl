@@ -5,7 +5,7 @@ using Test
 
 import JET
 
-if isdefined(JET, :JET_AVAILABLE) || JET.JET_AVAILABLE
+if !isdefined(JET, :JET_AVAILABLE) || JET.JET_AVAILABLE
     @testset "JET" begin
         # issue #778
         JET.@test_opt ForwardDiff.derivative(identity, 1.0)
