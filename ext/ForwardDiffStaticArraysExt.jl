@@ -7,7 +7,7 @@ using ForwardDiff: Dual, partials, npartials, Partials, GradientConfig, Jacobian
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
                    extract_gradient!, extract_jacobian!, extract_value!,
                    vector_mode_gradient, vector_mode_gradient!,
-                   vector_mode_jacobian, vector_mode_jacobian!, valtype, value
+                   vector_mode_jacobian, vector_mode_jacobian!, HESSIAN_ERROR, valtype, value
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 
 @generated function dualize(::Type{T}, x::StaticArray) where T
@@ -107,11 +107,34 @@ end
 end
 
 # Hessian
-ForwardDiff.hessian(f::F, x::StaticArray) where {F} = jacobian(Base.Fix1(gradient, f), x)
+@inline function extract_hessian(::Type{T}, ydual::Partials, x::StaticArray) where {T}
+    H = extract_jacobian(T, ydual, x)
+    return typeof(H)(Symmetric(H, :U))
+end
+
+@inline function extract_hessian(::Type{T}, ydual::Partials{0}, x::S) where {T,S<:StaticArray}
+    R = StaticArrays.similar_type(S, valtype(T, eltype(ydual)), Size(length(x), length(x)))
+    return zero(R)
+end
+
+@inline function ForwardDiff.hessian(f::F, x::StaticArray) where {F}
+    T = typeof(Tag(f, eltype(x)))
+    ydual = f(dualize(T, dualize(T, x)))
+    ydual isa Real || throw(HESSIAN_ERROR)
+    return extract_hessian(T, partials(T, ydual), x)
+end
+
 ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig) where {F} = hessian(f, x)
 ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} = hessian(f, x)
 
-ForwardDiff.hessian!(result::AbstractArray, f::F, x::StaticArray) where {F} = jacobian!(result, Base.Fix1(gradient, f), x)
+@inline function ForwardDiff.hessian!(result::AbstractArray, f::F, x::StaticArray) where {F}
+    T = typeof(Tag(f, eltype(x)))
+    ydual = f(dualize(T, dualize(T, x)))
+    ydual isa Real || throw(HESSIAN_ERROR)
+    H = result isa AbstractMatrix ? result : reshape(result, length(x), length(x))
+    ForwardDiff.extract_hessian_chunk!(T, H, ydual, 0, 0, length(x), length(x))
+    return result
+end
 
 ForwardDiff.hessian!(result::MutableDiffResult, f::F, x::StaticArray) where {F} = hessian!(result, f, x, HessianConfig(f, result, x))
 
@@ -123,9 +146,10 @@ function ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray)
     d1 = dualize(T, x)
     d2 = dualize(T, d1)
     fd2 = f(d2)
+    fd2 isa Real || throw(HESSIAN_ERROR)
     val = value(T,value(T,fd2))
     grad = extract_gradient(T,value(T,fd2), x)
-    hess = extract_jacobian(T,partials(T,fd2), x)
+    hess = extract_hessian(T,partials(T,fd2), x)
     result = DiffResults.hessian!(result, hess)
     result = DiffResults.gradient!(result, grad)
     result = DiffResults.value!(result, val)
