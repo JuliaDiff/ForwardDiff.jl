@@ -20,9 +20,43 @@ end
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
+# A tag `T1` provably nests a tag `T2` when `T2` appears inside `T1`'s type
+# structure: in the seeded value type `V1`, or captured by the function type `F1`
+# (closure/struct fields and type parameters). In that case `T1` was necessarily
+# created while `T2`'s derivative was already in progress, so `Dual{T1}` must be
+# composed outside `Dual{T2}` — independent of `tagcount`, whose values can be
+# baked in an arbitrary order by precompilation (see #714).
+function _containstag(@nospecialize(T), @nospecialize(target), seen::Base.IdSet{Any}, depth::Int)
+    T === target && return true
+    depth <= 0 && return false
+    if T isa Union
+        return _containstag(T.a, target, seen, depth - 1) ||
+               _containstag(T.b, target, seen, depth - 1)
+    elseif T isa UnionAll
+        return _containstag(Base.unwrap_unionall(T), target, seen, depth - 1)
+    end
+    T isa DataType || return false
+    T in seen && return false
+    push!(seen, T)
+    for p in T.parameters
+        p isa Type && _containstag(p, target, seen, depth - 1) && return true
+    end
+    if isconcretetype(T) && isstructtype(T)
+        for ft in fieldtypes(T)
+            ft isa Type && _containstag(ft, target, seen, depth - 1) && return true
+        end
+    end
+    return false
+end
+
+@generated function containstag(::Type{T1}, ::Type{T2}) where {T1,T2}
+    return _containstag(T1, T2, Base.IdSet{Any}(), 32) ? :(true) : :(false)
+end
 
 @inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
-    tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
+    containstag(Tag{F1,V1}, Tag{F2,V2}) && return false
+    containstag(Tag{F2,V2}, Tag{F1,V1}) && return true
+    return tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
 end
 
 struct InvalidTagException{E,O} <: Exception
