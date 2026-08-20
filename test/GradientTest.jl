@@ -333,9 +333,11 @@ end
 
             # a result whose structure *contains* that of `x` is fine, and gets hard zeros off it
             if T === Diagonal
-                out = UpperTriangular(fill(NaN, n, n))
-                ForwardDiff.gradient!(out, f, x, cfg)
-                @test out == UpperTriangular(dense_expected)
+                for S in (LowerTriangular, UpperTriangular)
+                    out = S(fill(NaN, n, n))
+                    ForwardDiff.gradient!(out, f, x, cfg)
+                    @test out == S(dense_expected)
+                end
             end
         end
     end

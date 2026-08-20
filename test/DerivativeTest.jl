@@ -55,6 +55,8 @@ end
     cfg = ForwardDiff.DerivativeConfig(f!, y, x)
     d = ForwardDiff.derivative(f, x)
 
+    @test eltype(cfg) === ForwardDiff.Dual{ForwardDiff.Tag{typeof(f!),typeof(x)},eltype(y),1}
+
     fill!(y, 0.0)
     @test isapprox(ForwardDiff.derivative(f!, y, x), d)
     @test isapprox(v, y)

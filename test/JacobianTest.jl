@@ -186,6 +186,10 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test ForwardDiff.jacobian(_diff, sx, scfg, Val{false}()) == actual
     @test ForwardDiff.jacobian(_diff, sx, scfg, Val{false}()) isa StaticArray
 
+    _densediff(A) = collect(diff(A; dims=1))
+    @test ForwardDiff.jacobian(_densediff, sx) == actual
+    @test ForwardDiff.jacobian(_densediff, sx) isa Matrix
+
     out = similar(x, 6, 9)
     ForwardDiff.jacobian!(out, _diff, sx)
     @test out == actual
