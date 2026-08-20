@@ -45,23 +45,23 @@ end
 # structural positions #
 ########################
 
-# Names which `structural_indices` method an array picks, so that two arrays can be checked for
-# having the same structural positions without comparing the positions themselves. Add a method here
-# whenever one is added below.
-structural_kind(::AbstractArray) = nothing
-structural_kind(::LowerTriangular) = LowerTriangular
-structural_kind(::UpperTriangular) = UpperTriangular
-structural_kind(::Diagonal) = Diagonal
+# The set of linear positions an array stores, so that two arrays can be compared without comparing
+# their positions themselves. `structural_indices` below enumerates the positions of each kind.
+abstract type StructuralKind end
+struct AllEntries <: StructuralKind end
+struct LowerTriangle <: StructuralKind end
+struct UpperTriangle <: StructuralKind end
+struct MainDiagonal <: StructuralKind end
 
-# The linear indices of the entries that are seeded, in seeding order. Configs hold one of these per
-# work buffer, so a sweep can index straight to a chunk instead of walking a lazy iterator from the
-# front.
-#
-# The positions are linear indices of the array itself, so one position indexes the input, the work
-# buffer and the result alike, and is a Jacobian column number as it stands -- the convention the
-# outputs already follow.
-#
-# Only the triangles are materialized; the other two are ranges already.
+structural_kind(::AbstractArray) = AllEntries()
+structural_kind(::LowerTriangular) = LowerTriangle()
+structural_kind(::UpperTriangular) = UpperTriangle()
+structural_kind(::Diagonal) = MainDiagonal()
+
+# The linear indices of the entries that are seeded, in seeding order. Being linear indices of the
+# array itself, one position indexes the input, the work buffer and the result alike, and is a
+# Jacobian column number as it stands. Configs hold one per work buffer, so that a sweep indexes
+# straight to a chunk.
 function structural_indices(x::AbstractArray)
     require_one_based_indexing(x)
     return Base.OneTo(length(x))
@@ -81,38 +81,31 @@ function structural_indices(x::LowerTriangular)
     return [i + (j - 1) * n for j in 1:n for i in j:n]
 end
 
-# The positions of the `count` entries starting at structural position `index`. Allocation-free: a
-# view of a range is a range, a view of a `Vector` a `SubArray`. A window overrunning the end is a
-# `BoundsError` rather than a silently truncated chunk, i.e. silently missing derivatives.
+# The positions of the `count` entries starting at structural position `index`. Allocation-free, and
+# a window overrunning the end is a `BoundsError` rather than a silently truncated chunk.
 structural_chunk(indices, index, count) = view(indices, index:(index + count - 1))
 
-# Checks that the structural positions of `x` are positions of `y` as well. A dense pair may differ
-# in shape -- extracting a gradient into a result of the same length has always worked -- but the
-# positions of a structured `x` come from its size, so there `y` has to share it.
+# Does an array of kind `outer` store every position of an array of kind `inner`? Add a method here
+# whenever a kind is added above.
+structural_issubset(inner::StructuralKind, outer::StructuralKind) = inner === outer
+structural_issubset(::StructuralKind, ::AllEntries) = true
+structural_issubset(::MainDiagonal, ::LowerTriangle) = true
+structural_issubset(::MainDiagonal, ::UpperTriangle) = true
+
+# Checks that the structural positions of `x` are positions of `y` as well. Being linear indices,
+# they only constrain how many entries `y` has, not its shape.
 function check_structural_indices(x::AbstractArray, y::AbstractArray)
     require_one_based_indexing(y)
+    structural_issubset(structural_kind(x), structural_kind(y)) || throw(ArgumentError(LazyString(
+        "an array of type ", nameof(typeof(y)), " does not store every entry of an array of type ",
+        nameof(typeof(x)), ": the two are structured differently")))
     length(x) == length(y) || throw(DimensionMismatch(
         lazy"expected an array with $(length(x)) elements, got an array with $(length(y)) elements"))
     return nothing
 end
-function check_structural_indices(x::Union{LowerTriangular,UpperTriangular,Diagonal},
-                                  y::AbstractArray)
-    require_one_based_indexing(y)
-    return check_matching_size(x, y)
-end
 
-# The two arrays are indexed by the same indices, so they have to have the same size. This is the
-# error a `gradient!` into a container that is not shaped like `x` aborts with, so it names the sizes.
-function check_matching_size(x::AbstractArray, y::AbstractArray)
-    size(x) == size(y) || throw(DimensionMismatch(
-        lazy"expected an array of size $(size(x)), got an array of size $(size(y))"))
-    return nothing
-end
-
-# A config's positions were built for its work buffer, which `similar` gave the structure and the size
-# of the array the config was constructed for, so they are the positions of `x` too exactly when the
-# two are structurally interchangeable. Comparing the kinds is O(1) and a compile-time constant, so
-# this can run on every call.
+# The config's positions were built for its work buffer, so they fit `x` exactly when the two are
+# structurally interchangeable. The kind comparison is a compile-time constant, hence free per call.
 function checkstructure(duals::AbstractArray, x::AbstractArray)
     structural_kind(duals) === structural_kind(x) || throw(ArgumentError(LazyString(
         "the config was built for an array of type ", nameof(typeof(duals)),
@@ -134,10 +127,8 @@ end
 # seeding #
 ###########
 
-# Mirrors an unassigned entry of `x` into the work buffer. Only an `Array` owns the storage its
-# entries live in, and `Base._unsetindex!` is implemented for nothing else -- a structured wrapper is
-# a view onto a parent, so it has no slot of its own to unset. Base's `AbstractArray` fallback
-# recurses until the stack runs out, so say so instead.
+# Mirrors an unassigned entry of `x` into the work buffer. `Base._unsetindex!` is implemented for
+# `Array` alone, a structured wrapper being a view onto a parent with no slot of its own to unset.
 _unsetindex!(duals::Array, idx) = Base._unsetindex!(duals, idx)
 _unsetindex!(duals::AbstractArray, idx) = throw(ArgumentError(LazyString(
     "cannot differentiate at an input with an unassigned entry at index ", idx,
@@ -164,34 +155,18 @@ _unsetindex!(duals::AbstractArray, idx) = throw(ArgumentError(LazyString(
     return duals
 end
 
-# Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
-# currently carrying and to initialize a freshly allocated work buffer, whose elements must all be
-# written before the target function reads them.
-seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, indices) where {T,V,N} =
-    _seed_zero_partials!(duals, x, indices)
-
-# Zeroes the partials of `count` elements starting at structural position `index`. Chunk mode only
-# needs to clear the chunk it just seeded, so writing through to the end of the array would be O(n)
-# redundant work per chunk, i.e. O(n^2/N) per sweep. `count` mirrors the `chunksize` argument of
-# `seed!(duals, x, indices, index, seeds, chunksize)`.
-function seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, indices, index,
-                             count = N) where {T,V,N}
-    return _seed_zero_partials!(duals, x, structural_chunk(indices, index, count))
-end
-
-function _seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {T,V,N}
+function seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {T,V,N}
     seed = zero(Partials{N,V})
     return _seed!(duals, x, idxs) do value, _
         Dual{T,V,N}(value, seed)
     end
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x, indices,
-               seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    return _seed!(duals, x, structural_chunk(indices, 1, N)) do value, i
-        Dual{T,V,N}(value, seeds[i])
-    end
-end
+seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, indices, index, count = N) where {T,V,N} =
+    seed_zero_partials!(duals, x, structural_chunk(indices, index, count))
+
+seed!(duals::AbstractArray{Dual{T,V,N}}, x, indices,
+      seeds::NTuple{N,Partials{N,V}}) where {T,V,N} = seed!(duals, x, indices, 1, seeds)
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, indices, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}

@@ -199,11 +199,6 @@ function JacobianConfig(f::F,
     return JacobianConfig{T,X,N,typeof(duals),typeof(indices)}(seeds, duals, indices)
 end
 
-# The positions belonging to the *input*, whichever constructor built the config: the `f!(y, x)` one
-# holds a `(y, x)` pair.
-input_indices(cfg::JacobianConfig) = cfg.indices
-input_indices(cfg::JacobianConfig{<:Any,<:Any,<:Any,<:Tuple}) = cfg.indices[2]
-
 checktag(::JacobianConfig{T},f,x) where {T} = checktag(T,f,x)
 Base.eltype(::Type{JacobianConfig{T,V,N,D,I}}) where {T,V,N,D,I} = Dual{T,V,N}
 

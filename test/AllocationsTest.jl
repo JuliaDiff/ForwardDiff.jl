@@ -21,8 +21,6 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     allocs_seed!(duals, x, indices, 1, seeds)
     @test iszero(allocs_seed!(duals, x, indices, 1, seeds))
 
-    # the windowed form passes `count` as a runtime value, so it catches an inference regression at
-    # the `_seed_zero_partials!` boundary that the forms defaulting `count` to `N` could hide
     allocs_szp!(args...) = @allocated ForwardDiff.seed_zero_partials!(args...)
     allocs_szp!(duals, x, indices)
     @test iszero(allocs_szp!(duals, x, indices))

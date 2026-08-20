@@ -100,15 +100,14 @@ jacobian(f, x::Real) = throw(DimensionMismatch("jacobian(f, x) expects that x is
 # to `x[j]`. Only the seeded entries of `x` have a derivative to extract, so the columns of the
 # structurally zero ones are zeroed instead. See #839.
 
-# Zeroes the whole Jacobian unless every column is going to be written; the written ones are
-# overwritten immediately after. In chunk mode the sweep calls this once up front, since the columns
-# that no chunk writes belong to none of them in particular.
+# The columns that no chunk writes belong to none of them in particular, so the sweep zeroes once up
+# front rather than each chunk zeroing its own.
 function zero_unseeded_columns!(::Type{T}, out::AbstractArray, ydual, x) where {T}
     structural_length(x) == length(x) || fill!(out, zero(valtype(T, eltype(ydual))))
-    return out
+    return nothing
 end
 
-# Vector mode is a single chunk that covers every seeded entry of `x`, so it extracts like the sweep.
+# Vector mode is a single chunk that covers every seeded entry of `x`.
 function extract_jacobian!(::Type{T}, result::AbstractArray, ydual::AbstractArray, x::AbstractArray,
                            indices) where {T}
     out_reshaped = reshape_jacobian(result, ydual, x)
@@ -128,9 +127,9 @@ end
 function extract_jacobian_chunk!(::Type{T}, result, ydual, indices, index, chunksize) where {T}
     ydual_reshaped = vec(ydual)
     irange = 1:chunksize
+    cols = structural_chunk(indices, index, chunksize)
     # Use closure to avoid GPU broadcasting with Type
     partials_wrap(ydual, nrange) = partials(T, ydual, nrange)
-    cols = structural_chunk(indices, index, chunksize)
     result[:, cols] .= partials_wrap.(ydual_reshaped, transpose(irange))
     return result
 end
@@ -151,7 +150,7 @@ function vector_mode_jacobian(f::F, x, cfg::JacobianConfig{T}) where {F,T}
     ydual = vector_mode_dual_eval!(f, cfg, x)
     ydual isa AbstractArray || throw(JACOBIAN_ERROR)
     result = similar(ydual, valtype(T, eltype(ydual)), length(ydual), length(x))
-    extract_jacobian!(T, result, ydual, x, input_indices(cfg))
+    extract_jacobian!(T, result, ydual, x, cfg.indices)
     extract_value!(T, result, ydual)
     return result
 end
@@ -159,14 +158,15 @@ end
 function vector_mode_jacobian(f!::F, y, x, cfg::JacobianConfig{T}) where {F,T}
     ydual = vector_mode_dual_eval!(f!, cfg, y, x)
     result = similar(y, length(y), length(x))
-    extract_jacobian!(T, result, ydual, x, input_indices(cfg))
+    extract_jacobian!(T, result, ydual, x, cfg.indices[2])
     map!(d -> value(T,d), y, ydual)
     return result
 end
 
 function vector_mode_jacobian!(result, f::F, x, cfg::JacobianConfig{T}) where {F,T}
     ydual = vector_mode_dual_eval!(f, cfg, x)
-    extract_jacobian!(T, result, ydual, x, input_indices(cfg))
+    ydual isa AbstractArray || throw(JACOBIAN_ERROR)
+    extract_jacobian!(T, result, ydual, x, cfg.indices)
     extract_value!(T, result, ydual)
     return result
 end
@@ -174,7 +174,7 @@ end
 function vector_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T}) where {F,T}
     ydual = vector_mode_dual_eval!(f!, cfg, y, x)
     map!(d -> value(T,d), y, ydual)
-    extract_jacobian!(T, result, ydual, x, input_indices(cfg))
+    extract_jacobian!(T, result, ydual, x, cfg.indices[2])
     extract_value!(T, result, y, ydual)
     return result
 end

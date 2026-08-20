@@ -240,6 +240,7 @@ end
     @test_throws DimensionMismatch ForwardDiff.jacobian(identity, 2pi) # input
     @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 2)) # vector_mode_jacobian
     @test_throws DimensionMismatch ForwardDiff.jacobian(sum, fill(2pi, 10^6)) # chunk_mode_jacobian
+    @test_throws DimensionMismatch ForwardDiff.jacobian!(fill(NaN, 1, 2), sum, fill(2pi, 2)) # vector_mode_jacobian!
 end
 
 @testset "eigen" begin

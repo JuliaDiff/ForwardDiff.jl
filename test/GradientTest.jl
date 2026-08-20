@@ -177,6 +177,7 @@ end
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, 2pi) # input
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 2)) # vector_mode_gradient
     @test_throws DimensionMismatch ForwardDiff.gradient(identity, fill(2pi, 10^6)) # chunk_mode_gradient
+    @test_throws DimensionMismatch ForwardDiff.gradient!(fill(NaN, 2), identity, fill(2pi, 2)) # vector_mode_gradient!
 end
 
 # Issue 548
@@ -326,7 +327,16 @@ end
             # every entry of a dense `x` is seeded, so a structured result cannot hold its gradient
             dense_x = Matrix(x)
             dense_cfg = ForwardDiff.GradientConfig(f, dense_x, ForwardDiff.Chunk{c}())
-            @test_throws ArgumentError ForwardDiff.gradient!(T(fill(NaN, n, n)), f, dense_x, dense_cfg)
+            @test_throws "ArgumentError: an array of type $(nameof(T)) does not store every entry of an " *
+                         "array of type Array" ForwardDiff.gradient!(
+                             T(fill(NaN, n, n)), f, dense_x, dense_cfg)
+
+            # a result whose structure *contains* that of `x` is fine, and gets hard zeros off it
+            if T === Diagonal
+                out = UpperTriangular(fill(NaN, n, n))
+                ForwardDiff.gradient!(out, f, x, cfg)
+                @test out == UpperTriangular(dense_expected)
+            end
         end
     end
 end

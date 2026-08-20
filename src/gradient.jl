@@ -52,9 +52,9 @@ gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is
 #####################
 
 # Only the structurally non-zero entries of `x` are seeded, so only those have a derivative to
-# extract. The positions come from the config, i.e. from `x`, not from `result`: the two may have
-# different structure, as they do when `DiffResults.HessianResult` allocates a dense gradient buffer
-# for a structured `x`. Entries of `result` that no position covers are zeroed. See #838.
+# extract. The positions come from `x`, not from `result`: the two may have different structure, as
+# they do when `DiffResults.HessianResult` allocates a dense gradient buffer for a structured `x`.
+# Entries of `result` that no position covers are zeroed. See #838.
 
 function extract_gradient!(::Type{T}, result::DiffResult, y::Real, x, indices) where {T}
     result = DiffResults.value!(result, y)
@@ -69,30 +69,26 @@ function extract_gradient!(::Type{T}, result::MutableDiffResult, dual::Dual, x, 
     return result
 end
 
-# Immutable results cannot be written to entry by entry. Copying the partials wholesale is correct
-# as long as every entry of `x` is seeded, which holds for the `StaticArray` gradient buffers that
-# are the only source of such results; anything else throws on the length mismatch.
+# Immutable results cannot be written to entry by entry, so the partials are copied wholesale, which
+# is only correct when every entry of `x` is seeded.
 function extract_gradient!(::Type{T}, result::ImmutableDiffResult, dual::Dual, x, indices) where {T}
+    check_structural_indices(x, DiffResults.gradient(result))
     result = DiffResults.value!(result, value(T, dual))
     result = DiffResults.gradient!(result, partials(T, dual))
     return result
 end
 
-# Readies `result` for extraction, once per sweep: checks that it can be indexed by the positions of
-# `x`, then zeroes it unless every entry is going to be written anyway. Comparing counts is exact
-# here -- a `result` with the same count but a different structure, an `UpperTriangular` one for a
-# `LowerTriangular` `x`, cannot hold the gradient at all. `dual` is passed for its value type, which
-# unlike `eltype(result)` is a number type even for an `Any` result.
+# Zeroes `result` unless every entry is going to be written anyway. `dual` is passed for its value
+# type, which unlike `eltype(result)` is a number type even for an `Any` result.
 function zero_unseeded!(::Type{T}, result::AbstractArray, dual, x) where {T}
     check_structural_indices(x, result)
     structural_length(x) == structural_length(result) || fill!(result, zero(valtype(T, dual)))
-    return result
+    return nothing
 end
-# Dispatched on `DiffResult`, not on `MutableDiffResult`: a `StaticArray` gradient buffer makes the
-# result immutable even when the buffer itself can be written to, as an `MVector` can.
+# `DiffResult`, not `MutableDiffResult`: `DiffResult(v, ::MVector)` is an `ImmutableDiffResult`.
 function zero_unseeded!(::Type{T}, result::DiffResult, dual, x) where {T}
     zero_unseeded!(T, DiffResults.gradient(result), dual, x)
-    return result
+    return nothing
 end
 
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real, x, indices) where {T} =
@@ -129,6 +125,7 @@ end
 
 function vector_mode_gradient!(result, f::F, x, cfg::GradientConfig{T}) where {T, F}
     ydual = vector_mode_dual_eval!(f, cfg, x)
+    ydual isa Real || throw(GRAD_ERROR)
     result = extract_gradient!(T, result, ydual, x, cfg.indices)
     return result
 end
