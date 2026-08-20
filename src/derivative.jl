@@ -26,8 +26,9 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
                             cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
     require_one_based_indexing(y)
     CHK && checktag(T, f!, x)
+    checkstructure(cfg, y)
     ydual = cfg.duals
-    seed_zero_partials!(ydual, y)
+    seed_zero_partials!(ydual, y, cfg.indices)
     f!(ydual, Dual{T}(x, one(x)))
     map!(value, y, ydual)
     return extract_derivative(T, ydual)
@@ -64,8 +65,9 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
                              cfg::DerivativeConfig{T} = DerivativeConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
     result isa DiffResult ? require_one_based_indexing(y) : require_one_based_indexing(result, y)
     CHK && checktag(T, f!, x)
+    checkstructure(cfg, y)
     ydual = cfg.duals
-    seed_zero_partials!(ydual, y)
+    seed_zero_partials!(ydual, y, cfg.indices)
     f!(ydual, Dual{T}(x, one(x)))
     result = extract_value!(T, result, y, ydual)
     result = extract_derivative!(T, result, ydual)

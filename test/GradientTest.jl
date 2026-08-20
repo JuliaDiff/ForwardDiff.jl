@@ -275,6 +275,147 @@ end
     end
 end
 
+# issue #838
+@testset "structured inputs: extraction positions" begin
+    # The seeds are laid out along `structural_indices(x)`, so the derivatives have to be written to
+    # the corresponding entries of the result and every other entry has to end up at zero. In
+    # particular this must not be read off `result`, which carries no structure to read it off of when
+    # it is dense -- as the gradient buffer of a `DiffResults.HessianResult` is even for a structured
+    # `x`. All results are prefilled with `NaN` so that entries left untouched are caught.
+    @testset "$T, n = $n" for T in (LowerTriangular, UpperTriangular, Diagonal), n in (3, 10)
+        M = rand(n, n)
+        x = T(randn(n, n))
+        f = z -> dot(M, z)
+        expected = T(M)                     # zero derivative for the structurally zero entries
+        dense_expected = Matrix(expected)
+        val = f(x)
+        nstruct = ForwardDiff.structural_length(x)
+
+        @testset "chunk size = $c" for c in unique((1, 2, nstruct))
+            cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())
+
+            # the allocated result is shaped like `x`, so its zeros are the structural ones
+            grad = ForwardDiff.gradient(f, x, cfg)
+            @test grad isa T
+            @test grad == expected
+
+            out = fill(NaN, n, n)
+            @test ForwardDiff.gradient!(out, f, x, cfg) === out
+            @test out == dense_expected
+
+            out = T(fill(NaN, n, n))
+            ForwardDiff.gradient!(out, f, x, cfg)
+            @test out == expected
+
+            # gradient buffer shaped like `x`, cf. `DiffResults.GradientResult`
+            result = DiffResults.GradientResult(x)
+            result = ForwardDiff.gradient!(result, f, x, cfg)
+            @test DiffResults.gradient(result) == expected
+            @test DiffResults.value(result) ≈ val
+
+            # dense gradient buffer, cf. `DiffResults.HessianResult`
+            result = DiffResults.DiffResult(NaN, fill(NaN, n, n))
+            result = ForwardDiff.gradient!(result, f, x, cfg)
+            @test DiffResults.gradient(result) == dense_expected
+            @test DiffResults.value(result) ≈ val
+
+            # the result has to be shaped like `x`, packing into the structural positions is not
+            # supported since their order is an implementation detail
+            @test_throws DimensionMismatch ForwardDiff.gradient!(fill(NaN, nstruct), f, x, cfg)
+
+            # every entry of a dense `x` is seeded, so a structured result cannot hold its gradient
+            dense_x = Matrix(x)
+            dense_cfg = ForwardDiff.GradientConfig(f, dense_x, ForwardDiff.Chunk{c}())
+            @test_throws ArgumentError ForwardDiff.gradient!(T(fill(NaN, n, n)), f, dense_x, dense_cfg)
+        end
+    end
+end
+
+# issue #842
+@testset "config reused for a differently structured input" begin
+    # A config seeds the positions of its own work buffer, so an input of a different structure would
+    # be seeded at one set of positions and extracted at another.
+    n = 4
+    A = randn(n, n)
+    inputs = (A, LowerTriangular(A), UpperTriangular(A), Diagonal(diag(A)))
+    f = z -> sum(abs2, z) / 2       # ∇f(z) == z
+
+    # `n` is vector mode for the `Diagonal` input and chunk mode for the others
+    @testset "chunk size = $c" for c in (2, n)
+        @testset "$(nameof(typeof(xcfg))) config" for xcfg in inputs
+            cfg = ForwardDiff.GradientConfig(f, xcfg, ForwardDiff.Chunk{c}())
+            # each input has a different structure, so `x === xcfg` is the one the config fits
+            for x in inputs
+                if x === xcfg
+                    @test ForwardDiff.gradient(f, x, cfg) == x
+                else
+                    msg = "ArgumentError: the config was built for an array of type " *
+                          "$(nameof(typeof(xcfg))) and cannot be used with an array of type " *
+                          "$(nameof(typeof(x)))"
+                    @test_throws msg ForwardDiff.gradient(f, x, cfg)
+                    @test_throws msg ForwardDiff.gradient!(similar(x), f, x, cfg)
+                end
+            end
+        end
+
+        # an input of the wrong length keeps failing as a `DimensionMismatch`
+        cfg = ForwardDiff.GradientConfig(f, A, ForwardDiff.Chunk{c}())
+        @test_throws "DimensionMismatch: expected an array with $(n^2) elements, got an array " *
+                     "with $(n * (n + 1)) elements" ForwardDiff.gradient(f, randn(n + 1, n), cfg)
+    end
+end
+
+# issue #842
+@testset "unassigned input entry" begin
+    # `Base._unsetindex!` takes a linear index into an `Array`, so mirroring the hole into the work
+    # buffer works precisely when that buffer is one. `similar` makes it one for all four inputs here.
+    M = Matrix{BigFloat}(undef, 3, 3)
+    for i in eachindex(M)
+        i == 5 || (M[i] = BigFloat(i))
+    end
+    used = [i for i in eachindex(M) if i != 5]
+    f = z -> sum(i -> z[i]^2, used) / 2      # never reads the hole
+
+    @testset "$(nameof(typeof(x))), chunk size = $c" for
+            x in (M, adjoint(M), PermutedDimsArray(M, (2, 1)), view(M, :, :)), c in (2, 9)
+        grad = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}()))
+        @test grad[used] == x[used]
+        @test iszero(grad[5])
+    end
+
+    # a buffer `similar` gives the structure of `x` cannot hold the hole
+    @testset "$(nameof(typeof(x))), chunk size = $c" for
+            x in (LowerTriangular(M), UpperTriangular(M)), c in (2, 6)
+        @test_throws "ArgumentError: cannot differentiate at an input with an unassigned entry " *
+                     "at index 5" ForwardDiff.gradient(
+                         f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}()))
+    end
+end
+
+@testset "result not shaped like x" begin
+    # The extraction positions are indices of `x`, which a result of a different shape cannot be
+    # indexed by, dense `x` included.
+    x = randn(4)
+    f = z -> dot(z, z)
+    @testset "chunk size = $c" for c in (2, 4)
+        cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())
+        @test_throws DimensionMismatch ForwardDiff.gradient!(fill(NaN, 5), f, x, cfg)
+        result = DiffResults.DiffResult(NaN, fill(NaN, 5))
+        @test_throws DimensionMismatch ForwardDiff.gradient!(result, f, x, cfg)
+    end
+end
+
+@testset "mutable gradient buffer in an immutable result" begin
+    # A `StaticArray` buffer makes the result immutable, but an `MVector` can still be written to
+    # entry by entry, which is how the chunk mode sweep fills it.
+    x = randn(6)
+    f = z -> dot(z, z)
+    result = DiffResults.DiffResult(NaN, @MVector fill(NaN, 6))
+    @test result isa DiffResults.ImmutableDiffResult
+    ForwardDiff.gradient!(result, f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{2}()))
+    @test DiffResults.gradient(result) ≈ 2 .* x
+end
+
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]

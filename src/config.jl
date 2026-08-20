@@ -59,8 +59,11 @@ Base.eltype(cfg::AbstractConfig) = eltype(typeof(cfg))
 # DerivativeConfig #
 ####################
 
-struct DerivativeConfig{T,D} <: AbstractConfig{1}
+# `indices` holds the structural positions of `duals`, so that the sweeps do not derive them per
+# chunk. They are linear indices throughout.
+struct DerivativeConfig{T,D,I} <: AbstractConfig{1}
     duals::D
+    indices::I
 end
 
 """
@@ -84,19 +87,21 @@ function DerivativeConfig(f::F,
                           x::X,
                           tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
     duals = similar(y, Dual{T,Y,1})
-    return DerivativeConfig{T,typeof(duals)}(duals)
+    indices = structural_indices(duals)
+    return DerivativeConfig{T,typeof(duals),typeof(indices)}(duals, indices)
 end
 
 checktag(::DerivativeConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
+Base.eltype(::Type{DerivativeConfig{T,D,I}}) where {T,D,I} = eltype(D)
 
 ##################
 # GradientConfig #
 ##################
 
-struct GradientConfig{T,V,N,D} <: AbstractConfig{N}
+struct GradientConfig{T,V,N,D,I} <: AbstractConfig{N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
+    indices::I
 end
 
 """
@@ -120,19 +125,23 @@ function GradientConfig(f::F,
                         ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
-    return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
+    indices = structural_indices(duals)
+    return GradientConfig{T,V,N,typeof(duals),typeof(indices)}(seeds, duals, indices)
 end
 
 checktag(::GradientConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{GradientConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
+Base.eltype(::Type{GradientConfig{T,V,N,D,I}}) where {T,V,N,D,I} = Dual{T,V,N}
 
 ##################
 # JacobianConfig #
 ##################
 
-struct JacobianConfig{T,V,N,D} <: AbstractConfig{N}
+# `indices` mirrors `duals`: the structural positions of the one work buffer of an `f(x)`, or a
+# `(y, x)` pair of position vectors for the two buffers of an `f!(y, x)`.
+struct JacobianConfig{T,V,N,D,I} <: AbstractConfig{N}
     seeds::NTuple{N,Partials{N,V}}
     duals::D
+    indices::I
 end
 
 """
@@ -157,7 +166,8 @@ function JacobianConfig(f::F,
                         ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
     duals = similar(x, Dual{T,V,N})
-    return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
+    indices = structural_indices(duals)
+    return JacobianConfig{T,V,N,typeof(duals),typeof(indices)}(seeds, duals, indices)
 end
 
 """
@@ -185,19 +195,25 @@ function JacobianConfig(f::F,
     yduals = similar(y, Dual{T,Y,N})
     xduals = similar(x, Dual{T,X,N})
     duals = (yduals, xduals)
-    return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
+    indices = (structural_indices(yduals), structural_indices(xduals))
+    return JacobianConfig{T,X,N,typeof(duals),typeof(indices)}(seeds, duals, indices)
 end
 
+# The positions belonging to the *input*, whichever constructor built the config: the `f!(y, x)` one
+# holds a `(y, x)` pair.
+input_indices(cfg::JacobianConfig) = cfg.indices
+input_indices(cfg::JacobianConfig{<:Any,<:Any,<:Any,<:Tuple}) = cfg.indices[2]
+
 checktag(::JacobianConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
+Base.eltype(::Type{JacobianConfig{T,V,N,D,I}}) where {T,V,N,D,I} = Dual{T,V,N}
 
 #################
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
-    jacobian_config::JacobianConfig{T,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
+struct HessianConfig{T,V,N,DG,DJ,IG,IJ} <: AbstractConfig{N}
+    jacobian_config::JacobianConfig{T,V,N,DJ,IJ}
+    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG,IG}
 end
 
 """
@@ -253,5 +269,5 @@ function HessianConfig(f::F,
 end
 
 checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
+Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ,IG,IJ}}) where {T,V,N,DG,DJ,IG,IJ} =
     Dual{T,Dual{T,V,N},N}
