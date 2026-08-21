@@ -84,6 +84,32 @@ end
     end
 end
 
+# The `StaticArray` extension has no config to cache the structural positions in, so it derives them
+# per extraction call.
+function allocs_static_gradient!(result, x)
+    f(z) = sum(abs2, z)
+    fill!(result, false)
+    ForwardDiff.gradient!(result, f, x)  # warmup
+    return @allocated ForwardDiff.gradient!(result, f, x)
+end
+
+function allocs_static_jacobian!(result, x)
+    f(z) = z .* z
+    fill!(result, false)
+    ForwardDiff.jacobian!(result, f, x)  # warmup
+    return @allocated ForwardDiff.jacobian!(result, f, x)
+end
+
+@testset "Test StaticArray gradient!/jacobian! allocations for size $(size(x))" for x in (
+        @SVector(rand(4)), @SMatrix(rand(2, 2)),
+    )
+    # extraction writes the result through a view, which is no static array for a mutable buffer
+    @test iszero(allocs_static_gradient!(zeros(size(x)), x))
+    @test iszero(allocs_static_gradient!(similar(x), x))
+    @test iszero(allocs_static_jacobian!(zeros(4, 4), x))
+    @test iszero(allocs_static_jacobian!(@MMatrix(zeros(4, 4)), x))
+end
+
 @testset "allocation-free nested StaticArray jacobian" begin
     # test that nested jacobians of StaticArrays do not allocate. 
     # This is a regression test for issue #798, where the inner jacobian was allocating
