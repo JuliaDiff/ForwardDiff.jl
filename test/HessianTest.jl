@@ -132,6 +132,12 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test symmetric_static == ForwardDiff.hessian(symmetry_f, x)
     @test all(iszero, ForwardDiff.hessian(Returns(2.0), sx))
     @test_throws DimensionMismatch ForwardDiff.hessian(identity, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(similar(x, 9, 9), identity, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.HessianResult(sx), identity, sx)
+
+    flat = fill(NaN, 81)
+    @test ForwardDiff.hessian!(flat, prod, sx) === flat
+    @test reshape(flat, 9, 9) == actual
 
     out = similar(x, 9, 9)
     ForwardDiff.hessian!(out, prod, sx)
@@ -184,6 +190,12 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult1) == DiffResults.hessian(result)
     @test DiffResults.hessian(sresult2) == DiffResults.hessian(result)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
+end
+
+@testset "empty input: $(nameof(typeof(z)))" for z in (Float64[], SVector{0,Float64}())
+    @test ForwardDiff.hessian(sum, z) == zeros(0, 0)
+    out = fill(NaN, 0, 0)
+    @test ForwardDiff.hessian!(out, sum, z) === out
 end
 
 # `log(sum(exp, z))` rounds differently in the two nesting orders, hence the bitwise comparison

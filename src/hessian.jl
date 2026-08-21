@@ -6,6 +6,9 @@
     ForwardDiff.hessian(f, x::AbstractArray, cfg::HessianConfig = HessianConfig(f, x), check=Val{true}())
 
 Return `H(f)` evaluated at `x`, assuming `f` is called as `f(x)`.
+Multidimensional arrays are flattened in iteration order: the array
+`H(f)` has shape `length(x) × length(x)`, and its elements are
+`H(f)[j,k] = ∂²f(x)/∂x[j]∂x[k]`.
 The returned Hessian is exactly symmetric: its two triangles are filled from the same
 derivative values.
 

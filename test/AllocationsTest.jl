@@ -49,6 +49,14 @@ end
         allocs_hseed!(duals, x, indices, 1, i, o, 4)
         @test iszero(allocs_hseed!(duals, x, indices, 1, i, o, 4))
     end
+
+    # a zero of a non-isbits value type does allocate, so supplying both seeds must not build one
+    @testset "BigFloat" begin
+        y = BigFloat[1, 2, 3]
+        cfg = ForwardDiff.HessianConfig(nothing, y, ForwardDiff.Chunk{3}())
+        allocs_hseed!(cfg.duals, y, cfg.indices, 1, cfg.iseeds, cfg.oseeds)
+        @test iszero(allocs_hseed!(cfg.duals, y, cfg.indices, 1, cfg.iseeds, cfg.oseeds))
+    end
 end
 
 @testset "Test jacobian! allocations" begin
