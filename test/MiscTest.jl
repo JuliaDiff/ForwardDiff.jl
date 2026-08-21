@@ -182,26 +182,26 @@ end
 # example from https://github.com/JuliaDiff/DiffRules.jl/pull/98#issuecomment-1574420052
 @test only(ForwardDiff.hessian(t -> abs(t[1])^2, [0.0])) == 2
 
-@testset "_lyap_div!!" begin
+@testset "_lyap_div_zero_diag!!" begin
     # In-place version for `Matrix`
     A = rand(3, 3)
     Acopy = copy(A)
     λ = rand(3)
-    B = @inferred(ForwardDiff._lyap_div!!(A, λ))
+    B = @inferred(ForwardDiff._lyap_div_zero_diag!!(A, λ))
     @test B === A
-    @test B[diagind(B)] == Acopy[diagind(Acopy)]
+    @test iszero(B[diagind(B)])
     no_diag(X) = [X[i] for i in eachindex(X) if !(i in diagind(X))]
     @test no_diag(B) == no_diag(Acopy ./ (λ' .- λ))
 
     # Immutable static arrays
     A_smatrix = SMatrix{3,3}(Acopy)
     λ_svector = SVector{3}(λ)
-    B_smatrix = @inferred(ForwardDiff._lyap_div!!(A_smatrix, λ_svector))
+    B_smatrix = @inferred(ForwardDiff._lyap_div_zero_diag!!(A_smatrix, λ_svector))
     @test B_smatrix !== A_smatrix
     @test B_smatrix isa SMatrix{3,3}
     @test B_smatrix == B
     λ_mvector = MVector{3}(λ)
-    B_smatrix = @inferred(ForwardDiff._lyap_div!!(A_smatrix, λ_mvector))
+    B_smatrix = @inferred(ForwardDiff._lyap_div_zero_diag!!(A_smatrix, λ_mvector))
     @test B_smatrix !== A_smatrix
     @test B_smatrix isa SMatrix{3,3}
     @test B_smatrix == B
@@ -209,12 +209,12 @@ end
     # Mutable static arrays
     A_mmatrix = MMatrix{3,3}(Acopy)
     λ_svector = SVector{3}(λ)
-    B_mmatrix = @inferred(ForwardDiff._lyap_div!!(A_mmatrix, λ_svector))
+    B_mmatrix = @inferred(ForwardDiff._lyap_div_zero_diag!!(A_mmatrix, λ_svector))
     @test B_mmatrix === A_mmatrix
     @test B_mmatrix == B
     A_mmatrix = MMatrix{3,3}(Acopy)
     λ_mvector = MVector{3}(λ)
-    B_mmatrix = @inferred(ForwardDiff._lyap_div!!(A_mmatrix, λ_mvector))
+    B_mmatrix = @inferred(ForwardDiff._lyap_div_zero_diag!!(A_mmatrix, λ_mvector))
     @test B_mmatrix === A_mmatrix
     @test B_mmatrix == B
 end
