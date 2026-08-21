@@ -16,7 +16,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian(f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    checkstructure(cfg.gradient_config, x)
+    checkstructure(cfg, x)
     H, _ = symmetric_hessian(f, x, cfg, nothing)
     return H
 end
@@ -35,7 +35,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    checkstructure(cfg.gradient_config, x)
+    checkstructure(cfg, x)
     hlen = length(x)
     H = result isa AbstractMatrix ? result : reshape(result, hlen, hlen)
     symmetric_hessian!(H, f, x, cfg, nothing)
@@ -55,7 +55,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    checkstructure(cfg.gradient_config, x)
+    checkstructure(cfg, x)
     hlen = length(x)
     hess = DiffResults.hessian(result)
     H = hess isa AbstractMatrix ? hess : reshape(hess, hlen, hlen)
@@ -107,10 +107,10 @@ function symmetric_hessian_expr(result_definition::Expr)
         # output type and value.
         nblocks = xlen == 0 ? 1 : cld(xlen, N)
 
-        xdual = cfg.gradient_config.duals
-        indices = cfg.gradient_config.indices
-        iseeds = cfg.jacobian_config.seeds
-        oseeds = cfg.gradient_config.seeds
+        xdual = cfg.duals
+        indices = cfg.indices
+        iseeds = cfg.iseeds
+        oseeds = cfg.oseeds
 
         # The first evaluation determines the output type. Seeding the first block and clearing
         # the untouched tail partitions the fresh buffer, so every element is initialized once.

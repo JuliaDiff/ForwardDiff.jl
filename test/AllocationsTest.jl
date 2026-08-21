@@ -11,9 +11,7 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
 @testset "Test seed!/seed_zero_partials! allocations" begin
     x = rand(1000)
     cfg = ForwardDiff.GradientConfig(nothing, x)
-    duals = cfg.duals
-    seeds = cfg.seeds
-    indices = cfg.indices
+    (; duals, seeds, indices) = cfg
 
     allocs_seed!(args...) = @allocated ForwardDiff.seed!(args...)
     allocs_seed!(duals, x, indices, seeds)
@@ -29,20 +27,28 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     allocs_szp!(duals, x, indices, 1, 4)
     @test iszero(allocs_szp!(duals, x, indices, 1, 4))
 
-    hcfg = ForwardDiff.HessianConfig(nothing, x)
-    hduals = hcfg.gradient_config.duals
-    hindices = hcfg.gradient_config.indices
-    iseeds = hcfg.jacobian_config.seeds
-    oseeds = hcfg.gradient_config.seeds
-    allocs_hseed!(args...) = @allocated ForwardDiff.seed_hessian_chunk!(args...)
-    allocs_hseed!(hduals, x, hindices, 1, iseeds, oseeds)
-    @test iszero(allocs_hseed!(hduals, x, hindices, 1, iseeds, oseeds))
-    allocs_hseed!(hduals, x, hindices, 1, nothing, nothing, 4)
-    @test iszero(allocs_hseed!(hduals, x, hindices, 1, nothing, nothing, 4))
-
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()
     @test iszero(allocs_convert_test_574())
+end
+
+@testset "Test seed_hessian_chunk! allocations" begin
+    x = rand(1000)
+    cfg = ForwardDiff.HessianConfig(nothing, x)
+    (; duals, indices, iseeds, oseeds) = cfg
+
+    allocs_hseed!(args...) = @allocated ForwardDiff.seed_hessian_chunk!(args...)
+    # all four seed combinations, the mixed ones being what the off-diagonal blocks use
+    @testset "iseeds=$(i === nothing) oseeds=$(o === nothing)" for (i, o) in
+                                                                  ((iseeds, oseeds),
+                                                                   (iseeds, nothing),
+                                                                   (nothing, oseeds),
+                                                                   (nothing, nothing))
+        allocs_hseed!(duals, x, indices, 1, i, o)
+        @test iszero(allocs_hseed!(duals, x, indices, 1, i, o))
+        allocs_hseed!(duals, x, indices, 1, i, o, 4)
+        @test iszero(allocs_hseed!(duals, x, indices, 1, i, o, 4))
+    end
 end
 
 @testset "Test jacobian! allocations" begin
