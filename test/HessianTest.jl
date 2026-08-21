@@ -67,6 +67,14 @@ cfgx = ForwardDiff.HessianConfig(sin, x)
 @test_throws DimensionMismatch ForwardDiff.hessian(identity, x)
 @test_throws DimensionMismatch ForwardDiff.hessian!(similar(x, 3, 3), identity, x)
 
+@testset "wrongly sized result: $(nameof(typeof(z)))" for z in ([1.0, 2.0, 3.0],
+                                                                SVector(1.0, 2.0, 3.0))
+    msg = "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (4, 4)"
+    @test_throws msg ForwardDiff.hessian!(fill(NaN, 4, 4), prod, z)
+    @test_throws msg ForwardDiff.hessian!(DiffResults.DiffResult(0.0, zeros(3),
+                                                                 fill(NaN, 4, 4)), prod, z)
+end
+
 
 ########################
 # test vs. Calculus.jl #

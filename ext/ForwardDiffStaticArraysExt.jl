@@ -131,7 +131,7 @@ ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} =
     T = typeof(Tag(f, eltype(x)))
     ydual = f(dualize(T, dualize(T, x)))
     ydual isa Real || throw(HESSIAN_ERROR)
-    H = result isa AbstractMatrix ? result : reshape(result, length(x), length(x))
+    H = ForwardDiff.reshape_hessian(result, x)
     ForwardDiff.extract_hessian_chunk!(T, H, ydual, structural_indices(x), 0, 0, length(x), length(x))
     return result
 end

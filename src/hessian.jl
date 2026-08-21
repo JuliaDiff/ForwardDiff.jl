@@ -36,9 +36,7 @@ function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianCon
     require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     checkstructure(cfg, x)
-    hlen = length(x)
-    H = result isa AbstractMatrix ? result : reshape(result, hlen, hlen)
-    symmetric_hessian!(H, f, x, cfg, nothing)
+    symmetric_hessian!(reshape_hessian(result, x), f, x, cfg, nothing)
     return result
 end
 
@@ -56,10 +54,8 @@ function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     checkstructure(cfg, x)
-    hlen = length(x)
-    hess = DiffResults.hessian(result)
-    H = hess isa AbstractMatrix ? hess : reshape(hess, hlen, hlen)
-    _, ydual = symmetric_hessian!(H, f, x, cfg, DiffResults.gradient(result))
+    _, ydual = symmetric_hessian!(reshape_hessian(result, x), f, x, cfg,
+                                  DiffResults.gradient(result))
     result = DiffResults.value!(result, value(T, value(T, ydual)))
     return result
 end
@@ -69,6 +65,15 @@ end
 ############################
 
 const HESSIAN_ERROR = DimensionMismatch("hessian(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?")
+
+function reshape_hessian(result::AbstractMatrix, x)
+    require_one_based_indexing(result)
+    size(result) == (length(x), length(x)) || throw(DimensionMismatch(
+        lazy"cannot store the $(length(x))×$(length(x)) Hessian in a result of size $(size(result))"))
+    return result
+end
+reshape_hessian(result::AbstractArray, x) = reshape(result, length(x), length(x))
+reshape_hessian(result::DiffResult, x) = reshape_hessian(DiffResults.hessian(result), x)
 
 # Copy a block from the nested partials and fill its transpose. On diagonal blocks, read
 # only the upper triangle so the result is exactly symmetric. Both axes are indexed by the linear
