@@ -186,6 +186,18 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 end
 
+# `log(sum(exp, z))` rounds differently in the two nesting orders, hence the bitwise comparison
+@testset "chunk size independence" begin
+    n = 16
+    x = randn(n)
+    f = z -> log(sum(exp, z))
+    expected = ForwardDiff.hessian(f, SVector{n}(x))
+    @testset "chunk size = $c" for c in (1, 2, 3, 5, 7, 11, n)
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+        @test ForwardDiff.hessian(f, x, cfg) == expected
+    end
+end
+
 # `n = 5` is the only structured case whose default `Chunk(x)` reaches the off-diagonal blocks.
 @testset "structured inputs: $(nameof(W)) of size $n" for n in (3, 5),
                                                           (W, sidx) in (
