@@ -218,10 +218,9 @@ Return a `HessianConfig` instance based on the type of `f` and type/shape of the
 vector `x`.
 
 The returned `HessianConfig` instance contains all the work buffers required by
-`ForwardDiff.hessian` and `ForwardDiff.hessian!`. For the latter, the buffers are
-configured for the case where the `result` argument is an `AbstractArray`. If
-it is a `DiffResult`, the `HessianConfig` should instead be constructed via
-`ForwardDiff.HessianConfig(f, result, x, chunk)`.
+`ForwardDiff.hessian` and `ForwardDiff.hessian!`, including when the latter stores into a
+`DiffResult`. The `ForwardDiff.HessianConfig(f, result, x, chunk)` constructor may also be
+used with any of these methods.
 
 If `f` is `nothing` instead of the actual target function, then the returned instance can
 be used with any target function. However, this will reduce ForwardDiff's ability to catch
@@ -245,7 +244,9 @@ Return a `HessianConfig` instance based on the type of `f`, types/storage in `re
 type/shape of the input vector `x`.
 
 The returned `HessianConfig` instance contains all the work buffers required by
-`ForwardDiff.hessian!` for the case where the `result` argument is an `DiffResult`.
+`ForwardDiff.hessian` and `ForwardDiff.hessian!`. It is interchangeable with a config
+constructed via `ForwardDiff.HessianConfig(f, x, chunk)`; this constructor retains the
+result-aware form for compatibility.
 
 If `f` is `nothing` instead of the actual target function, then the returned instance can
 be used with any target function. However, this will reduce ForwardDiff's ability to catch

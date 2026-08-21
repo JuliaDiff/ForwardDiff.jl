@@ -51,11 +51,21 @@ h = [-66.0  -40.0    0.0;
     @test isapprox(DiffResults.value(out), v)
     @test isapprox(DiffResults.gradient(out), g)
     @test isapprox(DiffResults.hessian(out), h)
+
+    # The result-aware and result-independent config constructors are interchangeable.
+    out = DiffResults.HessianResult(x)
+    ForwardDiff.hessian!(out, f, x, cfg)
+    @test isapprox(DiffResults.value(out), v)
+    @test isapprox(DiffResults.gradient(out), g)
+    @test isapprox(DiffResults.hessian(out), h)
 end
 
 cfgx = ForwardDiff.HessianConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.hessian(f, x, cfgx)
 @test ForwardDiff.hessian(f, x, cfgx, Val{false}()) == ForwardDiff.hessian(f,x)
+@test_throws ArgumentError ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{length(x) + 1}()))
+@test_throws DimensionMismatch ForwardDiff.hessian(identity, x)
+@test_throws DimensionMismatch ForwardDiff.hessian!(similar(x, 3, 3), identity, x)
 
 
 ########################
@@ -108,9 +118,21 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test ForwardDiff.hessian(prod, sx, scfg, Val{false}()) == actual
     @test ForwardDiff.hessian(prod, sx, scfg, Val{false}()) isa StaticArray
 
+    symmetry_f(z) = sum(sin(z[i]) / (1 + z[mod1(i + 1, length(z))]^2) for i in eachindex(z))
+    symmetric_static = ForwardDiff.hessian(symmetry_f, sx)
+    @test symmetric_static == transpose(symmetric_static)
+    @test symmetric_static == ForwardDiff.hessian(symmetry_f, x)
+    @test all(iszero, ForwardDiff.hessian(Returns(2.0), sx))
+    @test_throws DimensionMismatch ForwardDiff.hessian(identity, sx)
+
     out = similar(x, 9, 9)
     ForwardDiff.hessian!(out, prod, sx)
     @test out == actual
+
+    out = similar(x, 9, 9)
+    ForwardDiff.hessian!(out, symmetry_f, sx)
+    @test out == symmetric_static
+    @test out == transpose(out)
 
     out = similar(x, 9, 9)
     ForwardDiff.hessian!(out, prod, sx, cfg)
@@ -156,14 +178,15 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 end
 
-# issues #838 and #839, which `hessian` inherits through `jacobian(gradient(f), x)`
-@testset "structured inputs: $(nameof(W))" for (W, sidx) in (
+# `n = 5` is the only structured case whose default `Chunk(x)` reaches the off-diagonal blocks.
+@testset "structured inputs: $(nameof(W)) of size $n" for n in (3, 5),
+                                                          (W, sidx) in (
         # both axes are indexed by the linear indices of `x`, hard zeros off the structure
-        (LowerTriangular, [i + 3 * (j - 1) for j in 1:3 for i in j:3]),
-        (UpperTriangular, [i + 3 * (j - 1) for j in 1:3 for i in 1:j]),
-        (Diagonal,        1:4:9),
+        (LowerTriangular, [i + n * (j - 1) for j in 1:n for i in j:n]),
+        (UpperTriangular, [i + n * (j - 1) for j in 1:n for i in 1:j]),
+        (Diagonal,        1:(n + 1):n^2),
     )
-    x = W(randn(3, 3))
+    x = W(randn(n, n))
     # d²f/dx[a]dx[b] is `1 + (a == b)` for structural `a`, `b`, and zero everywhere else
     f = z -> (sum(abs2, z) + sum(z)^2) / 2
     L = length(x)
@@ -174,14 +197,16 @@ end
         expected[k, k] += 1
     end
     val = f(x)
-    grad = zeros(3, 3)
+    grad = zeros(n, n)
     grad[sidx] .= x[sidx] .+ sum(x)
 
-    # one chunk size below the full length, so that the final chunk is a partial one
-    @testset "chunk size = $c" for c in unique((1, 2, length(sidx) - 1, length(sidx)))
-        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+    # `nothing` is the default chunk; `length(sidx) - 1` makes the final chunk a partial one
+    @testset "chunk size = $c" for c in (nothing, unique((1, 2, length(sidx) - 1, length(sidx)))...)
+        chunk = c === nothing ? ForwardDiff.Chunk(x) : ForwardDiff.Chunk{c}()
+        cfg = ForwardDiff.HessianConfig(f, x, chunk)
 
         H = ForwardDiff.hessian(f, x, cfg)
+        @test H isa Matrix
         @test size(H) == (L, L)
         @test H == expected
 
@@ -189,10 +214,14 @@ end
         @test ForwardDiff.hessian!(out, f, x, cfg) === out
         @test out == expected
 
+        flat = fill(NaN, L^2)
+        @test ForwardDiff.hessian!(flat, f, x, cfg) === flat
+        @test reshape(flat, L, L) == expected
+
         # `DiffResults.HessianResult` allocates a dense gradient buffer even for a structured `x`
         result = DiffResults.HessianResult(x)
         result = ForwardDiff.hessian!(result, f, x,
-                                      ForwardDiff.HessianConfig(f, result, x, ForwardDiff.Chunk{c}()))
+                                      ForwardDiff.HessianConfig(f, result, x, chunk))
         @test DiffResults.value(result) ≈ val
         @test DiffResults.gradient(result) == grad
         @test DiffResults.hessian(result) == expected
@@ -219,6 +248,28 @@ end
                 @test_throws msg ForwardDiff.hessian!(fill(NaN, n^2, n^2), f, x, cfg)
             end
         end
+    end
+end
+
+@testset "BigFloat with an unassigned input entry" begin
+    x = Vector{BigFloat}(undef, 10)
+    hole = 5
+    for i in eachindex(x)
+        i == hole || (x[i] = BigFloat(i))
+    end
+    used = [i for i in eachindex(x) if i != hole]
+    f(x) = sum(abs2(x[i]) for i in used)
+    expected = zeros(BigFloat, 10, 10)
+    for i in used
+        expected[i, i] = 2
+    end
+
+    @test !isassigned(x, hole)
+    for chunksize in (1, 2, 10)
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{chunksize}())
+        H = ForwardDiff.hessian(f, x, cfg)
+        @test H isa Matrix{BigFloat}
+        @test H == expected
     end
 end
 

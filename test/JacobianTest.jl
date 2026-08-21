@@ -202,6 +202,10 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     ForwardDiff.jacobian!(out, _diff, sx, scfg)
     @test out == actual
 
+    out = similar(x, 6, 9)
+    ForwardDiff.jacobian!(out, _diff, sx, scfg, Val{false}())
+    @test out == actual
+
     result = DiffResults.JacobianResult(similar(x, 6), x)
     result = ForwardDiff.jacobian!(result, _diff, x)
 
