@@ -43,6 +43,11 @@ Random.seed!(SEED)
         t = @elapsed include("ConfusionTest.jl")
         println("##### done (took $t seconds).")
     end
+    @testset "GPUArrays" begin
+        println("##### Testing seeding on GPU arrays...")
+        t = @elapsed include("GPUArraysTest.jl")
+        println("##### done (took $t seconds).")
+    end
     @testset "Miscellaneous" begin
         println("##### Testing miscellaneous functionality...")
         t = @elapsed include("MiscTest.jl")
