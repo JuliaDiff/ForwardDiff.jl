@@ -89,13 +89,29 @@ function structural_linearindices(duals::UpperTriangular, x::AbstractArray)
     require_one_based_indexing(duals, x)
     check_structural_size(duals, x)
     n = size(duals, 1)
-    return [i + n * (j - 1) for j in 1:n for i in 1:j]
+    indices = Vector{Int}(undef, structural_length(duals))
+    k = idx = 0
+    for j in 1:n
+        for _ in 1:j
+            indices[k += 1] = (idx += 1)
+        end
+        idx += n - j
+    end
+    return indices
 end
 function structural_linearindices(duals::LowerTriangular, x::AbstractArray)
     require_one_based_indexing(duals, x)
     check_structural_size(duals, x)
     n = size(duals, 1)
-    return [i + n * (j - 1) for j in 1:n for i in j:n]
+    indices = Vector{Int}(undef, structural_length(duals))
+    k = idx = 0
+    for j in 1:n
+        for _ in j:n
+            indices[k += 1] = (idx += 1)
+        end
+        idx += j
+    end
+    return indices
 end
 function structural_linearindices(duals::Diagonal, x::AbstractArray)
     require_one_based_indexing(duals, x)
