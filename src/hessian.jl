@@ -100,9 +100,9 @@ function symmetric_hessian_expr(result_definition::Expr)
         # output type and value.
         nblocks = xlen == 0 ? 1 : cld(xlen, N)
 
-        xdual = cfg.gradient_config.duals
-        iseeds = cfg.jacobian_config.seeds
-        oseeds = cfg.gradient_config.seeds
+        xdual = cfg.duals
+        iseeds = cfg.iseeds
+        oseeds = cfg.oseeds
 
         # The first evaluation determines the output type. Seeding the first block and clearing
         # the untouched tail partitions the fresh buffer, so every element is initialized once.

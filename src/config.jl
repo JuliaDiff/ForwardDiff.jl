@@ -195,9 +195,10 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
-    jacobian_config::JacobianConfig{T,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
+struct HessianConfig{T,V,N,D} <: AbstractConfig{N}
+    iseeds::NTuple{N,Partials{N,V}}
+    oseeds::NTuple{N,Partials{N,Dual{T,V,N}}}
+    duals::D
 end
 
 """
@@ -219,11 +220,12 @@ This constructor does not store/modify `x`.
 """
 function HessianConfig(f::F,
                        x::AbstractArray{V},
-                       chunk::Chunk = Chunk(x),
-                       tag = Tag(f, V)) where {F,V}
-    jacobian_config = JacobianConfig(f, x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
-    return HessianConfig(jacobian_config, gradient_config)
+                       ::Chunk{N} = Chunk(x),
+                       ::T = Tag(f, V)) where {F,V,N,T}
+    iseeds = construct_seeds(Partials{N,V})
+    oseeds = construct_seeds(Partials{N,Dual{T,V,N}})
+    duals = similar(x, Dual{T,Dual{T,V,N},N})
+    return HessianConfig{T,V,N,typeof(duals)}(iseeds, oseeds, duals)
 end
 
 """
@@ -232,27 +234,20 @@ end
 Return a `HessianConfig` instance based on the type of `f`, types/storage in `result`, and
 type/shape of the input vector `x`.
 
-The returned `HessianConfig` instance contains all the work buffers required by
-`ForwardDiff.hessian` and `ForwardDiff.hessian!`. It is interchangeable with a config
-constructed via `ForwardDiff.HessianConfig(f, x, chunk)`; this constructor retains the
-result-aware form for compatibility.
+Equivalent to `ForwardDiff.HessianConfig(f, x, chunk)`: the work buffers do not depend on
+`result`. The result-aware form is retained for compatibility.
 
 If `f` is `nothing` instead of the actual target function, then the returned instance can
 be used with any target function. However, this will reduce ForwardDiff's ability to catch
 and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
 
-This constructor does not store/modify `x`.
+This constructor does not store/modify `result` or `x`.
 """
-function HessianConfig(f::F,
-                       result::DiffResult,
-                       x::AbstractArray{V},
-                       chunk::Chunk = Chunk(x),
-                       tag = Tag(f, V)) where {F,V}
-    jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
-    return HessianConfig(jacobian_config, gradient_config)
-end
+HessianConfig(f::F,
+              ::DiffResult,
+              x::AbstractArray{V},
+              chunk::Chunk = Chunk(x),
+              tag = Tag(f, V)) where {F,V} = HessianConfig(f, x, chunk, tag)
 
 checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
-    Dual{T,Dual{T,V,N},N}
+Base.eltype(::Type{HessianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,Dual{T,V,N},N}

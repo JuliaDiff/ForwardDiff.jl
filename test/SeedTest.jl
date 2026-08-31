@@ -91,10 +91,7 @@ end
 end
 
 @testset "seed_hessian_chunk!: $(nameof(typeof(x)))" for (x, sidx) in SEED_CASES
-    cfg = ForwardDiff.HessianConfig(nothing, x, ForwardDiff.Chunk{3}())
-    duals = cfg.gradient_config.duals
-    iseeds = cfg.jacobian_config.seeds
-    oseeds = cfg.gradient_config.seeds
+    (; duals, iseeds, oseeds) = ForwardDiff.HessianConfig(nothing, x, ForwardDiff.Chunk{3}())
     nstruct = length(sidx)
 
     ForwardDiff.seed_hessian_chunk!(duals, x, 1, nothing, nothing, nstruct)

@@ -30,9 +30,9 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     @test iszero(allocs_szp!(duals, x, 1, 4))
 
     hcfg = ForwardDiff.HessianConfig(nothing, x)
-    hduals = hcfg.gradient_config.duals
-    iseeds = hcfg.jacobian_config.seeds
-    oseeds = hcfg.gradient_config.seeds
+    hduals = hcfg.duals
+    iseeds = hcfg.iseeds
+    oseeds = hcfg.oseeds
     allocs_hseed!(args...) = @allocated ForwardDiff.seed_hessian_chunk!(args...)
     allocs_hseed!(hduals, x, 1, iseeds, oseeds)
     @test iszero(allocs_hseed!(hduals, x, 1, iseeds, oseeds))
