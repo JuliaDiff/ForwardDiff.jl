@@ -16,13 +16,19 @@ include("utils.jl")
 # The expected structural index sets are written out by hand rather than obtained from
 # `structural_eachindex`, so a bug in that iterator cannot hide inside the assertions depending on
 # it; one test ties the two together. Order is significant: `index` and `count` are positions along
-# the sequence, not array indices. The sets are heterogeneous by design — `Vector` and `Diagonal`
-# enumerate linear indices (the latter via `diagind`), `UpperTriangular` enumerates `CartesianIndex`
-# in column-major order.
+# the sequence, not array indices. The `sidx` sets are heterogeneous by design — `Vector` and
+# `Diagonal` enumerate linear indices (the latter via `diagind`), `UpperTriangular` enumerates
+# `CartesianIndex` in column-major order — while `lidx` is the same positions as linear indices.
 const SEED_CASES = (
-    (rand(10),                    collect(1:10)),
-    (UpperTriangular(rand(5, 5)), [CartesianIndex(i, j) for j in 1:5 for i in 1:j]),
-    (Diagonal(rand(6, 6)),        collect(1:7:36)),
+    (rand(10),
+     1:10,
+     1:10),
+    (UpperTriangular(rand(5, 5)),
+     [CartesianIndex(i, j) for j in 1:5 for i in 1:j],
+     [i + 5 * (j - 1) for j in 1:5 for i in 1:j]),
+    (Diagonal(rand(6, 6)),
+     1:7:36,
+     1:7:36),
 )
 
 # Positions within `sidx` whose partials are zero.
@@ -42,7 +48,7 @@ function fill_marker!(duals, x, sidx, marker)
     return duals
 end
 
-@testset "seed_zero_partials!: $(nameof(typeof(x)))" for (x, sidx) in SEED_CASES
+@testset "seed_zero_partials!: $(nameof(typeof(x)))" for (x, sidx, _) in SEED_CASES
     cfg = ForwardDiff.GradientConfig(nothing, x, ForwardDiff.Chunk{3}())
     duals, seeds = cfg.duals, cfg.seeds
     N = ForwardDiff.npartials(eltype(duals))
@@ -90,17 +96,21 @@ end
     end
 end
 
-@testset "seed_hessian_chunk!: $(nameof(typeof(x)))" for (x, sidx) in SEED_CASES
+@testset "seed_hessian_chunk!: $(nameof(typeof(x)))" for (x, sidx, lidx) in SEED_CASES
     (; duals, iseeds, oseeds) = ForwardDiff.HessianConfig(nothing, x, ForwardDiff.Chunk{3}())
     nstruct = length(sidx)
+    indices = ForwardDiff.structural_linearindices(duals, x)
 
-    ForwardDiff.seed_hessian_chunk!(duals, x, 1, nothing, nothing, nstruct)
-    ForwardDiff.seed_hessian_chunk!(duals, x, 4, iseeds, oseeds)
+    # the windows below are positions along `indices`, so pin it to the implementation once
+    @test indices == lidx
+
+    ForwardDiff.seed_hessian_chunk!(duals, x, indices, 1, nothing, nothing, nstruct)
+    ForwardDiff.seed_hessian_chunk!(duals, x, indices, 4, iseeds, oseeds)
     @test [i for (i, idx) in enumerate(sidx) if !iszero(ForwardDiff.partials(ForwardDiff.value(duals[idx])))] == collect(4:6)
     @test [i for (i, idx) in enumerate(sidx) if !iszero(ForwardDiff.partials(duals[idx]))] == collect(4:6)
     @test all(idx -> ForwardDiff.value(ForwardDiff.value(duals[idx])) == x[idx], eachindex(x))
 
-    ForwardDiff.seed_hessian_chunk!(duals, x, 4, nothing, nothing)
+    ForwardDiff.seed_hessian_chunk!(duals, x, indices, 4, nothing, nothing)
     @test all(idx -> iszero(ForwardDiff.partials(ForwardDiff.value(duals[idx]))), sidx)
     @test all(idx -> iszero(ForwardDiff.partials(duals[idx])), sidx)
 end

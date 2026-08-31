@@ -33,20 +33,22 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     hduals = hcfg.duals
     iseeds = hcfg.iseeds
     oseeds = hcfg.oseeds
+    hindices = ForwardDiff.structural_linearindices(hduals, x)
     allocs_hseed!(args...) = @allocated ForwardDiff.seed_hessian_chunk!(args...)
     for i in (iseeds, nothing), o in (oseeds, nothing)
-        allocs_hseed!(hduals, x, 1, i, o)
-        @test iszero(allocs_hseed!(hduals, x, 1, i, o))
+        allocs_hseed!(hduals, x, hindices, 1, i, o)
+        @test iszero(allocs_hseed!(hduals, x, hindices, 1, i, o))
     end
-    allocs_hseed!(hduals, x, 1, nothing, nothing, 4)
-    @test iszero(allocs_hseed!(hduals, x, 1, nothing, nothing, 4))
+    allocs_hseed!(hduals, x, hindices, 1, nothing, nothing, 4)
+    @test iszero(allocs_hseed!(hduals, x, hindices, 1, nothing, nothing, 4))
 
     # a zero is free for an isbits value type, so only a `BigFloat` catches one being built for a
     # layer that was given seeds
     bx = BigFloat.(x)
     bcfg = ForwardDiff.HessianConfig(nothing, bx, ForwardDiff.Chunk{3}())
-    allocs_hseed!(bcfg.duals, bx, 1, bcfg.iseeds, bcfg.oseeds)
-    @test iszero(allocs_hseed!(bcfg.duals, bx, 1, bcfg.iseeds, bcfg.oseeds))
+    bindices = ForwardDiff.structural_linearindices(bcfg.duals, bx)
+    allocs_hseed!(bcfg.duals, bx, bindices, 1, bcfg.iseeds, bcfg.oseeds)
+    @test iszero(allocs_hseed!(bcfg.duals, bx, bindices, 1, bcfg.iseeds, bcfg.oseeds))
 
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()

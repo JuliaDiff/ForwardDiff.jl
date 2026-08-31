@@ -217,25 +217,47 @@ end
     end
 end
 
-@testset "LowerTriangular, UpperTriangular and Diagonal" begin
-    for n in (3, 5), T in (LowerTriangular, UpperTriangular, Diagonal)
-        x = T(randn(n, n))
-        xlen = ForwardDiff.structural_length(x)
-        weights = reshape(collect(1.0:n^2), n, n)
-        objective = x -> dot(weights, abs2.(x))
-        expected = diagm(2 .* [weights[idx] for idx in ForwardDiff.structural_eachindex(x)])
+@testset "$(nameof(W)), n = $n" for n in (3, 5), (W, sidx) in (
+    (LowerTriangular, [i + n * (j - 1) for j in 1:n for i in j:n]),
+    (UpperTriangular, [i + n * (j - 1) for j in 1:n for i in 1:j]),
+    (Diagonal,        1:(n + 1):n^2),
+)
+    x = W(randn(n, n))
+    # d²f/dx[a]dx[b] is `1 + (a == b)` on the structural entries and zero everywhere else
+    f = z -> (sum(abs2, z) + sum(z)^2) / 2
+    L = length(x)
 
-        H = ForwardDiff.hessian(objective, x)
-        @test size(H) == (xlen, xlen)
+    expected = zeros(L, L)
+    expected[sidx, sidx] .= 1
+    for k in sidx
+        expected[k, k] += 1
+    end
+    grad = zeros(n, n)
+    grad[sidx] .= x[sidx] .+ sum(x)
+
+    # `length(sidx) - 1` makes the final chunk a partial one
+    @testset "chunk size = $c" for c in unique((1, 2, length(sidx) - 1, length(sidx)))
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+
+        H = ForwardDiff.hessian(f, x, cfg)
+        @test H isa Matrix
+        @test size(H) == (L, L)
         @test H == expected
 
-        out = fill(NaN, xlen, xlen)
-        ForwardDiff.hessian!(out, objective, x)
+        out = fill(NaN, L, L)
+        @test ForwardDiff.hessian!(out, f, x, cfg) === out
         @test out == expected
 
-        flat = fill(NaN, xlen^2)
-        ForwardDiff.hessian!(flat, objective, x)
-        @test reshape(flat, xlen, xlen) == expected
+        flat = fill(NaN, L^2)
+        @test ForwardDiff.hessian!(flat, f, x, cfg) === flat
+        @test reshape(flat, L, L) == expected
+
+        # `DiffResults.HessianResult` allocates a dense gradient buffer even for a structured `x`
+        result = DiffResults.HessianResult(x)
+        result = ForwardDiff.hessian!(result, f, x, cfg)
+        @test DiffResults.value(result) ≈ f(x)
+        @test DiffResults.gradient(result) == grad
+        @test DiffResults.hessian(result) == expected
     end
 end
 

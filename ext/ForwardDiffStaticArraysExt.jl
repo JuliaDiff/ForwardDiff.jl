@@ -5,7 +5,7 @@ using ForwardDiff.LinearAlgebra
 using ForwardDiff.DiffResults
 using ForwardDiff: Dual, partials, npartials, Partials, GradientConfig, JacobianConfig, HessianConfig, Tag, Chunk,
                    gradient, hessian, jacobian, gradient!, hessian!, jacobian!,
-                   extract_gradient!, extract_jacobian!, extract_value!,
+                   extract_gradient!, extract_jacobian!, extract_value!, structural_linearindices,
                    vector_mode_gradient, vector_mode_gradient!,
                    vector_mode_jacobian, vector_mode_jacobian!, HESSIAN_ERROR, valtype, value
 using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
@@ -134,7 +134,7 @@ ForwardDiff.hessian(f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} =
     ydual = f(dualize(T, dualize(T, x)))
     ydual isa Real || throw(HESSIAN_ERROR)
     H = result isa AbstractMatrix ? result : reshape(result, length(x), length(x))
-    ForwardDiff.extract_hessian_chunk!(T, H, ydual, 0, 0, length(x), length(x))
+    ForwardDiff.extract_hessian_chunk!(T, H, ydual, structural_linearindices(x), 0, 0, length(x), length(x))
     return result
 end
 
