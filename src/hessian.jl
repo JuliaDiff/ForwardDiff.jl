@@ -119,7 +119,7 @@ function symmetric_hessian_expr(result_definition::Expr)
     return quote
         xlen = structural_length(x)
         if xlen < N
-            throw(ArgumentError(lazy"chunk size cannot be greater than ForwardDiff.structural_length(x) ($(N) > $(structural_length(x)))"))
+            throw(ArgumentError(lazy"chunk size cannot be greater than the number of differentiated entries of x ($(N) > $(xlen))"))
         end
 
         # `N == 0` only for empty inputs, which still need one evaluation to determine the

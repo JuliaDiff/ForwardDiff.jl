@@ -280,6 +280,14 @@ end
     end
 end
 
+# a structured work buffer cannot preserve an unassigned entry: it can only be left unassigned in
+# an `Array`
+@testset "$(nameof(T)) with an unassigned entry" for T in (LowerTriangular, UpperTriangular)
+    x = T(Matrix{BigFloat}(undef, 3, 3))
+    @test_throws "ArgumentError: cannot differentiate at an input with an unassigned entry at index CartesianIndex(1, 1): that would leave an entry of the $(nameof(T)) work buffer unassigned" ForwardDiff.gradient(sum, x)
+end
+@test_throws "ArgumentError: cannot differentiate at an input with an unassigned entry at index 1: that would leave an entry of the Diagonal work buffer unassigned" ForwardDiff.gradient(sum, Diagonal(Vector{BigFloat}(undef, 3)))
+
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]

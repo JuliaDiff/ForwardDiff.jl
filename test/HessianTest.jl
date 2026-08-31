@@ -23,6 +23,8 @@ h = [-66.0  -40.0    0.0;
      -40.0  130.0  -80.0;
        0.0  -80.0  200.0]
 
+hessian_error = "DimensionMismatch: hessian(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?"
+
 @testset "running hardcoded test with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
     cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}(), tag)
     resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}(), tag)
@@ -63,9 +65,10 @@ end
 cfgx = ForwardDiff.HessianConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.hessian(f, x, cfgx)
 @test ForwardDiff.hessian(f, x, cfgx, Val{false}()) == ForwardDiff.hessian(f,x)
-@test_throws ArgumentError ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{length(x) + 1}()))
-@test_throws DimensionMismatch ForwardDiff.hessian(identity, x)
-@test_throws DimensionMismatch ForwardDiff.hessian!(similar(x, 3, 3), identity, x)
+@test_throws "ArgumentError: chunk size cannot be greater than the number of differentiated entries of x (4 > 3)" ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{length(x) + 1}()))
+@test_throws hessian_error ForwardDiff.hessian(identity, x)
+@test_throws hessian_error ForwardDiff.hessian!(similar(x, 3, 3), identity, x)
+@test_throws "DimensionMismatch: the config was built for an array of size (3,) and cannot be used with an array of size (4,)" ForwardDiff.hessian(f, rand(4), ForwardDiff.HessianConfig(f, x))
 
 
 ########################
@@ -123,7 +126,7 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test symmetric_static == transpose(symmetric_static)
     @test symmetric_static == ForwardDiff.hessian(symmetry_f, x)
     @test all(iszero, ForwardDiff.hessian(Returns(2.0), sx))
-    @test_throws DimensionMismatch ForwardDiff.hessian(identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian(identity, sx)
 
     out = similar(x, 9, 9)
     ForwardDiff.hessian!(out, prod, sx)
@@ -196,20 +199,20 @@ end
 
 @testset "a result of the wrong shape" begin
     @testset "$(nameof(typeof(x)))" for x in (randn(3), SVector(1.0, 2.0, 3.0))
-        @test_throws "cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(fill(NaN, 4, 4), sum, x)
-        @test_throws "cannot store the 3×3 Hessian in a result of size (2, 2)" ForwardDiff.hessian!(fill(NaN, 2, 2), sum, x)
-        @test_throws "cannot store the 3×3 Hessian in a result of length 8" ForwardDiff.hessian!(fill(NaN, 8), sum, x)
+        @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(fill(NaN, 4, 4), sum, x)
+        @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (2, 2)" ForwardDiff.hessian!(fill(NaN, 2, 2), sum, x)
+        @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of length 8" ForwardDiff.hessian!(fill(NaN, 8), sum, x)
     end
     result = DiffResults.DiffResult(0.0, randn(3), fill(NaN, 4, 4))
-    @test_throws "cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(result, sum, randn(3))
+    @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(result, sum, randn(3))
 end
 
 @testset "an array-valued f is not a Hessian" begin
     sx = SVector(1.0, 2.0, 3.0)
-    @test_throws DimensionMismatch ForwardDiff.hessian(identity, sx)
-    @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 3, 3), identity, sx)
-    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.HessianResult(sx), identity, sx)
-    @test_throws DimensionMismatch ForwardDiff.hessian(identity, [1.0, 2.0, 3.0])
+    @test_throws hessian_error ForwardDiff.hessian(identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian!(fill(NaN, 3, 3), identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian!(DiffResults.HessianResult(sx), identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian(identity, [1.0, 2.0, 3.0])
 end
 
 @testset "the result does not depend on the chunk size" begin
