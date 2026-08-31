@@ -112,6 +112,8 @@ end
     return typeof(H)(Symmetric(H, :U))
 end
 
+# An `f` ignoring its argument returns no partials at all, not `length(x)` zero ones, so the method
+# above would build a result with no rows. Reached for an empty `x` too.
 @inline function extract_hessian(::Type{T}, ydual::Partials{0}, x::S) where {T,S<:StaticArray}
     R = StaticArrays.similar_type(S, valtype(T, eltype(ydual)), Size(length(x), length(x)))
     return zero(R)

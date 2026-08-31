@@ -178,6 +178,30 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 end
 
+@testset "empty input" begin
+    f = z -> 1.0
+    for x in (Float64[], SVector{0,Float64}())
+        H = ForwardDiff.hessian(f, x)
+        @test size(H) == (0, 0)
+        @test ForwardDiff.hessian!(fill(NaN, 0, 0), f, x) == H
+    end
+end
+
+@testset "a StaticArray result that is not a matrix" begin
+    sx = SVector(1.0, 2.0, 3.0)
+    flat = fill(NaN, 9)
+    @test ForwardDiff.hessian!(flat, prod, sx) === flat
+    @test reshape(flat, 3, 3) == ForwardDiff.hessian(prod, sx)
+end
+
+@testset "an array-valued f is not a Hessian" begin
+    sx = SVector(1.0, 2.0, 3.0)
+    @test_throws DimensionMismatch ForwardDiff.hessian(identity, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(fill(NaN, 3, 3), identity, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.HessianResult(sx), identity, sx)
+    @test_throws DimensionMismatch ForwardDiff.hessian(identity, [1.0, 2.0, 3.0])
+end
+
 @testset "the result does not depend on the chunk size" begin
     n = 16
     v = randn(n)

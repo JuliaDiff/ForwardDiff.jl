@@ -129,13 +129,14 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
     end
 end
 
-# Seed a chunk in either layer of nested duals. A `nothing` seed clears that layer.
+# Seed a chunk in either layer of nested duals. A `nothing` seed clears that layer;
+# `seed_zero_partials!` cannot, as it would pass the primal where a nested `Dual` is wanted.
 function seed_hessian_chunk!(duals::AbstractArray{Dual{T,Dual{T,V,N},N}}, x, index,
                              iseeds::Union{Nothing,NTuple{N,Partials{N,V}}},
                              oseeds::Union{Nothing,NTuple{N,Partials{N,Dual{T,V,N}}}},
                              chunksize = N) where {T,V,N}
-    izero = zero(Partials{N,V})
-    ozero = zero(Partials{N,Dual{T,V,N}})
+    izero = iseeds === nothing ? zero(Partials{N,V}) : nothing
+    ozero = oseeds === nothing ? zero(Partials{N,Dual{T,V,N}}) : nothing
     idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), chunksize)
     return _seed!(duals, x, idxs) do value, i
         inner = Dual{T,V,N}(value, iseeds === nothing ? izero : iseeds[i])
