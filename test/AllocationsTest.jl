@@ -7,7 +7,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,Float64,8},4},2}, 1.3)
 
-@testset "Test seed!/seed_zero_partials! allocations" begin
+@testset "Test seeding allocations" begin
     x = rand(1000)
     cfg = ForwardDiff.GradientConfig(nothing, x)
     duals = cfg.duals
@@ -69,6 +69,21 @@ end
         return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
     end
     @test iszero(allocs_jacobian!())
+end
+
+@testset "Test hessian! allocations" begin
+    # the sweep is allocation-free only as long as the positions of a dense input stay a range:
+    # a `structural_linearindices` or `structural_chunk` returning an array would show up here
+    function allocs_hessian!(n, c)
+        f(z) = sum(abs2, z) + sum(z)^3
+        x = randn(n)
+        result = zeros(n, n)
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+        ForwardDiff.hessian!(result, f, x, cfg)  # warmup
+        return @allocated ForwardDiff.hessian!(result, f, x, cfg)
+    end
+    @test iszero(allocs_hessian!(40, 6))   # seven blocks, the last one partial
+    @test iszero(allocs_hessian!(10, 10))  # a single block
 end
 
 @testset "allocation-free nested StaticArray jacobian" begin
