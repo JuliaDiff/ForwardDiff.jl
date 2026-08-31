@@ -249,17 +249,14 @@ end
     (Diagonal,        1:(n + 1):n^2),
 )
     x = W(randn(n, n))
-    # d²f/dx[a]dx[b] is `1 + (a == b)` on the structural entries and zero everywhere else
-    f = z -> (sum(abs2, z) + sum(z)^2) / 2
     L = length(x)
+    # d²f/dx[a]dx[b] is `w[a] * w[b]`, which no permutation of the structural positions reproduces
+    w = zeros(L)
+    w[sidx] = 1:length(sidx)
+    f = z -> dot(w, z)^2 / 2
 
-    expected = zeros(L, L)
-    expected[sidx, sidx] .= 1
-    for k in sidx
-        expected[k, k] += 1
-    end
-    grad = zeros(n, n)
-    grad[sidx] .= x[sidx] .+ sum(x)
+    expected = w * transpose(w)
+    grad = reshape(w .* dot(w, x), n, n)
 
     # `length(sidx) - 1` makes the final chunk a partial one
     @testset "chunk size = $c" for c in unique((1, 2, length(sidx) - 1, length(sidx)))
