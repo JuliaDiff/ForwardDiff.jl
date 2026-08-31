@@ -178,6 +178,21 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 end
 
+@testset "the result does not depend on the chunk size" begin
+    n = 16
+    v = randn(n)
+    # the mixed partials of `log(sum(exp, ·))` round differently in the two orders; `sum(z)^3`,
+    # `exp(sum(z))`, `prod(z)` and `sum(sin, z) * sum(cos, z)` do not, and would pass regardless
+    f = z -> log(sum(exp, z))
+    expected = Matrix(ForwardDiff.hessian(f, SVector{n}(v)))
+
+    @testset "chunk size = $c" for c in (1, 2, 3, 5, 7, 11, n)
+        H = ForwardDiff.hessian(f, v, ForwardDiff.HessianConfig(f, v, ForwardDiff.Chunk{c}()))
+        @test H == expected
+        @test H == transpose(H)
+    end
+end
+
 @testset "LowerTriangular, UpperTriangular and Diagonal" begin
     for n in (3, 5), T in (LowerTriangular, UpperTriangular, Diagonal)
         x = T(randn(n, n))

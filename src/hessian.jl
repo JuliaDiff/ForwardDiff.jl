@@ -118,17 +118,18 @@ function symmetric_hessian_expr(result_definition::Expr)
         for q in 2:nblocks
             qoffset = (q - 1) * N
             qsize = min(N, xlen - qoffset)
-            # Off-diagonal blocks: p seeds columns and q seeds rows. The outer seeds for q
-            # remain unchanged throughout this loop.
-            seed_hessian_chunk!(xdual, x, qoffset + 1, nothing, oseeds, qsize)
+            # Outer-i inner-j and outer-j inner-i round differently, so the outer layer always
+            # takes the earlier position -- else the result would depend on the chunk size.
+            # q's inner seeds remain unchanged throughout this loop.
+            seed_hessian_chunk!(xdual, x, qoffset + 1, iseeds, nothing, qsize)
             for p in 1:(q - 1)
                 poffset = (p - 1) * N
-                seed_hessian_chunk!(xdual, x, poffset + 1, iseeds, nothing)
+                seed_hessian_chunk!(xdual, x, poffset + 1, nothing, oseeds)
                 ydual = f(xdual)
-                extract_hessian_chunk!(T, H, ydual, qoffset, poffset, qsize, N)
+                extract_hessian_chunk!(T, H, ydual, poffset, qoffset, N, qsize)
                 seed_hessian_chunk!(xdual, x, poffset + 1, nothing, nothing)
             end
-            # The diagonal block adds q's inner seeds while retaining its outer seeds.
+            # The diagonal block adds q's outer seeds while retaining its inner seeds.
             seed_hessian_chunk!(xdual, x, qoffset + 1, iseeds, oseeds, qsize)
             ydual = f(xdual)
             extract_hessian_chunk!(T, H, ydual, qoffset, qoffset, qsize, qsize)
