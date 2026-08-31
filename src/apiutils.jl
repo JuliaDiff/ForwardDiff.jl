@@ -70,8 +70,6 @@ function structural_eachindex(x::Diagonal, y::AbstractArray)
     return diagind(x)
 end
 
-# The positions of `structural_eachindex`, in the same order, as linear indices of `x`. The two
-# argument form is only ever given a config's work buffer and the input it is used with.
 function check_structural_size(duals, x)
     if size(duals) != size(x)
         throw(DimensionMismatch(lazy"the config was built for an array of size $(size(duals)) and cannot be used with an array of size $(size(x))"))
@@ -79,6 +77,8 @@ function check_structural_size(duals, x)
     return nothing
 end
 
+# The positions of `structural_eachindex`, in the same order, as linear indices of `x`. The two
+# argument form is only ever given a config's work buffer and the input it is used with.
 structural_linearindices(x::AbstractArray) = structural_linearindices(x, x)
 function structural_linearindices(duals::AbstractArray, x::AbstractArray)
     require_one_based_indexing(duals, x)

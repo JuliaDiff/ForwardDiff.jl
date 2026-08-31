@@ -194,6 +194,16 @@ end
     @test reshape(flat, 3, 3) == ForwardDiff.hessian(prod, sx)
 end
 
+@testset "a result of the wrong shape" begin
+    @testset "$(nameof(typeof(x)))" for x in (randn(3), SVector(1.0, 2.0, 3.0))
+        @test_throws "cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(fill(NaN, 4, 4), sum, x)
+        @test_throws "cannot store the 3×3 Hessian in a result of size (2, 2)" ForwardDiff.hessian!(fill(NaN, 2, 2), sum, x)
+        @test_throws "cannot store the 3×3 Hessian in a result of length 8" ForwardDiff.hessian!(fill(NaN, 8), sum, x)
+    end
+    result = DiffResults.DiffResult(0.0, randn(3), fill(NaN, 4, 4))
+    @test_throws "cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(result, sum, randn(3))
+end
+
 @testset "an array-valued f is not a Hessian" begin
     sx = SVector(1.0, 2.0, 3.0)
     @test_throws DimensionMismatch ForwardDiff.hessian(identity, sx)

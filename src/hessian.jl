@@ -36,9 +36,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    hlen = length(x)
-    H = result isa AbstractMatrix ? result : reshape(result, hlen, hlen)
-    symmetric_hessian!(H, f, x, cfg, nothing)
+    symmetric_hessian!(reshape_hessian(result, x), f, x, cfg, nothing)
     return result
 end
 
@@ -55,10 +53,8 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
 function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
-    hlen = length(x)
-    hess = DiffResults.hessian(result)
-    H = hess isa AbstractMatrix ? hess : reshape(hess, hlen, hlen)
-    _, ydual = symmetric_hessian!(H, f, x, cfg, DiffResults.gradient(result))
+    _, ydual = symmetric_hessian!(reshape_hessian(result, x), f, x, cfg,
+                                  DiffResults.gradient(result))
     result = DiffResults.value!(result, value(T, value(T, ydual)))
     return result
 end
@@ -68,6 +64,23 @@ end
 ############################
 
 const HESSIAN_ERROR = DimensionMismatch("hessian(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?")
+
+# Mirrors `reshape_jacobian`. The sweep writes the result entry by entry, so nothing else checks it.
+function reshape_hessian(result::AbstractMatrix, x)
+    require_one_based_indexing(result)
+    if size(result) != (length(x), length(x))
+        throw(DimensionMismatch(lazy"cannot store the $(length(x))×$(length(x)) Hessian in a result of size $(size(result))"))
+    end
+    return result
+end
+function reshape_hessian(result::AbstractArray, x)
+    require_one_based_indexing(result)
+    if length(result) != length(x)^2
+        throw(DimensionMismatch(lazy"cannot store the $(length(x))×$(length(x)) Hessian in a result of length $(length(result))"))
+    end
+    return reshape(result, length(x), length(x))
+end
+reshape_hessian(result::DiffResult, x) = reshape_hessian(DiffResults.hessian(result), x)
 
 # Copy a block from the nested partials and fill its transpose. On diagonal blocks, read
 # only the upper triangle so the result is exactly symmetric. `indices` maps a block
@@ -134,7 +147,9 @@ function symmetric_hessian_expr(result_definition::Expr)
         end
         extract_hessian_chunk!(T, H, ydual1, indices, 0, 0, N, N)
         extract_hessian_gradient_chunk!(T, grad, ydual1, indices, 1, N)
-        nblocks > 1 && seed_hessian_chunk!(xdual, x, indices, 1, nothing, nothing)
+        if nblocks > 1
+            seed_hessian_chunk!(xdual, x, indices, 1, nothing, nothing)
+        end
 
         for q in 2:nblocks
             qoffset = (q - 1) * N
