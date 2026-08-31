@@ -80,7 +80,10 @@ function reshape_hessian(result::AbstractArray, x)
     end
     return reshape(result, length(x), length(x))
 end
-reshape_hessian(result::DiffResult, x) = reshape_hessian(DiffResults.hessian(result), x)
+function reshape_hessian(result::DiffResult, x)
+    structural_eachindex(DiffResults.gradient(result), x)
+    return reshape_hessian(DiffResults.hessian(result), x)
+end
 
 # Copy a block from the nested partials and fill its transpose. On diagonal blocks, read
 # only the upper triangle so the result is exactly symmetric. `indices` maps a block

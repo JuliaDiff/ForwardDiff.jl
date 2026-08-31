@@ -205,6 +205,19 @@ end
     end
     result = DiffResults.DiffResult(0.0, randn(3), fill(NaN, 4, 4))
     @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(result, sum, randn(3))
+
+    # the gradient buffer is written by linear index of `x`, so it is checked against `x` as well
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 4), fill(NaN, 3, 3)), sum, randn(3))
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 2), fill(NaN, 3, 3)), sum, randn(3))
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 4, 3), fill(NaN, 9, 9)), sum, UpperTriangular(randn(3, 3)))
+end
+
+@testset "a gradient buffer that is flat rather than shaped like x" begin
+    X = randn(3, 3)
+    f = z -> sum(abs2, z)
+    result = ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 9), fill(NaN, 9, 9)), f, X)
+    @test DiffResults.gradient(result) == vec(2 .* X)
+    @test DiffResults.hessian(result) == ForwardDiff.hessian(f, X)
 end
 
 @testset "an array-valued f is not a Hessian" begin
