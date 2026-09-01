@@ -23,6 +23,8 @@ h = [-66.0  -40.0    0.0;
      -40.0  130.0  -80.0;
        0.0  -80.0  200.0]
 
+hessian_error = "DimensionMismatch: hessian(f, x) expects that f(x) is a real number. Perhaps you meant jacobian(f, x)?"
+
 @testset "running hardcoded test with chunk size = $c and tag = $(repr(tag))" for c in HESSIAN_CHUNK_SIZES, tag in (nothing, Tag((f,ForwardDiff.gradient), eltype(x)))
     cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}(), tag)
     resultcfg = ForwardDiff.HessianConfig(f, DiffResults.HessianResult(x), x, ForwardDiff.Chunk{c}(), tag)
@@ -51,11 +53,22 @@ h = [-66.0  -40.0    0.0;
     @test isapprox(DiffResults.value(out), v)
     @test isapprox(DiffResults.gradient(out), g)
     @test isapprox(DiffResults.hessian(out), h)
+
+    # The result-aware and result-independent config constructors are interchangeable.
+    out = DiffResults.HessianResult(x)
+    ForwardDiff.hessian!(out, f, x, cfg)
+    @test isapprox(DiffResults.value(out), v)
+    @test isapprox(DiffResults.gradient(out), g)
+    @test isapprox(DiffResults.hessian(out), h)
 end
 
 cfgx = ForwardDiff.HessianConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.hessian(f, x, cfgx)
 @test ForwardDiff.hessian(f, x, cfgx, Val{false}()) == ForwardDiff.hessian(f,x)
+@test_throws "ArgumentError: chunk size cannot be greater than the number of differentiated entries of x (4 > 3)" ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{length(x) + 1}()))
+@test_throws hessian_error ForwardDiff.hessian(identity, x)
+@test_throws hessian_error ForwardDiff.hessian!(similar(x, 3, 3), identity, x)
+@test_throws "DimensionMismatch: the config was built for an array of size (3,) and cannot be used with an array of size (4,)" ForwardDiff.hessian(f, rand(4), ForwardDiff.HessianConfig(f, x))
 
 
 ########################
@@ -108,9 +121,21 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test ForwardDiff.hessian(prod, sx, scfg, Val{false}()) == actual
     @test ForwardDiff.hessian(prod, sx, scfg, Val{false}()) isa StaticArray
 
+    symmetry_f(z) = sum(sin(z[i]) / (1 + z[mod1(i + 1, length(z))]^2) for i in eachindex(z))
+    symmetric_static = ForwardDiff.hessian(symmetry_f, sx)
+    @test symmetric_static == transpose(symmetric_static)
+    @test symmetric_static == ForwardDiff.hessian(symmetry_f, x)
+    @test all(iszero, ForwardDiff.hessian(Returns(2.0), sx))
+    @test_throws hessian_error ForwardDiff.hessian(identity, sx)
+
     out = similar(x, 9, 9)
     ForwardDiff.hessian!(out, prod, sx)
     @test out == actual
+
+    out = similar(x, 9, 9)
+    ForwardDiff.hessian!(out, symmetry_f, sx)
+    @test out == symmetric_static
+    @test out == transpose(out)
 
     out = similar(x, 9, 9)
     ForwardDiff.hessian!(out, prod, sx, cfg)
@@ -154,6 +179,247 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult1) == DiffResults.hessian(result)
     @test DiffResults.hessian(sresult2) == DiffResults.hessian(result)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
+end
+
+@testset "empty input" begin
+    f = z -> 1.0
+    for x in (Float64[], SVector{0,Float64}())
+        H = ForwardDiff.hessian(f, x)
+        @test size(H) == (0, 0)
+        @test ForwardDiff.hessian!(fill(NaN, 0, 0), f, x) == H
+    end
+end
+
+@testset "a StaticArray result that is not a matrix" begin
+    sx = SVector(1.0, 2.0, 3.0)
+    flat = fill(NaN, 9)
+    @test ForwardDiff.hessian!(flat, prod, sx) === flat
+    @test reshape(flat, 3, 3) == ForwardDiff.hessian(prod, sx)
+end
+
+@testset "a result of the wrong shape" begin
+    @testset "$(nameof(typeof(x)))" for x in (randn(3), SVector(1.0, 2.0, 3.0))
+        @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(fill(NaN, 4, 4), sum, x)
+        @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (2, 2)" ForwardDiff.hessian!(fill(NaN, 2, 2), sum, x)
+        @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of length 8" ForwardDiff.hessian!(fill(NaN, 8), sum, x)
+    end
+    result = DiffResults.DiffResult(0.0, randn(3), fill(NaN, 4, 4))
+    @test_throws "DimensionMismatch: cannot store the 3×3 Hessian in a result of size (4, 4)" ForwardDiff.hessian!(result, sum, randn(3))
+
+    # the gradient buffer is written by linear index of `x`, so it is checked against `x` as well
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 4), fill(NaN, 3, 3)), sum, randn(3))
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 2), fill(NaN, 3, 3)), sum, randn(3))
+    @test_throws DimensionMismatch ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 4, 3), fill(NaN, 9, 9)), sum, UpperTriangular(randn(3, 3)))
+end
+
+@testset "a gradient buffer that is flat rather than shaped like x" begin
+    X = randn(3, 3)
+    f = z -> sum(abs2, z)
+    result = ForwardDiff.hessian!(DiffResults.DiffResult(0.0, fill(NaN, 9), fill(NaN, 9, 9)), f, X)
+    @test DiffResults.gradient(result) == vec(2 .* X)
+    @test DiffResults.hessian(result) == ForwardDiff.hessian(f, X)
+end
+
+@testset "an array-valued f is not a Hessian" begin
+    sx = SVector(1.0, 2.0, 3.0)
+    @test_throws hessian_error ForwardDiff.hessian(identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian!(fill(NaN, 3, 3), identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian!(DiffResults.HessianResult(sx), identity, sx)
+    @test_throws hessian_error ForwardDiff.hessian(identity, [1.0, 2.0, 3.0])
+end
+
+@testset "the result does not depend on the chunk size" begin
+    n = 16
+    v = randn(n)
+    # the mixed partials of `log(sum(exp, ·))` round differently in the two orders; `sum(z)^3`,
+    # `exp(sum(z))`, `prod(z)` and `sum(sin, z) * sum(cos, z)` do not, and would pass regardless
+    f = z -> log(sum(exp, z))
+    expected = Matrix(ForwardDiff.hessian(f, SVector{n}(v)))
+
+    @testset "chunk size = $c" for c in (1, 2, 3, 5, 7, 11, n)
+        H = ForwardDiff.hessian(f, v, ForwardDiff.HessianConfig(f, v, ForwardDiff.Chunk{c}()))
+        @test H == expected
+        @test H == transpose(H)
+    end
+end
+
+# https://github.com/JuliaDiff/ForwardDiff.jl/issues/845
+@testset "f that inspects the layers of its argument" begin
+    # `ForwardDiff.value` drops the outer perturbation of an intermediate, not of the result
+    f = z -> sum(abs2, z) + ForwardDiff.value(z[1]) * z[2]
+    # the mixed derivative of `value(z[1]) * z[2]` is 1 in one order and 0 in the other, and
+    # only one triangle of block pairs is evaluated
+    expected_hessian = [2.0 0.0 0.0; 0.0 2.0 0.0; 0.0 0.0 2.0]
+
+    @testset "$(nameof(typeof(x))), chunk size = $c" for x in (
+            [1.0, 2.0, 3.0], SVector(1.0, 2.0, 3.0), MVector(1.0, 2.0, 3.0),
+        ), c in HESSIAN_CHUNK_SIZES
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+
+        @test ForwardDiff.hessian(f, x) == expected_hessian
+        @test ForwardDiff.hessian(f, x, cfg) == expected_hessian
+
+        out = fill(NaN, 3, 3)
+        @test ForwardDiff.hessian!(out, f, x, cfg) === out
+        @test out == expected_hessian
+
+        result = ForwardDiff.hessian!(DiffResults.HessianResult(x), f, x, cfg)
+        @test DiffResults.value(result) == 16.0
+        @test DiffResults.gradient(result) == [4.0, 5.0, 6.0]
+        @test DiffResults.hessian(result) == expected_hessian
+    end
+end
+
+# https://github.com/JuliaDiff/ForwardDiff.jl/issues/845
+# https://github.com/JuliaDiff/ForwardDiff.jl/issues/846
+@testset "a result that does not carry both perturbations" begin
+    xs = ([1.0, 2.0, 3.0], SVector(1.0, 2.0, 3.0), MVector(1.0, 2.0, 3.0))
+
+    @testset "the inner perturbation only: $(nameof(typeof(x)))" for x in xs
+        # the result itself lost its outer layer, so no second derivative survives -- but
+        # the gradient does, in the inner one
+        f = z -> ForwardDiff.value(sum(abs2, z))
+        @test all(iszero, ForwardDiff.hessian(f, x))
+        @test all(iszero, ForwardDiff.hessian!(fill(NaN, 3, 3), f, x))
+        result = ForwardDiff.hessian!(DiffResults.HessianResult(x), f, x)
+        @test DiffResults.value(result) == 14.0
+        @test DiffResults.gradient(result) == [2.0, 4.0, 6.0]
+        @test all(iszero, DiffResults.hessian(result))
+    end
+
+    @testset "neither perturbation: $(nameof(typeof(x)))" for x in xs
+        f = Returns(2.0)
+        @test all(iszero, ForwardDiff.hessian(f, x))
+        @test all(iszero, ForwardDiff.hessian!(fill(NaN, 3, 3), f, x))
+        result = ForwardDiff.hessian!(DiffResults.HessianResult(x), f, x)
+        @test DiffResults.value(result) == 2.0
+        @test all(iszero, DiffResults.gradient(result))
+        @test all(iszero, DiffResults.hessian(result))
+    end
+
+    @testset "an enclosing tag only: $(nameof(typeof(x)))" for x in xs
+        # `f` does not depend on `z`, so its result carries the `derivative` tag alone
+        @test ForwardDiff.derivative(a -> ForwardDiff.hessian(z -> a * 2.0, x)[1, 1], 1.0) == 0.0
+
+        ForwardDiff.derivative(1.0) do a
+            # a buffer that can hold the enclosing tag is written in full, one that cannot errors
+            H = fill(a * 111.0, 3, 3)
+            ForwardDiff.hessian!(H, z -> a * 2.0, x)
+            @test all(iszero, H)
+            @test_throws MethodError ForwardDiff.hessian!(fill(111.0, 3, 3), z -> a * 2.0, x)
+            return zero(a)
+        end
+    end
+end
+
+@testset "no block is evaluated for a derivative the result cannot carry" begin
+    x = [1.0, 2.0, 3.0]
+    chunk = ForwardDiff.Chunk{1}()
+    evaluations = Ref(0)
+
+    function second_order(z)
+        evaluations[] += 1
+        return sum(abs2, z)
+    end
+    function first_order(z)
+        evaluations[] += 1
+        return ForwardDiff.value(sum(abs2, z))
+    end
+    function constant(z)
+        evaluations[] += 1
+        return 2.0
+    end
+
+    # one evaluation per diagonal block and one per pair of distinct blocks
+    evaluations[] = 0
+    ForwardDiff.hessian(second_order, x, ForwardDiff.HessianConfig(second_order, x, chunk))
+    @test evaluations[] == 6
+
+    # without the outer perturbation only the diagonal blocks contribute, and only a gradient
+    evaluations[] = 0
+    ForwardDiff.hessian(first_order, x, ForwardDiff.HessianConfig(first_order, x, chunk))
+    @test evaluations[] == 1
+
+    evaluations[] = 0
+    ForwardDiff.hessian!(DiffResults.HessianResult(x), first_order, x,
+                         ForwardDiff.HessianConfig(first_order, x, chunk))
+    @test evaluations[] == 3
+
+    # a constant still needs the evaluation that determines the output type
+    evaluations[] = 0
+    ForwardDiff.hessian!(DiffResults.HessianResult(x), constant, x,
+                         ForwardDiff.HessianConfig(constant, x, chunk))
+    @test evaluations[] == 1
+end
+
+@testset "nested differentiation" begin
+    f = z -> sum(w -> w^3, z)
+    @testset "$(nameof(typeof(x)))" for x in ([1.0, 2.0, 3.0], SVector(1.0, 2.0, 3.0))
+        @test ForwardDiff.derivative(a -> ForwardDiff.hessian(f, a .* x)[1, 1], 1.0) == 6.0
+    end
+end
+
+@testset "$(nameof(W)), n = $n" for n in (3, 5), (W, sidx) in (
+    (LowerTriangular, [i + n * (j - 1) for j in 1:n for i in j:n]),
+    (UpperTriangular, [i + n * (j - 1) for j in 1:n for i in 1:j]),
+    (Diagonal,        1:(n + 1):n^2),
+)
+    x = W(randn(n, n))
+    L = length(x)
+    # d²f/dx[a]dx[b] is `w[a] * w[b]`, which no permutation of the structural positions reproduces
+    w = zeros(L)
+    w[sidx] = 1:length(sidx)
+    f = z -> dot(w, z)^2 / 2
+
+    expected = w * transpose(w)
+    grad = reshape(w .* dot(w, x), n, n)
+
+    # `length(sidx) - 1` makes the final chunk a partial one
+    @testset "chunk size = $c" for c in unique((1, 2, length(sidx) - 1, length(sidx)))
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+
+        H = ForwardDiff.hessian(f, x, cfg)
+        @test H isa Matrix
+        @test size(H) == (L, L)
+        @test H == expected
+
+        out = fill(NaN, L, L)
+        @test ForwardDiff.hessian!(out, f, x, cfg) === out
+        @test out == expected
+
+        flat = fill(NaN, L^2)
+        @test ForwardDiff.hessian!(flat, f, x, cfg) === flat
+        @test reshape(flat, L, L) == expected
+
+        # `DiffResults.HessianResult` allocates a dense gradient buffer even for a structured `x`
+        result = DiffResults.HessianResult(x)
+        result = ForwardDiff.hessian!(result, f, x, cfg)
+        @test DiffResults.value(result) ≈ f(x)
+        @test DiffResults.gradient(result) == grad
+        @test DiffResults.hessian(result) == expected
+    end
+end
+
+@testset "BigFloat with an unassigned input entry" begin
+    x = Vector{BigFloat}(undef, 10)
+    hole = 5
+    for i in eachindex(x)
+        i == hole || (x[i] = BigFloat(i))
+    end
+    used = [i for i in eachindex(x) if i != hole]
+    f(x) = sum(abs2(x[i]) for i in used)
+    expected = zeros(BigFloat, 10, 10)
+    for i in used
+        expected[i, i] = 2
+    end
+
+    @test !isassigned(x, hole)
+    for chunksize in (1, 2, 10)
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{chunksize}())
+        H = ForwardDiff.hessian(f, x, cfg)
+        @test H isa Matrix{BigFloat}
+        @test H == expected
+    end
 end
 
 @testset "branches in dot" begin
