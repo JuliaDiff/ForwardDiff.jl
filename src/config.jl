@@ -195,11 +195,16 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,D} <: AbstractConfig{N}
+struct HessianConfig{T,TO,V,N,D} <: AbstractConfig{N}
     iseeds::NTuple{N,Partials{N,V}}
     oseeds::NTuple{N,Partials{N,Dual{T,V,N}}}
     duals::D
 end
+
+# The layers need distinct tags, or `value`/`partials` inside `f` cannot tell them apart (#845).
+# `tagcount` fixes the ordering here rather than at the first comparison, as `Tag` does.
+outer_tag(::Type{T}, ::Type{D}) where {T,D} = (tagcount(Tag{T,D}); Tag{T,D})
+outer_tag(::Type{Nothing}, ::Type) = Nothing
 
 """
     ForwardDiff.HessianConfig(f, x::AbstractArray, chunk::Chunk = Chunk(x))
@@ -224,8 +229,9 @@ function HessianConfig(f::F,
                        ::T = Tag(f, V)) where {F,V,N,T}
     iseeds = construct_seeds(Partials{N,V})
     oseeds = construct_seeds(Partials{N,Dual{T,V,N}})
-    duals = similar(x, Dual{T,Dual{T,V,N},N})
-    return HessianConfig{T,V,N,typeof(duals)}(iseeds, oseeds, duals)
+    TO = outer_tag(T, Dual{T,V,N})
+    duals = similar(x, Dual{TO,Dual{T,V,N},N})
+    return HessianConfig{T,TO,V,N,typeof(duals)}(iseeds, oseeds, duals)
 end
 
 """
@@ -250,4 +256,4 @@ HessianConfig(f::F,
               tag = Tag(f, V)) where {F,V} = HessianConfig(f, x, chunk, tag)
 
 checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{HessianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,Dual{T,V,N},N}
+Base.eltype(::Type{HessianConfig{T,TO,V,N,D}}) where {T,TO,V,N,D} = Dual{TO,Dual{T,V,N},N}

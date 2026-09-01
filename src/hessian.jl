@@ -50,12 +50,12 @@ be used.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig{T} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
+function hessian!(result::DiffResult, f::F, x::AbstractArray, cfg::HessianConfig{T,TO} = HessianConfig(f, result, x), ::Val{CHK}=Val{true}()) where {F,T,TO,CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     _, ydual = symmetric_hessian!(reshape_hessian(result, x), f, x, cfg,
                                   DiffResults.gradient(result))
-    result = DiffResults.value!(result, value(T, value(T, ydual)))
+    result = DiffResults.value!(result, value(T, value(TO, ydual)))
     return result
 end
 
@@ -88,11 +88,11 @@ end
 # Copy a block from the nested partials and fill its transpose. On diagonal blocks, read
 # only the upper triangle so the result is exactly symmetric. `indices` maps a block
 # position to its row and column, both being linear indices of `x`.
-function extract_hessian_chunk!(::Type{T}, H, ydual, indices, roffset, coffset, rsize, csize) where {T}
+function extract_hessian_chunk!(::Type{T}, ::Type{TO}, H, ydual::Dual{TO,<:Dual{T}}, indices, roffset, coffset, rsize, csize) where {T,TO}
     rows = structural_chunk(indices, roffset + 1, rsize)
     cols = structural_chunk(indices, coffset + 1, csize)
     for r in 1:rsize
-        drow = partials(T, ydual, r)
+        drow = partials(TO, ydual, r)
         i = rows[r]
         cstart = roffset == coffset ? r : 1
         for c in cstart:csize
@@ -105,11 +105,23 @@ function extract_hessian_chunk!(::Type{T}, H, ydual, indices, roffset, coffset, 
     return H
 end
 
+# Without both perturbations the block is zero.
+function extract_hessian_chunk!(::Type{T}, ::Type{TO}, H, ydual, indices, roffset, coffset, rsize, csize) where {T,TO}
+    rows = structural_chunk(indices, roffset + 1, rsize)
+    cols = structural_chunk(indices, coffset + 1, csize)
+    h = zero(valtype(T, valtype(TO, typeof(ydual))))
+    for j in cols, i in rows
+        H[i, j] = h
+        H[j, i] = h
+    end
+    return H
+end
+
 # The inner partials of a diagonal block contain the corresponding gradient chunk.
 # TODO: delegate to `extract_gradient_chunk!` once it takes its positions from `x` (#838).
-extract_hessian_gradient_chunk!(::Type{T}, ::Nothing, ydual, indices, index, chunksize) where {T} = nothing
-function extract_hessian_gradient_chunk!(::Type{T}, grad, ydual, indices, index, chunksize) where {T}
-    dual = value(T, ydual)
+extract_hessian_gradient_chunk!(::Type{T}, ::Type{TO}, ::Nothing, ydual, indices, index, chunksize) where {T,TO} = nothing
+function extract_hessian_gradient_chunk!(::Type{T}, ::Type{TO}, grad, ydual, indices, index, chunksize) where {T,TO}
+    dual = value(TO, ydual)
     for (i, idx) in enumerate(structural_chunk(indices, index, chunksize))
         grad[idx] = partials(T, dual, i)
     end
@@ -140,16 +152,27 @@ function symmetric_hessian_expr(result_definition::Expr)
         seed_hessian_chunk!(xdual, x, indices, N + 1, nothing, nothing, xlen - N)
         ydual1 = f(xdual)
         ydual1 isa Real || throw(HESSIAN_ERROR)
+        Vout = valtype(T, valtype(TO, typeof(ydual1)))
         $(result_definition)
-        # the structural zeros of `x` are not variables, so no block writes their rows and columns
-        if xlen != length(x)
-            fill!(H, zero(eltype(H)))
-            if grad !== nothing
-                fill!(grad, zero(eltype(grad)))
-            end
+        # A second derivative needs both perturbations, a first derivative only the inner one:
+        # what the result does not carry vanishes identically.
+        zero_hessian = !(ydual1 isa Dual{TO,<:Dual{T}})
+        zero_gradient = zero_hessian && !(ydual1 isa Dual{T})
+
+        # Zero what no block writes: a derivative that vanishes, and the rows and columns of
+        # the structural zeros of `x`, which are not variables.
+        if zero_hessian || xlen != length(x)
+            fill!(H, zero(Vout))
         end
-        extract_hessian_chunk!(T, H, ydual1, indices, 0, 0, N, N)
-        extract_hessian_gradient_chunk!(T, grad, ydual1, indices, 1, N)
+        if grad !== nothing && (zero_gradient || xlen != length(x))
+            fill!(grad, zero(Vout))
+        end
+        # off-diagonal blocks find second derivatives, diagonal ones also the gradient
+        if zero_hessian && (zero_gradient || grad === nothing)
+            return H, ydual1
+        end
+        extract_hessian_chunk!(T, TO, H, ydual1, indices, 0, 0, N, N)
+        extract_hessian_gradient_chunk!(T, TO, grad, ydual1, indices, 1, N)
         if nblocks > 1
             seed_hessian_chunk!(xdual, x, indices, 1, nothing, nothing)
         end
@@ -157,22 +180,24 @@ function symmetric_hessian_expr(result_definition::Expr)
         for q in 2:nblocks
             qoffset = (q - 1) * N
             qsize = min(N, xlen - qoffset)
-            # Outer-i inner-j and outer-j inner-i round differently, so the outer layer always
-            # takes the earlier position -- else the result would depend on the chunk size.
-            # q's inner seeds remain unchanged throughout this loop.
-            seed_hessian_chunk!(xdual, x, indices, qoffset + 1, iseeds, nothing, qsize)
-            for p in 1:(q - 1)
-                poffset = (p - 1) * N
-                seed_hessian_chunk!(xdual, x, indices, poffset + 1, nothing, oseeds)
-                ydual = f(xdual)
-                extract_hessian_chunk!(T, H, ydual, indices, poffset, qoffset, N, qsize)
-                seed_hessian_chunk!(xdual, x, indices, poffset + 1, nothing, nothing)
+            if !zero_hessian
+                # Outer-i inner-j and outer-j inner-i round differently, so the outer layer always
+                # takes the earlier position -- else the result would depend on the chunk size.
+                # q's inner seeds remain unchanged throughout this loop.
+                seed_hessian_chunk!(xdual, x, indices, qoffset + 1, iseeds, nothing, qsize)
+                for p in 1:(q - 1)
+                    poffset = (p - 1) * N
+                    seed_hessian_chunk!(xdual, x, indices, poffset + 1, nothing, oseeds)
+                    ydual = f(xdual)
+                    extract_hessian_chunk!(T, TO, H, ydual, indices, poffset, qoffset, N, qsize)
+                    seed_hessian_chunk!(xdual, x, indices, poffset + 1, nothing, nothing)
+                end
             end
             # The diagonal block adds q's outer seeds while retaining its inner seeds.
             seed_hessian_chunk!(xdual, x, indices, qoffset + 1, iseeds, oseeds, qsize)
             ydual = f(xdual)
-            extract_hessian_chunk!(T, H, ydual, indices, qoffset, qoffset, qsize, qsize)
-            extract_hessian_gradient_chunk!(T, grad, ydual, indices, qoffset + 1, qsize)
+            extract_hessian_chunk!(T, TO, H, ydual, indices, qoffset, qoffset, qsize, qsize)
+            extract_hessian_gradient_chunk!(T, TO, grad, ydual, indices, qoffset + 1, qsize)
             seed_hessian_chunk!(xdual, x, indices, qoffset + 1, nothing, nothing, qsize)
         end
 
@@ -180,10 +205,10 @@ function symmetric_hessian_expr(result_definition::Expr)
     end
 end
 
-@eval function symmetric_hessian(f::F, x, cfg::HessianConfig{T,V,N}, grad) where {F,T,V,N}
-    $(symmetric_hessian_expr(:(H = similar(x, valtype(T, valtype(T, typeof(ydual1))), length(x), length(x)))))
+@eval function symmetric_hessian(f::F, x, cfg::HessianConfig{T,TO,V,N}, grad) where {F,T,TO,V,N}
+    $(symmetric_hessian_expr(:(H = similar(x, Vout, length(x), length(x)))))
 end
 
-@eval function symmetric_hessian!(H, f::F, x, cfg::HessianConfig{T,V,N}, grad) where {F,T,V,N}
+@eval function symmetric_hessian!(H, f::F, x, cfg::HessianConfig{T,TO,V,N}, grad) where {F,T,TO,V,N}
     $(symmetric_hessian_expr(:()))
 end
