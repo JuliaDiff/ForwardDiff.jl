@@ -94,9 +94,9 @@ Base.eltype(::Type{DerivativeConfig{T,D}}) where {T,D} = eltype(D)
 # GradientConfig #
 ##################
 
-struct GradientConfig{T,V,N,D} <: AbstractConfig{N}
-    seeds::NTuple{N,Partials{N,V}}
-    duals::D
+mutable struct GradientConfig{T,V,N,D} <: AbstractConfig{N}
+    const seeds::NTuple{N,Partials{N,V}}
+    const duals::D
 end
 
 """
@@ -130,9 +130,9 @@ Base.eltype(::Type{GradientConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # JacobianConfig #
 ##################
 
-struct JacobianConfig{T,V,N,D} <: AbstractConfig{N}
-    seeds::NTuple{N,Partials{N,V}}
-    duals::D
+mutable struct JacobianConfig{T,V,N,D} <: AbstractConfig{N}
+    const seeds::NTuple{N,Partials{N,V}}
+    const duals::D
 end
 
 """
@@ -195,9 +195,9 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
-    jacobian_config::JacobianConfig{T,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
+mutable struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
+    const jacobian_config::JacobianConfig{T,V,N,DJ}
+    const gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
 end
 
 """
