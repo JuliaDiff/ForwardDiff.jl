@@ -259,6 +259,135 @@ end
     x0_mvector = MVector{2}(x0)
     @test ForwardDiff.jacobian(ev1, x0_mvector) isa MMatrix{2, 2}
     @test ForwardDiff.jacobian(ev1, x0_mvector) ≈ Calculus.finite_difference_jacobian(ev1, x0)
+
+    # real eigenvalues
+    f(x) = eigvals(reshape(x, 2, 2))
+    x1 = [1.0, 2.0, 3.0, 4.0]
+    @test ForwardDiff.jacobian(f, x1) ≈ Calculus.finite_difference_jacobian(f, x1)
+
+    # complex eigenvalues
+    g(x) = begin
+        vals = eigvals(reshape(x, 2, 2))
+        vcat(real(vals), imag(vals))
+    end
+    x2 = [0.0, -1.0, 1.0, 0.0]
+    @test ForwardDiff.jacobian(g, x2) ≈ Calculus.finite_difference_jacobian(g, x2)
+
+    # eigenvectors, deliberately without renormalizing: the derivatives have to belong to
+    # the normalization `eigen` itself returns, i.e. unit 2-norm with largest entry real
+    h(x) = vec(eigen(reshape(x, 2, 2)).vectors)
+    x3 = [2.0, 1.0, 0.5, 3.0]
+    @test ForwardDiff.jacobian(h, x3) ≈ Calculus.finite_difference_jacobian(h, x3)
+
+    # complex eigenvectors
+    hc(x) = begin
+        V = eigen(reshape(x, 2, 2)).vectors
+        vcat(real(vec(V)), imag(vec(V)))
+    end
+    x3c = vec([0.3 -1.2; 1.7 0.5])
+    @test ForwardDiff.jacobian(hc, x3c) ≈ Calculus.finite_difference_jacobian(hc, x3c)
+
+    # larger than 2x2, non-symmetric with real eigenvalues
+    f3(x) = eigvals(reshape(x, 3, 3))
+    x4 = vec([2.0 1.0 0.5; 0.5 3.0 1.5; 0.25 0.75 4.0])
+    @test ForwardDiff.jacobian(f3, x4) ≈ Calculus.finite_difference_jacobian(f3, x4)
+    h3(x) = vec(eigen(reshape(x, 3, 3)).vectors)
+    @test ForwardDiff.jacobian(h3, x4) ≈ Calculus.finite_difference_jacobian(h3, x4)
+
+    # 3x3 with one real and one complex conjugate pair of eigenvalues
+    g3(x) = begin
+        vals = eigvals(reshape(x, 3, 3))
+        vcat(real(vals), imag(vals))
+    end
+    hc3(x) = begin
+        V = eigen(reshape(x, 3, 3)).vectors
+        vcat(real(vec(V)), imag(vec(V)))
+    end
+    x4c = vec([0.5 -1.3 0.2; 1.1 0.4 -0.6; 0.3 0.7 2.0])
+    @test ForwardDiff.jacobian(g3, x4c) ≈ Calculus.finite_difference_jacobian(g3, x4c)
+    @test ForwardDiff.jacobian(hc3, x4c) ≈ Calculus.finite_difference_jacobian(hc3, x4c)
+
+    # 4x4 with two complex conjugate pairs. At 2x2 and 3x3 the entry that carries the phase
+    # convention can come out right by accident, so the complex eigenvector derivatives need
+    # to be pinned at a larger size as well.
+    g4(x) = begin
+        vals = eigvals(reshape(x, 4, 4))
+        vcat(real(vals), imag(vals))
+    end
+    hc4(x) = begin
+        V = eigen(reshape(x, 4, 4)).vectors
+        vcat(real(vec(V)), imag(vec(V)))
+    end
+    x5c = vec([1.0 -2.0 0.5 0.0; 2.0 1.0 0.0 0.5; 0.0 0.5 2.0 -1.0; 0.5 0.0 1.0 2.0])
+    @test !isreal(eigvals(reshape(x5c, 4, 4)))
+    @test ForwardDiff.jacobian(g4, x5c) ≈ Calculus.finite_difference_jacobian(g4, x5c)
+    @test ForwardDiff.jacobian(hc4, x5c) ≈ Calculus.finite_difference_jacobian(hc4, x5c)
+
+    # the eigenvector derivatives used to belong to the normalization
+    # `diag(inv(U) * U̇) == 0` instead, which differs for a non-normal matrix
+    A_gauge = Dual{TestTag}.([1.0 1.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])
+    @test ForwardDiff.partials.(eigen(A_gauge).vectors, 1) ≈ [0.0 1/(2*sqrt(2)); 0.0 -1/(2*sqrt(2))]
+
+    # keyword arguments are forwarded to the decomposition of the values
+    A_kw = reshape(x4, 3, 3)
+    A_kw_dual = Dual{TestTag}.(A_kw, Matrix(1.0I, 3, 3))
+    for kwargs in ((), (sortby = nothing,), (permute = false,), (scale = false,),
+                   (permute = false, scale = false), (sortby = λ -> -real(λ),))
+        @test ForwardDiff.value.(eigvals(A_kw_dual; kwargs...)) ≈ eigvals(A_kw; kwargs...)
+        @test eigvals(A_kw_dual; kwargs...) ≈ eigen(A_kw_dual; kwargs...).values
+        f_kw(x) = eigvals(reshape(x, 3, 3); kwargs...)
+        @test ForwardDiff.jacobian(f_kw, x4) ≈ Calculus.finite_difference_jacobian(f_kw, x4)
+    end
+    # and the derivatives follow the ordering they produce: `A_kw` has a real spectrum, so
+    # sorting by `-real` reverses the order `LinearAlgebra.eigsortby` gives
+    @test ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3); sortby = λ -> -real(λ)), x4) ≈
+          ForwardDiff.jacobian(x -> eigvals(reshape(x, 3, 3)), x4)[3:-1:1, :]
+
+    # a plain `Matrix` that is Hermitian in its values *and* its partials goes through the
+    # `Symmetric` methods, so both agree exactly
+    S0 = [2.0 1.0 0.5; 1.0 3.0 1.5; 0.5 1.5 4.0]
+    Ṡ = [0.5 -1.0 0.25; -1.0 2.0 0.75; 0.25 0.75 -0.5]
+    A_herm = Dual{TestTag}.(S0, Ṡ)
+    @test ishermitian(A_herm)
+    @test eigvals(A_herm) == eigvals(Symmetric(A_herm))
+    @test eigen(A_herm).values == eigen(Symmetric(A_herm)).values
+    @test eigen(A_herm).vectors == eigen(Symmetric(A_herm)).vectors
+    @test eigvals(A_herm) isa Vector{Dual{TestTag,Float64,1}}
+    # but a `sortby` the `Symmetric` methods cannot honour has to stay on the general path
+    @test ForwardDiff.partials.(eigvals(A_herm; sortby = λ -> -real(λ)), 1) ≈
+          reverse(ForwardDiff.partials.(eigvals(A_herm), 1))
+
+    # Hermitian values with non-Hermitian partials must *not* take the `Symmetric` path,
+    # which would symmetrize the perturbation and give a different derivative
+    A_asym = Dual{TestTag}.([1.0 2.0; 2.0 1.0], [0.0 1.0; 0.0 0.0])
+    @test !ishermitian(A_asym)
+    @test ForwardDiff.partials.(eigvals(A_asym), 1) ≈ [-0.5, 0.5]
+    @test ForwardDiff.partials.(eigvals(Symmetric(A_asym)), 1) ≈ [-1.0, 1.0]
+
+    # repeated eigenvalues: the eigenvectors are not unique, so their derivatives do not
+    # exist. This used to be a silent `NaN` in `.vectors`.
+    for A_rep in (Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]),   # diagonalizable
+                  Dual{TestTag}.([2.0 1.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]))   # defective
+        @test_throws ArgumentError eigen(A_rep)
+    end
+    @test_throws ArgumentError eigen(Symmetric(Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])))
+    @test_throws ArgumentError eigen(SymTridiagonal(Dual{TestTag}.([2.0, 2.0], [1.0, 0.0]),
+                                                    Dual{TestTag}.([0.0], [0.0])))
+    # `eigvals` never divides by the eigenvalue gaps and is unaffected
+    @test eigvals(Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0])) ==
+          Dual{TestTag}.([2.0, 2.0], [1.0, 0.0])
+    # equal values with differing partials would divide by a `Dual` with a zero value
+    A_nested = Dual{TestTag}.(Dual{TestTag}.([2.0 0.0; 0.0 2.0], [1.0 0.0; 0.0 0.0]),
+                              Dual{TestTag}.([0.0 1.0; 1.0 0.0], [0.0 0.0; 0.0 0.0]))
+    @test_throws ArgumentError eigen(A_nested)
+
+    # eltypes of the general path
+    A_dual = Dual{TestTag}.([1.0 2.0; 3.0 4.0], [1.0 0.0; 0.0 0.0])
+    @test eigvals(A_dual) isa Vector{Dual{TestTag,Float64,1}}
+    @test eigen(A_dual).vectors isa Matrix{Dual{TestTag,Float64,1}}
+    A_dual_complex = Dual{TestTag}.([0.0 -1.0; 1.0 0.0], [1.0 0.0; 0.0 0.0])
+    @test eigvals(A_dual_complex) isa Vector{Complex{Dual{TestTag,Float64,1}}}
+    @test eigen(A_dual_complex).vectors isa Matrix{Complex{Dual{TestTag,Float64,1}}}
 end
 
 @testset "type stability" begin

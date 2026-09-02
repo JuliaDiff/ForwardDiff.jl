@@ -805,6 +805,29 @@ function LinearAlgebra.eigvals(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:R
     Dual{Tg}.(λ, tuple.(parts...))
 end
 
+@noinline function _throw_repeated_eigvals(i, j, λ)
+    throw(ArgumentError(lazy"eigenvector derivatives are not defined for repeated eigenvalues, but λ[$i] == λ[$j] == $λ"))
+end
+
+# `_lyap_div!!` special cases only the diagonal, where `λ[j] - λ[i]` vanishes by
+# construction. Two equal eigenvalues make an off-diagonal denominator vanish as well, and
+# the eigenvector partials come out as `Inf` or `NaN`: the eigenvectors of a repeated
+# eigenvalue are not unique and hence not differentiable. The `eigen` methods below call
+# this once, right after the decomposition and before anything can fail for another reason,
+# rather than from inside `_lyap_div!!`, which runs once per partial direction.
+#
+# The eigenvalues are compared as they are, without extracting primal values: for nested
+# `Dual`s two of them can be `!=` here and still divide to `Inf`, but then their primals
+# coincide, and the decomposition of the values -- which every method computes first, one
+# `Dual` level down -- has already seen them as exact duplicates and thrown.
+function _check_distinct_eigvals(λ::AbstractVector)
+    for j in eachindex(λ), i in eachindex(λ)
+        i < j || continue
+        λ[i] == λ[j] && _throw_repeated_eigvals(i, j, λ[i])
+    end
+    return nothing
+end
+
 # A ./ (λ' .- λ) but with diag special cased
 # Default out-of-place method
 function _lyap_div!!(A::AbstractMatrix, λ::AbstractVector)
@@ -833,15 +856,148 @@ LinearAlgebra.eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N} = _eigen(
 function _eigen(A::Symmetric{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(Symmetric(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    λvals = value.(λ)
+    _check_distinct_eigvals(λvals)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), λvals), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
 end
 
 function LinearAlgebra.eigen(A::SymTridiagonal{<:Dual{Tg,T,N}}) where {Tg,T<:Real,N}
     λ = eigvals(A)
     _,Q = eigen(SymTridiagonal(value.(parent(A))))
-    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), value.(λ)), N)
+    λvals = value.(λ)
+    _check_distinct_eigvals(λvals)
+    parts = ntuple(j -> Q*_lyap_div!!(Q' * getindex.(partials.(A), j) * Q - Diagonal(getindex.(partials.(λ), j)), λvals), N)
     Eigen(λ,Dual{Tg}.(Q, tuple.(parts...)))
+end
+
+# General eigvals and eigen #
+#---------------------------#
+
+# Assemble a value and its `N` partials into a `Dual` of type `D = Dual{Tg}`. Eigenvalues
+# and eigenvectors of a real matrix can be complex, in which case real and imaginary part
+# each become a `Dual` of their own.
+_make_eigen_dual(D::Type, val::Real, parts::NTuple{N,Real}) where {N} = D(val, parts...)
+_make_eigen_dual(D::Type, val::Complex, parts::NTuple{N,Number}) where {N} =
+    Complex(D(real(val), real.(parts)...), D(imag(val), imag.(parts)...))
+
+# The derivatives are computed entirely from the values of `A`, i.e. one `Dual` level
+# below the entries of `A`, and are only assembled into `Dual`s at the very end. Mixing
+# the two levels in a single expression (e.g. multiplying the eigenvectors of `value.(A)`
+# by `A` itself) would make the same-tag product rule apply at the outer level and hence
+# give wrong results for nested `Dual`s, as in `ForwardDiff.hessian`.
+#
+# The formulas are the ones of https://people.maths.ox.ac.uk/gilesm/files/NA-08-01.pdf:
+# with `A = U * Diagonal(λ) * inv(U)` and `M = inv(U) * Ȧ * U`, we have `λ̇ = diag(M)`
+# and `U̇ = U * (F .* M)`, where `F[i,j] = inv(λ[j] - λ[i])` off the diagonal and zero on it.
+
+@noinline function _throw_no_real_eigvec_entry()
+    throw(ArgumentError("no entry of an eigenvector is real, so the entry that carries the phase convention cannot be identified; the derivatives assume the normalization of `eigen`, whose eigenvectors have a real entry of largest magnitude"))
+end
+
+# Index of the entry of largest magnitude among the real entries of `v`. LAPACK normalizes
+# the eigenvectors it returns to unit 2-norm with their largest entry real, so this is the
+# entry that carries the phase convention. Modelled after `_findrealmaxabs2` in ChainRules,
+# except that reaching the end without a real entry is an error rather than a silent
+# fallback: it means the assumed normalization does not hold.
+function _findrealmaxabs2(v)
+    imax = firstindex(v)
+    amax = abs2(zero(eltype(v)))
+    found = false
+    for i in eachindex(v)
+        vi = v[i]
+        isreal(vi) || continue
+        a = abs2(vi)
+        a < amax && continue
+        amax, imax = a, i
+        found = true
+    end
+    found || _throw_no_real_eigvec_entry()
+    return imax
+end
+
+# The diagonal of `F` is a free gauge parameter: `U̇ + U * Diagonal(ċ)` solves the same
+# differentiated eigenvalue equation for any `ċ`. Setting it to zero, as `U̇ = U * (F .* M)`
+# does, normalizes the eigenvectors by `diag(inv(U) * U̇) == 0`, which for a non-normal `A`
+# is not the convention `eigen` itself returns. Choose `ċ` instead such that the derivatives
+# belong to LAPACK's convention, i.e. differentiate its two constraints at `t = 0`:
+#
+#   `u' * u == 1`             ⇒  `real(ċ) = -real(u' * u̇)`
+#   `imag(u[k]) == 0`         ⇒  `imag(ċ) = -imag(u̇[k]) / real(u[k])`,  `k = _findrealmaxabs2(u)`
+#
+# This mirrors `_eigen_norm_phase_fwd!` in ChainRules, so that both agree on `eigen`.
+function _eigen_norm_phase!(U̇, U)
+    for i in axes(U, 2)
+        u, u̇ = view(U, :, i), view(U̇, :, i)
+        ċ_norm = -real(dot(u, u̇))
+        if eltype(U) <: Real
+            u̇ .+= u .* ċ_norm
+        else
+            k = _findrealmaxabs2(u)
+            u̇ .+= u .* complex(ċ_norm, -imag(u̇[k]) / real(u[k]))
+            # `imag(u[k]) == 0` holds identically along the curve, so `imag(u̇[k])` is exactly
+            # zero. Leaving it as the cancellation `q + fl(r * fl(-q / r))` keeps a rounding
+            # residue instead, and one differentiation level up that residue sits in the
+            # partials, where `isreal` sees it: `_findrealmaxabs2` then finds no real entry
+            # in the column and fixes the phase at the wrong one. Being exact rather than
+            # approximate, this also keeps third and higher derivatives right.
+            u̇[k] = complex(real(u̇[k]), zero(real(u̇[k])))
+        end
+    end
+    return U̇
+end
+
+# A matrix that is Hermitian in both its values and its partials is handled by the
+# `Symmetric` methods, which is what `LinearAlgebra.eigen!` and `eigvals!` do for the
+# values as well. Their eigenvalues are real, so the eltype no longer depends on whether
+# `geevx!` happens to produce a nonzero imaginary part.
+#
+# Those methods take no keyword arguments. `permute` and `scale` only control the balancing
+# that the symmetric algorithm does not use, so they can be ignored the way
+# `LinearAlgebra.eigen!` ignores them, but any `sortby` other than the ascending order that
+# is returned anyway has to go through the general path.
+function _use_symmetric(A; permute::Bool=true, scale::Bool=true,
+                        sortby::Union{Function,Nothing}=LinearAlgebra.eigsortby)
+    return (sortby === nothing || sortby === LinearAlgebra.eigsortby) && ishermitian(A)
+end
+
+# `value.(A)` is a temporary of our own, so the decomposition may consume it. `eigen!` only
+# exists for BLAS element types, which is the innermost level of the nesting; above it the
+# recursion goes through the copying `eigen` below. `!!` as in `_lyap_div!!`: may mutate.
+_eigen!!(B::StridedMatrix{<:LinearAlgebra.BlasFloat}; kwargs...) = eigen!(B; kwargs...)
+_eigen!!(B::AbstractMatrix; kwargs...) = eigen(B; kwargs...)
+
+# `permute`, `scale` and `sortby` are forwarded to the underlying decomposition of
+# `value.(A)`; the derivatives are assembled in whatever order it returns, and for nested
+# `Dual`s every level is decomposed with the same keyword arguments
+function LinearAlgebra.eigvals(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    _use_symmetric(A; kwargs...) && return _eigvals(Symmetric(A))
+    return _eigvals_general(A; kwargs...)
+end
+function _eigvals_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    λ, U = _eigen!!(value.(A); kwargs...)
+    luU = lu(U)
+    # `Ȧ * U` is a temporary as well, so the solve can overwrite it
+    parts = ntuple(j -> diag(ldiv!(luU, getindex.(partials.(A), j) * U)), N)
+    return map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(parts...))
+end
+
+function LinearAlgebra.eigen(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    _use_symmetric(A; kwargs...) && return _eigen(Symmetric(A))
+    return _eigen_general(A; kwargs...)
+end
+function _eigen_general(A::StridedMatrix{Dual{Tg,T,N}}; kwargs...) where {Tg,T<:Real,N}
+    λ, U = _eigen!!(value.(A); kwargs...)
+    # before `lu`, so that a repeated eigenvalue is reported as such rather than surfacing
+    # as a `SingularException` from the factorization of a defective `U`
+    _check_distinct_eigvals(λ)
+    luU = lu(U)
+    M = ntuple(j -> ldiv!(luU, getindex.(partials.(A), j) * U), N)
+    λ_parts = map(diag, M)
+    U_parts = ntuple(j -> _eigen_norm_phase!(U * _lyap_div!!(M[j] - Diagonal(λ_parts[j]), λ), U), N)
+    λ_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), λ, tuple.(λ_parts...))
+    U_dual = map((val, p) -> _make_eigen_dual(Dual{Tg}, val, p), U, tuple.(U_parts...))
+    return Eigen(λ_dual, U_dual)
 end
 
 # Functions in SpecialFunctions which return tuples #
