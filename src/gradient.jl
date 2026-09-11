@@ -49,21 +49,24 @@ gradient(f, x::Real) = throw(DimensionMismatch("gradient(f, x) expects that x is
 # result extraction #
 #####################
 
+# Without the perturbation the gradient is zero everywhere.
 function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
-    result = DiffResults.value!(result, y)
+    v = value(T, y)
+    result = DiffResults.value!(result, v)
     grad = DiffResults.gradient(result)
-    fill!(grad, zero(y))
+    fill!(grad, zero(v))
     return result
 end
 
-function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
+function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual{T}) where {T}
     result = DiffResults.value!(result, value(T, dual))
     result = DiffResults.gradient!(result, partials(T, dual))
     return result
 end
 
-extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
-function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
+extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} =
+    fill!(result, zero(value(T, y)))
+function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual{T}) where {T}
     idxs = structural_eachindex(result)
     for (i, idx) in zip(1:npartials(dual), idxs)
         result[idx] = partials(T, dual, i)
