@@ -88,14 +88,22 @@ end
 
 function _seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {T,V,N}
     seed = zero(Partials{N,V})
+    return _seed!(duals, x, idxs) do value, _
+        Dual{T,V,N}(value, seed)
+    end
+end
+
+# Write a sequence of duals while preserving unassigned entries in arrays whose element type is not
+# stored inline. `make_dual` receives the primal value and its one-based position in `idxs`.
+@inline function _seed!(make_dual::F, duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {F,T,V,N}
     if isbitstype(V)
-        for idx in idxs
-            duals[idx] = Dual{T,V,N}(x[idx], seed)
+        for (i, idx) in enumerate(idxs)
+            duals[idx] = make_dual(x[idx], i)
         end
     else
-        for idx in idxs
+        for (i, idx) in enumerate(idxs)
             if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seed)
+                duals[idx] = make_dual(x[idx], i)
             else
                 Base._unsetindex!(duals, idx)
             end
@@ -106,38 +114,31 @@ end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
-    if isbitstype(V)
-        for (i, idx) in zip(1:N, structural_eachindex(duals, x))
-            duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
-        end
-    else
-        for (i, idx) in zip(1:N, structural_eachindex(duals, x))
-            if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
-            else
-                Base._unsetindex!(duals, idx)
-            end
-        end
+    idxs = Iterators.take(structural_eachindex(duals, x), N)
+    return _seed!(duals, x, idxs) do value, i
+        Dual{T,V,N}(value, seeds[i])
     end
-    return duals
 end
 
 function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
     offset = index - 1
-    idxs = Iterators.drop(structural_eachindex(duals, x), offset)
-    if isbitstype(V)
-        for (i, idx) in zip(1:chunksize, idxs)
-            duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
-        end
-    else
-        for (i, idx) in zip(1:chunksize, idxs)
-            if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
-            else
-                Base._unsetindex!(duals, idx)
-            end
-        end
+    idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), offset), chunksize)
+    return _seed!(duals, x, idxs) do value, i
+        Dual{T,V,N}(value, seeds[i])
     end
-    return duals
+end
+
+# Seed a chunk in either layer of nested duals. A `nothing` seed clears that layer.
+function seed_hessian_chunk!(duals::AbstractArray{Dual{T,Dual{T,V,N},N}}, x, index,
+                             iseeds::Union{Nothing,NTuple{N,Partials{N,V}}},
+                             oseeds::Union{Nothing,NTuple{N,Partials{N,Dual{T,V,N}}}},
+                             chunksize = N) where {T,V,N}
+    izero = zero(Partials{N,V})
+    ozero = zero(Partials{N,Dual{T,V,N}})
+    idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), chunksize)
+    return _seed!(duals, x, idxs) do value, i
+        inner = Dual{T,V,N}(value, iseeds === nothing ? izero : iseeds[i])
+        Dual{T,Dual{T,V,N},N}(inner, oseeds === nothing ? ozero : oseeds[i])
+    end
 end
