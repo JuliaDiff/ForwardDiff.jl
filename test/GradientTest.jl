@@ -56,6 +56,7 @@ end
 cfgx = ForwardDiff.GradientConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.gradient(f, x, cfgx)
 @test ForwardDiff.gradient(f, x, cfgx, Val{false}()) == ForwardDiff.gradient(f,x)
+@test_throws ArgumentError ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{length(x) + 1}()))
 
 
 ########################
@@ -113,6 +114,10 @@ end
 
     out = similar(x)
     ForwardDiff.gradient!(out, prod, sx, scfg)
+    @test out == actual
+
+    out = similar(x)
+    ForwardDiff.gradient!(out, prod, sx, scfg, Val{false}())
     @test out == actual
 
     result = DiffResults.GradientResult(x)
@@ -274,6 +279,14 @@ end
         end
     end
 end
+
+# a structured work buffer cannot preserve an unassigned entry: it can only be left unassigned in
+# an `Array`
+@testset "$(nameof(T)) with an unassigned entry" for T in (LowerTriangular, UpperTriangular)
+    x = T(Matrix{BigFloat}(undef, 3, 3))
+    @test_throws "ArgumentError: cannot differentiate at an input with an unassigned entry at index CartesianIndex(1, 1): that would leave an entry of the $(nameof(T)) work buffer unassigned" ForwardDiff.gradient(sum, x)
+end
+@test_throws "ArgumentError: cannot differentiate at an input with an unassigned entry at index 1: that would leave an entry of the Diagonal work buffer unassigned" ForwardDiff.gradient(sum, Diagonal(Vector{BigFloat}(undef, 3)))
 
 # issue #769
 @testset "functions with `Dual` output" begin
