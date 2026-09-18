@@ -110,8 +110,71 @@ end
     @test_throws DimensionMismatch ForwardDiff.derivative(sum, fill(2pi, 3))
 end
 
+# `abs`/`conj`/`real`/`angle` are nowhere complex differentiable, and work only because the real and
+# imaginary parts carry separate partials.
+const COMPLEX_OUTPUT_FUNCS = (
+    ("cis and exp",    (y, x) -> (y[1] = cis(x); y[2] = exp((1+2im)*x)),
+                       x -> [cis(x), exp((1+2im)*x)]),
+    ("abs and conj",   (y, x) -> (z = cis(x)*(2+x); y[1] = abs(z)+0im; y[2] = conj(z)),
+                       x -> (z = cis(x)*(2+x); [abs(z)+0im, conj(z)])),
+    ("real and angle", (y, x) -> (z = (1+2im)*x^2+3; y[1] = real(z)+0im; y[2] = angle(z)+0im),
+                       x -> (z = (1+2im)*x^2+3; [real(z)+0im, angle(z)+0im])),
+    ("sqrt and log",   (y, x) -> (z = 2cis(x)+3; y[1] = sqrt(z); y[2] = log(z)/(x+1im)),
+                       x -> (z = 2cis(x)+3; [sqrt(z), log(z)/(x+1im)])),
+)
+
 @testset "complex output" begin
     @test ForwardDiff.derivative(x -> (1+im)*x, 0) == (1+im)
+
+    # The in-place path must agree exactly with the non-mutating one: same `Complex{Dual}` arithmetic.
+    # `y` only matches approximately, since recomputing `f(x)` in `Float64` reassociates.
+    @testset "in-place, $name" for (name, f!, f) in COMPLEX_OUTPUT_FUNCS
+        x = 0.7
+        v, d = f(x), ForwardDiff.derivative(f, x)
+        @test !(eltype(d) <: ForwardDiff.Dual)
+        @test d ≈ Calculus.derivative(f, x) atol=FINITEDIFF_ERROR
+
+        y = Vector{ComplexF64}(undef, 2)
+        for cfg in ((), (ForwardDiff.DerivativeConfig(f!, y, x),))
+            @test ForwardDiff.derivative(f!, y, x, cfg...) == d
+            @test y ≈ v
+
+            out = similar(d)
+            @test ForwardDiff.derivative!(out, f!, y, x, cfg...) === out
+            @test out == d
+
+            out = DiffResults.DiffResult(similar(v), similar(d))
+            @test ForwardDiff.derivative!(out, f!, y, x, cfg...) === out
+            @test DiffResults.value(out) ≈ v
+            @test DiffResults.derivative(out) == d
+        end
+    end
+
+    @testset "in-place, entries f! leaves alone" begin
+        y = ComplexF64[0, 9-4im]
+        d = ForwardDiff.derivative((y, x) -> (y[1] = cis(x)), y, 0.3)
+        @test d[1] ≈ im*cis(0.3)
+        @test d[2] === 0.0+0.0im
+        @test y[2] === 9.0-4.0im
+    end
+
+    @testset "in-place, nested" begin
+        h!(y, x) = (y[1] = cis(2x); y[2] = x^2 + 3im*x)
+        @test ForwardDiff.derivative(1.0) do x
+            ForwardDiff.derivative(h!, Vector{Complex{typeof(x)}}(undef, 2), x)
+        end ≈ [-4cis(2.0), 2.0+0im]
+    end
+
+    # `Complex{BigFloat}` is not `isbitstype`, covering the `isassigned` branch of
+    # `_seed_zero_partials!`; the `Matrix` covers a non-vector shape.
+    @testset "in-place, $(eltype(y))" for y in (Vector{Complex{BigFloat}}(undef, 3),
+                                               Matrix{ComplexF64}(undef, 2, 2))
+        f(x) = fill(cis(x)*(1+x), size(y))
+        x = convert(real(eltype(y)), 4//10)
+        @test ForwardDiff.derivative((y, x) -> (y .= cis(x)*(1+x)), y, x) ==
+              ForwardDiff.derivative(f, x)
+        @test y ≈ f(x)
+    end
 end
 
 @testset "NaN-safe mode" begin
