@@ -57,8 +57,13 @@ function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
 end
 
 function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
-    result = DiffResults.value!(result, value(T, dual))
-    result = DiffResults.gradient!(result, partials(T, dual))
+    if hastag(T, typeof(dual))
+        result = DiffResults.value!(result, value(T, dual))
+        result = DiffResults.gradient!(result, partials(T, dual))
+    else
+        result = DiffResults.value!(result, dual)
+        fill!(DiffResults.gradient(result), zero(dual))
+    end
     return result
 end
 

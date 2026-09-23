@@ -29,7 +29,7 @@ Set `check` to `Val{false}()` to disable tag checking. This can lead to perturba
     ydual = cfg.duals
     seed_zero_partials!(ydual, y)
     f!(ydual, Dual{T}(x, one(x)))
-    map!(value, y, ydual)
+    map!(d -> value(T, d), y, ydual)
     return extract_derivative(T, ydual)
 end
 

@@ -43,7 +43,7 @@ of the function, propagating the derivative via multiplication. For example, `Ba
 can be overloaded on `Dual` like so:
 
 ```julia
-Base.sin(d::Dual{T}) where {T} = Dual{T}(sin(value(d)), cos(value(d)) * partials(d))
+Base.sin(d::Dual{T}) where {T} = Dual{T}(sin(value(T, d)), cos(value(T, d)) * partials(T, d))
 ```
 
 If we assume that a general function `f` is composed of entirely of these elementary

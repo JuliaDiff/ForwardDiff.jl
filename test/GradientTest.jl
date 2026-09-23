@@ -259,7 +259,7 @@ end
             npartials = Ref(0)
             y = ForwardDiff.gradient(T(randn(n, n))) do x
                 fevals[] += 1
-                npartials[] += ForwardDiff.npartials(eltype(x))
+                npartials[] += ForwardDiff.npartials(ForwardDiff.tagtype(eltype(x)), eltype(x))
                 return sum(x)
             end
             if npartials[] <= ForwardDiff.DEFAULT_CHUNK_THRESHOLD
@@ -278,8 +278,8 @@ end
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
-    f(x) = sum(ForwardDiff.value, x)
-    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+    f(x) = sum(Base.Fix1(ForwardDiff.value, OuterTestTag), x)
+    der = ForwardDiff.derivative(Base.Fix1(ForwardDiff.value, OuterTestTag), only(x))
 
     # Vector mode
     grad = ForwardDiff.gradient(f, x)

@@ -15,6 +15,7 @@ struct Dual{T,V,N} <: Real
     value::V
     partials::Partials{N,V}
     function Dual{T, V, N}(value::V, partials::Partials{N, V}) where {T, V, N}
+        T isa Type || throw_invalid_tag(T)
         can_dual(V) || throw_cannot_dual(V)
         new{T, V, N}(value, partials)
     end
@@ -36,6 +37,10 @@ end
 
 Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
     print(io, "Cannot determine ordering of Dual tags ", e.a, " and ", e.b)
+
+@noinline function throw_invalid_tag(T)
+    throw(ArgumentError(lazy"The tag of a Dual must be a type, got $(repr(T))."))
+end
 
 @noinline function throw_cannot_dual(V::Type)
     throw(ArgumentError(lazy"Cannot create a dual over scalar type $V. If the type behaves as a scalar, define ForwardDiff.can_dual(::Type{$V}) = true."))
@@ -85,9 +90,6 @@ Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
 # Utility/Accessor Functions #
 ##############################
 
-@inline value(x) = x
-@inline value(d::Dual) = d.value
-
 # Whether a `Dual` with tag `T` occurs anywhere in the nesting of `D`
 @inline hastag(::Type{T}, ::Type) where {T} = false
 @inline hastag(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N} = S === T || hastag(T, V)
@@ -98,7 +100,7 @@ Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
 # the order in which the layers are nested. Without a layer with tag `T` the value is the
 # number itself and the partials are zero.
 @inline value(::Type{T}, x) where T = x
-@inline value(::Type{T}, d::Dual{T}) where T = value(d)
+@inline value(::Type{T}, d::Dual{T}) where T = d.value
 @inline function value(::Type{T}, d::Dual{S,V}) where {T,S,V}
     if hastag(T, typeof(d))
         Dual{S}(value(T, value(S, d)), map_partials(p -> value(T, p), valtype(T, V), partials(S, d)))
@@ -107,23 +109,17 @@ Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
     end
 end
 
-@inline partials(x) = Partials{0,typeof(x)}(tuple())
-@inline partials(d::Dual) = d.partials
-@inline partials(x, i...) = zero(x)
-@inline Base.@propagate_inbounds partials(d::Dual, i) = d.partials[i]
-@inline Base.@propagate_inbounds partials(d::Dual, i, j) = partials(d, i).partials[j]
-@inline Base.@propagate_inbounds partials(d::Dual, i, j, k...) = partials(partials(d, i, j), k...)
-
-@inline Base.@propagate_inbounds partials(::Type{T}, x, i...) where T = partials(x, i...)
-@inline Base.@propagate_inbounds partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
-@inline Base.@propagate_inbounds function partials(::Type{T}, d::Dual{S,V}, i...) where {T,S,V}
+@inline partials(::Type{T}, x) where T = Partials{0,typeof(x)}(tuple())
+@inline partials(::Type{T}, x, i) where T = zero(x)
+@inline partials(::Type{T}, d::Dual{T}) where T = d.partials
+@inline Base.@propagate_inbounds partials(::Type{T}, d::Dual{T}, i) where T = d.partials[i]
+@inline Base.@propagate_inbounds function partials(::Type{T}, d::Dual{S,V}, i) where {T,S,V}
     if hastag(T, typeof(d))
-        Dual{S}(partials(T, value(S, d), i...), map_partials(p -> partials(T, p, i...), valtype(T, V), partials(S, d)))
+        Dual{S}(partials(T, value(S, d), i), map_partials(p -> partials(T, p, i), valtype(T, V), partials(S, d)))
     else
         zero(d)
     end
 end
-@inline partials(::Type{T}, d::Dual{T}) where {T} = partials(d)
 @inline function partials(::Type{T}, d::Dual) where {T}
     if hastag(T, typeof(d))
         Partials{npartials(T, typeof(d)),valtype(T, typeof(d))}(ntuple(i -> partials(T, d, i), Val(npartials(T, typeof(d)))))
@@ -131,9 +127,6 @@ end
         Partials{0,typeof(d)}(tuple())
     end
 end
-
-@inline npartials(::Dual{T,V,N}) where {T,V,N} = N
-@inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
 
 @inline npartials(::Type{T}, ::Type) where {T} = 0
 @inline npartials(::Type{T}, ::Type{Dual{T,V,N}}) where {T,V,N} = N
@@ -264,9 +257,9 @@ function unary_dual_definition(M, f)
     end)
     return quote
         @inline function $M.$f(d::$FD.Dual{T}) where T
-            x = $FD.value(d)
+            x = $FD.value(T, d)
             $work
-            return $FD.dual_definition_retval(Val{T}(), val, deriv, $FD.partials(d))
+            return $FD.dual_definition_retval(Val{T}(), val, deriv, $FD.partials(T, d))
         end
     end
 end
@@ -294,19 +287,19 @@ function binary_dual_definition(M, f)
         $FD.@define_binary_dual_op(
             $M.$f,
             begin
-                vx, vy = $FD.value(x), $FD.value(y)
+                vx, vy = $FD.value(Txy, x), $FD.value(Txy, y)
                 $xy_work
-                return $FD.dual_definition_retval(Val{Txy}(), val, dvx, $FD.partials(x), dvy, $FD.partials(y))
+                return $FD.dual_definition_retval(Val{Txy}(), val, dvx, $FD.partials(Txy, x), dvy, $FD.partials(Txy, y))
             end,
             begin
-                vx = $FD.value(x)
+                vx = $FD.value(Tx, x)
                 $x_work
-                return $FD.dual_definition_retval(Val{Tx}(), val, dvx, $FD.partials(x))
+                return $FD.dual_definition_retval(Val{Tx}(), val, dvx, $FD.partials(Tx, x))
             end,
             begin
-                vy = $FD.value(y)
+                vy = $FD.value(Ty, y)
                 $y_work
-                return $FD.dual_definition_retval(Val{Ty}(), val, dvy, $FD.partials(y))
+                return $FD.dual_definition_retval(Val{Ty}(), val, dvy, $FD.partials(Ty, y))
             end
         )
     end
@@ -319,12 +312,12 @@ end
 
 Base.copy(d::Dual) = d
 
-Base.eps(d::Dual) = eps(value(d))
+Base.eps(d::Dual{T}) where {T} = eps(value(T, d))
 Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
 
 # The `base` keyword was added in Julia 1.8:
 # https://github.com/JuliaLang/julia/pull/42428
-Base.precision(d::Dual; base::Integer=2) = precision(value(d); base=base)
+Base.precision(d::Dual{T}; base::Integer=2) where {T} = precision(value(T, d); base=base)
 function Base.precision(::Type{D}; base::Integer=2) where {D<:Dual}
     precision(valtype(D); base=base)
 end
@@ -341,26 +334,26 @@ Base.rtoldefault(::Type{D}) where {D<:Dual} = Base.rtoldefault(valtype(D))
 
 # Base derives floor/ceil/trunc/round from `round(x, ::RoundingMode)`:
 # https://docs.julialang.org/en/v1/manual/interfaces/#man-rounding-interface
-Base.round(d::Dual, r::RoundingMode) = round(value(d), r)
+Base.round(d::Dual{T}, r::RoundingMode) where {T} = round(value(T, d), r)
 
 # Julia 1.11 added the generic `f(::Type{T}, x)` fallbacks, so these can be
 # dropped once 1.11 is the minimum supported version.
 if VERSION < v"1.11"
-    Base.floor(::Type{R}, d::Dual) where {R<:Real} = floor(R, value(d))
-    Base.ceil(::Type{R}, d::Dual) where {R<:Real} = ceil(R, value(d))
-    Base.trunc(::Type{R}, d::Dual) where {R<:Real} = trunc(R, value(d))
-    Base.round(::Type{R}, d::Dual) where {R<:Real} = round(R, value(d))
+    Base.floor(::Type{R}, d::Dual{T}) where {R<:Real,T} = floor(R, value(T, d))
+    Base.ceil(::Type{R}, d::Dual{T}) where {R<:Real,T} = ceil(R, value(T, d))
+    Base.trunc(::Type{R}, d::Dual{T}) where {R<:Real,T} = trunc(R, value(T, d))
+    Base.round(::Type{R}, d::Dual{T}) where {R<:Real,T} = round(R, value(T, d))
 end
 
-Base.fld(x::Dual, y::Dual) = fld(value(x), value(y))
+Base.fld(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} = fld(value(Tx, x), value(Ty, y))
 
-Base.cld(x::Dual, y::Dual) = cld(value(x), value(y))
+Base.cld(x::Dual{Tx}, y::Dual{Ty}) where {Tx,Ty} = cld(value(Tx, x), value(Ty, y))
 
-Base.exponent(x::Dual) = exponent(value(x))
+Base.exponent(x::Dual{T}) where {T} = exponent(value(T, x))
 
-Base.div(x::Dual, y::Dual, r::RoundingMode) = div(value(x), value(y), r)
+Base.div(x::Dual{Tx}, y::Dual{Ty}, r::RoundingMode) where {Tx,Ty} = div(value(Tx, x), value(Ty, y), r)
 
-Base.hash(d::Dual, hsh::UInt) = hash(value(d), hsh)
+Base.hash(d::Dual{T}, hsh::UInt) where {T} = hash(value(T, d), hsh)
 
 function Base.read(io::IO, ::Type{Dual{T,V,N}}) where {T,V,N}
     value = read(io, V)
@@ -368,9 +361,9 @@ function Base.read(io::IO, ::Type{Dual{T,V,N}}) where {T,V,N}
     return Dual{T,V,N}(value, partials)
 end
 
-function Base.write(io::IO, d::Dual)
-    write(io, value(d))
-    write(io, partials(d))
+function Base.write(io::IO, d::Dual{T}) where {T}
+    write(io, value(T, d))
+    write(io, partials(T, d))
 end
 
 @inline Base.zero(d::Dual) = zero(typeof(d))
@@ -379,16 +372,16 @@ end
 @inline Base.one(d::Dual) = one(typeof(d))
 @inline Base.one(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(one(V), zero(Partials{N,V}))
 
-@inline function Base.Int(d::Dual)
-    all(iszero, partials(d)) || throw(InexactError(:Int, Int, d))
-    Int(value(d))
+@inline function Base.Int(d::Dual{T}) where {T}
+    all(iszero, partials(T, d)) || throw(InexactError(:Int, Int, d))
+    Int(value(T, d))
 end
-@inline function Base.Integer(d::Dual)
-    all(iszero, partials(d)) || throw(InexactError(:Integer, Integer, d))
-    Integer(value(d))
+@inline function Base.Integer(d::Dual{T}) where {T}
+    all(iszero, partials(T, d)) || throw(InexactError(:Integer, Integer, d))
+    Integer(value(T, d))
 end
 
-@inline Random.rand(rng::AbstractRNG, d::Dual) = rand(rng, value(d))
+@inline Random.rand(rng::AbstractRNG, d::Dual{T}) where {T} = rand(rng, value(T, d))
 @inline Random.rand(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(V), zero(Partials{N,V}))
 @inline Random.rand(rng::AbstractRNG, ::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(rand(rng, V), zero(Partials{N,V}))
 @inline Random.randn(::Type{Dual{T,V,N}}) where {T,V,N} = Dual{T}(randn(V), zero(Partials{N,V}))
@@ -399,10 +392,10 @@ end
 # Predicates #
 #------------#
 
-isconstant(d::Dual) = iszero(partials(d))
+isconstant(d::Dual{T}) where {T} = iszero(partials(T, d))
 
 for pred in UNARY_PREDICATES
-    @eval Base.$(pred)(d::Dual) = $(pred)(value(d))
+    @eval Base.$(pred)(d::Dual{T}) where {T} = $(pred)(value(T, d))
 end
 
 # Before PR#481 this loop ran over this list:
@@ -410,33 +403,33 @@ end
 # Not a minimal set, as Base defines some in terms of others.
 @define_binary_dual_op(
     Base.:(<),
-    (value(x) < value(y)) || (value(x) == value(y) && (partials(x) < partials(y))),
-    (value(x) < y) || (value(x) == y && (partials(x) < zero(partials(x)))),
-    (x < value(y)) || (x == value(y) && (zero(partials(y)) < partials(y))),
+    (value(Txy, x) < value(Txy, y)) || (value(Txy, x) == value(Txy, y) && (partials(Txy, x) < partials(Txy, y))),
+    (value(Tx, x) < y) || (value(Tx, x) == y && (partials(Tx, x) < zero(partials(Tx, x)))),
+    (x < value(Ty, y)) || (x == value(Ty, y) && (zero(partials(Ty, y)) < partials(Ty, y))),
 )
 @define_binary_dual_op(
     Base.:(<=),
-    (value(x) < value(y)) || (value(x) == value(y) && (partials(x) <= partials(y))),
-    (value(x) < y) || (value(x) == y && (partials(x) <= zero(partials(x)))),
-    (x < value(y)) || (x == value(y) && (zero(partials(y)) <= partials(y))),
+    (value(Txy, x) < value(Txy, y)) || (value(Txy, x) == value(Txy, y) && (partials(Txy, x) <= partials(Txy, y))),
+    (value(Tx, x) < y) || (value(Tx, x) == y && (partials(Tx, x) <= zero(partials(Tx, x)))),
+    (x < value(Ty, y)) || (x == value(Ty, y) && (zero(partials(Ty, y)) <= partials(Ty, y))),
 )
 
 @define_binary_dual_op(
     Base.isless,
-    isless(value(x), value(y)) || (isequal(value(x), value(y)) && isless(partials(x), partials(y))),
-    isless(value(x), y)        || (isequal(value(x), y) && isless(partials(x), zero(partials(x)))),
-    isless(x, value(y))        || (isequal(x, value(y)) && isless(zero(partials(y)), partials(y))),
+    isless(value(Txy, x), value(Txy, y)) || (isequal(value(Txy, x), value(Txy, y)) && isless(partials(Txy, x), partials(Txy, y))),
+    isless(value(Tx, x), y)        || (isequal(value(Tx, x), y) && isless(partials(Tx, x), zero(partials(Tx, x)))),
+    isless(x, value(Ty, y))        || (isequal(x, value(Ty, y)) && isless(zero(partials(Ty, y)), partials(Ty, y))),
 )
 
-Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
+Base.iszero(x::Dual{T}) where {T} = iszero(value(T, x)) && iszero(partials(T, x))  # shortcut, equivalent to x == zero(x)
 
 for pred in [:isequal, :(==)]
     @eval begin
         @define_binary_dual_op(
             Base.$(pred),
-            $(pred)(value(x), value(y)) && $(pred)(partials(x), partials(y)),
-            $(pred)(value(x), y)        && iszero(partials(x)),
-            $(pred)(x, value(y))        && iszero(partials(y)),
+            $(pred)(value(Txy, x), value(Txy, y)) && $(pred)(partials(Txy, x), partials(Txy, y)),
+            $(pred)(value(Tx, x), y)        && iszero(partials(Tx, x)),
+            $(pred)(x, value(Ty, y))        && iszero(partials(Ty, y)),
         )
     end
 end
@@ -474,7 +467,7 @@ for R in (AbstractIrrational, Real, BigFloat, Bool)
     end
 end
 
-@inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(d)), convert(Partials{N,V}, partials(d)))
+@inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(T, d)), convert(Partials{N,V}, partials(T, d)))
 @inline Base.convert(::Type{Dual{T,Dual{T,V,M},N}}, d::Dual{T,V,M}) where {T,V,N,M} = Dual{T}(d, Partials{N,Dual{T,V,M}}(zero_tuple(NTuple{N,Dual{T,V,M}})))
 @inline Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 @inline Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
@@ -513,29 +506,29 @@ end
 @define_binary_dual_op(
     Base.:+,
     begin
-        vx, vy = value(x), value(y)
-        Dual{Txy}(vx + vy, partials(x) + partials(y))
+        vx, vy = value(Txy, x), value(Txy, y)
+        Dual{Txy}(vx + vy, partials(Txy, x) + partials(Txy, y))
     end,
-    Dual{Tx}(value(x) + y, partials(x)),
-    Dual{Ty}(x + value(y), partials(y))
+    Dual{Tx}(value(Tx, x) + y, partials(Tx, x)),
+    Dual{Ty}(x + value(Ty, y), partials(Ty, y))
 )
 
 @define_binary_dual_op(
     Base.:-,
     begin
-        vx, vy = value(x), value(y)
-        Dual{Txy}(vx - vy, partials(x) - partials(y))
+        vx, vy = value(Txy, x), value(Txy, y)
+        Dual{Txy}(vx - vy, partials(Txy, x) - partials(Txy, y))
     end,
-    Dual{Tx}(value(x) - y, partials(x)),
-    Dual{Ty}(x - value(y), -partials(y))
+    Dual{Tx}(value(Tx, x) - y, partials(Tx, x)),
+    Dual{Ty}(x - value(Ty, y), -partials(Ty, y))
 )
 
-@inline Base.:-(d::Dual{T}) where {T} = Dual{T}(-value(d), -partials(d))
+@inline Base.:-(d::Dual{T}) where {T} = Dual{T}(-value(T, d), -partials(T, d))
 
 # * #
 #---#
 
-@inline Base.:*(d::Dual, x::Bool) = x ? d : (signbit(value(d))==0 ? zero(d) : -zero(d))
+@inline Base.:*(d::Dual{T}, x::Bool) where {T} = x ? d : (signbit(value(T, d))==0 ? zero(d) : -zero(d))
 @inline Base.:*(x::Bool, d::Dual) = d * x
 
 # / #
@@ -546,14 +539,14 @@ end
 @define_binary_dual_op(
     Base.:/,
     begin
-        vx, vy = value(x), value(y)
-        Dual{Txy}(vx / vy, _div_partials(partials(x), partials(y), vx, vy))
+        vx, vy = value(Txy, x), value(Txy, y)
+        Dual{Txy}(vx / vy, _div_partials(partials(Txy, x), partials(Txy, y), vx, vy))
     end,
-    Dual{Tx}(value(x) / y, partials(x) / y),
+    Dual{Tx}(value(Tx, x) / y, partials(Tx, x) / y),
     begin
-        v = value(y)
+        v = value(Ty, y)
         divv = x / v
-        Dual{Ty}(divv, -(divv / v) * partials(y))
+        Dual{Ty}(divv, -(divv / v) * partials(Ty, y))
     end
 )
 
@@ -565,7 +558,7 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
         @define_binary_dual_op(
             $f,
             begin
-                vx, vy = value(x), value(y)
+                vx, vy = value(Txy, x), value(Txy, y)
                 expv = ($f)(vx, vy)
                 powval = vy * ($f)(vx, vy - 1)
                 if isconstant(y)
@@ -575,38 +568,38 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
                 else
                     logval = expv * ($log)(vx)
                 end
-                new_partials = _mul_partials(partials(x), partials(y), powval, logval)
+                new_partials = _mul_partials(partials(Txy, x), partials(Txy, y), powval, logval)
                 return Dual{Txy}(expv, new_partials)
             end,
             begin
-                v = value(x)
+                v = value(Tx, x)
                 expv = ($f)(v, y)
-                if y == zero(y) || iszero(partials(x))
-                    new_partials = zero(partials(x))
+                if y == zero(y) || iszero(partials(Tx, x))
+                    new_partials = zero(partials(Tx, x))
                 else
-                    new_partials = partials(x) * y * ($f)(v, y - 1)
+                    new_partials = partials(Tx, x) * y * ($f)(v, y - 1)
                 end
                 return Dual{Tx}(expv, new_partials)
             end,
             begin
-                v = value(y)
+                v = value(Ty, y)
                 expv = ($f)(x, v)
                 deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(oftype(expv, x))
-                return Dual{Ty}(expv, deriv * partials(y))
+                return Dual{Ty}(expv, deriv * partials(Ty, y))
             end
         )
     end
 end
 
 @inline Base.literal_pow(::typeof(^), x::Dual{T}, ::Val{0}) where {T} =
-    Dual{T}(one(value(x)), zero(partials(x)))
+    Dual{T}(one(value(T, x)), zero(partials(T, x)))
 
 for y in 1:3
     @eval @inline function Base.literal_pow(::typeof(^), x::Dual{T}, ::Val{$y}) where {T}
-        v = value(x)
+        v = value(T, x)
         expv = v^$y
         deriv = $y * v^$(y - 1)
-        return Dual{T}(expv, deriv * partials(x))
+        return Dual{T}(expv, deriv * partials(T, x))
     end
 end
 
@@ -614,11 +607,11 @@ end
 #-------#
 
 @inline function calc_hypot(x, y, z, ::Type{T}) where T
-    vx = value(x)
-    vy = value(y)
-    vz = value(z)
+    vx = value(T, x)
+    vy = value(T, y)
+    vz = value(T, z)
     h = hypot(vx, vy, vz)
-    p = (vx / h) * partials(x) + (vy / h) * partials(y) + (vz / h) * partials(z)
+    p = (vx / h) * partials(T, x) + (vy / h) * partials(T, y) + (vz / h) * partials(T, z)
     return Dual{T}(h, p)
 end
 
@@ -639,27 +632,27 @@ end
 @generated function calc_fma_xyz(x::Dual{T,<:Any,N},
                                  y::Dual{T,<:Any,N},
                                  z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(fma(value(x), partials(y)[$i], fma(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
+    ex = Expr(:tuple, [:(fma(value(T, x), partials(T, y)[$i], fma(value(T, y), partials(T, x)[$i], partials(T, z)[$i]))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        v = fma(value(x), value(y), value(z))
+        v = fma(value(T, x), value(T, y), value(T, z))
         return Dual{T}(v, $ex)
     end
 end
 
 @inline function calc_fma_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
-    vx, vy = value(x), value(y)
+    vx, vy = value(T, x), value(T, y)
     result = fma(vx, vy, z)
-    return Dual{T}(result, _mul_partials(partials(x), partials(y), vy, vx))
+    return Dual{T}(result, _mul_partials(partials(T, x), partials(T, y), vy, vx))
 end
 
 @generated function calc_fma_xz(x::Dual{T,<:Any,N},
                                 y::Real,
                                 z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(fma(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
+    ex = Expr(:tuple, [:(fma(partials(T, x)[$i], y,  partials(T, z)[$i])) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        v = fma(value(x), y, value(z))
+        v = fma(value(T, x), y, value(T, z))
         Dual{T}(v, $ex)
     end
 end
@@ -670,9 +663,9 @@ end
     calc_fma_xy(x, y, z),                          # xy_body
     calc_fma_xz(x, y, z),                          # xz_body
     Base.fma(y, x, z),                             # yz_body
-    Dual{Tx}(fma(value(x), y, z), partials(x) * y), # x_body
+    Dual{Tx}(fma(value(Tx, x), y, z), partials(Tx, x) * y), # x_body
     Base.fma(y, x, z),                              # y_body
-    Dual{Tz}(fma(x, y, value(z)), partials(z))      # z_body
+    Dual{Tz}(fma(x, y, value(Tz, z)), partials(Tz, z))      # z_body
 )
 
 # muladd #
@@ -681,27 +674,27 @@ end
 @generated function calc_muladd_xyz(x::Dual{T,<:Any,N},
                                     y::Dual{T,<:Any,N},
                                     z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(muladd(value(x), partials(y)[$i], muladd(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
+    ex = Expr(:tuple, [:(muladd(value(T, x), partials(T, y)[$i], muladd(value(T, y), partials(T, x)[$i], partials(T, z)[$i]))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        v = muladd(value(x), value(y), value(z))
+        v = muladd(value(T, x), value(T, y), value(T, z))
         return Dual{T}(v, $ex)
     end
 end
 
 @inline function calc_muladd_xy(x::Dual{T}, y::Dual{T}, z::Real) where T
-    vx, vy = value(x), value(y)
+    vx, vy = value(T, x), value(T, y)
     result = muladd(vx, vy, z)
-    return Dual{T}(result, _mul_partials(partials(x), partials(y), vy, vx))
+    return Dual{T}(result, _mul_partials(partials(T, x), partials(T, y), vy, vx))
 end
 
 @generated function calc_muladd_xz(x::Dual{T,<:Any,N},
                                    y::Real,
                                    z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(muladd(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
+    ex = Expr(:tuple, [:(muladd(partials(T, x)[$i], y,  partials(T, z)[$i])) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
-        v = muladd(value(x), y, value(z))
+        v = muladd(value(T, x), y, value(T, z))
         Dual{T}(v, $ex)
     end
 end
@@ -712,35 +705,35 @@ end
     calc_muladd_xy(x, y, z),                          # xy_body
     calc_muladd_xz(x, y, z),                          # xz_body
     Base.muladd(y, x, z),                             # yz_body
-    Dual{Tx}(muladd(value(x), y, z), partials(x) * y), # x_body
+    Dual{Tx}(muladd(value(Tx, x), y, z), partials(Tx, x) * y), # x_body
     Base.muladd(y, x, z),                             # y_body
-    Dual{Tz}(muladd(x, y, value(z)), partials(z))      # z_body
+    Dual{Tz}(muladd(x, y, value(Tz, z)), partials(Tz, z))      # z_body
 )
 
 # sin/cos #
 #--------#
 
 function Base.sin(d::Dual{T}) where T
-    s, c = sincos(value(d))
-    return Dual{T}(s, c * partials(d))
+    s, c = sincos(value(T, d))
+    return Dual{T}(s, c * partials(T, d))
 end
 
 function Base.cos(d::Dual{T}) where T
-    s, c = sincos(value(d))
-    return Dual{T}(c, -s * partials(d))
+    s, c = sincos(value(T, d))
+    return Dual{T}(c, -s * partials(T, d))
 end
 
 @inline function Base.sincos(d::Dual{T}) where T
-    sd, cd = sincos(value(d))
-    return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
+    sd, cd = sincos(value(T, d))
+    return (Dual{T}(sd, cd * partials(T, d)), Dual{T}(cd, -sd * partials(T, d)))
 end
 
 # sincospi #
 #----------#
 
 @inline function Base.sincospi(d::Dual{T}) where T
-    sd, cd = sincospi(value(d))
-    return (Dual{T}(sd, cd * π * partials(d)), Dual{T}(cd, -sd * π * partials(d)))
+    sd, cd = sincospi(value(T, d))
+    return (Dual{T}(sd, cd * π * partials(T, d)), Dual{T}(cd, -sd * π * partials(T, d)))
 end
 
 # LinearAlgebra.givensAlgorithm #
@@ -758,35 +751,35 @@ end
 @define_binary_dual_op(
     LinearAlgebra.givensAlgorithm,
     begin
-        vx, vy = value(x), value(y)
+        vx, vy = value(Txy, x), value(Txy, y)
         c, s, u = LinearAlgebra.givensAlgorithm(vx, vy)
         ∂c∂x = s^2 / u
         ∂c∂y = ∂s∂x = -(c * s / u)
         ∂s∂y = c^2 / u
-        ∂x = partials(x)
-        ∂y = partials(y)
+        ∂x = partials(Txy, x)
+        ∂y = partials(Txy, y)
         ∂c = _mul_partials(∂x, ∂y, ∂c∂x, ∂c∂y)
         ∂s = _mul_partials(∂x, ∂y, ∂s∂x, ∂s∂y)
         ∂u = _mul_partials(∂x, ∂y, c, s)
         return Dual{Txy}(c, ∂c), Dual{Txy}(s, ∂s), Dual{Txy}(u, ∂u)
     end,
     begin
-        vx = value(x)
+        vx = value(Tx, x)
         c, s, u = LinearAlgebra.givensAlgorithm(vx, y)
         ∂c∂x = s^2 / u
         ∂s∂x = -(c * s / u)
-        ∂x = partials(x)
+        ∂x = partials(Tx, x)
         ∂c = ∂c∂x * ∂x
         ∂s = ∂s∂x * ∂x
         ∂u = c * ∂x
         return Dual{Tx}(c, ∂c), Dual{Tx}(s, ∂s), Dual{Tx}(u, ∂u)
     end,
     begin
-        vy = value(y)
+        vy = value(Ty, y)
         c, s, u = LinearAlgebra.givensAlgorithm(x, vy)
         ∂c∂y = -(c * s / u)
         ∂s∂y = c^2 / u
-        ∂y = partials(y)
+        ∂y = partials(Ty, y)
         ∂c = ∂c∂y * ∂y
         ∂s = ∂s∂y * ∂y
         ∂u = s * ∂y
@@ -798,17 +791,17 @@ end
 #------------------------------------------------#
 
 # Extract structured matrices of primal values and partials
-_structured_value(A::Symmetric{Dual{T,V,N}}) where {T,V,N} = Symmetric(map(value, parent(A)), A.uplo === 'U' ? :U : :L)
-_structured_value(A::Hermitian{Dual{T,V,N}}) where {T,V,N} = Hermitian(map(value, parent(A)), A.uplo === 'U' ? :U : :L)
-_structured_value(A::Hermitian{Complex{Dual{T,V,N}}}) where {T,V,N} = Hermitian(map(z -> splat(complex)(map(value, reim(z))), parent(A)), A.uplo === 'U' ? :U : :L)
-_structured_value(A::SymTridiagonal{Dual{T,V,N}}) where {T,V,N} = SymTridiagonal(map(value, A.dv), map(value, A.ev))
+_structured_value(A::Symmetric{Dual{T,V,N}}) where {T,V,N} = Symmetric(map(Base.Fix1(value, T), parent(A)), A.uplo === 'U' ? :U : :L)
+_structured_value(A::Hermitian{Dual{T,V,N}}) where {T,V,N} = Hermitian(map(Base.Fix1(value, T), parent(A)), A.uplo === 'U' ? :U : :L)
+_structured_value(A::Hermitian{Complex{Dual{T,V,N}}}) where {T,V,N} = Hermitian(map(z -> splat(complex)(map(Base.Fix1(value, T), reim(z))), parent(A)), A.uplo === 'U' ? :U : :L)
+_structured_value(A::SymTridiagonal{Dual{T,V,N}}) where {T,V,N} = SymTridiagonal(map(Base.Fix1(value, T), A.dv), map(Base.Fix1(value, T), A.ev))
 
-_structured_partials(A::Symmetric{Dual{T,V,N}}, j::Int) where {T,V,N} = Symmetric(partials.(parent(A), j), A.uplo === 'U' ? :U : :L)
-_structured_partials(A::Hermitian{Dual{T,V,N}}, j::Int) where {T,V,N} = Hermitian(partials.(parent(A), j), A.uplo === 'U' ? :U : :L)
+_structured_partials(A::Symmetric{Dual{T,V,N}}, j::Int) where {T,V,N} = Symmetric(partials.(T, parent(A), j), A.uplo === 'U' ? :U : :L)
+_structured_partials(A::Hermitian{Dual{T,V,N}}, j::Int) where {T,V,N} = Hermitian(partials.(T, parent(A), j), A.uplo === 'U' ? :U : :L)
 function _structured_partials(A::Hermitian{Complex{Dual{T,V,N}}}, j::Int) where {T,V,N}
-    return Hermitian(complex.(partials.(real.(parent(A)), j), partials.(imag.(parent(A)), j)), A.uplo === 'U' ? :U : :L)
+    return Hermitian(complex.(partials.(T, real.(parent(A)), j), partials.(T, imag.(parent(A)), j)), A.uplo === 'U' ? :U : :L)
 end
-_structured_partials(A::SymTridiagonal{Dual{T,V,N}}, j::Int) where {T,V,N} = SymTridiagonal(partials.(A.dv, j), partials.(A.ev, j))
+_structured_partials(A::SymTridiagonal{Dual{T,V,N}}, j::Int) where {T,V,N} = SymTridiagonal(partials.(T, A.dv, j), partials.(T, A.ev, j))
 
 # Convert arrays of primal values and partials to arrays of Duals
 function _to_duals(::Val{T}, values::AbstractArray{<:Real}, partials::Tuple{Vararg{AbstractArray{<:Real}}}) where {T}
@@ -883,16 +876,16 @@ end
 #---------------------------------------------------#
 
 function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
-    x = value(d)
+    x = value(T, d)
     y, s = SpecialFunctions.logabsgamma(x)
-    return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), s)
+    return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(T, d)), s)
 end
 
 # Derivatives wrt to first parameter and precision setting are not supported
 function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
-    x = value(d)
+    x = value(T, d)
     p, q = SpecialFunctions.gamma_inc(a, x, ind)
-    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(T, d)
     return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
 
@@ -901,9 +894,9 @@ end
 ###################
 
 function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
-    print(io, "Dual{$(repr(T))}(", value(d))
+    print(io, "Dual{$(repr(T))}(", value(T, d))
     for i in 1:N
-        print(io, ",", partials(d, i))
+        print(io, ",", partials(T, d, i))
     end
     print(io, ")")
 end
@@ -914,4 +907,4 @@ for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
     end
 end
 
-Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
+Printf.tofloat(d::Dual{T}) where {T} = Printf.tofloat(value(T, d))
