@@ -88,13 +88,22 @@ Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
 @inline value(x) = x
 @inline value(d::Dual) = d.value
 
+# Whether a `Dual` with tag `T` occurs anywhere in the nesting of `D`
+@inline hastag(::Type{T}, ::Type) where {T} = false
+@inline hastag(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N} = S === T || hastag(T, V)
+
+@inline map_partials(f::F, ::Type{W}, p::Partials{N}) where {F,W,N} = Partials{N,W}(map(f, p.values))
+
+# Extraction w.r.t. `T` descends through layers with other tags, so it does not depend on
+# the order in which the layers are nested. Without a layer with tag `T` the value is the
+# number itself and the partials are zero.
 @inline value(::Type{T}, x) where T = x
 @inline value(::Type{T}, d::Dual{T}) where T = value(d)
-@inline function value(::Type{T}, d::Dual{S}) where {T,S}
-    if S ≺ T
-        d
+@inline function value(::Type{T}, d::Dual{S,V}) where {T,S,V}
+    if hastag(T, typeof(d))
+        Dual{S}(value(T, value(S, d)), map_partials(p -> value(T, p), valtype(T, V), partials(S, d)))
     else
-        throw(DualMismatchError(T,S))
+        d
     end
 end
 
@@ -107,17 +116,28 @@ end
 
 @inline Base.@propagate_inbounds partials(::Type{T}, x, i...) where T = partials(x, i...)
 @inline Base.@propagate_inbounds partials(::Type{T}, d::Dual{T}, i...) where T = partials(d, i...)
-@inline function partials(::Type{T}, d::Dual{S}, i...) where {T,S}
-    if S ≺ T
-        zero(d)
+@inline Base.@propagate_inbounds function partials(::Type{T}, d::Dual{S,V}, i...) where {T,S,V}
+    if hastag(T, typeof(d))
+        Dual{S}(partials(T, value(S, d), i...), map_partials(p -> partials(T, p, i...), valtype(T, V), partials(S, d)))
     else
-        throw(DualMismatchError(T,S))
+        zero(d)
+    end
+end
+@inline partials(::Type{T}, d::Dual{T}) where {T} = partials(d)
+@inline function partials(::Type{T}, d::Dual) where {T}
+    if hastag(T, typeof(d))
+        Partials{npartials(T, typeof(d)),valtype(T, typeof(d))}(ntuple(i -> partials(T, d, i), Val(npartials(T, typeof(d)))))
+    else
+        Partials{0,typeof(d)}(tuple())
     end
 end
 
-
 @inline npartials(::Dual{T,V,N}) where {T,V,N} = N
 @inline npartials(::Type{Dual{T,V,N}}) where {T,V,N} = N
+
+@inline npartials(::Type{T}, ::Type) where {T} = 0
+@inline npartials(::Type{T}, ::Type{Dual{T,V,N}}) where {T,V,N} = N
+@inline npartials(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N} = npartials(T, V)
 
 @inline order(::Type{V}) where {V} = 0
 @inline order(::Type{Dual{T,V,N}}) where {T,V,N} = 1 + order(V)
@@ -130,13 +150,7 @@ end
 @inline valtype(::Type{T}, ::V) where {T,V} = valtype(T, V)
 @inline valtype(::Type, ::Type{V}) where {V} = V
 @inline valtype(::Type{T}, ::Type{Dual{T,V,N}}) where {T,V,N} = V
-@inline function valtype(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N}
-    if S ≺ T
-        Dual{S,V,N}
-    else
-        throw(DualMismatchError(T,S))
-    end
-end
+@inline valtype(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N} = Dual{S,valtype(T, V),N}
 
 @inline tagtype(::V) where {V} = Nothing
 @inline tagtype(::Type{V}) where {V} = Nothing

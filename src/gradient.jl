@@ -64,9 +64,13 @@ end
 
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
 function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
-    idxs = structural_eachindex(result)
-    for (i, idx) in zip(1:npartials(dual), idxs)
-        result[idx] = partials(T, dual, i)
+    if hastag(T, typeof(dual))
+        idxs = structural_eachindex(result)
+        for (i, idx) in zip(1:npartials(T, typeof(dual)), idxs)
+            result[idx] = partials(T, dual, i)
+        end
+    else
+        fill!(result, zero(dual))
     end
     return result
 end
