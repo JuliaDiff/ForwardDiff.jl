@@ -27,12 +27,12 @@ const SEED_CASES = (
 
 # Positions within `sidx` whose partials are zero.
 zeroed_positions(duals, sidx) =
-    [i for (i, idx) in enumerate(sidx) if iszero(ForwardDiff.partials(Nothing, duals[idx]))]
+    [i for (i, idx) in enumerate(sidx) if iszero(ForwardDiff.partials(ForwardDiff.Tag{Nothing,Float64}, duals[idx]))]
 
 # Compares over *every* index of `x`, not just the structural ones, so a bug misplacing values
 # outside the structural set is visible. Off-structure reads are safe: the wrapper types return
 # `zero(Dual)` without touching the (uninitialized) parent storage.
-values_match(duals, x) = all(idx -> ForwardDiff.value(Nothing, duals[idx]) == x[idx], eachindex(x))
+values_match(duals, x) = all(idx -> ForwardDiff.value(ForwardDiff.Tag{Nothing,Float64}, duals[idx]) == x[idx], eachindex(x))
 
 function fill_marker!(duals, x, sidx, marker)
     D = eltype(duals)
@@ -45,7 +45,7 @@ end
 @testset "seed_zero_partials!: $(nameof(typeof(x)))" for (x, sidx) in SEED_CASES
     cfg = ForwardDiff.GradientConfig(nothing, x, ForwardDiff.Chunk{3}())
     duals, seeds = cfg.duals, cfg.seeds
-    N = ForwardDiff.npartials(Nothing, eltype(duals))
+    N = ForwardDiff.npartials(ForwardDiff.Tag{Nothing,Float64}, eltype(duals))
     marker = Partials(ntuple(i -> Float64(i), N))
     nstruct = length(sidx)
 

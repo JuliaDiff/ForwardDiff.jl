@@ -5,7 +5,9 @@ using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
 
-convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,Float64,8},4},2}, 1.3)
+const D1_574 = ForwardDiff.Dual{ForwardDiff.Tag{Nothing,Float64},Float64,8}
+const D2_574 = ForwardDiff.Dual{ForwardDiff.Tag{Nothing,D1_574},D1_574,4}
+convert_test_574() = convert(ForwardDiff.Dual{ForwardDiff.Tag{Nothing,D2_574},D2_574,2}, 1.3)
 
 @testset "Test seed!/seed_zero_partials! allocations" begin
     x = rand(1000)

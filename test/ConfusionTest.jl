@@ -4,6 +4,8 @@ using Test
 using ForwardDiff
 
 using LinearAlgebra
+using StaticArrays
+using DiffResults
 
 # Perturbation Confusion (Issue #83) #
 #------------------------------------#
@@ -110,6 +112,49 @@ struct ATag end
 struct BTag end
 @test ForwardDiff.Dual{BTag}(ForwardDiff.Dual{ATag}(1.0, 2.0), ForwardDiff.Dual{ATag}(3.0, 4.0)) isa ForwardDiff.Dual{BTag}
 @test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag}(ForwardDiff.Dual{BTag}(1.0, 2.0), ForwardDiff.Dual{BTag}(3.0, 4.0))
+@test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag,Real,1}(ForwardDiff.Dual{BTag}(1.0, 2.0), ForwardDiff.Partials{1,Real}((3.0,)))
+@test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag,Real,1}(1.0, ForwardDiff.Partials{1,Real}((ForwardDiff.Dual{BTag}(3.0, 4.0),)))
+
+# Tags of nested `Dual`s are unique
+@test_throws ArgumentError("Cannot store a Dual with tag $ATag inside a Dual with the same tag.") ForwardDiff.Dual{ATag}(ForwardDiff.Dual{ATag}(1.0, 2.0), ForwardDiff.Dual{ATag}(3.0, 4.0))
+let d = ForwardDiff.Dual(ForwardDiff.Dual(1.0, 2.0), ForwardDiff.Dual(3.0, 4.0))
+    T = ForwardDiff.Tag{Nothing,Float64}
+    S = ForwardDiff.Tag{Nothing,ForwardDiff.Dual{T,Float64,1}}
+    @test d isa ForwardDiff.Dual{S}
+    @test ForwardDiff.value(T, ForwardDiff.value(S, d)) == 1.0
+    @test ForwardDiff.partials(T, ForwardDiff.value(S, d), 1) == 2.0
+    @test ForwardDiff.value(T, ForwardDiff.partials(S, d, 1)) == 3.0
+    @test ForwardDiff.partials(T, ForwardDiff.partials(S, d, 1), 1) == 4.0
+end
+let f = x -> x[1]^2 * x[2], x = [3.0, 2.0]
+    @test ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(nothing, x)) == [4.0 6.0; 6.0 0.0]
+end
+
+# Issue #845: all Hessian paths agree with the Jacobian of the gradient
+strip_outer(x) = x
+strip_outer(d::ForwardDiff.Dual{T}) where {T} = ForwardDiff.value(T, d)
+f845a(z) = sum(abs2, z) + strip_outer(z[1]) * z[2]
+f845b(z) = strip_outer(sum(abs2, z))
+for f in (f845a, f845b), x in ([1.0, 2.0, 3.0], SVector(1.0, 2.0, 3.0))
+    H = ForwardDiff.jacobian(y -> ForwardDiff.gradient(f, y), x)
+    g = ForwardDiff.gradient(f, x)
+    @test ForwardDiff.hessian(f, x) == H
+    for c in 1:3
+        @test ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())) == H
+    end
+    out = fill(NaN, 3, 3)
+    @test ForwardDiff.hessian!(out, f, x) === out
+    @test out == H
+    for result in (DiffResults.HessianResult(x), DiffResults.DiffResult(NaN, (fill(NaN, 3), fill(NaN, 3, 3))))
+        r = ForwardDiff.hessian!(result, f, x)
+        if result isa DiffResults.MutableDiffResult
+            @test r === result
+        end
+        @test DiffResults.value(r) == f(x)
+        @test DiffResults.gradient(r) == g
+        @test DiffResults.hessian(r) == H
+    end
+end
 
 
 end # module

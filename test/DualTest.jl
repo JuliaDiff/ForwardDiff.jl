@@ -30,7 +30,7 @@ dual_isapprox(a::Dual{T,T1,T2}, b::Dual{T3,T4,T5}) where {T,T1,T2,T3,T4,T5} = er
 ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
 ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
-@testset "Dual{Z,$V,$N} and Dual{Z,Dual{Z,$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
+@testset "Dual{Z,$V,$N} and Dual{Y,Dual{Z,$V,$M},$N}" for N in (0,3), M in (0,4), V in (Int, Float32)
 
     PARTIALS = Partials{N,V}(ntuple(n -> intrand(V), N))
     PRIMAL = intrand(V)
@@ -53,26 +53,27 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     M_PARTIALS = Partials{M,V}(ntuple(m -> intrand(V), M))
     NESTED_PARTIALS = convert(Partials{N,Dual{TestTag,V,M}}, PARTIALS)
-    NESTED_FDNUM = Dual{TestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
+    NESTED_FDNUM = Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
     M_PARTIALS2 = Partials{M,V}(ntuple(m -> intrand(V), M))
     NESTED_PARTIALS2 = convert(Partials{N,Dual{TestTag,V,M}}, PARTIALS2)
-    NESTED_FDNUM2 = Dual{TestTag}(Dual{TestTag}(PRIMAL2, M_PARTIALS2), NESTED_PARTIALS2)
+    NESTED_FDNUM2 = Dual{OuterTestTag}(Dual{TestTag}(PRIMAL2, M_PARTIALS2), NESTED_PARTIALS2)
 
     ################
     # Constructors #
     ################
 
     @test Dual{TestTag}(PRIMAL, PARTIALS...) === FDNUM
-    @test Dual(PRIMAL, PARTIALS...) === Dual{Nothing}(PRIMAL, PARTIALS...)
-    @test Dual(PRIMAL) === Dual{Nothing}(PRIMAL)
+    @test Dual(PRIMAL, PARTIALS...) === Dual{ForwardDiff.Tag{Nothing,V}}(PRIMAL, PARTIALS...)
+    @test Dual(PRIMAL) === Dual{ForwardDiff.Tag{Nothing,V}}(PRIMAL)
+    @test Dual(PRIMAL, convert(Partials{N,widen(V)}, PARTIALS)) isa Dual{ForwardDiff.Tag{Nothing,widen(V)},widen(V),N}
     @test_throws ArgumentError("The tag of a Dual must be a type, got 1.") Dual{1}(PRIMAL, PARTIALS)
     @test_throws ArgumentError("The tag of a Dual must be a type, got :tag.") Dual{:tag}(PRIMAL, PARTIALS)
 
     @test typeof(Dual{TestTag}(widen(V)(PRIMAL), PARTIALS)) === Dual{TestTag,widen(V),N}
     @test typeof(Dual{TestTag}(widen(V)(PRIMAL), PARTIALS.values)) === Dual{TestTag,widen(V),N}
     @test typeof(Dual{TestTag}(widen(V)(PRIMAL), PARTIALS...)) === Dual{TestTag,widen(V),N}
-    @test typeof(NESTED_FDNUM) == Dual{TestTag,Dual{TestTag,V,M},N}
+    @test typeof(NESTED_FDNUM) == Dual{OuterTestTag,Dual{TestTag,V,M},N}
 
     #############
     # Accessors #
@@ -80,18 +81,19 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test value(TestTag, PRIMAL) == PRIMAL
     @test value(TestTag, FDNUM) == PRIMAL
-    @test value(TestTag, NESTED_FDNUM) === Dual{TestTag}(PRIMAL, M_PARTIALS)
+    @test value(OuterTestTag, NESTED_FDNUM) === Dual{TestTag}(PRIMAL, M_PARTIALS)
 
     @test partials(TestTag, PRIMAL) == Partials{0,V}(tuple())
     @test partials(TestTag, FDNUM) == PARTIALS
-    @test partials(TestTag, NESTED_FDNUM) === NESTED_PARTIALS
+    @test partials(OuterTestTag, NESTED_FDNUM) === NESTED_PARTIALS
 
     for i in 1:N
         @test partials(TestTag, FDNUM, i) == PARTIALS[i]
     end
 
     @test ForwardDiff.npartials(TestTag, typeof(FDNUM)) == N
-    @test ForwardDiff.npartials(TestTag, typeof(NESTED_FDNUM)) == N
+    @test ForwardDiff.npartials(TestTag, typeof(NESTED_FDNUM)) == M
+    @test ForwardDiff.npartials(OuterTestTag, typeof(NESTED_FDNUM)) == N
 
     @test (@test_deprecated r"`ForwardDiff.value` without a tag is deprecated" value(PRIMAL)) == PRIMAL
     @test (@test_deprecated r"`ForwardDiff.value` without a tag is deprecated" value(FDNUM)) == PRIMAL
@@ -101,7 +103,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
         @test (@test_deprecated r"`ForwardDiff.partials` without a tag is deprecated" partials(FDNUM, i)) == PARTIALS[i]
         for j in 1:M
             @test (@test_deprecated r"`ForwardDiff.partials` without a tag is deprecated" partials(NESTED_FDNUM, i, j)) == partials(TestTag, NESTED_PARTIALS[i], j)
-            @test (@test_deprecated r"`ForwardDiff.partials\(T, x, i, j...\)` is deprecated" partials(TestTag, NESTED_FDNUM, i, j)) == partials(TestTag, NESTED_PARTIALS[i], j)
+            @test (@test_deprecated r"`ForwardDiff.partials\(T, x, i, j...\)` is deprecated" partials(OuterTestTag, NESTED_FDNUM, i, j)) == partials(TestTag, NESTED_PARTIALS[i], j)
         end
     end
     @test (@test_deprecated r"`ForwardDiff.npartials` without a tag is deprecated" ForwardDiff.npartials(FDNUM)) == N
@@ -114,13 +116,13 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test ForwardDiff.valtype(TestTag, FDNUM) == V
     @test ForwardDiff.valtype(TestTag, typeof(FDNUM)) == V
-    @test ForwardDiff.valtype(TestTag, NESTED_FDNUM) == Dual{TestTag,V,M}
-    @test ForwardDiff.valtype(TestTag, typeof(NESTED_FDNUM)) == Dual{TestTag,V,M}
+    @test ForwardDiff.valtype(TestTag, NESTED_FDNUM) == Dual{OuterTestTag,V,N}
+    @test ForwardDiff.valtype(TestTag, typeof(NESTED_FDNUM)) == Dual{OuterTestTag,V,N}
 
     @test ForwardDiff.valtype(OuterTestTag, FDNUM) == Dual{TestTag,V,N}
     @test ForwardDiff.valtype(OuterTestTag, typeof(FDNUM)) == Dual{TestTag,V,N}
-    @test ForwardDiff.valtype(OuterTestTag, NESTED_FDNUM) == Dual{TestTag,Dual{TestTag,V,M},N}
-    @test ForwardDiff.valtype(OuterTestTag, typeof(NESTED_FDNUM)) == Dual{TestTag,Dual{TestTag,V,M},N}
+    @test ForwardDiff.valtype(OuterTestTag, NESTED_FDNUM) == Dual{TestTag,V,M}
+    @test ForwardDiff.valtype(OuterTestTag, typeof(NESTED_FDNUM)) == Dual{TestTag,V,M}
 
     OUTER_FDNUM = Dual{OuterTestTag}(PRIMAL, PARTIALS)
     @test ForwardDiff.valtype(TestTag, OUTER_FDNUM) == Dual{OuterTestTag,V,N}
@@ -128,14 +130,11 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test value(TestTag, OUTER_FDNUM) === OUTER_FDNUM
     @test partials(TestTag, OUTER_FDNUM, 1) === zero(OUTER_FDNUM)
     @test partials(TestTag, OUTER_FDNUM) === Partials{0,typeof(OUTER_FDNUM)}(())
-    INNER_FDNUM = Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
-    @test ForwardDiff.valtype(TestTag, INNER_FDNUM) == Dual{OuterTestTag,V,N}
-    @test ForwardDiff.valtype(TestTag, typeof(INNER_FDNUM)) == Dual{OuterTestTag,V,N}
-    @test value(TestTag, INNER_FDNUM) === Dual{OuterTestTag}(PRIMAL, PARTIALS)
+    @test value(TestTag, NESTED_FDNUM) === Dual{OuterTestTag}(PRIMAL, PARTIALS)
     for j in 1:M
-        @test partials(TestTag, INNER_FDNUM, j) === Dual{OuterTestTag}(M_PARTIALS[j], zero(PARTIALS))
+        @test partials(TestTag, NESTED_FDNUM, j) === Dual{OuterTestTag}(M_PARTIALS[j], zero(PARTIALS))
     end
-    @test partials(TestTag, INNER_FDNUM) === Partials{M,Dual{OuterTestTag,V,N}}(ntuple(j -> Dual{OuterTestTag}(M_PARTIALS[j], zero(PARTIALS)), M))
+    @test partials(TestTag, NESTED_FDNUM) === Partials{M,Dual{OuterTestTag,V,N}}(ntuple(j -> Dual{OuterTestTag}(M_PARTIALS[j], zero(PARTIALS)), M))
 
     #####################
     # Generic Functions #
@@ -255,25 +254,25 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
     @test zero(FDNUM) === Dual{TestTag}(zero(PRIMAL), zero(PARTIALS))
     @test zero(typeof(FDNUM)) === Dual{TestTag}(zero(V), zero(Partials{N,V}))
-    @test zero(NESTED_FDNUM) === Dual{TestTag}(Dual{TestTag}(zero(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
-    @test zero(typeof(NESTED_FDNUM)) === Dual{TestTag}(Dual{TestTag}(zero(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag,V,M}}))
+    @test zero(NESTED_FDNUM) === Dual{OuterTestTag}(Dual{TestTag}(zero(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
+    @test zero(typeof(NESTED_FDNUM)) === Dual{OuterTestTag}(Dual{TestTag}(zero(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag,V,M}}))
 
     @test one(FDNUM) === Dual{TestTag}(one(PRIMAL), zero(PARTIALS))
     @test one(typeof(FDNUM)) === Dual{TestTag}(one(V), zero(Partials{N,V}))
-    @test one(NESTED_FDNUM) === Dual{TestTag}(Dual{TestTag}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
-    @test one(typeof(NESTED_FDNUM)) === Dual{TestTag}(Dual{TestTag}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag,V,M}}))
+    @test one(NESTED_FDNUM) === Dual{OuterTestTag}(Dual{TestTag}(one(PRIMAL), zero(M_PARTIALS)), zero(NESTED_PARTIALS))
+    @test one(typeof(NESTED_FDNUM)) === Dual{OuterTestTag}(Dual{TestTag}(one(V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag,V,M}}))
 
     if V <: Integer
         @test rand(samerng(), FDNUM) == rand(samerng(), value(TestTag, FDNUM))
-        @test rand(samerng(), NESTED_FDNUM) == rand(samerng(), value(TestTag, NESTED_FDNUM))
+        @test rand(samerng(), NESTED_FDNUM) == rand(samerng(), value(OuterTestTag, NESTED_FDNUM))
     elseif V <: AbstractFloat
         @test rand(samerng(), typeof(FDNUM)) === Dual{TestTag}(rand(samerng(), V), zero(Partials{N,V}))
-        @test rand(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag}(Dual{TestTag}(rand(samerng(), V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag,V,M}}))
+        @test rand(samerng(), typeof(NESTED_FDNUM)) === Dual{OuterTestTag}(Dual{TestTag}(rand(samerng(), V), zero(Partials{M,V})), zero(Partials{N,Dual{TestTag,V,M}}))
         @test randn(samerng(), typeof(FDNUM)) === Dual{TestTag}(randn(samerng(), V), zero(Partials{N,V}))
-        @test randn(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag}(Dual{TestTag}(randn(samerng(), V), zero(Partials{M,V})),
+        @test randn(samerng(), typeof(NESTED_FDNUM)) === Dual{OuterTestTag}(Dual{TestTag}(randn(samerng(), V), zero(Partials{M,V})),
         zero(Partials{N,Dual{TestTag,V,M}}))
         @test randexp(samerng(), typeof(FDNUM)) === Dual{TestTag}(randexp(samerng(), V), zero(Partials{N,V}))
-        @test randexp(samerng(), typeof(NESTED_FDNUM)) === Dual{TestTag}(Dual{TestTag}(randexp(samerng(), V), zero(Partials{M,V})),
+        @test randexp(samerng(), typeof(NESTED_FDNUM)) === Dual{OuterTestTag}(Dual{TestTag}(randexp(samerng(), V), zero(Partials{M,V})),
         zero(Partials{N,Dual{TestTag,V,M}}))
     end
 
@@ -291,13 +290,13 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     # Recall that FDNUM = Dual{TestTag}(PRIMAL, PARTIALS) has N partials, 
     # and FDNUM2 has everything with a 2, and all random numbers nonzero.
     # M is the length of M_PARTIALS, which affects:
-    # NESTED_FDNUM = Dual{TestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
+    # NESTED_FDNUM = Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), NESTED_PARTIALS)
 
     NAN_PARTIALS = Partials{N,float(V)}(map(x -> oftype(float(x), NaN), PARTIALS.values))
 
     @test (FDNUM == Dual{TestTag}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
     @test isequal(FDNUM, Dual{TestTag}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
-    @test isequal(NESTED_FDNUM, Dual{TestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
+    @test isequal(NESTED_FDNUM, Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS2), NESTED_PARTIALS2)) == ((M_PARTIALS == M_PARTIALS2) && (NESTED_PARTIALS == NESTED_PARTIALS2))
 
     if PRIMAL == PRIMAL2
         @test isequal(FDNUM, Dual{TestTag}(PRIMAL, PARTIALS2)) == (PARTIALS == PARTIALS2)
@@ -324,10 +323,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test !isless(Dual{TestTag}(1, NAN_PARTIALS), Dual{TestTag}(1, PARTIALS))
     @test !(isless(Dual{TestTag}(2, PARTIALS), Dual{TestTag}(1, NAN_PARTIALS)))
 
-    @test isless(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
-    @test isless(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === isless(NESTED_PARTIALS, NESTED_PARTIALS2)
-    @test !(isless(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS)))
-    @test !(isless(Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS), Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)))
+    @test isless(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
+    @test isless(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === isless(NESTED_PARTIALS, NESTED_PARTIALS2)
+    @test !(isless(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS), Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS)))
+    @test !(isless(Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS), Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)))
 
     @test Dual{TestTag}(1, PARTIALS) < Dual{TestTag}(2, PARTIALS2)
     @test (Dual{TestTag}(1, PARTIALS) < Dual{TestTag}(1, PARTIALS2)) === (PARTIALS < PARTIALS2)
@@ -338,10 +337,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test !(Dual{TestTag}(1, NAN_PARTIALS) < Dual{TestTag}(1, PARTIALS))
     @test !(Dual{TestTag}(2, PARTIALS) < Dual{TestTag}(1, NAN_PARTIALS))
 
-    @test Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2)
-    @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS < NESTED_PARTIALS2)
-    @test !(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS))
-    @test !(Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) < Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2))
+    @test Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2)
+    @test (Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS < NESTED_PARTIALS2)
+    @test !(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) < Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS))
+    @test !(Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) < Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test Dual{TestTag}(1, PARTIALS) <= Dual{TestTag}(2, PARTIALS2)
     @test (Dual{TestTag}(1, PARTIALS) <= Dual{TestTag}(1, PARTIALS2)) === (PARTIALS <= PARTIALS2)
@@ -352,10 +351,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test (Dual{TestTag}(1, NAN_PARTIALS) <= Dual{TestTag}(1, PARTIALS)) === (N == 0)
     @test !(Dual{TestTag}(2, PARTIALS) <= Dual{TestTag}(1, NAN_PARTIALS))
 
-    @test Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2)
-    @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS <= NESTED_PARTIALS2)
-    @test Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS)
-    @test !(Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) <= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2))
+    @test Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2)
+    @test (Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS <= NESTED_PARTIALS2)
+    @test Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) <= Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS)
+    @test !(Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) <= Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test Dual{TestTag}(2, PARTIALS) > Dual{TestTag}(1, PARTIALS2)
     @test (Dual{TestTag}(1, PARTIALS) > Dual{TestTag}(1, PARTIALS2)) === (PARTIALS > PARTIALS2)
@@ -366,10 +365,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test !(Dual{TestTag}(1, NAN_PARTIALS) > Dual{TestTag}(1, PARTIALS))
     @test Dual{TestTag}(2, PARTIALS) > Dual{TestTag}(1, NAN_PARTIALS)
 
-    @test Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)
-    @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS > NESTED_PARTIALS2)
-    @test !(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS))
-    @test !(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
+    @test Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) > Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)
+    @test (Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS > NESTED_PARTIALS2)
+    @test !(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS))
+    @test !(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) > Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test Dual{TestTag}(2, PARTIALS) >= Dual{TestTag}(1, PARTIALS2)
     @test (Dual{TestTag}(1, PARTIALS) >= Dual{TestTag}(1, PARTIALS2)) === (PARTIALS >= PARTIALS2)
@@ -380,27 +379,27 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test ((Dual{TestTag}(1, NAN_PARTIALS) >= Dual{TestTag}(1, PARTIALS))) === (N == 0)
     @test Dual{TestTag}(2, PARTIALS) >= Dual{TestTag}(1, NAN_PARTIALS)
 
-    @test Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)
-    @test (Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS >= NESTED_PARTIALS2)
-    @test Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS)
-    @test !(Dual{TestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{TestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
+    @test Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS), NESTED_PARTIALS) >= Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS2), NESTED_PARTIALS2)
+    @test (Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS2)) === (NESTED_PARTIALS >= NESTED_PARTIALS2)
+    @test Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS)
+    @test !(Dual{OuterTestTag}(Dual{TestTag}(1, M_PARTIALS), NESTED_PARTIALS) >= Dual{OuterTestTag}(Dual{TestTag}(2, M_PARTIALS2), NESTED_PARTIALS2))
 
     @test isnan(Dual{TestTag}(NaN, PARTIALS))
     @test !(isnan(FDNUM))
 
-    @test isnan(Dual{TestTag}(Dual{TestTag}(NaN, M_PARTIALS), NESTED_PARTIALS))
+    @test isnan(Dual{OuterTestTag}(Dual{TestTag}(NaN, M_PARTIALS), NESTED_PARTIALS))
     @test !(isnan(NESTED_FDNUM))
 
     @test isfinite(FDNUM)
     @test !(isfinite(Dual{TestTag}(Inf, PARTIALS)))
 
     @test isfinite(NESTED_FDNUM)
-    @test !(isfinite(Dual{TestTag}(Dual{TestTag}(NaN, M_PARTIALS), NESTED_PARTIALS)))
+    @test !(isfinite(Dual{OuterTestTag}(Dual{TestTag}(NaN, M_PARTIALS), NESTED_PARTIALS)))
 
     @test isinf(Dual{TestTag}(Inf, PARTIALS))
     @test !(isinf(FDNUM))
 
-    @test isinf(Dual{TestTag}(Dual{TestTag}(Inf, M_PARTIALS), NESTED_PARTIALS))
+    @test isinf(Dual{OuterTestTag}(Dual{TestTag}(Inf, M_PARTIALS), NESTED_PARTIALS))
     @test !(isinf(NESTED_FDNUM))
 
     @test isreal(FDNUM)
@@ -409,20 +408,20 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test isinteger(Dual{TestTag}(1.0, PARTIALS))
     @test isinteger(FDNUM) == (V == Int)
 
-    @test isinteger(Dual{TestTag}(Dual{TestTag}(1.0, M_PARTIALS), NESTED_PARTIALS))
+    @test isinteger(Dual{OuterTestTag}(Dual{TestTag}(1.0, M_PARTIALS), NESTED_PARTIALS))
     @test isinteger(NESTED_FDNUM) == (V == Int)
 
     @test iseven(Dual{TestTag}(2))
     @test !(iseven(Dual{TestTag}(1)))
 
-    @test iseven(Dual{TestTag}(Dual{TestTag}(2)))
-    @test !(iseven(Dual{TestTag}(Dual{TestTag}(1))))
+    @test iseven(Dual{OuterTestTag}(Dual{TestTag}(2)))
+    @test !(iseven(Dual{OuterTestTag}(Dual{TestTag}(1))))
 
     @test isodd(Dual{TestTag}(1))
     @test !(isodd(Dual{TestTag}(2)))
 
-    @test isodd(Dual{TestTag}(Dual{TestTag}(1)))
-    @test !(isodd(Dual{TestTag}(Dual{TestTag}(2))))
+    @test isodd(Dual{OuterTestTag}(Dual{TestTag}(1)))
+    @test !(isodd(Dual{OuterTestTag}(Dual{TestTag}(2))))
 
     ########################
     # Promotion/Conversion #
@@ -435,29 +434,33 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test promote_type(Dual{TestTag,WIDE_T,N}, V) == Dual{TestTag,WIDE_T,N}
     @test promote_type(Dual{TestTag,V,N}, Dual{TestTag,V,N}) == Dual{TestTag,V,N}
     @test promote_type(Dual{TestTag,V,N}, Dual{TestTag,WIDE_T,N}) == Dual{TestTag,WIDE_T,N}
-    @test promote_type(Dual{TestTag,WIDE_T,N}, Dual{TestTag,Dual{TestTag,V,M},N}) == Dual{TestTag,Dual{TestTag,WIDE_T,M},N}
+    @test promote_type(Dual{OuterTestTag,WIDE_T,N}, Dual{OuterTestTag,Dual{TestTag,V,M},N}) == Dual{OuterTestTag,Dual{TestTag,WIDE_T,M},N}
+    @test promote_type(Dual{TestTag,V,M}, Dual{OuterTestTag,Dual{TestTag,V,M},N}) == Dual{OuterTestTag,Dual{TestTag,V,M},N}
+    if M != N
+        @test_throws ArgumentError("Cannot promote Duals with the same tag $TestTag but $M and $N partials.") promote_type(Dual{TestTag,V,M}, Dual{TestTag,V,N})
+    end
 
     # issue #322
     @test promote_type(Bool, Dual{TestTag,V,N}) == Dual{TestTag,promote_type(Bool, V),N}
     @test promote_type(BigFloat, Dual{TestTag,V,N}) == Dual{TestTag,promote_type(BigFloat, V),N}
 
     WIDE_FDNUM = convert(Dual{TestTag,WIDE_T,N}, FDNUM)
-    WIDE_NESTED_FDNUM = convert(Dual{TestTag,Dual{TestTag,WIDE_T,M},N}, NESTED_FDNUM)
+    WIDE_NESTED_FDNUM = convert(Dual{OuterTestTag,Dual{TestTag,WIDE_T,M},N}, NESTED_FDNUM)
 
     @test typeof(WIDE_FDNUM) === Dual{TestTag,WIDE_T,N}
-    @test typeof(WIDE_NESTED_FDNUM) === Dual{TestTag,Dual{TestTag,WIDE_T,M},N}
+    @test typeof(WIDE_NESTED_FDNUM) === Dual{OuterTestTag,Dual{TestTag,WIDE_T,M},N}
 
     @test value(TestTag, WIDE_FDNUM) == PRIMAL
-    @test (value(TestTag, WIDE_NESTED_FDNUM) == PRIMAL) == (M == 0)
+    @test (value(OuterTestTag, WIDE_NESTED_FDNUM) == PRIMAL) == (M == 0)
 
     @test convert(Dual, FDNUM) === FDNUM
     @test convert(Dual, NESTED_FDNUM) === NESTED_FDNUM
     @test convert(Dual{TestTag,V,N}, FDNUM) === FDNUM
-    @test convert(Dual{TestTag,Dual{TestTag,V,M},N}, NESTED_FDNUM) === NESTED_FDNUM
+    @test convert(Dual{OuterTestTag,Dual{TestTag,V,M},N}, NESTED_FDNUM) === NESTED_FDNUM
     @test convert(Dual{TestTag,WIDE_T,N}, PRIMAL) === Dual{TestTag}(WIDE_T(PRIMAL), zero(Partials{N,WIDE_T}))
-    @test convert(Dual{TestTag,Dual{TestTag,WIDE_T,M},N}, PRIMAL) === Dual{TestTag}(Dual{TestTag}(WIDE_T(PRIMAL), zero(Partials{M,WIDE_T})), zero(Partials{N,Dual{TestTag,V,M}}))
-    @test convert(Dual{TestTag,Dual{TestTag,V,M},N}, FDNUM) === Dual{TestTag}(convert(Dual{TestTag,V,M}, PRIMAL), convert(Partials{N,Dual{TestTag,V,M}}, PARTIALS))
-    @test convert(Dual{TestTag,Dual{TestTag,WIDE_T,M},N}, FDNUM) === Dual{TestTag}(convert(Dual{TestTag,WIDE_T,M}, PRIMAL), convert(Partials{N,Dual{TestTag,WIDE_T,M}}, PARTIALS))
+    @test convert(Dual{OuterTestTag,Dual{TestTag,WIDE_T,M},N}, PRIMAL) === Dual{OuterTestTag}(Dual{TestTag}(WIDE_T(PRIMAL), zero(Partials{M,WIDE_T})), zero(Partials{N,Dual{TestTag,V,M}}))
+    @test convert(Dual{OuterTestTag,Dual{TestTag,V,M},N}, Dual{TestTag}(PRIMAL, M_PARTIALS)) === Dual{OuterTestTag}(Dual{TestTag}(PRIMAL, M_PARTIALS), zero(Partials{N,Dual{TestTag,V,M}}))
+    @test convert(Dual{OuterTestTag,Dual{TestTag,WIDE_T,M},N}, Dual{TestTag}(PRIMAL, M_PARTIALS)) === Dual{OuterTestTag}(Dual{TestTag}(WIDE_T(PRIMAL), convert(Partials{M,WIDE_T}, M_PARTIALS)), zero(Partials{N,Dual{TestTag,WIDE_T,M}}))
 
     ##############
     # Arithmetic #
@@ -470,19 +473,19 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test FDNUM + PRIMAL === Dual{TestTag}(value(TestTag, FDNUM) + PRIMAL, partials(TestTag, FDNUM))
     @test PRIMAL + FDNUM === Dual{TestTag}(value(TestTag, FDNUM) + PRIMAL, partials(TestTag, FDNUM))
 
-    @test NESTED_FDNUM + NESTED_FDNUM2 === Dual{TestTag}(value(TestTag, NESTED_FDNUM) + value(TestTag, NESTED_FDNUM2), partials(TestTag, NESTED_FDNUM) + partials(TestTag, NESTED_FDNUM2))
-    @test NESTED_FDNUM + PRIMAL === Dual{TestTag}(value(TestTag, NESTED_FDNUM) + PRIMAL, partials(TestTag, NESTED_FDNUM))
-    @test PRIMAL + NESTED_FDNUM === Dual{TestTag}(value(TestTag, NESTED_FDNUM) + PRIMAL, partials(TestTag, NESTED_FDNUM))
+    @test NESTED_FDNUM + NESTED_FDNUM2 === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) + value(OuterTestTag, NESTED_FDNUM2), partials(OuterTestTag, NESTED_FDNUM) + partials(OuterTestTag, NESTED_FDNUM2))
+    @test NESTED_FDNUM + PRIMAL === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) + PRIMAL, partials(OuterTestTag, NESTED_FDNUM))
+    @test PRIMAL + NESTED_FDNUM === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) + PRIMAL, partials(OuterTestTag, NESTED_FDNUM))
 
     @test FDNUM - FDNUM2 === Dual{TestTag}(value(TestTag, FDNUM) - value(TestTag, FDNUM2), partials(TestTag, FDNUM) - partials(TestTag, FDNUM2))
     @test FDNUM - PRIMAL === Dual{TestTag}(value(TestTag, FDNUM) - PRIMAL, partials(TestTag, FDNUM))
     @test PRIMAL - FDNUM === Dual{TestTag}(PRIMAL - value(TestTag, FDNUM), -(partials(TestTag, FDNUM)))
     @test -(FDNUM) === Dual{TestTag}(-(value(TestTag, FDNUM)), -(partials(TestTag, FDNUM)))
 
-    @test NESTED_FDNUM - NESTED_FDNUM2 === Dual{TestTag}(value(TestTag, NESTED_FDNUM) - value(TestTag, NESTED_FDNUM2), partials(TestTag, NESTED_FDNUM) - partials(TestTag, NESTED_FDNUM2))
-    @test NESTED_FDNUM - PRIMAL === Dual{TestTag}(value(TestTag, NESTED_FDNUM) - PRIMAL, partials(TestTag, NESTED_FDNUM))
-    @test PRIMAL - NESTED_FDNUM === Dual{TestTag}(PRIMAL - value(TestTag, NESTED_FDNUM), -(partials(TestTag, NESTED_FDNUM)))
-    @test -(NESTED_FDNUM) === Dual{TestTag}(-(value(TestTag, NESTED_FDNUM)), -(partials(TestTag, NESTED_FDNUM)))
+    @test NESTED_FDNUM - NESTED_FDNUM2 === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) - value(OuterTestTag, NESTED_FDNUM2), partials(OuterTestTag, NESTED_FDNUM) - partials(OuterTestTag, NESTED_FDNUM2))
+    @test NESTED_FDNUM - PRIMAL === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) - PRIMAL, partials(OuterTestTag, NESTED_FDNUM))
+    @test PRIMAL - NESTED_FDNUM === Dual{OuterTestTag}(PRIMAL - value(OuterTestTag, NESTED_FDNUM), -(partials(OuterTestTag, NESTED_FDNUM)))
+    @test -(NESTED_FDNUM) === Dual{OuterTestTag}(-(value(OuterTestTag, NESTED_FDNUM)), -(partials(OuterTestTag, NESTED_FDNUM)))
 
     # Multiplication #
     #----------------#
@@ -491,9 +494,9 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test FDNUM * PRIMAL === Dual{TestTag}(value(TestTag, FDNUM) * PRIMAL, partials(TestTag, FDNUM) * PRIMAL)
     @test PRIMAL * FDNUM === Dual{TestTag}(value(TestTag, FDNUM) * PRIMAL, partials(TestTag, FDNUM) * PRIMAL)
 
-    @test NESTED_FDNUM * NESTED_FDNUM2 === Dual{TestTag}(value(TestTag, NESTED_FDNUM) * value(TestTag, NESTED_FDNUM2), ForwardDiff._mul_partials(partials(TestTag, NESTED_FDNUM), partials(TestTag, NESTED_FDNUM2), value(TestTag, NESTED_FDNUM2), value(TestTag, NESTED_FDNUM)))
-    @test NESTED_FDNUM * PRIMAL === Dual{TestTag}(value(TestTag, NESTED_FDNUM) * PRIMAL, partials(TestTag, NESTED_FDNUM) * PRIMAL)
-    @test PRIMAL * NESTED_FDNUM === Dual{TestTag}(value(TestTag, NESTED_FDNUM) * PRIMAL, partials(TestTag, NESTED_FDNUM) * PRIMAL)
+    @test NESTED_FDNUM * NESTED_FDNUM2 === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) * value(OuterTestTag, NESTED_FDNUM2), ForwardDiff._mul_partials(partials(OuterTestTag, NESTED_FDNUM), partials(OuterTestTag, NESTED_FDNUM2), value(OuterTestTag, NESTED_FDNUM2), value(OuterTestTag, NESTED_FDNUM)))
+    @test NESTED_FDNUM * PRIMAL === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) * PRIMAL, partials(OuterTestTag, NESTED_FDNUM) * PRIMAL)
+    @test PRIMAL * NESTED_FDNUM === Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) * PRIMAL, partials(OuterTestTag, NESTED_FDNUM) * PRIMAL)
 
     # Division #
     #----------#
@@ -513,9 +516,9 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test dual_isapprox(FDNUM / PRIMAL, Dual{TestTag}(value(TestTag, FDNUM) / PRIMAL, partials(TestTag, FDNUM) / PRIMAL))
     @test dual_isapprox(PRIMAL / FDNUM, Dual{TestTag}(PRIMAL / value(TestTag, FDNUM), (-(PRIMAL) / value(TestTag, FDNUM)^2) * partials(TestTag, FDNUM)))
 
-    @test dual_isapprox(NESTED_FDNUM / NESTED_FDNUM2, Dual{TestTag}(value(TestTag, NESTED_FDNUM) / value(TestTag, NESTED_FDNUM2), ForwardDiff._div_partials(partials(TestTag, NESTED_FDNUM), partials(TestTag, NESTED_FDNUM2), value(TestTag, NESTED_FDNUM), value(TestTag, NESTED_FDNUM2))))
-    @test dual_isapprox(NESTED_FDNUM / PRIMAL, Dual{TestTag}(value(TestTag, NESTED_FDNUM) / PRIMAL, partials(TestTag, NESTED_FDNUM) / PRIMAL))
-    @test dual_isapprox(PRIMAL / NESTED_FDNUM, Dual{TestTag}(PRIMAL / value(TestTag, NESTED_FDNUM), (-(PRIMAL) / value(TestTag, NESTED_FDNUM)^2) * partials(TestTag, NESTED_FDNUM)))
+    @test dual_isapprox(NESTED_FDNUM / NESTED_FDNUM2, Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) / value(OuterTestTag, NESTED_FDNUM2), ForwardDiff._div_partials(partials(OuterTestTag, NESTED_FDNUM), partials(OuterTestTag, NESTED_FDNUM2), value(OuterTestTag, NESTED_FDNUM), value(OuterTestTag, NESTED_FDNUM2))))
+    @test dual_isapprox(NESTED_FDNUM / PRIMAL, Dual{OuterTestTag}(value(OuterTestTag, NESTED_FDNUM) / PRIMAL, partials(OuterTestTag, NESTED_FDNUM) / PRIMAL))
+    @test dual_isapprox(PRIMAL / NESTED_FDNUM, Dual{OuterTestTag}(PRIMAL / value(OuterTestTag, NESTED_FDNUM), (-(PRIMAL) / value(OuterTestTag, NESTED_FDNUM)^2) * partials(OuterTestTag, NESTED_FDNUM)))
 
     # Exponentiation #
     #----------------#
@@ -719,7 +722,7 @@ end
     @test isfinite(dfmin)
     @test isfinite(dfmax)
 
-  @test floatmin(Dual{Nothing, ForwardDiff.Dual{Nothing, Float64, 2}, 1}) === Dual{Nothing}(Dual{Nothing}(floatmin(Float64),0.0,0.0),Dual{Nothing}(0.0,0.0,0.0))
+  @test floatmin(Dual{OuterTestTag, Dual{TestTag, Float64, 2}, 1}) === Dual{OuterTestTag}(Dual{TestTag}(floatmin(Float64),0.0,0.0),Dual{TestTag}(0.0,0.0,0.0))
 end
 
 @testset "Integer" begin
@@ -745,8 +748,8 @@ end
 
 @testset "float" begin # issue #492
     @test float(Dual{Nothing, Int, 2}) === Dual{Nothing, Float64, 2}
-    @test float(Dual(1)) isa Dual{Nothing, Float64, 0}
-    @test value.(Nothing, float.(Dual.(1:4, 2:5, 3:6))) isa Vector{Float64}
+    @test float(Dual(1)) isa Dual{ForwardDiff.Tag{Nothing,Int}, Float64, 0}
+    @test value.(ForwardDiff.Tag{Nothing,Int}, float.(Dual.(1:4, 2:5, 3:6))) isa Vector{Float64}
     @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
 end
 

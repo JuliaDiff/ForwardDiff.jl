@@ -7,7 +7,7 @@ end
 
 Tag(f::F, ::Type{V}) where {F,V} = Tag{F,V}()
 
-Tag(::Nothing, ::Type{V}) where {V} = nothing
+Tag(::Nothing, ::Type{V}) where {V} = Tag{Nothing,V}()
 
 # Encodes a type (or type parameter) as a sequence of strings that depends only on its
 # structure. Distinct objects have distinct keys, and the key of a parameter is a strict
@@ -56,6 +56,9 @@ checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
 # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
+
+# tag of `nothing` configs, for any function
+checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Nothing,VT,F,V} = true
 
 # custom tag: you're on your own.
 checktag(z, f, x) = true
@@ -213,9 +216,9 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
+struct HessianConfig{T,V,N,DG,DJ,TG} <: AbstractConfig{N}
     jacobian_config::JacobianConfig{T,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
+    gradient_config::GradientConfig{TG,Dual{T,V,N},N,DG}
 end
 
 """
@@ -241,7 +244,7 @@ function HessianConfig(f::F,
                        chunk::Chunk = Chunk(x),
                        tag = Tag(f, V)) where {F,V}
     jacobian_config = JacobianConfig(f, x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, Tag{F,eltype(jacobian_config)}())
     return HessianConfig(jacobian_config, gradient_config)
 end
 
@@ -266,10 +269,10 @@ function HessianConfig(f::F,
                        chunk::Chunk = Chunk(x),
                        tag = Tag(f, V)) where {F,V}
     jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, Tag{F,eltype(jacobian_config)}())
     return HessianConfig(jacobian_config, gradient_config)
 end
 
 checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
-    Dual{T,Dual{T,V,N},N}
+Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ,TG}}) where {T,V,N,DG,DJ,TG} =
+    Dual{TG,Dual{T,V,N},N}

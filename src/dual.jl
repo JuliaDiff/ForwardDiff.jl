@@ -16,7 +16,8 @@ struct Dual{T,V,N} <: Real
     partials::Partials{N,V}
     function Dual{T, V, N}(value::V, partials::Partials{N, V}) where {T, V, N}
         T isa Type || throw_invalid_tag(T)
-        check_tag_order(T, V)
+        check_tag_order(T, value)
+        foreach(p -> check_tag_order(T, p), partials.values)
         can_dual(V) || throw_cannot_dual(V)
         new{T, V, N}(value, partials)
     end
@@ -53,10 +54,16 @@ function ≺ end
     throw(ArgumentError(lazy"Cannot store a Dual with tag $T outside a Dual with tag $S, since $T ≺ $S."))
 end
 
-# Every `Dual` stores its greatest tag outermost, so it suffices to compare with the next layer
-@inline check_tag_order(::Type{T}, ::Type) where {T} = nothing
-@inline function check_tag_order(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N}
-    if S !== T && T ≺ S
+@noinline function throw_same_tag(T)
+    throw(ArgumentError(lazy"Cannot store a Dual with tag $T inside a Dual with the same tag."))
+end
+
+# Tags are strictly decreasing inwards, hence unique, so it suffices to check the next layer
+@inline check_tag_order(::Type{T}, x) where {T} = nothing
+@inline function check_tag_order(::Type{T}, ::Dual{S}) where {T,S}
+    if S === T
+        throw_same_tag(T)
+    elseif T ≺ S
         throw_tag_order(T, S)
     end
     return nothing
@@ -66,20 +73,27 @@ end
 # Constructors #
 ################
 
-@inline Dual{T}(value::V, partials::Partials{N,V}) where {T,N,V} = Dual{T,V,N}(value, partials)
-
-@inline function Dual{T}(value::A, partials::Partials{N,B}) where {T,N,A,B}
+# Converts the arguments of the constructors to a value and partials of the same type
+@inline dual_args(value::V, partials::Partials{N,V}) where {N,V} = (value, partials)
+@inline function dual_args(value::A, partials::Partials{N,B}) where {N,A,B}
     C = promote_type(A, B)
-    return Dual{T}(convert(C, value), convert(Partials{N,C}, partials))
+    return (convert(C, value), convert(Partials{N,C}, partials))
+end
+@inline dual_args(value, partials::Tuple) = dual_args(value, Partials(partials))
+@inline dual_args(value, partials::Tuple{}) = dual_args(value, Partials{0,typeof(value)}(partials))
+@inline dual_args(value) = dual_args(value, ())
+@inline dual_args(value, partial1, partials...) = dual_args(value, tuple(partial1, partials...))
+@inline dual_args(value::V, ::Chunk{N}, p::Val{i}) where {V,N,i} = dual_args(value, single_seed(Partials{N,V}, p))
+
+@inline function Dual{T}(args...) where {T}
+    value, partials = dual_args(args...)
+    return Dual{T,typeof(value),length(partials)}(value, partials)
 end
 
-@inline Dual{T}(value, partials::Tuple) where {T} = Dual{T}(value, Partials(partials))
-@inline Dual{T}(value, partials::Tuple{}) where {T} = Dual{T}(value, Partials{0,typeof(value)}(partials))
-@inline Dual{T}(value) where {T} = Dual{T}(value, ())
-@inline Dual{T}(x::Dual{T}) where {T} = Dual{T}(x, ())
-@inline Dual{T}(value, partial1, partials...) where {T} = Dual{T}(value, tuple(partial1, partials...))
-@inline Dual{T}(value::V, ::Chunk{N}, p::Val{i}) where {T,V,N,i} = Dual{T}(value, single_seed(Partials{N,V}, p))
-@inline Dual(args...) = Dual{Nothing}(args...)
+@inline function Dual(args...)
+    value, partials = dual_args(args...)
+    return Dual{Tag{Nothing,typeof(value)}}(value, partials)
+end
 
 # we define these special cases so that the "constructor <--> convert" pun holds for `Dual`
 @inline Dual{T,V,N}(x::Dual{T,V,N}) where {T,V,N} = x
@@ -453,9 +467,13 @@ function Base.promote_rule(::Type{Dual{T1,V1,N1}},
     end
 end
 
-function Base.promote_rule(::Type{Dual{T,A,N}},
-                           ::Type{Dual{T,B,N}}) where {T,A,B,N}
-    return Dual{T,promote_type(A, B),N}
+function Base.promote_rule(::Type{Dual{T,A,M}},
+                           ::Type{Dual{T,B,N}}) where {T,A,B,M,N}
+    if M === N
+        Dual{T,promote_type(A, B),N}
+    else
+        throw(ArgumentError(lazy"Cannot promote Duals with the same tag $T but $M and $N partials."))
+    end
 end
 
 for R in (AbstractIrrational, Real, BigFloat, Bool)
@@ -473,7 +491,6 @@ for R in (AbstractIrrational, Real, BigFloat, Bool)
 end
 
 @inline Base.convert(::Type{Dual{T,V,N}}, d::Dual{T}) where {T,V,N} = Dual{T}(V(value(T, d)), convert(Partials{N,V}, partials(T, d)))
-@inline Base.convert(::Type{Dual{T,Dual{T,V,M},N}}, d::Dual{T,V,M}) where {T,V,N,M} = Dual{T}(d, Partials{N,Dual{T,V,M}}(zero_tuple(NTuple{N,Dual{T,V,M}})))
 @inline Base.convert(::Type{Dual{T,V,N}}, x) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 @inline Base.convert(::Type{Dual{T,V,N}}, x::Number) where {T,V,N} = Dual{T}(V(x), zero(Partials{N,V}))
 Base.convert(::Type{D}, d::D) where {D<:Dual} = d

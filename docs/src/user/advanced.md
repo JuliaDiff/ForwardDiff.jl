@@ -129,7 +129,7 @@ aren't sensitive to the input and thus cause ForwardDiff to incorrectly return `
 # the dual number's perturbation component is zero, so this
 # variable should not propagate derivative information
 julia> log(ForwardDiff.Dual(0.0, 0.0))
-Dual{Nothing}(-Inf,NaN) # oops, this NaN should be 0.0
+Dual{ForwardDiff.Tag{Nothing, Float64}}(-Inf,NaN) # oops, this NaN should be 0.0
 ```
 
 Here, ForwardDiff computes the derivative of `log(0.0)` as `NaN` and then propagates
@@ -167,7 +167,7 @@ julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_m
 julia> using ForwardDiff
 
 julia> log(ForwardDiff.Dual(0.0, 0.0))
-Dual{Nothing}(-Inf,0.0)
+Dual{ForwardDiff.Tag{Nothing, Float64}}(-Inf,0.0)
 ```
 
 In the future, we plan on allowing users and downstream library authors to dynamically
