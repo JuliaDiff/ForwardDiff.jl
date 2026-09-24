@@ -72,5 +72,44 @@ end
     end
 end == 0.0
 
+# Nested derivatives whose tags are not ordered by containment
+const captured = Ref{Any}()
+const inner = Ref{Any}()
+struct AFunction end
+struct BFunction end
+(::AFunction)(x) = captured[] * x^2
+(::BFunction)(x) = captured[] * x^2
+struct ADerivative end
+struct BDerivative end
+(::ADerivative)(x) = (captured[] = x; D(inner[], 2.0))
+(::BDerivative)(x) = (captured[] = x; D(inner[], 2.0))
+struct AGradient end
+struct BGradient end
+(::AGradient)(x) = (captured[] = prod(x); D(inner[], 2.0))
+(::BGradient)(x) = (captured[] = prod(x); D(inner[], 2.0))
+for (outer, f) in ((ADerivative(), BFunction()), (BDerivative(), AFunction()))
+    inner[] = f
+    @test D(outer, 3.0) == 4.0
+end
+for (outer, f) in ((AGradient(), BFunction()), (BGradient(), AFunction()))
+    inner[] = f
+    @test ForwardDiff.gradient(outer, [3.0, 2.0]) == [8.0, 12.0]
+    @test ForwardDiff.hessian(outer, [3.0, 2.0]) == [0.0 4.0; 4.0 0.0]
+end
+
+# Every tag is greater than the tags in its input type and its function type
+let T = ForwardDiff.Tag{AFunction,Float64}, d = ForwardDiff.Dual{T}(1.0, 1.0), f = x -> d * x
+    for S in (ForwardDiff.Tag{BFunction,typeof(d)}, ForwardDiff.Tag{typeof(f),Float64})
+        @test ForwardDiff.:≺(T, S)
+        @test !ForwardDiff.:≺(S, T)
+    end
+end
+
+# Nested `Dual`s store the greatest tag outermost
+struct ATag end
+struct BTag end
+@test ForwardDiff.Dual{BTag}(ForwardDiff.Dual{ATag}(1.0, 2.0), ForwardDiff.Dual{ATag}(3.0, 4.0)) isa ForwardDiff.Dual{BTag}
+@test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag}(ForwardDiff.Dual{BTag}(1.0, 2.0), ForwardDiff.Dual{BTag}(3.0, 4.0))
+
 
 end # module

@@ -16,7 +16,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 struct TestTag end
 struct OuterTestTag end
 ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
-ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{<:Tag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
 ##################
 # hardcoded test #

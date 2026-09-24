@@ -16,6 +16,7 @@ struct Dual{T,V,N} <: Real
     partials::Partials{N,V}
     function Dual{T, V, N}(value::V, partials::Partials{N, V}) where {T, V, N}
         T isa Type || throw_invalid_tag(T)
+        check_tag_order(T, V)
         can_dual(V) || throw_cannot_dual(V)
         new{T, V, N}(value, partials)
     end
@@ -30,14 +31,6 @@ Base.ArithmeticStyle(::Type{<:Dual{T,V}}) where {T,V} = Base.ArithmeticStyle(V)
 # Exceptions #
 ##############
 
-struct DualMismatchError{A,B} <: Exception
-    a::A
-    b::B
-end
-
-Base.showerror(io::IO, e::DualMismatchError{A,B}) where {A,B} =
-    print(io, "Cannot determine ordering of Dual tags ", e.a, " and ", e.b)
-
 @noinline function throw_invalid_tag(T)
     throw(ArgumentError(lazy"The tag of a Dual must be a type, got $(repr(T))."))
 end
@@ -49,13 +42,25 @@ end
 """
     ForwardDiff.≺(a, b)::Bool
 
-Determines the order in which tagged `Dual` objects are composed. If true, then `Dual{b}`
+Determines the order in which tagged `Dual` objects are stored. If true, then `Dual{b}`
 objects will appear outside `Dual{a}` objects.
 
-This is important when working with nested differentiation: currently, only the outermost
-tag can be extracted, so it should be used in the _innermost_ function.
+Values and partials with respect to a tag can be extracted irrespective of this order.
 """
-≺(a,b) = throw(DualMismatchError(a,b))
+function ≺ end
+
+@noinline function throw_tag_order(T, S)
+    throw(ArgumentError(lazy"Cannot store a Dual with tag $T outside a Dual with tag $S, since $T ≺ $S."))
+end
+
+# Every `Dual` stores its greatest tag outermost, so it suffices to compare with the next layer
+@inline check_tag_order(::Type{T}, ::Type) where {T} = nothing
+@inline function check_tag_order(::Type{T}, ::Type{Dual{S,V,N}}) where {T,S,V,N}
+    if S !== T && T ≺ S
+        throw_tag_order(T, S)
+    end
+    return nothing
+end
 
 ################
 # Constructors #

@@ -5,25 +5,43 @@
 struct Tag{F,V}
 end
 
-const TAGCOUNT = Threads.Atomic{UInt}(0)
-
-# each tag is assigned a unique number
-# tags which depend on other tags will be larger
-@generated function tagcount(::Type{Tag{F,V}}) where {F,V}
-    :($(Threads.atomic_add!(TAGCOUNT, UInt(1))))
-end
-
-function Tag(f::F, ::Type{V}) where {F,V}
-    tagcount(Tag{F,V}) # trigger generated function
-    Tag{F,V}()
-end
+Tag(f::F, ::Type{V}) where {F,V} = Tag{F,V}()
 
 Tag(::Nothing, ::Type{V}) where {V} = nothing
 
-
-@inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
-    tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
+# Encodes a type (or type parameter) as a sequence of strings that depends only on its
+# structure. Distinct objects have distinct keys, and the key of a parameter is a strict
+# subsequence of the key of the type.
+function typekey!(key::Vector{String}, x::DataType)
+    push!(key, "T", string(fullname(parentmodule(x))), String(nameof(x)), string(length(x.parameters)))
+    foreach(p -> typekey!(key, p), x.parameters)
+    return key
 end
+typekey!(key::Vector{String}, x::Symbol) = push!(key, "S", String(x))
+function typekey!(key::Vector{String}, x)
+    typekey!(push!(key, "V"), typeof(x))
+    if isprimitivetype(typeof(x))
+        push!(key, bytes2hex(reinterpret(UInt8, [x])))
+    else
+        for i in 1:nfields(x)
+            if isdefined(x, i)
+                typekey!(key, getfield(x, i))
+            else
+                push!(key, "#undef")
+            end
+        end
+    end
+    return key
+end
+
+# `A ≺ B` compares `(rank, key)` lexicographically. The rank strictly increases from a type to
+# any type containing it, so every tag is greater than the tags occurring in its parameters.
+@generated tagid(::Type{T}) where {T} = (key = typekey!(String[], T); (length(key), key...))
+
+# Nested `Dual`s store the greatest tag outermost. A tag `Tag{F,V}` is greater than all tags
+# in the type `V` of its input and in the type `F` of its function, so seeding it outermost
+# keeps nested `Dual`s sorted. The comparison of the constant IDs is evaluated at compile time.
+≺(::Type{A}, ::Type{B}) where {A,B} = isless(tagid(A), tagid(B))
 
 struct InvalidTagException{E,O} <: Exception
 end
