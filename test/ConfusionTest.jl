@@ -6,6 +6,7 @@ using ForwardDiff
 using LinearAlgebra
 using StaticArrays
 using DiffResults
+using Serialization
 
 # Perturbation Confusion (Issue #83) #
 #------------------------------------#
@@ -156,5 +157,28 @@ for f in (f845a, f845b), x in ([1.0, 2.0, 3.0], SVector(1.0, 2.0, 3.0))
     end
 end
 
+# Output of `code` in a new process, which can load the packages in `packages/`
+julia_output(code) = readchomp(`$(Base.julia_cmd()) --project=$(Base.active_project()) -e "push!(LOAD_PATH, $(repr(joinpath(@__DIR__, "packages")))); $code"`)
+
+# Issue #714: nested derivatives in precompiled code
+@test julia_output("using P714; print(P714.compute_derivative(1, 0))") == "2"
+
+# Issue #801: packages precompiling the same tags in different orders
+@test julia_output("using PkgA, PkgB; print(PkgA.mix() === PkgB.mix())") == "true"
+
+# Issue #320: a function and its config deserialized separately have different tags
+dir = mktempdir()
+julia_output("""
+    using ForwardDiff, Serialization
+    f = let c = 2.0
+        x -> c * sum(abs2, x)
+    end
+    serialize($(repr(joinpath(dir, "f"))), f)
+    serialize($(repr(joinpath(dir, "cfg"))), ForwardDiff.GradientConfig(f, [1.0, 2.0]))
+    """)
+f320 = deserialize(joinpath(dir, "f"))
+cfg320 = deserialize(joinpath(dir, "cfg"))
+@test_throws "Invalid Tag object" ForwardDiff.gradient(f320, [1.0, 2.0], cfg320)
+@test ForwardDiff.gradient(f320, [1.0, 2.0], cfg320, Val(false)) == [4.0, 8.0]
 
 end # module
