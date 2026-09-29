@@ -94,11 +94,14 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test ForwardDiff.npartials(TestTag, typeof(FDNUM)) == N
     @test ForwardDiff.npartials(TestTag, typeof(NESTED_FDNUM)) == M
     @test ForwardDiff.npartials(OuterTestTag, typeof(NESTED_FDNUM)) == N
+    @test ForwardDiff.npartials(TestTag, V) == 0
+    @test ForwardDiff.npartials(OutermostTestTag, typeof(NESTED_FDNUM)) == 0
 
     @test (@test_deprecated r"`ForwardDiff.value` without a tag is deprecated" value(PRIMAL)) == PRIMAL
     @test (@test_deprecated r"`ForwardDiff.value` without a tag is deprecated" value(FDNUM)) == PRIMAL
     @test (@test_deprecated r"`ForwardDiff.partials` without a tag is deprecated" partials(PRIMAL)) == Partials{0,V}(tuple())
     @test (@test_deprecated r"`ForwardDiff.partials` without a tag is deprecated" partials(FDNUM)) == PARTIALS
+    @test (@test_deprecated r"`ForwardDiff.partials` without a tag is deprecated" partials(PRIMAL, 1)) == zero(PRIMAL)
     for i in 1:N
         @test (@test_deprecated r"`ForwardDiff.partials` without a tag is deprecated" partials(FDNUM, i)) == PARTIALS[i]
         for j in 1:M
@@ -437,8 +440,10 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test promote_type(Dual{OuterTestTag,WIDE_T,N}, Dual{OuterTestTag,Dual{TestTag,V,M},N}) == Dual{OuterTestTag,Dual{TestTag,WIDE_T,M},N}
     @test promote_type(Dual{TestTag,V,M}, Dual{OuterTestTag,Dual{TestTag,V,M},N}) == Dual{OuterTestTag,Dual{TestTag,V,M},N}
     if M != N
-        @test_throws ArgumentError("Cannot promote Duals with the same tag $TestTag but $M and $N partials.") promote_type(Dual{TestTag,V,M}, Dual{TestTag,V,N})
+        @test promote_type(Dual{TestTag,V,M}, Dual{TestTag,V,N}) == Dual{TestTag,V}
     end
+    @test zero(Dual{TestTag,Real,N}) isa Dual{TestTag,Real,N}
+    @test value(TestTag, convert(Dual{TestTag,Real,N}, PRIMAL)) == PRIMAL
 
     # issue #322
     @test promote_type(Bool, Dual{TestTag,V,N}) == Dual{TestTag,promote_type(Bool, V),N}
@@ -751,6 +756,10 @@ end
     @test float(Dual(1)) isa Dual{ForwardDiff.Tag{Nothing,Int}, Float64, 0}
     @test value.(ForwardDiff.Tag{Nothing,Int}, float.(Dual.(1:4, 2:5, 3:6))) isa Vector{Float64}
     @test ForwardDiff.derivative(float, 1)::Float64 === 1.0
+end
+
+@testset "show" begin
+    @test repr(Dual(1.0, 2.0)) == "Dual{ForwardDiff.Tag{Nothing, Float64}}(1.0,2.0)"
 end
 
 @testset "TwicePrecision" begin

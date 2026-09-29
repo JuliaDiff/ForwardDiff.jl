@@ -7,13 +7,12 @@ end
 
 Tag(f::F, ::Type{V}) where {F,V} = Tag{F,V}()
 
-Tag(::Nothing, ::Type{V}) where {V} = Tag{Nothing,V}()
-
 # Encodes a type (or type parameter) as a sequence of strings that depends only on its
-# structure. Distinct objects have distinct keys, and the key of a parameter is a strict
-# subsequence of the key of the type.
+# structure. Distinct objects have distinct keys, except a type and its redefinition in the
+# same session. The key of a parameter is a strict subsequence of the key of the type.
 function typekey!(key::Vector{String}, x::DataType)
-    push!(key, "T", string(fullname(parentmodule(x))), String(nameof(x)), string(length(x.parameters)))
+    mod = parentmodule(x)
+    push!(key, "T", string(Base.PkgId(Base.moduleroot(mod)).uuid), string(fullname(mod)), String(nameof(x)), string(length(x.parameters)))
     foreach(p -> typekey!(key, p), x.parameters)
     return key
 end

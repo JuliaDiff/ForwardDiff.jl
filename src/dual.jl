@@ -87,12 +87,12 @@ end
 
 @inline function Dual{T}(args...) where {T}
     value, partials = dual_args(args...)
-    return Dual{T,typeof(value),length(partials)}(value, partials)
+    return Dual{T,eltype(partials),length(partials)}(value, partials)
 end
 
 @inline function Dual(args...)
     value, partials = dual_args(args...)
-    return Dual{Tag{Nothing,typeof(value)}}(value, partials)
+    return Dual{Tag{Nothing,eltype(partials)}}(value, partials)
 end
 
 # we define these special cases so that the "constructor <--> convert" pun holds for `Dual`
@@ -467,14 +467,13 @@ function Base.promote_rule(::Type{Dual{T1,V1,N1}},
     end
 end
 
-function Base.promote_rule(::Type{Dual{T,A,M}},
-                           ::Type{Dual{T,B,N}}) where {T,A,B,M,N}
-    if M === N
-        Dual{T,promote_type(A, B),N}
-    else
-        throw(ArgumentError(lazy"Cannot promote Duals with the same tag $T but $M and $N partials."))
-    end
+function Base.promote_rule(::Type{Dual{T,A,N}},
+                           ::Type{Dual{T,B,N}}) where {T,A,B,N}
+    return Dual{T,promote_type(A, B),N}
 end
+
+# no common type for different numbers of partials, `promote_type` falls back to `typejoin`
+Base.promote_rule(::Type{Dual{T,A,M}}, ::Type{Dual{T,B,N}}) where {T,A,B,M,N} = Union{}
 
 for R in (AbstractIrrational, Real, BigFloat, Bool)
     if isconcretetype(R) # issue #322

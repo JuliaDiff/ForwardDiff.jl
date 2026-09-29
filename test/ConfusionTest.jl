@@ -108,6 +108,12 @@ let T = ForwardDiff.Tag{AFunction,Float64}, d = ForwardDiff.Dual{T}(1.0, 1.0), f
     end
 end
 
+# Distinct tags are ordered, also with symbols, values or `Vararg`s as parameters
+for (A, B) in ((Val{:a}, Val{:b}), (Val{(1, 2)}, Val{(2, 1)}), (Tuple{Vararg{Int}}, Tuple{Vararg{Float64}}))
+    T, S = ForwardDiff.Tag{A,Float64}, ForwardDiff.Tag{B,Float64}
+    @test ForwardDiff.:≺(T, S) != ForwardDiff.:≺(S, T)
+end
+
 # Nested `Dual`s store the greatest tag outermost
 struct ATag end
 struct BTag end
