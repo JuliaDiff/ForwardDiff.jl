@@ -137,6 +137,19 @@ let f = x -> x[1]^2 * x[2], x = [3.0, 2.0]
     @test ForwardDiff.hessian(f, x, ForwardDiff.HessianConfig(nothing, x)) == [4.0 6.0; 6.0 0.0]
 end
 
+# Seeding keeps greater tags of the input outside, e.g. if the input type is abstract
+let f = x -> x[1]^2 * x[2], g! = (y, x) -> (y[1] = f(x); y)
+    @test ForwardDiff.derivative(t -> ForwardDiff.gradient(f, Real[t, 2t])[1], 1.0) == 8.0
+    @test ForwardDiff.derivative(t -> ForwardDiff.gradient(f, Real[t, 2t], ForwardDiff.GradientConfig(f, Real[t, 2t], ForwardDiff.Chunk{1}()))[1], 1.0) == 8.0
+    @test ForwardDiff.derivative(t -> ForwardDiff.jacobian(x -> [f(x)], Real[t, 2t])[1, 1], 1.0) == 8.0
+    @test ForwardDiff.derivative(t -> ForwardDiff.jacobian(g!, Real[0.0], Real[t, 2t])[1, 1], 1.0) == 8.0
+    @test ForwardDiff.derivative(t -> ForwardDiff.jacobian(g!, Real[t], Real[t, 2t])[1, 1], 1.0) == 8.0
+    @test ForwardDiff.derivative(t -> ForwardDiff.jacobian(g!, Real[0.0], Real[t, 2t], ForwardDiff.JacobianConfig(g!, Real[0.0], Real[t, 2t], ForwardDiff.Chunk{1}()))[1, 1], 1.0) == 8.0
+    @test ForwardDiff.derivative(t -> ForwardDiff.hessian(f, Real[t, 2t])[1, 1], 1.0) == 4.0
+    x = [ForwardDiff.Dual{BTag}(1.0, 1.0), ForwardDiff.Dual{BTag}(2.0, 2.0)]
+    @test ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{2}(), ATag())) == [ForwardDiff.Dual{BTag}(4.0, 8.0), ForwardDiff.Dual{BTag}(1.0, 2.0)]
+end
+
 # Issue #845: all Hessian paths agree with the Jacobian of the gradient
 strip_outer(x) = x
 strip_outer(d::ForwardDiff.Dual{T}) where {T} = ForwardDiff.value(T, d)

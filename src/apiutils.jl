@@ -20,14 +20,14 @@ end
 
 function vector_mode_dual_eval!(f::F, cfg::Union{JacobianConfig,GradientConfig}, x) where {F}
     xdual = cfg.duals
-    seed!(xdual, x, cfg.seeds)
+    seed!(eltype(cfg), xdual, x, cfg.seeds)
     return f(xdual)
 end
 
-function vector_mode_dual_eval!(f!::F, cfg::JacobianConfig, y, x) where {F}
+function vector_mode_dual_eval!(f!::F, cfg::JacobianConfig{T,V,N}, y, x) where {F,T,V,N}
     ydual, xdual = cfg.duals
-    seed!(xdual, x, cfg.seeds)
-    seed_zero_partials!(ydual, y)
+    seed!(eltype(cfg), xdual, x, cfg.seeds)
+    seed_zero_partials!(Dual{T,eltype(y),N}, ydual, y)
     f!(ydual, xdual)
     return ydual
 end
@@ -38,6 +38,25 @@ end
 
 @generated function construct_seeds(::Type{Partials{N,V}}) where {N,V}
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
+end
+
+# Seeds `x` with tag `T` and partials `p`. Layers of `x` with greater tags are kept outside, so
+# nested `Dual`s stay sorted even if `T` is not greater than all tags in `x`.
+@inline seed_dual(::Type{T}, x, p::Partials) where {T} = Dual{T}(x, p)
+@inline function seed_dual(::Type{T}, x::Dual{S}, p::Partials) where {T,S}
+    T ≺ S || return Dual{T}(x, p)
+    # the seeds are constants, so their partials w.r.t. `S` are zero
+    q = map_partials(y -> value(S, y), valtype(S, eltype(p)), p)
+    return Dual{S}(seed_dual(T, value(S, x), q), map(y -> seed_dual(T, y, zero(q)), partials(S, x).values))
+end
+
+# Type of `seed_dual(T, x, p)` for `x::V` and `p::Partials{N,V}`. If `V` is abstract and can contain
+# `Dual`s, their tags may be greater than `T`, so only `Real` is a bound.
+function seed_type(::Type{Dual{T,V,N}}) where {T,V,N}
+    return isconcretetype(V) || typeintersect(V, Dual) === Union{} ? Dual{T,V,N} : Real
+end
+function seed_type(::Type{Dual{T,Dual{S,W,M},N}}) where {T,S,W,M,N}
+    return T ≺ S ? Dual{S,seed_type(Dual{T,W,N}),M} : Dual{T,Dual{S,W,M},N}
 end
 
 # Only seed indices that are structurally non-zero
@@ -73,29 +92,29 @@ end
 # Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
 # currently carrying and to initialize a freshly allocated work buffer, whose elements must all be
 # written before the target function reads them.
-seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x) where {T,V,N} =
-    _seed_zero_partials!(duals, x, structural_eachindex(duals, x))
+seed_zero_partials!(::Type{D}, duals::AbstractArray, x) where {D<:Dual} =
+    _seed_zero_partials!(D, duals, x, structural_eachindex(duals, x))
 
 # Zeroes the partials of `count` elements starting at structural position `index`. Chunk mode only
 # needs to clear the chunk it just seeded, so writing through to the end of the array would be O(n)
 # redundant work per chunk, i.e. O(n^2/N) per sweep. `count` mirrors the `chunksize` argument of
-# `seed!(duals, x, index, seeds, chunksize)`.
-function seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, index,
+# `seed!(D, duals, x, index, seeds, chunksize)`.
+function seed_zero_partials!(::Type{Dual{T,V,N}}, duals::AbstractArray, x, index,
                              count = N) where {T,V,N}
     idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), count)
-    return _seed_zero_partials!(duals, x, idxs)
+    return _seed_zero_partials!(Dual{T,V,N}, duals, x, idxs)
 end
 
-function _seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {T,V,N}
+function _seed_zero_partials!(::Type{Dual{T,V,N}}, duals::AbstractArray, x, idxs) where {T,V,N}
     seed = zero(Partials{N,V})
     if isbitstype(V)
         for idx in idxs
-            duals[idx] = Dual{T,V,N}(x[idx], seed)
+            duals[idx] = seed_dual(T, x[idx], seed)
         end
     else
         for idx in idxs
             if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seed)
+                duals[idx] = seed_dual(T, x[idx], seed)
             else
                 Base._unsetindex!(duals, idx)
             end
@@ -104,16 +123,16 @@ function _seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where 
     return duals
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
+function seed!(::Type{Dual{T,V,N}}, duals::AbstractArray, x,
                seeds::NTuple{N,Partials{N,V}}) where {T,V,N}
     if isbitstype(V)
         for (i, idx) in zip(1:N, structural_eachindex(duals, x))
-            duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+            duals[idx] = seed_dual(T, x[idx], seeds[i])
         end
     else
         for (i, idx) in zip(1:N, structural_eachindex(duals, x))
             if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+                duals[idx] = seed_dual(T, x[idx], seeds[i])
             else
                 Base._unsetindex!(duals, idx)
             end
@@ -122,18 +141,18 @@ function seed!(duals::AbstractArray{Dual{T,V,N}}, x,
     return duals
 end
 
-function seed!(duals::AbstractArray{Dual{T,V,N}}, x, index,
+function seed!(::Type{Dual{T,V,N}}, duals::AbstractArray, x, index,
                seeds::NTuple{N,Partials{N,V}}, chunksize = N) where {T,V,N}
     offset = index - 1
     idxs = Iterators.drop(structural_eachindex(duals, x), offset)
     if isbitstype(V)
         for (i, idx) in zip(1:chunksize, idxs)
-            duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+            duals[idx] = seed_dual(T, x[idx], seeds[i])
         end
     else
         for (i, idx) in zip(1:chunksize, idxs)
             if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seeds[i])
+                duals[idx] = seed_dual(T, x[idx], seeds[i])
             else
                 Base._unsetindex!(duals, idx)
             end

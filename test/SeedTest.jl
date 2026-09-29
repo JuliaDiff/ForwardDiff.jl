@@ -44,7 +44,7 @@ end
 
 @testset "seed_zero_partials!: $(nameof(typeof(x)))" for (x, sidx) in SEED_CASES
     cfg = ForwardDiff.GradientConfig(nothing, x, ForwardDiff.Chunk{3}())
-    duals, seeds = cfg.duals, cfg.seeds
+    D, duals, seeds = eltype(cfg), cfg.duals, cfg.seeds
     N = ForwardDiff.npartials(ForwardDiff.Tag{Nothing,Float64}, eltype(duals))
     marker = Partials(ntuple(i -> Float64(i), N))
     nstruct = length(sidx)
@@ -55,7 +55,7 @@ end
 
     # `count` defaults to N
     fill_marker!(duals, x, sidx, marker)
-    ForwardDiff.seed_zero_partials!(duals, x, 4)
+    ForwardDiff.seed_zero_partials!(D, duals, x, 4)
     @test zeroed_positions(duals, sidx) == collect(4:(4 + N - 1))
     @test values_match(duals, x)
 
@@ -67,24 +67,24 @@ end
                                               (nstruct - 1, N, (nstruct - 1):nstruct),
                                               (1, 0, 1:0))
         fill_marker!(duals, x, sidx, marker)
-        ForwardDiff.seed_zero_partials!(duals, x, index, count)
+        ForwardDiff.seed_zero_partials!(D, duals, x, index, count)
         @test zeroed_positions(duals, sidx) == collect(expected)
         @test values_match(duals, x)
     end
 
-    # the 2-arg form clears every structural position
+    # the form without `index` clears every structural position
     fill_marker!(duals, x, sidx, marker)
-    ForwardDiff.seed_zero_partials!(duals, x)
+    ForwardDiff.seed_zero_partials!(D, duals, x)
     @test zeroed_positions(duals, sidx) == collect(1:nstruct)
     @test values_match(duals, x)
 
     # `seed!` and `seed_zero_partials!` must agree on what "the chunk at `index`" is, or chunk mode
     # would leave stale seeds behind. `duals` enters each iteration fully cleared.
     @testset "round-trips seed! at index=$index" for index in unique((1, 4, nstruct - N + 1))
-        ForwardDiff.seed!(duals, x, index, seeds)
+        ForwardDiff.seed!(D, duals, x, index, seeds)
         @test zeroed_positions(duals, sidx) ==
               [i for i in 1:nstruct if !(index <= i <= index + N - 1)]
-        ForwardDiff.seed_zero_partials!(duals, x, index)
+        ForwardDiff.seed_zero_partials!(D, duals, x, index)
         @test zeroed_positions(duals, sidx) == collect(1:nstruct)
         @test values_match(duals, x)
     end

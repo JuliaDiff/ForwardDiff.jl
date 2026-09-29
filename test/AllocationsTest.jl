@@ -12,24 +12,25 @@ convert_test_574() = convert(ForwardDiff.Dual{ForwardDiff.Tag{Nothing,D2_574},D2
 @testset "Test seed!/seed_zero_partials! allocations" begin
     x = rand(1000)
     cfg = ForwardDiff.GradientConfig(nothing, x)
-    duals = cfg.duals
+    D, duals = eltype(cfg), cfg.duals
     seeds = cfg.seeds
 
-    allocs_seed!(args...) = @allocated ForwardDiff.seed!(args...)
-    allocs_seed!(duals, x, seeds)
-    @test iszero(allocs_seed!(duals, x, seeds))
-    allocs_seed!(duals, x, 1, seeds)
-    @test iszero(allocs_seed!(duals, x, 1, seeds))
+    allocs_seed!(::Type{D}, duals, x, seeds) where {D} = @allocated ForwardDiff.seed!(D, duals, x, seeds)
+    allocs_seed!(::Type{D}, duals, x, index, seeds) where {D} = @allocated ForwardDiff.seed!(D, duals, x, index, seeds)
+    allocs_seed!(D, duals, x, seeds)
+    @test iszero(allocs_seed!(D, duals, x, seeds))
+    allocs_seed!(D, duals, x, 1, seeds)
+    @test iszero(allocs_seed!(D, duals, x, 1, seeds))
 
-    # the 4-arg form passes `count` as a runtime value, so it catches an inference regression at the
+    # the form with `count` passes `count` as a runtime value, so it catches an inference regression at the
     # `_seed_zero_partials!` boundary that the forms defaulting `count` to `N` could hide
-    allocs_szp!(args...) = @allocated ForwardDiff.seed_zero_partials!(args...)
-    allocs_szp!(duals, x)
-    @test iszero(allocs_szp!(duals, x))
-    allocs_szp!(duals, x, 1)
-    @test iszero(allocs_szp!(duals, x, 1))
-    allocs_szp!(duals, x, 1, 4)
-    @test iszero(allocs_szp!(duals, x, 1, 4))
+    allocs_szp!(::Type{D}, args...) where {D} = @allocated ForwardDiff.seed_zero_partials!(D, args...)
+    allocs_szp!(D, duals, x)
+    @test iszero(allocs_szp!(D, duals, x))
+    allocs_szp!(D, duals, x, 1)
+    @test iszero(allocs_szp!(D, duals, x, 1))
+    allocs_szp!(D, duals, x, 1, 4)
+    @test iszero(allocs_szp!(D, duals, x, 1, 4))
 
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()
