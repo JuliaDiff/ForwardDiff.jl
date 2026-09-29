@@ -128,7 +128,7 @@ end
 # NaNs #
 #------#
 
-@test ForwardDiff.partials(NaNMath.pow(ForwardDiff.Dual(-2.0,1.0),ForwardDiff.Dual(2.0,0.0)),1) == -4.0
+@test ForwardDiff.partials(ForwardDiff.Tag{Nothing,Float64}, NaNMath.pow(ForwardDiff.Dual(-2.0,1.0),ForwardDiff.Dual(2.0,0.0)),1) == -4.0
 
 # Partials{0} #
 #-------------#

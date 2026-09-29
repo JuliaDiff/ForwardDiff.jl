@@ -57,16 +57,25 @@ function extract_gradient!(::Type{T}, result::DiffResult, y::Real) where {T}
 end
 
 function extract_gradient!(::Type{T}, result::DiffResult, dual::Dual) where {T}
-    result = DiffResults.value!(result, value(T, dual))
-    result = DiffResults.gradient!(result, partials(T, dual))
+    if hastag(T, typeof(dual))
+        result = DiffResults.value!(result, value(T, dual))
+        result = DiffResults.gradient!(result, partials(T, dual))
+    else
+        result = DiffResults.value!(result, dual)
+        fill!(DiffResults.gradient(result), zero(dual))
+    end
     return result
 end
 
 extract_gradient!(::Type{T}, result::AbstractArray, y::Real) where {T} = fill!(result, zero(y))
 function extract_gradient!(::Type{T}, result::AbstractArray, dual::Dual) where {T}
-    idxs = structural_eachindex(result)
-    for (i, idx) in zip(1:npartials(dual), idxs)
-        result[idx] = partials(T, dual, i)
+    if hastag(T, typeof(dual))
+        idxs = structural_eachindex(result)
+        for (i, idx) in zip(1:npartials(T, typeof(dual)), idxs)
+            result[idx] = partials(T, dual, i)
+        end
+    else
+        fill!(result, zero(dual))
     end
     return result
 end
@@ -130,24 +139,24 @@ function chunk_mode_gradient_expr(result_definition::Expr)
 
         # do first chunk manually to calculate output type. Seeding the first chunk and zeroing the
         # remaining elements partitions `xdual`, so every element is initialized exactly once.
-        seed!(xdual, x, 1, seeds)
-        seed_zero_partials!(xdual, x, N + 1, xlen - N)
+        seed!(Dual{T,V,N}, xdual, x, 1, seeds)
+        seed_zero_partials!(Dual{T,V,N}, xdual, x, N + 1, xlen - N)
         ydual = f(xdual)
         $(result_definition)
         extract_gradient_chunk!(T, result, ydual, 1, N)
-        seed_zero_partials!(xdual, x, 1)
+        seed_zero_partials!(Dual{T,V,N}, xdual, x, 1)
 
         # do middle chunks
         for c in middlechunks
             i = ((c - 1) * N + 1)
-            seed!(xdual, x, i, seeds)
+            seed!(Dual{T,V,N}, xdual, x, i, seeds)
             ydual = f(xdual)
             extract_gradient_chunk!(T, result, ydual, i, N)
-            seed_zero_partials!(xdual, x, i)
+            seed_zero_partials!(Dual{T,V,N}, xdual, x, i)
         end
 
         # do final chunk
-        seed!(xdual, x, lastchunkindex, seeds, lastchunksize)
+        seed!(Dual{T,V,N}, xdual, x, lastchunkindex, seeds, lastchunksize)
         ydual = f(xdual)
         extract_gradient_chunk!(T, result, ydual, lastchunkindex, lastchunksize)
 
