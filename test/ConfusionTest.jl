@@ -119,8 +119,6 @@ struct ATag end
 struct BTag end
 @test ForwardDiff.Dual{BTag}(ForwardDiff.Dual{ATag}(1.0, 2.0), ForwardDiff.Dual{ATag}(3.0, 4.0)) isa ForwardDiff.Dual{BTag}
 @test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag}(ForwardDiff.Dual{BTag}(1.0, 2.0), ForwardDiff.Dual{BTag}(3.0, 4.0))
-@test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag,Real,1}(ForwardDiff.Dual{BTag}(1.0, 2.0), ForwardDiff.Partials{1,Real}((3.0,)))
-@test_throws ArgumentError("Cannot store a Dual with tag $ATag outside a Dual with tag $BTag, since $ATag ≺ $BTag.") ForwardDiff.Dual{ATag,Real,1}(1.0, ForwardDiff.Partials{1,Real}((ForwardDiff.Dual{BTag}(3.0, 4.0),)))
 
 # Tags of nested `Dual`s are unique
 @test_throws ArgumentError("Cannot store a Dual with tag $ATag inside a Dual with the same tag.") ForwardDiff.Dual{ATag}(ForwardDiff.Dual{ATag}(1.0, 2.0), ForwardDiff.Dual{ATag}(3.0, 4.0))

@@ -40,21 +40,20 @@ end
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
-# Seeds `x` with tag `T` and partials `p`. Layers of `x` with greater tags are kept outside, so
-# nested `Dual`s stay sorted even if `T` is not greater than all tags in `x`.
-@inline seed_dual(::Type{T}, x, p::Partials) where {T} = Dual{T}(x, p)
-@inline function seed_dual(::Type{T}, x::Dual{S}, p::Partials) where {T,S}
+# Seeds `x` with tag `T` and partials `p`, converted to the type of `x`. Layers of `x` with greater
+# tags are kept outside, so nested `Dual`s stay sorted even if `T` is not greater than all tags in `x`.
+@inline seed_dual(::Type{T}, x, p::Partials{N}) where {T,N} = Dual{T}(x, convert(Partials{N,typeof(x)}, p))
+@inline function seed_dual(::Type{T}, x::Dual{S}, p::Partials{N}) where {T,S,N}
+    p = convert(Partials{N,typeof(x)}, p)
     T ≺ S || return Dual{T}(x, p)
     # the seeds are constants, so their partials w.r.t. `S` are zero
     q = map_partials(y -> value(S, y), valtype(S, eltype(p)), p)
     return Dual{S}(seed_dual(T, value(S, x), q), map(y -> seed_dual(T, y, zero(q)), partials(S, x).values))
 end
 
-# Type of `seed_dual(T, x, p)` for `x::V` and `p::Partials{N,V}`. If `V` is abstract and can contain
-# `Dual`s, their tags may be greater than `T`, so only `Real` is a bound.
-function seed_type(::Type{Dual{T,V,N}}) where {T,V,N}
-    return isconcretetype(V) || typeintersect(V, Dual) === Union{} ? Dual{T,V,N} : Real
-end
+# Type of `seed_dual(T, x, p)` for `x::V` and `p::Partials{N,V}`. If `V` is abstract, each element is
+# seeded with its own type, so only `Real` is a bound.
+seed_type(::Type{Dual{T,V,N}}) where {T,V,N} = isconcretetype(V) ? Dual{T,V,N} : Real
 function seed_type(::Type{Dual{T,Dual{S,W,M},N}}) where {T,S,W,M,N}
     return T ≺ S ? Dual{S,seed_type(Dual{T,W,N}),M} : Dual{T,Dual{S,W,M},N}
 end

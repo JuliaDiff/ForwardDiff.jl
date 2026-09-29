@@ -16,8 +16,8 @@ struct Dual{T,V,N} <: Real
     partials::Partials{N,V}
     function Dual{T, V, N}(value::V, partials::Partials{N, V}) where {T, V, N}
         T isa Type || throw_invalid_tag(T)
-        check_tag_order(T, value)
-        foreach(p -> check_tag_order(T, p), partials.values)
+        isconcretetype(V) || throw_abstract_value(V)
+        check_tag_order(T, V)
         can_dual(V) || throw_cannot_dual(V)
         new{T, V, N}(value, partials)
     end
@@ -34,6 +34,10 @@ Base.ArithmeticStyle(::Type{<:Dual{T,V}}) where {T,V} = Base.ArithmeticStyle(V)
 
 @noinline function throw_invalid_tag(T)
     throw(ArgumentError(lazy"The tag of a Dual must be a type, got $(repr(T))."))
+end
+
+@noinline function throw_abstract_value(V::Type)
+    throw(ArgumentError(lazy"The value type of a Dual must be concrete, got $V."))
 end
 
 @noinline function throw_cannot_dual(V::Type)
@@ -59,8 +63,8 @@ end
 end
 
 # Tags are strictly decreasing inwards, hence unique, so it suffices to check the next layer
-@inline check_tag_order(::Type{T}, x) where {T} = nothing
-@inline function check_tag_order(::Type{T}, ::Dual{S}) where {T,S}
+@inline check_tag_order(::Type{T}, ::Type) where {T} = nothing
+@inline function check_tag_order(::Type{T}, ::Type{<:Dual{S}}) where {T,S}
     if S === T
         throw_same_tag(T)
     elseif T ≺ S

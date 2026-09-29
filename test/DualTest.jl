@@ -442,8 +442,8 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     if M != N
         @test promote_type(Dual{TestTag,V,M}, Dual{TestTag,V,N}) == Dual{TestTag,V}
     end
-    @test zero(Dual{TestTag,Real,N}) isa Dual{TestTag,Real,N}
-    @test value(TestTag, convert(Dual{TestTag,Real,N}, PRIMAL)) == PRIMAL
+    @test_throws ArgumentError("The value type of a Dual must be concrete, got Real.") convert(Dual{TestTag,Real,N}, PRIMAL)
+    @test_throws ArgumentError("The value type of a Dual must be concrete, got Real.") Dual{TestTag}(PRIMAL, Partials{N,Real}(ntuple(i -> PRIMAL, N)))
 
     # issue #322
     @test promote_type(Bool, Dual{TestTag,V,N}) == Dual{TestTag,promote_type(Bool, V),N}
