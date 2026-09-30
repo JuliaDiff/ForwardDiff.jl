@@ -305,8 +305,10 @@ end
 
 Base.copy(d::Dual) = d
 
-Base.eps(d::Dual) = eps(value(d))
-Base.eps(::Type{D}) where {D<:Dual} = eps(valtype(D))
+for op in (:eps, :typemin, :typemax, :floatmin, :floatmax, :maxintfloat)
+    @eval Base.$op(d::Dual) = $op(d.value)
+    @eval Base.$op(::Type{<:Dual{T,V}}) where {T,V} = $op(V)
+end
 
 # The `base` keyword was added in Julia 1.8:
 # https://github.com/JuliaLang/julia/pull/42428
@@ -892,12 +894,6 @@ function Base.show(io::IO, d::Dual{T,V,N}) where {T,V,N}
         print(io, ",", partials(d, i))
     end
     print(io, ")")
-end
-
-for op in (:(Base.typemin), :(Base.typemax), :(Base.floatmin), :(Base.floatmax))
-    @eval function $op(::Type{ForwardDiff.Dual{T,V,N}}) where {T,V,N}
-        ForwardDiff.Dual{T,V,N}($op(V))
-    end
 end
 
 Printf.tofloat(d::Dual) = Printf.tofloat(value(d))
