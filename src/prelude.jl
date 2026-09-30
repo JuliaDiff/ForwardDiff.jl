@@ -3,7 +3,7 @@ const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
-const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :iseven, :isodd, :isreal, :isinteger]
+const UNARY_PREDICATES = Symbol[:isinf, :isnan, :isfinite, :issubnormal, :iseven, :isodd, :isreal, :isinteger]
 
 struct Chunk{N} end
 
