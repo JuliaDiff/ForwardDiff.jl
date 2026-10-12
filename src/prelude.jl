@@ -1,4 +1,4 @@
-const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
+const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", true)
 const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
