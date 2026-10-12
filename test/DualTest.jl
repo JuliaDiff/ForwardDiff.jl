@@ -679,6 +679,36 @@ end
     y = Dual{TestTag}(1.0, 0.0, 1.0);
     x = Dual{OuterTestTag}(0*y, 0*y);
     @test iszero(ForwardDiff.partials(ForwardDiff.partials(x^y)[1]))
+
+    # base with zero partials and exponent with the same tag
+    for f in (^, NaNMath.pow), vy in (0.5, 1.5)
+        x = Dual{TestTag}(0.0, 0.0, 0.0)
+        y = Dual{TestTag}(vy, 1.0, 0.0)
+        @test f(x, y) === Dual{TestTag}(0.0, 0.0, 0.0)
+
+        # nested
+        x = Dual{OuterTestTag}(Dual{TestTag}(0.0, 0.0), Dual{TestTag}(0.0, 0.0))
+        y = Dual{OuterTestTag}(Dual{TestTag}(vy, 1.0), Dual{TestTag}(1.0, 0.0))
+        z = f(x, y)
+        @test iszero(ForwardDiff.value(z))
+        @test iszero(ForwardDiff.partials(z))
+
+        # base is constant with respect to the outer tag but not the inner tag
+        x = Dual{OuterTestTag}(Dual{TestTag}(0.25, 1.0), Dual{TestTag}(0.0, 0.0))
+        y = Dual{OuterTestTag}(Dual{TestTag}(vy, 0.5), Dual{TestTag}(1.0, 0.0))
+        z = f(x, y)
+        @test dual_isapprox(z, exp(y * log(x)))
+        @test !iszero(ForwardDiff.partials(ForwardDiff.value(z)))
+    end
+end
+
+@testset "Exponentiation: a `Dual` with zero partials behaves like a `Real`" begin
+    for f in (^, NaNMath.pow), vx in (0.0, 0.5, 2.0), vy in (-0.5, 0.0, 0.5, 1.5)
+        x = Dual{TestTag}(vx, 1.0, 2.0)
+        y = Dual{TestTag}(vy, 1.0, 2.0)
+        @test isequal(f(Dual{TestTag}(vx, 0.0, 0.0), y), f(vx, y))
+        @test isequal(f(x, Dual{TestTag}(vy, 0.0, 0.0)), f(x, vy))
+    end
 end
 
 @testset "Type min/max" begin

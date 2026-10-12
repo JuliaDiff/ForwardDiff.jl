@@ -553,7 +553,11 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
             begin
                 vx, vy = value(x), value(y)
                 expv = ($f)(vx, vy)
-                powval = vy * ($f)(vx, vy - 1)
+                if iszero(vy) || isconstant(x)
+                    powval = zero(expv)
+                else
+                    powval = vy * ($f)(vx, vy - 1)
+                end
                 if isconstant(y)
                     logval = one(expv)
                 elseif iszero(vx) && vy > 0
@@ -567,7 +571,7 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
             begin
                 v = value(x)
                 expv = ($f)(v, y)
-                if y == zero(y) || iszero(partials(x))
+                if iszero(y) || isconstant(x)
                     new_partials = zero(partials(x))
                 else
                     new_partials = partials(x) * y * ($f)(v, y - 1)
