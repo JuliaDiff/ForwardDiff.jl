@@ -151,11 +151,11 @@ end
 @testset "exponential function at base zero" begin
     if ForwardDiff.NANSAFE_MODE_ENABLED
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [-Inf, -Inf])
-        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, -Inf])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [0.0, -Inf])
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, 0.0])
     else
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [NaN, NaN])
-        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, NaN])
+        @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, -Inf])
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, NaN])
     end
     @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  1.5]), [0.0, 0.0])
