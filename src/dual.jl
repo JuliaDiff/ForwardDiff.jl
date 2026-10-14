@@ -551,20 +551,13 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
         @define_binary_dual_op(
             $f,
             begin
+                # a `Dual` with zero partials behaves like a `Real`
+                isconstant(y) && return ($f)(x, value(y))
+                isconstant(x) && return ($f)(value(x), y)
                 vx, vy = value(x), value(y)
                 expv = ($f)(vx, vy)
-                if iszero(vy) || isconstant(x)
-                    powval = zero(expv)
-                else
-                    powval = vy * ($f)(vx, vy - 1)
-                end
-                if isconstant(y)
-                    logval = one(expv)
-                elseif iszero(vx) && vy > 0
-                    logval = zero(vx)
-                else
-                    logval = expv * ($log)(vx)
-                end
+                powval = iszero(vy) ? zero(expv) : vy * ($f)(vx, vy - 1)
+                logval = (iszero(vx) && vy > 0) ? zero(vx) : expv * ($log)(vx)
                 new_partials = _mul_partials(partials(x), partials(y), powval, logval)
                 return Dual{Txy}(expv, new_partials)
             end,
@@ -574,7 +567,7 @@ for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
                 if iszero(y) || isconstant(x)
                     new_partials = zero(partials(x))
                 else
-                    new_partials = partials(x) * y * ($f)(v, y - 1)
+                    new_partials = (y * ($f)(v, y - 1)) * partials(x)
                 end
                 return Dual{Tx}(expv, new_partials)
             end,

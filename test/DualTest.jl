@@ -703,11 +703,11 @@ end
 end
 
 @testset "Exponentiation: a `Dual` with zero partials behaves like a `Real`" begin
-    for f in (^, NaNMath.pow), vx in (0.0, 0.5, 2.0), vy in (-0.5, 0.0, 0.5, 1.5)
-        x = Dual{TestTag}(vx, 1.0, 2.0)
-        y = Dual{TestTag}(vy, 1.0, 2.0)
-        @test isequal(f(Dual{TestTag}(vx, 0.0, 0.0), y), f(vx, y))
-        @test isequal(f(x, Dual{TestTag}(vy, 0.0, 0.0)), f(x, vy))
+    for f in (^, NaNMath.pow), vx in (0.0, 0.5, 1.3, 2.0), vy in (-0.5, 0.0, 0.5, 1.5, 2.7)
+        x = Dual{TestTag}(vx, 0.7, 0.3, -0.0)
+        y = Dual{TestTag}(vy, 0.7, 0.3, -0.0)
+        @test isequal(f(Dual{TestTag}(vx, 0.0, 0.0, 0.0), y), f(vx, y))
+        @test isequal(f(x, Dual{TestTag}(vy, 0.0, 0.0, 0.0)), f(x, vy))
     end
 end
 
