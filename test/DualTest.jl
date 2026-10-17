@@ -667,6 +667,18 @@ end
 # bug fixes #
 #############
 
+@testset "gamma_inc derivatives" begin
+    for V in (Float32, Float64), (a, x) in ((150, 150), (200, 200), (1, 0), (2, 0)), ind in 0:2
+        # Compute the reference in arbitrary precision to avoid overflowing intermediates.
+        expected = V(exp(-big(x)) * big(x)^(a - 1) / factorial(big(a - 1)))
+        p, q = gamma_inc(V(a), Dual{TestTag}(V(x), one(V)), ind)
+        @test partials(p, 1) ≈ expected
+        @test partials(q, 1) ≈ -expected
+    end
+    @test ForwardDiff.derivative(x -> ForwardDiff.derivative(y -> gamma_inc(2.0, y, 0)[1], x), 0.0) ≈ 1.0
+    @test ForwardDiff.derivative(x -> ForwardDiff.derivative(y -> gamma_inc(2.0, y, 0)[2], x), 0.0) ≈ -1.0
+end
+
 @testset "Exponentiation of zero" begin
     x0 = 0.0
     x1 = Dual{:t1}(x0, 1.0)

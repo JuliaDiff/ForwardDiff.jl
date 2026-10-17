@@ -878,7 +878,13 @@ end
 function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
     x = value(d)
     p, q = SpecialFunctions.gamma_inc(a, x, ind)
-    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    logx = log(x)
+    if isfinite(logx)
+        ∂p = exp(-x + (a - 1) * logx - SpecialFunctions.loggamma(a)) * partials(d)
+    else
+        # Preserve the power rule at zero for higher-order derivatives.
+        ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    end
     return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
 
