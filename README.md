@@ -4,6 +4,8 @@
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliadiff.org/ForwardDiff.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://juliadiff.org/ForwardDiff.jl/dev)
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 # ForwardDiff.jl
 
 ## Upgrading to ForwardDiff.jl 1.0
