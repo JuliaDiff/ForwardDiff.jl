@@ -85,15 +85,27 @@ Base.convert(::Type{Partials{N,V}}, partials::Partials{N,V}) where {N,V} = parti
 @inline Base.:*(x::Real, partials::Partials) = partials*x
 
 @inline function Base.:*(partials::Partials, x::Real)
-    return Partials(scale_tuple(partials.values, x))
+    if _mul_needs_mask(x)
+        return Partials(scale_tuple(_mul_partial, partials.values, x))
+    else
+        return Partials(scale_tuple(*, partials.values, x))
+    end
 end
 
 @inline function Base.:/(partials::Partials, x::Real)
-    return Partials(div_tuple_by_scalar(partials.values, x))
+    if _div_needs_mask(x)
+        return Partials(div_tuple_by_scalar(_div_partial, partials.values, x))
+    else
+        return Partials(div_tuple_by_scalar(/, partials.values, x))
+    end
 end
 
 @inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
-    return Partials(mul_tuples(a.values, b.values, x_a, x_b))
+    if _mul_needs_mask(x_a) | _mul_needs_mask(x_b)
+        return Partials(mul_tuples(_mul_partial, a.values, b.values, x_a, x_b))
+    else
+        return Partials(mul_tuples(*, a.values, b.values, x_a, x_b))
+    end
 end
 
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
@@ -117,10 +129,18 @@ if NANSAFE_MODE_ENABLED
         y = partial / x
         return iszero(partial) ? zero(y) : y
     end
+    @inline _mul_needs_mask(x::Real) = !_isfinite_all(x)
+    @inline _div_needs_mask(x::Real) = true
+    @inline _div_needs_mask(x::Base.IEEEFloat) = !isfinite(x) | iszero(x)
 else
     @inline _mul_partial(partial::Real, x::Real) = partial * x
     @inline _div_partial(partial::Real, x::Real) = partial / x
+    @inline _mul_needs_mask(x::Real) = false
+    @inline _div_needs_mask(x::Real) = false
 end
+
+# Whether `x` and, for dual numbers, all of its partials are finite
+@inline _isfinite_all(x::Real) = isfinite(x)
 
 # edge cases where N == 0 #
 #-------------------------#
@@ -199,12 +219,12 @@ end
     return tupexpr(i -> :(rand(V)), N)
 end
 
-@generated function scale_tuple(tup::NTuple{N}, x) where N
-    return tupexpr(i -> :(_mul_partial(tup[$i], x)), N)
+@generated function scale_tuple(f::F, tup::NTuple{N}, x) where {F,N}
+    return tupexpr(i -> :(f(tup[$i], x)), N)
 end
 
-@generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
-    return tupexpr(i -> :(_div_partial(tup[$i], x)), N)
+@generated function div_tuple_by_scalar(f::F, tup::NTuple{N}, x) where {F,N}
+    return tupexpr(i -> :(f(tup[$i], x)), N)
 end
 
 @generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
@@ -219,8 +239,8 @@ end
     return tupexpr(i -> :(-tup[$i]), N)
 end
 
-@generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
-    return tupexpr(i -> :(_mul_partial(a[$i], afactor) + _mul_partial(b[$i], bfactor)), N)
+@generated function mul_tuples(f::F, a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where {F,N}
+    return tupexpr(i -> :(f(a[$i], afactor) + f(b[$i], bfactor)), N)
 end
 
 ###################

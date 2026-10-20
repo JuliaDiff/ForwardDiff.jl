@@ -416,6 +416,8 @@ end
 
 Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
 
+@inline _isfinite_all(x::Dual) = _isfinite_all(value(x)) & all(_isfinite_all, partials(x).values)
+
 for pred in [:isequal, :(==)]
     @eval begin
         @define_binary_dual_op(
