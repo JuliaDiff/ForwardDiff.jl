@@ -141,7 +141,7 @@ samerng() = MersenneTwister(1)
         end
 
         if ForwardDiff.NANSAFE_MODE_ENABLED
-            for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf))
+            for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> big(Inf) * p), (p -> NaN32 * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf), (p -> p / big(0.0)))
                 # Only zero partials
                 @test iszero(@inferred(f(ALLZERO)))
 
@@ -157,6 +157,17 @@ samerng() = MersenneTwister(1)
             end
         end
     end
+end
+
+# A number type that claims to be finite but yields `NaN` when multiplied by zero
+struct FiniteNaN <: Real end
+Base.isfinite(::FiniteNaN) = true
+Base.:*(x::Float64, ::FiniteNaN) = x * NaN
+
+@testset "strong zeros" begin
+    z = ForwardDiff.NANSAFE_MODE_ENABLED ? 0.0 : NaN
+    @test isequal(Partials((0.0, 1.0)) * FiniteNaN(), Partials((z, NaN)))
+    @test isequal(Partials((0.0, 1.0)) * ForwardDiff.Dual(1.0, Inf), Partials((ForwardDiff.Dual(0.0, z), ForwardDiff.Dual(1.0, Inf))))
 end
 
 io = IOBuffer()
