@@ -140,12 +140,12 @@ This check can noticeably decrease performance in code that is dominated by chea
 arithmetic operations (up to ~50% on some of our benchmarks). If you are sure that your
 code is not affected, you can disable `NaN`-safe mode by using the
 [Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) API to set
-the `nansafe_mode` preference to false, for example via:
+the `unsafe_mode` preference to true, for example via:
 
 ```julia-repl
 julia> using ForwardDiff, Preferences
 
-julia> set_preferences!(ForwardDiff, "nansafe_mode" => false)
+julia> set_preferences!(ForwardDiff, "unsafe_mode" => true)
 ```
 
 Note that Julia has to be restarted and ForwardDiff has to be reloaded after changing
@@ -156,7 +156,7 @@ Alternatively, you can set the preference before loading ForwardDiff, for exampl
 ```julia-repl
 julia> using Preferences, UUIDs
 
-julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_mode" => false)
+julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "unsafe_mode" => true)
 
 julia> using ForwardDiff
 
@@ -168,6 +168,12 @@ julia> ForwardDiff.gradient(v -> sqrt(v[1]) + v[2], [0.0, 1.0])
   Inf
  NaN
 ```
+
+!!! compat "ForwardDiff 1.5"
+    Before ForwardDiff 1.5.0, `NaN`-safe mode was disabled by default and could be enabled by
+    setting the `nansafe_mode` preference to true. The `nansafe_mode` preference is
+    deprecated: setting it emits a warning, and `nansafe_mode = false` disables `NaN`-safe
+    mode only if the `unsafe_mode` preference is not set.
 
 In the future, we plan on allowing users and downstream library authors to dynamically
 toggle [`NaN`-safe mode via the `AbstractConfig`

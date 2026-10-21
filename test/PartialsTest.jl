@@ -140,7 +140,7 @@ samerng() = MersenneTwister(1)
             @test isequal(ForwardDiff._mul_partials(PARTIALS, ZERO_PARTIALS, v1, v2), v1 * PARTIALS)
         end
 
-        if ForwardDiff.NANSAFE_MODE_ENABLED
+        if !ForwardDiff.UNSAFE_MODE_ENABLED
             for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> big(Inf) * p), (p -> NaN32 * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf), (p -> p / big(0.0)))
                 # Only zero partials
                 @test iszero(@inferred(f(ALLZERO)))
@@ -165,7 +165,7 @@ Base.isfinite(::FiniteNaN) = true
 Base.:*(x::Float64, ::FiniteNaN) = x * NaN
 
 @testset "strong zeros" begin
-    z = ForwardDiff.NANSAFE_MODE_ENABLED ? 0.0 : NaN
+    z = ForwardDiff.UNSAFE_MODE_ENABLED ? NaN : 0.0
     @test isequal(Partials((0.0, 1.0)) * FiniteNaN(), Partials((z, NaN)))
     @test isequal(Partials((0.0, 1.0)) * ForwardDiff.Dual(1.0, Inf), Partials((ForwardDiff.Dual(0.0, z), ForwardDiff.Dual(1.0, Inf))))
 end

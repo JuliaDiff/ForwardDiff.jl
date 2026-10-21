@@ -126,7 +126,7 @@ end
 end
 
 # Whether plain `*`/`/` already treat zero partials of type `V` as strong zeros
-if NANSAFE_MODE_ENABLED
+if !UNSAFE_MODE_ENABLED
     @inline function _mul_is_strong(::Type{V}, x::Real) where {V}
         return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _isfinite_all(x)
     end
