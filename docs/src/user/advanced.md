@@ -136,9 +136,11 @@ julia> ForwardDiff.gradient(v -> sqrt(v[1]) + v[2], [0.0, 1.0])
   1.0
 ```
 
-This check can noticeably decrease performance in code that is dominated by cheap
-arithmetic operations (up to ~50% on some of our benchmarks). If you are sure that your
-code is not affected, you can disable `NaN`-safe mode by using the
+Similar to `@fastmath`, you can trade correctness for performance by disabling `NaN`-safe
+mode: derivatives may then be `NaN` even though they are well-defined (see the example
+below). The speedup depends on the function and on the derivatives being computed, and is
+largest in code that is dominated by cheap arithmetic operations (up to ~1.6× on some of our
+benchmarks). To disable `NaN`-safe mode, use the
 [Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) API to set
 the `unsafe_mode` preference to true, for example via:
 

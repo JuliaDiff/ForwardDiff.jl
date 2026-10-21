@@ -94,9 +94,9 @@ end
 
 @inline function Base.:/(partials::Partials{N,V}, x::Real) where {N,V}
     if _div_is_strong(V, x)
-        return Partials(div_tuple_by_scalar(/, partials.values, x))
+        return Partials(scale_tuple(/, partials.values, x))
     else
-        return Partials(div_tuple_by_scalar(_strong_div, partials.values, x))
+        return Partials(scale_tuple(_strong_div, partials.values, x))
     end
 end
 
@@ -140,7 +140,7 @@ end
 
 # Types whose zeros stay zero when multiplied by finite values of such types
 @inline _is_strong_zero_type(::Type) = false
-@inline _is_strong_zero_type(::Type{<:Union{Base.IEEEFloat,Base.BitInteger,Bool,BigInt,BigFloat,Rational{<:Union{Base.BitInteger,Bool,BigInt}}}}) = true
+@inline _is_strong_zero_type(::Type{<:Union{Base.IEEEFloat,Base.BitInteger,Bool,BigInt,BigFloat,Rational{<:Union{Base.BitInteger,Bool,BigInt}},AbstractIrrational}}) = true
 
 # Whether `x` and, for dual numbers, all of its partials are finite
 @inline _isfinite_all(x::Real) = isfinite(x)
@@ -223,10 +223,6 @@ end
 end
 
 @generated function scale_tuple(f::F, tup::NTuple{N}, x) where {F,N}
-    return tupexpr(i -> :(f(tup[$i], x)), N)
-end
-
-@generated function div_tuple_by_scalar(f::F, tup::NTuple{N}, x) where {F,N}
     return tupexpr(i -> :(f(tup[$i], x)), N)
 end
 

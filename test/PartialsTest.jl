@@ -168,6 +168,14 @@ Base.:*(x::Float64, ::FiniteNaN) = x * NaN
     z = ForwardDiff.UNSAFE_MODE_ENABLED ? NaN : 0.0
     @test isequal(Partials((0.0, 1.0)) * FiniteNaN(), Partials((z, NaN)))
     @test isequal(Partials((0.0, 1.0)) * ForwardDiff.Dual(1.0, Inf), Partials((ForwardDiff.Dual(0.0, z), ForwardDiff.Dual(1.0, Inf))))
+    @test isequal(Partials((0.0, 1.0)) / ForwardDiff.Dual(1.0, Inf), Partials((ForwardDiff.Dual(0.0, z), ForwardDiff.Dual(1.0, -Inf))))
+    @test isequal(Partials((0.0, 1.0)) / ForwardDiff.Dual(0.0, 1.0), Partials((ForwardDiff.Dual(z, z), ForwardDiff.Dual(Inf, -Inf))))
+    @test Partials((0.0, 1.0)) / ForwardDiff.Dual(Inf, 1.0) == Partials((ForwardDiff.Dual(0.0, 0.0), ForwardDiff.Dual(0.0, 0.0)))
+    x = ForwardDiff.Dual{:a}(ForwardDiff.Dual{:b}(2.0, Inf), -3.0)
+    @test isequal(Partials((0.0, 1.0)) / x, Partials((ForwardDiff.Dual{:a}(ForwardDiff.Dual{:b}(0.0, z), ForwardDiff.Dual{:b}(0.0, z)), 1.0 / x)))
+    @test isequal(ForwardDiff._mul_partials(Partials((0.0, 1.0)), Partials((1.0, 0.0)), ForwardDiff.Dual(1.0, Inf), 2.0), Partials((ForwardDiff.Dual(2.0, z), ForwardDiff.Dual(1.0, Inf))))
+    @test Partials((0.0, 1.0)) * π === Partials((0.0, Float64(π)))
+    @test Partials((0.0, 1.0)) / π === Partials((0.0, 1 / π))
 end
 
 io = IOBuffer()

@@ -16,6 +16,7 @@ const DEPRECATION_MESSAGE = "The `nansafe_mode` preference of ForwardDiff is dep
     for (preferences, unsafe_mode_enabled) in (
         ("nansafe_mode = false\n__clear__ = [\"unsafe_mode\"]", true),
         ("nansafe_mode = false\nunsafe_mode = false", false),
+        ("nansafe_mode = true\n__clear__ = [\"unsafe_mode\"]", false),
     )
         mktempdir() do dir
             write(joinpath(dir, "Project.toml"), """
