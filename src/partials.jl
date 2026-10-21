@@ -108,8 +108,9 @@ end
     end
 end
 
+# Divide by `bval` instead of multiplying by `inv(bval)` or dividing by `bval^2`, which may overflow or underflow
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
-    return _mul_partials(a, b, inv(bval), -(aval / (bval*bval)))
+    return (a - (aval / bval) * b) / bval
 end
 
 # NaN/Inf-safe methods #
@@ -131,7 +132,7 @@ if !UNSAFE_MODE_ENABLED
         return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _isfinite_all(x)
     end
     @inline function _div_is_strong(::Type{V}, x::Real) where {V}
-        return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && !(x isa Dual) && !(isnan(x) | iszero(x))
+        return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _is_strong_divisor(x)
     end
 else
     @inline _mul_is_strong(::Type, ::Real) = true
@@ -144,6 +145,9 @@ end
 
 # Whether `x` and, for dual numbers, all of its partials are finite
 @inline _isfinite_all(x::Real) = isfinite(x)
+
+# Whether zero divided by `x` is zero
+@inline _is_strong_divisor(x::Real) = !(isnan(x) | iszero(x))
 
 # edge cases where N == 0 #
 #-------------------------#

@@ -123,6 +123,13 @@ end
     end
 end
 
+@testset "division by tiny and huge numbers" begin
+    for x0 in (1e-200, 1e-310, 1e200)
+        @test iszero(ForwardDiff.derivative(x -> 2x / x, x0))
+        @test iszero(ForwardDiff.derivative(x -> zero(x) / x, x0))
+    end
+end
+
 @testset "Givens rotations: Derivatives" begin
     # Test different branches in `LinearAlgebra.givensAlgorithm`
     for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f], i in 1:3
