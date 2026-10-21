@@ -116,10 +116,17 @@ end
 
 @testset "NaN-safe mode" begin
     x = ForwardDiff.derivative(log ∘ zero, 1.0)
-    if ForwardDiff.NANSAFE_MODE_ENABLED
+    if !ForwardDiff.UNSAFE_MODE_ENABLED
         @test iszero(x)
     else
         @test isnan(x)
+    end
+end
+
+@testset "division by tiny and huge numbers" begin
+    for x0 in (1e-200, 1e-310, 1e200)
+        @test iszero(ForwardDiff.derivative(x -> 2x / x, x0))
+        @test iszero(ForwardDiff.derivative(x -> zero(x) / x, x0))
     end
 end
 

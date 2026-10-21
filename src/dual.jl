@@ -416,6 +416,10 @@ end
 
 Base.iszero(x::Dual) = iszero(value(x)) && iszero(partials(x))  # shortcut, equivalent to x == zero(x)
 
+@inline _isfinite_all(x::Dual) = _isfinite_all(x.value) & all(_isfinite_all, x.partials.values)
+@inline _is_strong_divisor(x::Dual) = _is_strong_divisor(x.value) & all(_isfinite_all, x.partials.values)
+@inline _is_strong_zero_type(::Type{<:Dual{<:Any,V}}) where {V} = _is_strong_zero_type(V)
+
 for pred in [:isequal, :(==)]
     @eval begin
         @define_binary_dual_op(
