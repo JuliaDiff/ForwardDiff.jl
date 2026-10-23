@@ -143,6 +143,9 @@ let i, j
         i != j && @test h[i, j] ≈ 0.0
     end
 end
+hypotx(x) = hypot(x, 0.0, 0.0)
+@test ForwardDiff.derivative(hypotx, 0.0) ≈ 1
+@test ForwardDiff.derivative(hypotx, -0.0) ≈ -1
 
 # AbstractIrrational numbers #
 #----------------------------#
