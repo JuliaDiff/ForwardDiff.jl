@@ -12,12 +12,13 @@ NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [weakdeps]
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [extensions]
+ForwardDiffSpecialFunctionsExt = "SpecialFunctions"
 ForwardDiffStaticArraysExt = "StaticArrays"
 
 [compat]
@@ -42,8 +43,9 @@ InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 IrrationalConstants = "92d709cd-6900-40b7-9082-c6be49f344b6"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Calculus", "DiffTests", "IrrationalConstants", "JET", "SparseArrays", "StaticArrays", "Test", "InteractiveUtils"]
+test = ["Calculus", "DiffTests", "IrrationalConstants", "JET", "SparseArrays", "SpecialFunctions", "StaticArrays", "Test", "InteractiveUtils"]
