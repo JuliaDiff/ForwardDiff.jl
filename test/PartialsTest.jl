@@ -132,7 +132,7 @@ samerng() = MersenneTwister(1)
         # The following properties should always be satisfied, regardless of whether NaN-safe mode is enabled or disabled
         # We use `isequal` for comparisons in the presence of `NaN`s
         for p1 in (PARTIALS, ALLZERO, FIRSTZERO), p2 in (PARTIALS2, ALLZERO, FIRSTZERO), v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
-            @test isequal(ForwardDiff._div_partials(p1, p2, v1, v2), ForwardDiff._mul_partials(p1, p2, inv(v2), -v1/(v2^2)))
+            @test isequal(ForwardDiff._div_partials(p1, p2, v1, v2), (p1 - (v1 / v2) * p2) / v2)
             @test isequal(ForwardDiff._mul_partials(p1, p2, v1, v2), v1 * p1 + v2 * p2)
         end
         for v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
