@@ -164,4 +164,40 @@ show(io, MIME("text/plain"), Partials((1, 2, 3)))
 str = String(take!(io))
 @test str == "3-element $(ForwardDiff.Partials{3,Int}):\n 1\n 2\n 3"
 
+###################################
+# Specialization of iszero_tuple  #
+###################################
+
+# A scalar type that does not support `==`, standing in for types (e.g., intervals)
+# that reserve `==` for a different meaning and supply their own `iszero_tuple`
+# implementation.
+struct Fuzzy{T<:Real} <: Real
+    val::T
+end
+Base.:(==)(::Fuzzy, ::Fuzzy) = throw(ArgumentError("`==` is not supported for Fuzzy"))
+Base.zero(::Type{Fuzzy{T}}) where {T} = Fuzzy(zero(T))
+
+fuzzy_iszero(x::Fuzzy) = iszero(x.val)
+fuzzy_iszero(d::ForwardDiff.Dual) =
+    fuzzy_iszero(ForwardDiff.value(d)) && all(fuzzy_iszero, ForwardDiff.partials(d).values)
+
+ForwardDiff._iszero_tuple(::Type{<:Fuzzy}, tup::NTuple{N,V}) where {N,V} = all(fuzzy_iszero, tup)
+
+@testset "iszero_tuple specialization" begin
+    @test ForwardDiff.unwrap_dual(Fuzzy{Float64}) === Fuzzy{Float64}
+    @test ForwardDiff.unwrap_dual(ForwardDiff.Dual{:t1,Fuzzy{Float64},1}) === Fuzzy{Float64}
+    @test ForwardDiff.unwrap_dual(ForwardDiff.Dual{:t2,ForwardDiff.Dual{:t1,Fuzzy{Float64},1},1}) === Fuzzy{Float64}
+
+    # Without the specialization these would throw, since the default implementation uses `==`
+    z, o = Fuzzy(0.0), Fuzzy(1.0)
+    @test iszero(Partials((z, z)))
+    @test !iszero(Partials((z, o)))
+
+    # Higher-order derivatives: dispatch is on the type wrapped by the `Dual`s
+    dz = ForwardDiff.Dual{:t1}(z, Partials((z,)))
+    dnz = ForwardDiff.Dual{:t1}(z, Partials((o,)))
+    @test iszero(Partials((dz, dz)))
+    @test !iszero(Partials((dz, dnz)))
+end
+
 end # module
