@@ -1,5 +1,6 @@
 const NANSAFE_MODE_ENABLED = @load_preference("nansafe_mode", false)
 const DEFAULT_CHUNK_THRESHOLD = @load_preference("default_chunk_threshold", 12)
+const STATIC_DEFAULT_CHUNK = @load_preference("static_default_chunk", false)
 
 const AMBIGUOUS_TYPES = (AbstractFloat, Irrational, Integer, Rational, Real, RoundingMode)
 
@@ -21,6 +22,19 @@ structural_length(x::Diagonal) = size(x, 1)
 
 function Chunk(x::AbstractArray, threshold::Integer = DEFAULT_CHUNK_THRESHOLD)
     return Chunk(structural_length(x), threshold)
+end
+
+if STATIC_DEFAULT_CHUNK
+    # One branch per chunk size: the Union returned by `Chunk(x)` is too wide to split.
+    # Exhaustive since `pickchunksize` never exceeds the threshold.
+    @eval function with_default_chunk(f::F, x::AbstractArray) where {F}
+        N = pickchunksize(structural_length(x))
+        N == 0 && return f(Chunk{0}())
+        return Base.@nif $DEFAULT_CHUNK_THRESHOLD d -> (N == d) d -> f(Chunk{d}()) d -> f(Chunk{d}())
+    end
+else
+    # Dynamic dispatch compiles only the chunk size that is used.
+    with_default_chunk(f::F, x::AbstractArray) where {F} = f(Chunk(x))
 end
 
 # Constrained to `N <= threshold`, minimize (in order of priority):
