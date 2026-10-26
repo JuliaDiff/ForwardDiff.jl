@@ -702,6 +702,48 @@ end
   @test floatmin(Dual{Nothing, ForwardDiff.Dual{Nothing, Float64, 2}, 1}) === Dual{Nothing}(Dual{Nothing}(floatmin(Float64),0.0,0.0),Dual{Nothing}(0.0,0.0,0.0))
 end
 
+@testset "min/max consistent with isless (issue #868)" begin
+    D(v, p...) = Dual{TestTag}(v, p...)
+    one_ = D(1.0, 0.0)
+    one_pos = D(1.0, 1.0)
+    one_neg = D(1.0, -1.0)
+    one_nan = D(1.0, NaN)
+    nan_ = D(NaN, 0.0)
+    nested_one = D(D(1.0, 0.0), D(0.0, 0.0))
+    nested_one_pos = D(D(1.0, 1.0), D(0.0, 0.0))
+    nested_one_innernan = D(D(1.0, NaN), D(0.0, 0.0))
+    nested_one_outernan = D(D(1.0, 0.0), D(NaN, 0.0))
+    nested_nan = D(D(NaN, 0.0), D(0.0, 0.0))
+
+    # (a, b, min(a, b), max(a, b))
+    cases = [
+        (one_pos, 1.0, one_, one_pos),
+        (one_pos, 1, one_, one_pos),
+        (one_neg, 1.0, one_neg, one_),
+        (one_pos, one_neg, one_neg, one_pos),
+        (one_pos, D(2.0, -1.0), one_pos, D(2.0, -1.0)),
+        (one_nan, one_, one_, one_nan),
+        (nan_, one_pos, nan_, nan_),
+        (nan_, 1.0, nan_, nan_),
+        (nested_one_pos, 1.0, nested_one, nested_one_pos),
+        (nested_one_innernan, nested_one, nested_one, nested_one_innernan),
+        (nested_one_outernan, nested_one, nested_one, nested_one_outernan),
+        (nested_nan, nested_one_pos, nested_nan, nested_nan),
+        (nested_nan, 1.0, nested_nan, nested_nan),
+    ]
+    for (a, b, lo, hi) in cases
+        @test min(a, b) === min(b, a) === lo
+        @test max(a, b) === max(b, a) === hi
+        if !isnan(a) && !isnan(b)
+            @test !isless(a, min(a, b)) && !isless(b, min(a, b))
+            @test !isless(max(a, b), a) && !isless(max(a, b), b)
+        end
+    end
+
+    @test ForwardDiff.derivative(t -> min(t, 48.0), 48.0) === ForwardDiff.derivative(t -> min(48.0, t), 48.0) === 0.0
+    @test ForwardDiff.derivative(t -> max(t, 48.0), 48.0) === ForwardDiff.derivative(t -> max(48.0, t), 48.0) === 1.0
+end
+
 @testset "Integer" begin
     x = Dual(1.0,0)
     @test Int(x) ≡ Integer(x) ≡ convert(Int,x) ≡ convert(Integer,x) ≡ 1
