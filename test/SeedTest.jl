@@ -90,4 +90,22 @@ end
     end
 end
 
+@testset "seed_hessian_chunk!: $(nameof(typeof(x)))" for (x, sidx) in SEED_CASES
+    cfg = ForwardDiff.HessianConfig(nothing, x, ForwardDiff.Chunk{3}())
+    duals = cfg.gradient_config.duals
+    iseeds = cfg.jacobian_config.seeds
+    oseeds = cfg.gradient_config.seeds
+    nstruct = length(sidx)
+
+    ForwardDiff.seed_hessian_chunk!(duals, x, 1, nothing, nothing, nstruct)
+    ForwardDiff.seed_hessian_chunk!(duals, x, 4, iseeds, oseeds)
+    @test [i for (i, idx) in enumerate(sidx) if !iszero(ForwardDiff.partials(ForwardDiff.value(duals[idx])))] == collect(4:6)
+    @test [i for (i, idx) in enumerate(sidx) if !iszero(ForwardDiff.partials(duals[idx]))] == collect(4:6)
+    @test all(idx -> ForwardDiff.value(ForwardDiff.value(duals[idx])) == x[idx], eachindex(x))
+
+    ForwardDiff.seed_hessian_chunk!(duals, x, 4, nothing, nothing)
+    @test all(idx -> iszero(ForwardDiff.partials(ForwardDiff.value(duals[idx]))), sidx)
+    @test all(idx -> iszero(ForwardDiff.partials(duals[idx])), sidx)
+end
+
 end # module

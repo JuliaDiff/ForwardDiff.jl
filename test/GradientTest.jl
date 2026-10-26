@@ -56,6 +56,7 @@ end
 cfgx = ForwardDiff.GradientConfig(sin, x)
 @test_throws ForwardDiff.InvalidTagException ForwardDiff.gradient(f, x, cfgx)
 @test ForwardDiff.gradient(f, x, cfgx, Val{false}()) == ForwardDiff.gradient(f,x)
+@test_throws ArgumentError ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{length(x) + 1}()))
 
 
 ########################
@@ -113,6 +114,10 @@ end
 
     out = similar(x)
     ForwardDiff.gradient!(out, prod, sx, scfg)
+    @test out == actual
+
+    out = similar(x)
+    ForwardDiff.gradient!(out, prod, sx, scfg, Val{false}())
     @test out == actual
 
     result = DiffResults.GradientResult(x)
