@@ -174,4 +174,15 @@ end
     @test iszero(hessian_allocs())
 end
 
+# issue #696
+@testset "immutable `DiffResult`, chunk size = $c" for c in HESSIAN_CHUNK_SIZES
+    x = [1.0, 2.0, 3.0]
+    result = DiffResults.HessianResult(@MVector zeros(3))
+    cfg = ForwardDiff.HessianConfig(prod, result, x, ForwardDiff.Chunk{c}())
+    result = ForwardDiff.hessian!(result, prod, x, cfg)
+    @test DiffResults.value(result) == 6.0
+    @test DiffResults.gradient(result) == [6.0, 3.0, 2.0]
+    @test DiffResults.hessian(result) == [0.0 3.0 2.0; 3.0 0.0 1.0; 2.0 1.0 0.0]
+end
+
 end # module

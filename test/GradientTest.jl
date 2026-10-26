@@ -331,6 +331,25 @@ end
     end
 end
 
+# issue #696
+@testset "immutable `DiffResult`, chunk size = $c" for c in (1, 2, 3, 4)
+    # An immutable result only reaches `src` when `x` is not a `StaticArray`.
+    x = [1.0, 2.0, 3.0, 4.0]
+    cfg = ForwardDiff.GradientConfig(prod, x, ForwardDiff.Chunk{c}())
+    result = ForwardDiff.gradient!(DiffResults.GradientResult(@MVector(zeros(4))), prod, x, cfg)
+    @test DiffResults.value(result) == 24.0
+    @test DiffResults.gradient(result) == [24.0, 12.0, 8.0, 6.0]
+end
+
+# issue #696
+@testset "immutable `DiffResult` with an `SVector` buffer" begin
+    # Chunk mode writes the buffer in place, which an `SVector` cannot do, so only vector mode.
+    x = [1.0, 2.0, 3.0, 4.0]
+    result = ForwardDiff.gradient!(DiffResults.GradientResult(@SVector(zeros(4))), prod, x)
+    @test DiffResults.value(result) == 24.0
+    @test DiffResults.gradient(result) == [24.0, 12.0, 8.0, 6.0]
+end
+
 @testset "Givens rotations: Gradients" begin
     # Test different branches in `LinearAlgebra.givensAlgorithm`
     for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f], i in 1:3
