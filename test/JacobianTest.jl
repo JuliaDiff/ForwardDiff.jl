@@ -14,7 +14,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 struct TestTag end
 struct OuterTestTag end
 ForwardDiff.:≺(::Type{TestTag}, ::Type{OuterTestTag}) = true
-ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{<:Tag}) = true
+ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
 
 ##################
 # hardcoded test #
@@ -401,8 +401,8 @@ end
 # issue #769
 @testset "functions with `Dual` output" begin
     x = [Dual{OuterTestTag}(Dual{TestTag}(1.3, 2.1), Dual{TestTag}(0.3, -2.4))]
-    f(x) = map(ForwardDiff.value, x)
-    der = ForwardDiff.derivative(ForwardDiff.value, only(x))
+    f(x) = map(Base.Fix1(ForwardDiff.value, OuterTestTag), x)
+    der = ForwardDiff.derivative(Base.Fix1(ForwardDiff.value, OuterTestTag), only(x))
 
     # Vector mode
     jac = ForwardDiff.jacobian(f, x)

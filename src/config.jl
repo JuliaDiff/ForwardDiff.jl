@@ -5,25 +5,42 @@
 struct Tag{F,V}
 end
 
-const TAGCOUNT = Threads.Atomic{UInt}(0)
+Tag(f::F, ::Type{V}) where {F,V} = Tag{F,V}()
 
-# each tag is assigned a unique number
-# tags which depend on other tags will be larger
-@generated function tagcount(::Type{Tag{F,V}}) where {F,V}
-    :($(Threads.atomic_add!(TAGCOUNT, UInt(1))))
+# Encodes a type (or type parameter) as a sequence of strings that depends only on its
+# structure. Distinct objects have distinct keys, except a type and its redefinition in the
+# same session. The key of a parameter is a strict subsequence of the key of the type.
+function typekey!(key::Vector{String}, x::DataType)
+    mod = parentmodule(x)
+    push!(key, "T", string(Base.PkgId(Base.moduleroot(mod)).uuid), string(fullname(mod)), String(nameof(x)), string(length(x.parameters)))
+    foreach(p -> typekey!(key, p), x.parameters)
+    return key
+end
+typekey!(key::Vector{String}, x::Symbol) = push!(key, "S", String(x))
+function typekey!(key::Vector{String}, x)
+    typekey!(push!(key, "V"), typeof(x))
+    if isprimitivetype(typeof(x))
+        push!(key, bytes2hex(reinterpret(UInt8, [x])))
+    else
+        for i in 1:nfields(x)
+            if isdefined(x, i)
+                typekey!(key, getfield(x, i))
+            else
+                push!(key, "#undef")
+            end
+        end
+    end
+    return key
 end
 
-function Tag(f::F, ::Type{V}) where {F,V}
-    tagcount(Tag{F,V}) # trigger generated function
-    Tag{F,V}()
-end
+# `A ≺ B` compares `(rank, key)` lexicographically. The rank strictly increases from a type to
+# any type containing it, so every tag is greater than the tags occurring in its parameters.
+@generated tagid(::Type{T}) where {T} = (key = typekey!(String[], T); (length(key), key...))
 
-Tag(::Nothing, ::Type{V}) where {V} = nothing
-
-
-@inline function ≺(::Type{Tag{F1,V1}}, ::Type{Tag{F2,V2}}) where {F1,V1,F2,V2}
-    tagcount(Tag{F1,V1}) < tagcount(Tag{F2,V2})
-end
+# Nested `Dual`s store the greatest tag outermost. A tag `Tag{F,V}` is greater than all tags
+# in the type `V` of its input and in the type `F` of its function, so seeding it outermost
+# keeps nested `Dual`s sorted. The comparison of the constant IDs is evaluated at compile time.
+≺(::Type{A}, ::Type{B}) where {A,B} = isless(tagid(A), tagid(B))
 
 struct InvalidTagException{E,O} <: Exception
 end
@@ -38,6 +55,9 @@ checktag(::Type{Tag{F,V}}, f::F, x::AbstractArray{V}) where {F,V} = true
 
 # no easy way to check Jacobian tag used with Hessians as multiple functions may be used
 checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Tuple,VT,F,V} = true
+
+# tag of `nothing` configs, for any function
+checktag(::Type{Tag{FT,VT}}, f::F, x::AbstractArray{V}) where {FT<:Nothing,VT,F,V} = true
 
 # custom tag: you're on your own.
 checktag(z, f, x) = true
@@ -83,7 +103,7 @@ function DerivativeConfig(f::F,
                           y::AbstractArray{Y},
                           x::X,
                           tag::T = Tag(f, X)) where {F,X<:Real,Y<:Real,T}
-    duals = similar(y, Dual{T,Y,1})
+    duals = similar(y, seed_type(Dual{T,Y,1}))
     return DerivativeConfig{T,typeof(duals)}(duals)
 end
 
@@ -119,7 +139,7 @@ function GradientConfig(f::F,
                         ::Chunk{N} = Chunk(x),
                         ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
-    duals = similar(x, Dual{T,V,N})
+    duals = similar(x, seed_type(Dual{T,V,N}))
     return GradientConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
@@ -156,7 +176,7 @@ function JacobianConfig(f::F,
                         ::Chunk{N} = Chunk(x),
                         ::T = Tag(f, V)) where {F,V,N,T}
     seeds = construct_seeds(Partials{N,V})
-    duals = similar(x, Dual{T,V,N})
+    duals = similar(x, seed_type(Dual{T,V,N}))
     return JacobianConfig{T,V,N,typeof(duals)}(seeds, duals)
 end
 
@@ -182,8 +202,8 @@ function JacobianConfig(f::F,
                         ::Chunk{N} = Chunk(x),
                         ::T = Tag(f, X)) where {F,Y,X,N,T}
     seeds = construct_seeds(Partials{N,X})
-    yduals = similar(y, Dual{T,Y,N})
-    xduals = similar(x, Dual{T,X,N})
+    yduals = similar(y, seed_type(Dual{T,Y,N}))
+    xduals = similar(x, seed_type(Dual{T,X,N}))
     duals = (yduals, xduals)
     return JacobianConfig{T,X,N,typeof(duals)}(seeds, duals)
 end
@@ -195,9 +215,9 @@ Base.eltype(::Type{JacobianConfig{T,V,N,D}}) where {T,V,N,D} = Dual{T,V,N}
 # HessianConfig #
 #################
 
-struct HessianConfig{T,V,N,DG,DJ} <: AbstractConfig{N}
+struct HessianConfig{T,V,N,DJ,G<:GradientConfig} <: AbstractConfig{N}
     jacobian_config::JacobianConfig{T,V,N,DJ}
-    gradient_config::GradientConfig{T,Dual{T,V,N},N,DG}
+    gradient_config::G
 end
 
 """
@@ -223,7 +243,7 @@ function HessianConfig(f::F,
                        chunk::Chunk = Chunk(x),
                        tag = Tag(f, V)) where {F,V}
     jacobian_config = JacobianConfig(f, x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals, chunk, Tag{F,eltype(jacobian_config)}())
     return HessianConfig(jacobian_config, gradient_config)
 end
 
@@ -248,10 +268,9 @@ function HessianConfig(f::F,
                        chunk::Chunk = Chunk(x),
                        tag = Tag(f, V)) where {F,V}
     jacobian_config = JacobianConfig((f,gradient), DiffResults.gradient(result), x, chunk, tag)
-    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, Tag{F,eltype(jacobian_config)}())
     return HessianConfig(jacobian_config, gradient_config)
 end
 
 checktag(::HessianConfig{T},f,x) where {T} = checktag(T,f,x)
-Base.eltype(::Type{HessianConfig{T,V,N,DG,DJ}}) where {T,V,N,DG,DJ} =
-    Dual{T,Dual{T,V,N},N}
+Base.eltype(::Type{HessianConfig{T,V,N,DJ,G}}) where {T,V,N,DJ,G} = eltype(G)

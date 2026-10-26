@@ -47,10 +47,10 @@ mutable struct InnerGradientForHess{R,C,F}
     f::F
 end
 
-function (g::InnerGradientForHess)(y, z)
+function (g::InnerGradientForHess{R,<:HessianConfig{T}})(y, z) where {R,T}
     inner_result = DiffResult(zero(eltype(y)), y)
     gradient!(inner_result, g.f, z, g.cfg.gradient_config, Val{false}())
-    g.result = DiffResults.value!(g.result, value(DiffResults.value(inner_result)))
+    g.result = DiffResults.value!(g.result, value(T, DiffResults.value(inner_result)))
     return y
 end
 

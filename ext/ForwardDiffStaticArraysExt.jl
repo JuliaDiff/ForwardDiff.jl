@@ -132,13 +132,16 @@ ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::Hes
 ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray, cfg::HessianConfig, ::Val) where {F} = hessian!(result, f, x)
 
 function ForwardDiff.hessian!(result::ImmutableDiffResult, f::F, x::StaticArray) where {F}
-    T = typeof(Tag(f, eltype(x)))
-    d1 = dualize(T, x)
-    d2 = dualize(T, d1)
+    T1 = typeof(Tag(f, eltype(x)))
+    d1 = dualize(T1, x)
+    T2 = typeof(Tag(f, eltype(d1)))
+    d2 = dualize(T2, d1)
     fd2 = f(d2)
-    val = value(T,value(T,fd2))
-    grad = extract_gradient(T,value(T,fd2), x)
-    hess = extract_jacobian(T,partials(T,fd2), x)
+    # Hessian = Jacobian (w.r.t. `T1`) of the gradient (w.r.t. `T2`), as in `hessian!` for other arrays
+    ∇fd2 = extract_gradient(T2, fd2, d1)
+    val = value(T1, value(T2, fd2))
+    grad = map(Base.Fix1(value, T1), ∇fd2)
+    hess = extract_jacobian(T1, ∇fd2, x)
     result = DiffResults.hessian!(result, hess)
     result = DiffResults.gradient!(result, grad)
     result = DiffResults.value!(result, val)
