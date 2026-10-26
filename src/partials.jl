@@ -117,9 +117,19 @@ if NANSAFE_MODE_ENABLED
         y = partial / x
         return iszero(partial) ? zero(y) : y
     end
+    @inline function _fma_partial(x::Real, partial::Real, acc::Real)
+        y = fma(x, partial, acc)
+        return iszero(partial) ? oftype(y, acc) : y
+    end
+    @inline function _muladd_partial(x::Real, partial::Real, acc::Real)
+        y = muladd(x, partial, acc)
+        return iszero(partial) ? oftype(y, acc) : y
+    end
 else
     @inline _mul_partial(partial::Real, x::Real) = partial * x
     @inline _div_partial(partial::Real, x::Real) = partial / x
+    @inline _fma_partial(x::Real, partial::Real, acc::Real) = fma(x, partial, acc)
+    @inline _muladd_partial(x::Real, partial::Real, acc::Real) = muladd(x, partial, acc)
 end
 
 # edge cases where N == 0 #

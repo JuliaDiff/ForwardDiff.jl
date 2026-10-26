@@ -625,7 +625,7 @@ end
 @generated function calc_fma_xyz(x::Dual{T,<:Any,N},
                                  y::Dual{T,<:Any,N},
                                  z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(fma(value(x), partials(y)[$i], fma(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
+    ex = Expr(:tuple, [:(_fma_partial(value(x), partials(y, $i), _fma_partial(value(y), partials(x, $i), partials(z, $i)))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         v = fma(value(x), value(y), value(z))
@@ -642,7 +642,7 @@ end
 @generated function calc_fma_xz(x::Dual{T,<:Any,N},
                                 y::Real,
                                 z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(fma(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
+    ex = Expr(:tuple, [:(_fma_partial(y, partials(x, $i), partials(z, $i))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         v = fma(value(x), y, value(z))
@@ -667,7 +667,7 @@ end
 @generated function calc_muladd_xyz(x::Dual{T,<:Any,N},
                                     y::Dual{T,<:Any,N},
                                     z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(muladd(value(x), partials(y)[$i], muladd(value(y), partials(x)[$i], partials(z)[$i]))) for i in 1:N]...)
+    ex = Expr(:tuple, [:(_muladd_partial(value(x), partials(y, $i), _muladd_partial(value(y), partials(x, $i), partials(z, $i)))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         v = muladd(value(x), value(y), value(z))
@@ -684,7 +684,7 @@ end
 @generated function calc_muladd_xz(x::Dual{T,<:Any,N},
                                    y::Real,
                                    z::Dual{T,<:Any,N}) where {T,N}
-    ex = Expr(:tuple, [:(muladd(partials(x)[$i], y,  partials(z)[$i])) for i in 1:N]...)
+    ex = Expr(:tuple, [:(_muladd_partial(y, partials(x, $i), partials(z, $i))) for i in 1:N]...)
     return quote
         $(Expr(:meta, :inline))
         v = muladd(value(x), y, value(z))
