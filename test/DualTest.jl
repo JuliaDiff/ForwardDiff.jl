@@ -383,6 +383,12 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
     @test isinf(Dual{TestTag}(Dual{TestTag}(Inf, M_PARTIALS), NESTED_PARTIALS))
     @test !(isinf(NESTED_FDNUM))
 
+    @test issubnormal(Dual{TestTag}(1.0f-38, PARTIALS))
+    @test !(issubnormal(Dual{TestTag}(1.0f-37, PARTIALS)))
+
+    @test issubnormal(Dual{TestTag}(Dual{TestTag}(1.0f-38, M_PARTIALS), NESTED_PARTIALS))
+    @test !(issubnormal(Dual{TestTag}(Dual{TestTag}(1.0f-37, M_PARTIALS), NESTED_PARTIALS)))
+
     @test isreal(FDNUM)
     @test isreal(NESTED_FDNUM)
 
@@ -681,25 +687,15 @@ end
     @test iszero(ForwardDiff.partials(ForwardDiff.partials(x^y)[1]))
 end
 
-@testset "Type min/max" begin
-    d1 = Dual(1.0)
-    dinf = typemax(typeof(d1))
-    dminf = typemin(typeof(d1))
-    @test dminf < d1 < dinf
-    @test typeof(dminf) === typeof(d1)
-    @test typeof(dinf) === typeof(d1)
-    @test !isfinite(dminf)
-    @test !isfinite(dinf)
-
-    dfmin = floatmin(typeof(d1))
-    dfmax = floatmax(typeof(d1))
-    @test dfmin < d1 < dfmax
-    @test typeof(dfmin) === typeof(d1)
-    @test typeof(dfmax) === typeof(d1)
-    @test isfinite(dfmin)
-    @test isfinite(dfmax)
-
-  @test floatmin(Dual{Nothing, ForwardDiff.Dual{Nothing, Float64, 2}, 1}) === Dual{Nothing}(Dual{Nothing}(floatmin(Float64),0.0,0.0),Dual{Nothing}(0.0,0.0,0.0))
+@testset "Type min/max: $T" for T in (Float32, Float64)
+    d = Dual(T(1), T(2))
+    nested = Dual(Dual(T(1), T(2), T(3)), Dual(T(4), T(5), T(6)))
+    for f in (typemin, typemax, floatmin, floatmax, maxintfloat)
+        @test f(d) === f(T)
+        @test f(typeof(d)) === f(T)
+        @test f(nested) === f(T)
+        @test f(typeof(nested)) === f(T)
+    end
 end
 
 @testset "Integer" begin
