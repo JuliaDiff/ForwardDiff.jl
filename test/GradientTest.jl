@@ -301,6 +301,62 @@ end
     @test grad == SVector{3}(der, der, der)
 end
 
+# https://github.com/JuliaDiff/ForwardDiff.jl/issues/847
+@testset "a result that does not carry the perturbation" begin
+    xs = ([1.0, 2.0, 3.0], SVector(1.0, 2.0, 3.0), MVector(1.0, 2.0, 3.0))
+
+    @testset "no perturbation: $(nameof(typeof(x)))" for x in xs
+        f = Returns(2.0)
+        @test all(iszero, ForwardDiff.gradient(f, x))
+        @test all(iszero, ForwardDiff.gradient!(fill(NaN, 3), f, x))
+        result = ForwardDiff.gradient!(DiffResults.GradientResult(collect(x)), f, x)
+        @test DiffResults.value(result) == 2.0
+        @test all(iszero, DiffResults.gradient(result))
+    end
+
+    @testset "an enclosing tag only: $(nameof(typeof(x)))" for x in xs
+        # `f` does not depend on `z`, so its result carries the `derivative` tag alone
+        ForwardDiff.derivative(1.0) do a
+            f = z -> a * 2.0
+            @test all(iszero, ForwardDiff.gradient(f, x))
+
+            # a buffer that can hold the enclosing tag is written in full, one that cannot errors
+            g = fill(a * 111.0, 3)
+            ForwardDiff.gradient!(g, f, x)
+            @test all(iszero, g)
+            @test_throws MethodError ForwardDiff.gradient!(fill(111.0, 3), f, x)
+
+            result = ForwardDiff.gradient!(DiffResults.GradientResult(fill(a * 111.0, 3)), f, x)
+            @test DiffResults.value(result) === a * 2.0
+            @test all(iszero, DiffResults.gradient(result))
+            return zero(a)
+        end
+    end
+
+    @testset "an enclosing tag only, chunk size = $c" for c in (1, 2, 3)
+        x = [1.0, 2.0, 3.0]
+        ForwardDiff.derivative(1.0) do a
+            f = z -> a * 2.0
+            cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())
+            @test all(iszero, ForwardDiff.gradient(f, x, cfg))
+            g = fill(a * 111.0, 3)
+            ForwardDiff.gradient!(g, f, x, cfg)
+            @test all(iszero, g)
+            return zero(a)
+        end
+    end
+
+    # a tag with no relation to the config's is a mismatch, not a derivative that vanishes
+    @testset "an unrelated tag, chunk size = $c" for c in (1, 2, 3)
+        x = [1.0, 2.0, 3.0]
+        f = z -> Dual{OuterTestTag}(sum(z), 1.0)
+        cfg = ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}(), TestTag())
+        @test_throws ForwardDiff.DualMismatchError ForwardDiff.gradient(f, x, cfg)
+        @test_throws ForwardDiff.DualMismatchError ForwardDiff.gradient!(fill(NaN, 3), f, x, cfg)
+        @test_throws ForwardDiff.DualMismatchError ForwardDiff.gradient!(DiffResults.GradientResult(x), f, x, cfg)
+    end
+end
+
 @testset "NaN-safe mode" begin
     # issue #774
     f = x -> log(zero(x[1]) + x[2])
