@@ -334,6 +334,35 @@ end
                 @test ForwardDiff.jacobian(ev, x0) ≈ Calculus.finite_difference_jacobian(ev, x0)
             end
         end
+
+        @testset "#undef outside of the `uplo` triangle" begin
+            x = ForwardDiff.Dual{Nothing}.(BigFloat[1, 2, 3], BigFloat[1, 0, 0], BigFloat[0, 1, 0])
+            k = uplo === :U ? 3 : 2 # linear index of the stored off-diagonal element
+            M = similar(x, 2, 2)
+            M[1, 1], M[k], M[2, 2] = x[1], x[2], x[3]
+            Mc = similar(x, Complex{eltype(x)}, 2, 2)
+            Mc[1, 1], Mc[k], Mc[2, 2] = x[1], x[2] + im * x[1], x[3]
+            s = uplo === :U ? 1 : -1 # sign of imag(A[1, 2])
+            @testset "$name" for (name, A, value, ∂1, ∂2) in (
+                ("Symmetric{<:Real}", Symmetric(M, uplo), [1 2; 2 3], [1 0; 0 0], [0 1; 1 0]),
+                ("Hermitian{<:Real}", Hermitian(M, uplo), [1 2; 2 3], [1 0; 0 0], [0 1; 1 0]),
+                ("Hermitian{<:Complex}", Hermitian(Mc, uplo), [1 2+s*im; 2-s*im 3], [1 s*im; -s*im 0], [0 1; 1 0]),
+            )
+                @test ForwardDiff._structured_value(A) == value
+                @test ForwardDiff._structured_partials(A, 1) == ∂1
+                @test ForwardDiff._structured_partials(A, 2) == ∂2
+            end
+        end
+
+        @testset "#undef in the ignored element of SymTridiagonal" begin
+            dv = ForwardDiff.Dual{Nothing}.(BigFloat[1, 2, 3], BigFloat[1, 0, 0], BigFloat[0, 1, 0])
+            ev = similar(dv, 3)
+            ev[1], ev[2] = dv[1], dv[2]
+            A = SymTridiagonal(dv, ev)
+            @test ForwardDiff._structured_value(A) == [1 1 0; 1 2 2; 0 2 3]
+            @test ForwardDiff._structured_partials(A, 1) == [1 1 0; 1 0 0; 0 0 0]
+            @test ForwardDiff._structured_partials(A, 2) == [0 0 0; 0 1 1; 0 1 0]
+        end
     end
 end
 
