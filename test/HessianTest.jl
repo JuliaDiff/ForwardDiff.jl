@@ -156,6 +156,72 @@ for T in (StaticArrays.SArray, StaticArrays.MArray)
     @test DiffResults.hessian(sresult3) == DiffResults.hessian(result)
 end
 
+# issues #838 and #839, which `hessian` inherits through `jacobian(gradient(f), x)`
+@testset "structured inputs: $(nameof(W))" for (W, sidx) in (
+        # both axes are indexed by the linear indices of `x`, hard zeros off the structure
+        (LowerTriangular, [i + 3 * (j - 1) for j in 1:3 for i in j:3]),
+        (UpperTriangular, [i + 3 * (j - 1) for j in 1:3 for i in 1:j]),
+        (Diagonal,        1:4:9),
+    )
+    x = W(randn(3, 3))
+    # d²f/dx[a]dx[b] is `1 + (a == b)` for structural `a`, `b`, and zero everywhere else
+    f = z -> (sum(abs2, z) + sum(z)^2) / 2
+    L = length(x)
+
+    expected = zeros(L, L)
+    expected[sidx, sidx] .= 1
+    for k in sidx
+        expected[k, k] += 1
+    end
+    val = f(x)
+    grad = zeros(3, 3)
+    grad[sidx] .= x[sidx] .+ sum(x)
+
+    # one chunk size below the full length, so that the final chunk is a partial one
+    @testset "chunk size = $c" for c in unique((1, 2, length(sidx) - 1, length(sidx)))
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+
+        H = ForwardDiff.hessian(f, x, cfg)
+        @test size(H) == (L, L)
+        @test H == expected
+
+        out = fill(NaN, L, L)
+        @test ForwardDiff.hessian!(out, f, x, cfg) === out
+        @test out == expected
+
+        # `DiffResults.HessianResult` allocates a dense gradient buffer even for a structured `x`
+        result = DiffResults.HessianResult(x)
+        result = ForwardDiff.hessian!(result, f, x,
+                                      ForwardDiff.HessianConfig(f, result, x, ForwardDiff.Chunk{c}()))
+        @test DiffResults.value(result) ≈ val
+        @test DiffResults.gradient(result) == grad
+        @test DiffResults.hessian(result) == expected
+    end
+end
+
+# issue #842, which `hessian` inherits through both of its sub-configs
+@testset "config reused for a differently structured input" begin
+    n = 3
+    A = randn(n, n)
+    inputs = (A, LowerTriangular(A), UpperTriangular(A), Diagonal(diag(A)))
+    f = z -> (sum(abs2, z) + sum(z)^2) / 2
+
+    @testset "chunk size = $c" for c in (2, n)
+        @testset "$(nameof(typeof(xcfg))) config" for xcfg in inputs
+            cfg = ForwardDiff.HessianConfig(f, xcfg, ForwardDiff.Chunk{c}())
+            # each input has a different structure, so `x === xcfg` is the one the config fits
+            for x in inputs
+                x === xcfg && continue
+                msg = "ArgumentError: the config was built for an array of type " *
+                      "$(nameof(typeof(xcfg))) and cannot be used with an array of type " *
+                      "$(nameof(typeof(x)))"
+                @test_throws msg ForwardDiff.hessian(f, x, cfg)
+                @test_throws msg ForwardDiff.hessian!(fill(NaN, n^2, n^2), f, x, cfg)
+            end
+        end
+    end
+end
+
 @testset "branches in dot" begin
     # https://github.com/JuliaDiff/ForwardDiff.jl/issues/551
     H = [1 2 3; 4 5 6; 7 8 9];

@@ -1,6 +1,7 @@
 module AllocationsTest
 
 using ForwardDiff
+using LinearAlgebra
 using StaticArrays
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
@@ -12,22 +13,21 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     cfg = ForwardDiff.GradientConfig(nothing, x)
     duals = cfg.duals
     seeds = cfg.seeds
+    indices = cfg.indices
 
     allocs_seed!(args...) = @allocated ForwardDiff.seed!(args...)
-    allocs_seed!(duals, x, seeds)
-    @test iszero(allocs_seed!(duals, x, seeds))
-    allocs_seed!(duals, x, 1, seeds)
-    @test iszero(allocs_seed!(duals, x, 1, seeds))
+    allocs_seed!(duals, x, indices, seeds)
+    @test iszero(allocs_seed!(duals, x, indices, seeds))
+    allocs_seed!(duals, x, indices, 1, seeds)
+    @test iszero(allocs_seed!(duals, x, indices, 1, seeds))
 
-    # the 4-arg form passes `count` as a runtime value, so it catches an inference regression at the
-    # `_seed_zero_partials!` boundary that the forms defaulting `count` to `N` could hide
     allocs_szp!(args...) = @allocated ForwardDiff.seed_zero_partials!(args...)
-    allocs_szp!(duals, x)
-    @test iszero(allocs_szp!(duals, x))
-    allocs_szp!(duals, x, 1)
-    @test iszero(allocs_szp!(duals, x, 1))
-    allocs_szp!(duals, x, 1, 4)
-    @test iszero(allocs_szp!(duals, x, 1, 4))
+    allocs_szp!(duals, x, indices)
+    @test iszero(allocs_szp!(duals, x, indices))
+    allocs_szp!(duals, x, indices, 1)
+    @test iszero(allocs_szp!(duals, x, indices, 1))
+    allocs_szp!(duals, x, indices, 1, 4)
+    @test iszero(allocs_szp!(duals, x, indices, 1, 4))
 
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()
@@ -48,6 +48,66 @@ end
         return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
     end
     @test iszero(allocs_jacobian!())
+end
+
+# Seeding and extraction take their positions from the config, so the `structural_chunk` view of a
+# chunk must not allocate, whether or not `x` has structurally zero entries.
+function allocs_structured_gradient!(result, x, chunk)
+    f(z) = sum(abs2, z)
+    fill!(result, false)
+    cfg = ForwardDiff.GradientConfig(f, x, chunk)
+    ForwardDiff.gradient!(result, f, x, cfg)  # warmup
+    return @allocated ForwardDiff.gradient!(result, f, x, cfg)
+end
+
+function allocs_structured_jacobian!(x, chunk)
+    f!(y, z) = (y[1] = sum(abs2, z); y[2] = sqrt(sum(abs2, z)); y)
+    y = zeros(2)
+    result = zeros(2, length(x))
+    cfg = ForwardDiff.JacobianConfig(f!, y, x, chunk)
+    ForwardDiff.jacobian!(result, f!, y, x, cfg)  # warmup
+    return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
+end
+
+@testset "Test gradient!/jacobian! allocations for $(nameof(typeof(x)))" for (x, nstruct) in (
+        (rand(6, 6),                  36),
+        (LowerTriangular(rand(6, 6)), 21),
+        (UpperTriangular(rand(6, 6)), 21),
+        (Diagonal(rand(6, 6)),         6),
+    )
+    # A result shaped like `x` receives a derivative in every entry it stores, a dense one has the
+    # entries off the structure of `x` zeroed as well. The chunk sizes cover chunk and vector mode.
+    for result in (similar(x), zeros(size(x))), chunk_size in (2, nstruct)
+        chunk = ForwardDiff.Chunk{chunk_size}()
+        @test iszero(allocs_structured_gradient!(result, x, chunk))
+        @test iszero(allocs_structured_jacobian!(x, chunk))
+    end
+end
+
+# The `StaticArray` extension has no config to cache the structural positions in, so it derives them
+# per extraction call.
+function allocs_static_gradient!(result, x)
+    f(z) = sum(abs2, z)
+    fill!(result, false)
+    ForwardDiff.gradient!(result, f, x)  # warmup
+    return @allocated ForwardDiff.gradient!(result, f, x)
+end
+
+function allocs_static_jacobian!(result, x)
+    f(z) = z .* z
+    fill!(result, false)
+    ForwardDiff.jacobian!(result, f, x)  # warmup
+    return @allocated ForwardDiff.jacobian!(result, f, x)
+end
+
+@testset "Test StaticArray gradient!/jacobian! allocations for size $(size(x))" for x in (
+        @SVector(rand(4)), @SMatrix(rand(2, 2)),
+    )
+    # extraction writes the result through a view, which is no static array for a mutable buffer
+    @test iszero(allocs_static_gradient!(zeros(size(x)), x))
+    @test iszero(allocs_static_gradient!(similar(x), x))
+    @test iszero(allocs_static_jacobian!(zeros(4, 4), x))
+    @test iszero(allocs_static_jacobian!(@MMatrix(zeros(4, 4)), x))
 end
 
 @testset "allocation-free nested StaticArray jacobian" begin
