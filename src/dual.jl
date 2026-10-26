@@ -474,7 +474,7 @@ Base.float(d::Dual) = convert(float(typeof(d)), d)
 ###################################
 
 for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
-    if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos))
+    if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos), (:Base, :min), (:Base, :max))
         continue  # Skip methods which we define elsewhere.
     elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
         continue  # Skip rules for methods not defined in the current scope
@@ -542,6 +542,13 @@ end
         Dual{Ty}(divv, -(divv / v) * partials(y))
     end
 )
+
+# min/max #
+#---------#
+
+# Consistent with `isless` (also on ties in value), and propagate NaN like `min`/`max` on floats; see issue #868
+@inline Base.min(x::D, y::D) where {D<:Dual} = ifelse(isnan(x) | (!isnan(y) & !isless(y, x)), x, y)
+@inline Base.max(x::D, y::D) where {D<:Dual} = ifelse(isnan(x) | (!isnan(y) & !isless(x, y)), x, y)
 
 # exponentiation #
 #----------------#
