@@ -132,7 +132,7 @@ samerng() = MersenneTwister(1)
         # The following properties should always be satisfied, regardless of whether NaN-safe mode is enabled or disabled
         # We use `isequal` for comparisons in the presence of `NaN`s
         for p1 in (PARTIALS, ALLZERO, FIRSTZERO), p2 in (PARTIALS2, ALLZERO, FIRSTZERO), v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
-            @test isequal(ForwardDiff._div_partials(p1, p2, v1, v2), ForwardDiff._mul_partials(p1, p2, inv(v2), -v1/(v2^2)))
+            @test isequal(ForwardDiff._div_partials(p1, p2, v1, v2), (p1 - (v1 / v2) * p2) / v2)
             @test isequal(ForwardDiff._mul_partials(p1, p2, v1, v2), v1 * p1 + v2 * p2)
         end
         for v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
@@ -140,8 +140,8 @@ samerng() = MersenneTwister(1)
             @test isequal(ForwardDiff._mul_partials(PARTIALS, ZERO_PARTIALS, v1, v2), v1 * PARTIALS)
         end
 
-        if ForwardDiff.NANSAFE_MODE_ENABLED
-            for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf))
+        if !ForwardDiff.UNSAFE_MODE_ENABLED
+            for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> big(Inf) * p), (p -> NaN32 * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf), (p -> p / big(0.0)))
                 # Only zero partials
                 @test iszero(@inferred(f(ALLZERO)))
 
@@ -157,6 +157,31 @@ samerng() = MersenneTwister(1)
             end
         end
     end
+end
+
+# A number type that claims to be finite but yields `NaN` when multiplied by zero
+struct FiniteNaN <: Real end
+Base.isfinite(::FiniteNaN) = true
+Base.:*(x::Float64, ::FiniteNaN) = x * NaN
+
+@testset "strong zeros" begin
+    z = ForwardDiff.UNSAFE_MODE_ENABLED ? NaN : 0.0
+    @test isequal(Partials((0.0, 1.0)) * FiniteNaN(), Partials((z, NaN)))
+    @test isequal(Partials((0.0, 1.0)) * ForwardDiff.Dual(1.0, Inf), Partials((ForwardDiff.Dual(0.0, z), ForwardDiff.Dual(1.0, Inf))))
+    @test isequal(Partials((0.0, 1.0)) / ForwardDiff.Dual(1.0, Inf), Partials((ForwardDiff.Dual(0.0, z), ForwardDiff.Dual(1.0, -Inf))))
+    @test isequal(Partials((0.0, 1.0)) / ForwardDiff.Dual(0.0, 1.0), Partials((ForwardDiff.Dual(z, z), ForwardDiff.Dual(Inf, -Inf))))
+    @test Partials((0.0, 1.0)) / ForwardDiff.Dual(Inf, 1.0) == Partials((ForwardDiff.Dual(0.0, 0.0), ForwardDiff.Dual(0.0, 0.0)))
+    x = ForwardDiff.Dual{:a}(ForwardDiff.Dual{:b}(2.0, Inf), -3.0)
+    @test isequal(Partials((0.0, 1.0)) / x, Partials((ForwardDiff.Dual{:a}(ForwardDiff.Dual{:b}(0.0, z), ForwardDiff.Dual{:b}(0.0, z)), 1.0 / x)))
+    for x in (ForwardDiff.Dual{:a}(ForwardDiff.Dual{:b}(1e-200, 1.0), 1.0), ForwardDiff.Dual{:a}(ForwardDiff.Dual{:b}(1e-310, 1.0), 1.0))
+        @test iszero((Partials((0.0, 1.0)) / x)[1])
+    end
+    for x in (ForwardDiff.Dual{:b}(1e-200, 1.0), ForwardDiff.Dual{:b}(1e-310, 1.0))
+        @test iszero((Partials((ForwardDiff.Dual{:b}(0.0, 0.0), ForwardDiff.Dual{:b}(1.0, 0.0))) / x)[1])
+    end
+    @test isequal(ForwardDiff._mul_partials(Partials((0.0, 1.0)), Partials((1.0, 0.0)), ForwardDiff.Dual(1.0, Inf), 2.0), Partials((ForwardDiff.Dual(2.0, z), ForwardDiff.Dual(1.0, Inf))))
+    @test Partials((0.0, 1.0)) * π === Partials((0.0, Float64(π)))
+    @test Partials((0.0, 1.0)) / π === Partials((0.0, 1 / π))
 end
 
 io = IOBuffer()

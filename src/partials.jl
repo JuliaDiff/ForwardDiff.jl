@@ -84,43 +84,70 @@ Base.convert(::Type{Partials{N,V}}, partials::Partials{N,V}) where {N,V} = parti
 @inline Base.:-(partials::Partials) = Partials(minus_tuple(partials.values))
 @inline Base.:*(x::Real, partials::Partials) = partials*x
 
-@inline function Base.:*(partials::Partials, x::Real)
-    return Partials(scale_tuple(partials.values, x))
+@inline function Base.:*(partials::Partials{N,V}, x::Real) where {N,V}
+    if _mul_is_strong(V, x)
+        return Partials(scale_tuple(*, partials.values, x))
+    else
+        return Partials(scale_tuple(_strong_mul, partials.values, x))
+    end
 end
 
-@inline function Base.:/(partials::Partials, x::Real)
-    return Partials(div_tuple_by_scalar(partials.values, x))
+@inline function Base.:/(partials::Partials{N,V}, x::Real) where {N,V}
+    if _div_is_strong(V, x)
+        return Partials(scale_tuple(/, partials.values, x))
+    else
+        return Partials(scale_tuple(_strong_div, partials.values, x))
+    end
 end
 
-@inline function _mul_partials(a::Partials{N}, b::Partials{N}, x_a, x_b) where N
-    return Partials(mul_tuples(a.values, b.values, x_a, x_b))
+@inline function _mul_partials(a::Partials{N,A}, b::Partials{N,B}, x_a, x_b) where {N,A,B}
+    if _mul_is_strong(A, x_a) & _mul_is_strong(B, x_b)
+        return Partials(mul_tuples(*, a.values, b.values, x_a, x_b))
+    else
+        return Partials(mul_tuples(_strong_mul, a.values, b.values, x_a, x_b))
+    end
 end
 
+# Divide by `bval` instead of multiplying by `inv(bval)` or dividing by `bval^2`, which may overflow or underflow
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
-    return _mul_partials(a, b, inv(bval), -(aval / (bval*bval)))
+    return (a - (aval / bval) * b) / bval
 end
 
 # NaN/Inf-safe methods #
 #----------------------#
 
-if NANSAFE_MODE_ENABLED
-    # A dual number with a zero partial is just an unperturbed non-dual number
-    # Hence when propagated the resulting dual number is unperturbed as well,
-    # ie., its partial is zero as well, regardless of the primal value
-    # However, standard floating point multiplication/division would return `NaN`
-    # if the primal is not-finite/zero
-    @inline function _mul_partial(partial::Real, x::Real)
-        y = partial * x
-        return iszero(partial) ? zero(y) : y
+# Zero perturbations in input yield zero perturbations in output
+@inline function _strong_mul(partial::Real, x::Real)
+    y = partial * x
+    return iszero(partial) ? zero(y) : y
+end
+@inline function _strong_div(partial::Real, x::Real)
+    y = partial / x
+    return iszero(partial) ? zero(y) : y
+end
+
+# Whether plain `*`/`/` already treat zero partials of type `V` as strong zeros
+if !UNSAFE_MODE_ENABLED
+    @inline function _mul_is_strong(::Type{V}, x::Real) where {V}
+        return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _isfinite_all(x)
     end
-    @inline function _div_partial(partial::Real, x::Real)
-        y = partial / x
-        return iszero(partial) ? zero(y) : y
+    @inline function _div_is_strong(::Type{V}, x::Real) where {V}
+        return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _is_strong_divisor(x)
     end
 else
-    @inline _mul_partial(partial::Real, x::Real) = partial * x
-    @inline _div_partial(partial::Real, x::Real) = partial / x
+    @inline _mul_is_strong(::Type, ::Real) = true
+    @inline _div_is_strong(::Type, ::Real) = true
 end
+
+# Types whose zeros stay zero when multiplied by finite values of such types
+@inline _is_strong_zero_type(::Type) = false
+@inline _is_strong_zero_type(::Type{<:Union{Base.IEEEFloat,Base.BitInteger,Bool,BigInt,BigFloat,Rational{<:Union{Base.BitInteger,Bool,BigInt}},AbstractIrrational}}) = true
+
+# Whether `x` and, for dual numbers, all of its partials are finite
+@inline _isfinite_all(x::Real) = isfinite(x)
+
+# Whether zero divided by `x` is zero
+@inline _is_strong_divisor(x::Real) = !(isnan(x) | iszero(x))
 
 # edge cases where N == 0 #
 #-------------------------#
@@ -199,12 +226,8 @@ end
     return tupexpr(i -> :(rand(V)), N)
 end
 
-@generated function scale_tuple(tup::NTuple{N}, x) where N
-    return tupexpr(i -> :(_mul_partial(tup[$i], x)), N)
-end
-
-@generated function div_tuple_by_scalar(tup::NTuple{N}, x) where N
-    return tupexpr(i -> :(_div_partial(tup[$i], x)), N)
+@generated function scale_tuple(f::F, tup::NTuple{N}, x) where {F,N}
+    return tupexpr(i -> :(f(tup[$i], x)), N)
 end
 
 @generated function add_tuples(a::NTuple{N}, b::NTuple{N})  where N
@@ -219,8 +242,8 @@ end
     return tupexpr(i -> :(-tup[$i]), N)
 end
 
-@generated function mul_tuples(a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where N
-    return tupexpr(i -> :(_mul_partial(a[$i], afactor) + _mul_partial(b[$i], bfactor)), N)
+@generated function mul_tuples(f::F, a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where {F,N}
+    return tupexpr(i -> :(f(a[$i], afactor) + f(b[$i], bfactor)), N)
 end
 
 ###################
