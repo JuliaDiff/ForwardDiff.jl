@@ -546,40 +546,41 @@ end
 # exponentiation #
 #----------------#
 
+@inline function _pow_dual_base(f::F, x::Dual{T}, y) where {F,T}
+    v = value(x)
+    expv = f(v, y)
+    if iszero(y) || isconstant(x)
+        new_partials = zero((y * expv) * partials(x))
+    else
+        new_partials = (y * f(v, y - 1)) * partials(x)
+    end
+    return Dual{T}(expv, new_partials)
+end
+
+@inline function _pow_dual_exponent(f::F, log::L, x, y::Dual{T}) where {F,L,T}
+    v = value(y)
+    expv = f(x, v)
+    deriv = (iszero(x) && v > 0) ? zero(expv) : expv*log(oftype(expv, x))
+    return Dual{T}(expv, deriv * partials(y))
+end
+
 for (f, log) in ((:(Base.:^), :(Base.log)), (:(NaNMath.pow), :(NaNMath.log)))
     @eval begin
         @define_binary_dual_op(
             $f,
             begin
+                # a `Dual` with zero partials behaves like a `Real`
+                isconstant(y) && return _pow_dual_base($f, x, value(y))
+                isconstant(x) && return _pow_dual_exponent($f, $log, value(x), y)
                 vx, vy = value(x), value(y)
                 expv = ($f)(vx, vy)
-                powval = vy * ($f)(vx, vy - 1)
-                if isconstant(y)
-                    logval = one(expv)
-                elseif iszero(vx) && vy > 0
-                    logval = zero(vx)
-                else
-                    logval = expv * ($log)(vx)
-                end
+                powval = iszero(vy) ? zero(expv) : vy * ($f)(vx, vy - 1)
+                logval = (iszero(vx) && vy > 0) ? zero(vx) : expv * ($log)(vx)
                 new_partials = _mul_partials(partials(x), partials(y), powval, logval)
                 return Dual{Txy}(expv, new_partials)
             end,
-            begin
-                v = value(x)
-                expv = ($f)(v, y)
-                if y == zero(y) || iszero(partials(x))
-                    new_partials = zero(partials(x))
-                else
-                    new_partials = partials(x) * y * ($f)(v, y - 1)
-                end
-                return Dual{Tx}(expv, new_partials)
-            end,
-            begin
-                v = value(y)
-                expv = ($f)(x, v)
-                deriv = (iszero(x) && v > 0) ? zero(expv) : expv*($log)(oftype(expv, x))
-                return Dual{Ty}(expv, deriv * partials(y))
-            end
+            _pow_dual_base($f, x, y),
+            _pow_dual_exponent($f, $log, x, y)
         )
     end
 end
