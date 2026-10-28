@@ -10,7 +10,7 @@ Return `df/dx` evaluated at `x`, assuming `f` is called as `f(x)`.
 This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 """
 @inline function derivative(f::F, x::R) where {F,R<:Real}
-    T = typeof(Tag(f, R))
+    T = maketagtype(f,R)
     return extract_derivative(T, f(Dual{T}(x, one(x))))
 end
 
@@ -44,7 +44,7 @@ This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
     result isa DiffResult || require_one_based_indexing(result)
-    T = typeof(Tag(f, R))
+    T = maketagtype(f,R)
     ydual = f(Dual{T}(x, one(x)))
     result = extract_value!(T, result, ydual)
     result = extract_derivative!(T, result, ydual)
