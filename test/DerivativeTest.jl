@@ -128,11 +128,13 @@ end
         @test iszero(ForwardDiff.derivative(x -> 2x / x, x0))
         @test iszero(ForwardDiff.derivative(x -> zero(x) / x, x0))
     end
+    # `x^2` overflows `Int`
+    @test iszero(ForwardDiff.derivative(x -> 2x / x, 3037000500))
 
-    # Third derivative of x / (x^2 + x^3) = 1 / (x + x^2) (#866)
-    d3(f, x) = ForwardDiff.derivative(x -> ForwardDiff.derivative(x -> ForwardDiff.derivative(f, x), x), x)
+    # Third derivative of x / (x^2 + x^3) = 1 / x - 1 / (1 + x) (#866)
     for x0 in (1e-20, 1e-30, 1e-40)
-        @test d3(x -> x / (x^2 + x^3), x0) ≈ d3(x -> 1 / (x + x^2), x0)
+        d3 = ForwardDiff.derivative(x -> ForwardDiff.derivative(x -> ForwardDiff.derivative(x -> x / (x^2 + x^3), x), x), x0)
+        @test d3 ≈ -6 / x0^4 + 6 / (1 + x0)^4
     end
 end
 
