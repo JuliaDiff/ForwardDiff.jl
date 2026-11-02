@@ -96,8 +96,9 @@ end
     return Partials(mul_tuples(a.values, b.values, x_a, x_b))
 end
 
+# Divide by `bval` instead of multiplying by `inv(bval)` or dividing by `bval^2`, which may overflow or underflow
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
-    return _mul_partials(a, b, inv(bval), -(aval / (bval*bval)))
+    return (a - (aval / bval) * b) / bval
 end
 
 # NaN/Inf-safe methods #
