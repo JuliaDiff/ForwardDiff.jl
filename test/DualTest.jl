@@ -742,6 +742,15 @@ end
 
     @test ForwardDiff.derivative(t -> min(t, 48.0), 48.0) === ForwardDiff.derivative(t -> min(48.0, t), 48.0) === 0.0
     @test ForwardDiff.derivative(t -> max(t, 48.0), 48.0) === ForwardDiff.derivative(t -> max(48.0, t), 48.0) === 1.0
+
+    d(f) = t -> ForwardDiff.derivative(f, t)
+    for f in (t -> min(3t - 2, t^2), t -> min(t^2, 3t - 2))
+        @test d(f)(1.0) === d(d(f))(1.0) === 2.0
+    end
+    for f in (t -> max(3t - 2, t^2), t -> max(t^2, 3t - 2))
+        @test d(f)(1.0) === 3.0
+        @test d(d(f))(1.0) === 0.0
+    end
 end
 
 @testset "Integer" begin
