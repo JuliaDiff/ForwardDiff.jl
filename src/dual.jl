@@ -877,20 +877,18 @@ function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
 end
 
 # Derivatives wrt to first parameter and precision setting are not supported
-function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
-    x = value(d)
+function SpecialFunctions.gamma_inc(a::Real, d::Dual{T}, ind::Integer) where {T}
+    x = d.value
     p, q = SpecialFunctions.gamma_inc(a, x, ind)
-    ∂p = _gamma_inc_dx(a, x) * partials(d)
+    ∂p = _gamma_inc_dx(a, x) * d.partials
     return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
-SpecialFunctions.gamma_inc(a::Dual, x::Real, ind::Integer) = SpecialFunctions.gamma_inc(_constant_a(a), x, ind)
-SpecialFunctions.gamma_inc(a::Dual, d::Dual{<:Any,<:Real}, ind::Integer) = SpecialFunctions.gamma_inc(_constant_a(a), d, ind)
-
-function _constant_a(a::Dual)
-    isconstant(a) || throw(ArgumentError("derivatives with respect to the first argument `a` are not supported"))
-    return _constant_a(value(a))
+SpecialFunctions.gamma_inc(a::Dual, x::Real, ind::Integer) = _gamma_inc_constant_a(a, x, ind)
+SpecialFunctions.gamma_inc(a::Dual, x::Dual, ind::Integer) = _gamma_inc_constant_a(a, x, ind)
+function _gamma_inc_constant_a(a::Dual, x::Real, ind::Integer)
+    iszero(a.partials) || throw(ArgumentError("derivatives with respect to the first argument `a` are not supported"))
+    return SpecialFunctions.gamma_inc(a.value, x, ind)
 end
-_constant_a(a::Real) = a
 
 # TODO: Remove fallback once SpecialFunctions >= 2.10 is required
 if isdefined(SpecialFunctions, :gamma_inc_dx)

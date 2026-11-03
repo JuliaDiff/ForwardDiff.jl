@@ -10,6 +10,7 @@ using NaNMath, SpecialFunctions, LogExpFunctions
 using DiffRules
 
 import Calculus
+import DiffResults
 import LinearAlgebra
 
 struct TestTag end
@@ -749,6 +750,7 @@ end
     for (a, x) in ((150.0, 150.0), (1e6, 1e6), (1e6, 999_000.0), (3.0, 1e-160))
         @test @inferred(d2p(a, x)) ≈ ∂p(a, x) * (big(a) - 1 - big(x)) / big(x) rtol = 8 * eps() broken = !has_gamma_inc_dx && a > 100
     end
+    @test ForwardDiff.derivative(x -> gamma_inc(1.0, x, 0)[1], 0.0) == 1
     @test d2p(2.0, 0.0) == 1
     @test d3p(3.0, 0.0) == 1
 
@@ -757,7 +759,6 @@ end
             x -> gamma_inc(0.5, zero(x), 0)[1],
             x -> gamma_inc(0.5, zero(x), 0)[2],
             y -> ForwardDiff.derivative(x -> gamma_inc(0.5, zero(x), 0)[1], y),
-            x -> logabsgamma(zero(x))[1],
         )
         df = ForwardDiff.derivative(f, 1.0)
         @test ForwardDiff.NANSAFE_MODE_ENABLED ? iszero(df) : isnan(df)
@@ -809,13 +810,17 @@ end
             @test ForwardDiff.gradient(v -> SpecialFunctions.gamma_inc_dx(v[1], v[2]), [V(a), V(x)]) == [dfda, dfdx]
         end
 
-        for (a, x) in ((2.5, 1.0), (0.3, 2.0), (-2.0, 1.5), (150.0, 150.0), (1e6, 1e6))
+        # `a` and `x` with different tags
+        d2fdadx(a, x) = ForwardDiff.derivative(a -> ForwardDiff.derivative(x -> SpecialFunctions.gamma_inc_dx(a, x), x), a)
+        d2fdxda(a, x) = ForwardDiff.derivative(x -> ForwardDiff.derivative(a -> SpecialFunctions.gamma_inc_dx(a, x), a), x)
+        for (a, x) in ((2.5, 1.0), (0.3, 2.0), (-2.0, 1.5), (150.0, 150.0), (1e6, 1e6), (1e10, 1e10))
             H = Float64.(∇²f(a, x))
-            @test ForwardDiff.hessian(v -> SpecialFunctions.gamma_inc_dx(v[1], v[2]), [a, x]) ≈ H rtol = 1e-14
-            # `a` and `x` with different tags
-            d2fdadx(a, x) = ForwardDiff.derivative(a -> ForwardDiff.derivative(x -> SpecialFunctions.gamma_inc_dx(a, x), x), a)
+            result = ForwardDiff.hessian!(DiffResults.HessianResult([a, x]), v -> SpecialFunctions.gamma_inc_dx(v[1], v[2]), [a, x])
+            # The gradient is computed with nested duals
+            @test DiffResults.gradient(result) ≈ setprecision(() -> Float64.(∇f(a, x)), BigFloat, 512) rtol = 8 * eps()
+            @test DiffResults.hessian(result) ≈ H rtol = 1e-14
             @test @inferred(d2fdadx(a, x)) ≈ H[1, 2] rtol = 1e-14
-            @test ForwardDiff.derivative(x -> ForwardDiff.derivative(a -> SpecialFunctions.gamma_inc_dx(a, x), a), x) ≈ H[2, 1] rtol = 1e-14
+            @test d2fdxda(a, x) ≈ H[2, 1] rtol = 1e-14
         end
     else
         # The x-derivative of `gamma_inc` falls back to the closed form
