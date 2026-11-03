@@ -877,11 +877,51 @@ function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
 end
 
 # Derivatives wrt to first parameter and precision setting are not supported
-function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
-    x = value(d)
+function SpecialFunctions.gamma_inc(a::Real, d::Dual{T}, ind::Integer) where {T}
+    x = d.value
     p, q = SpecialFunctions.gamma_inc(a, x, ind)
-    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
+    ∂p = _gamma_inc_dx(a, x) * d.partials
     return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
+end
+SpecialFunctions.gamma_inc(a::Dual, x::Real, ind::Integer) = _gamma_inc_constant_a(a, x, ind)
+SpecialFunctions.gamma_inc(a::Dual, x::Dual, ind::Integer) = _gamma_inc_constant_a(a, x, ind)
+function _gamma_inc_constant_a(a::Dual, x::Real, ind::Integer)
+    iszero(a.partials) || throw(ArgumentError("derivatives with respect to the first argument `a` are not supported"))
+    return SpecialFunctions.gamma_inc(a.value, x, ind)
+end
+
+# TODO: Remove fallback once SpecialFunctions >= 2.10 is required
+if isdefined(SpecialFunctions, :gamma_inc_dx)
+    _gamma_inc_dx(a, x) = SpecialFunctions.gamma_inc_dx(a, x)
+    # The first argument `x` is the shape `a`, the second argument `y` is `x`
+    @define_binary_dual_op(
+        SpecialFunctions.gamma_inc_dx,
+        begin
+            va, vx = value(Txy, x), value(Txy, y)
+            f = SpecialFunctions.gamma_inc_dx(va, vx)
+            ∂f∂a = SpecialFunctions._gamma_inc_dx_da(va, vx, f)
+            ∂f∂x = SpecialFunctions._gamma_inc_dx_dx(va, vx, f)
+            return dual_definition_retval(Val{Txy}(), f, ∂f∂a, partials(Txy, x), ∂f∂x, partials(Txy, y))
+        end,
+        begin
+            va = value(Tx, x)
+            f = SpecialFunctions.gamma_inc_dx(va, y)
+            ∂f∂a = SpecialFunctions._gamma_inc_dx_da(va, y, f)
+            return dual_definition_retval(Val{Tx}(), f, ∂f∂a, partials(Tx, x))
+        end,
+        begin
+            vx = value(Ty, y)
+            f = SpecialFunctions.gamma_inc_dx(x, vx)
+            ∂f∂x = SpecialFunctions._gamma_inc_dx_dx(x, vx, f)
+            return dual_definition_retval(Val{Ty}(), f, ∂f∂x, partials(Ty, y))
+        end,
+    )
+else
+    function _gamma_inc_dx(a, x)
+        f = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a)
+        # avoid overflow for large `a`
+        return isfinite(f) || iszero(x) ? f : exp((a - 1) * log(x) - x - SpecialFunctions.loggamma(a))
+    end
 end
 
 ###################
