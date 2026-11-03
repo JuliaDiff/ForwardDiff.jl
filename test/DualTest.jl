@@ -785,11 +785,12 @@ end
         # f = x^(a - 1) e^(-x) / Γ(a), ∂f/∂a = f * (log(x) - ψ(a)), ∂f/∂x = f * (a - 1 - x) / x
         function ∇f(a, x)
             a, x = big(a), big(x)
-            e = exp((a - 1) * log(x) - x)
+            l = (a - 1) * log(x) - x
+            e = exp(l)
             # At the poles of ψ(a), f = 0 and ∂f/∂a = (-1)^a Γ(1 - a) x^(a - 1) e^(-x)
             isinteger(a) && a <= 0 && return [cospi(a) * e * gamma(1 - a), zero(a)]
             # 1 / Γ(a) = sin(πa) Γ(1 - a) / π
-            f = a > 0 ? e / gamma(a) : e * sinpi(a) * gamma(1 - a) / big(π)
+            f = a > 0 ? exp(l - loggamma(a)) : e * sinpi(a) * gamma(1 - a) / big(π)
             return [f * (log(x) - digamma(a)), f * (a - 1 - x) / x]
         end
         function ∇²f(a, x)
