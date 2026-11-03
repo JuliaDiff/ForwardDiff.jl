@@ -730,6 +730,101 @@ end
     @test ForwardDiff.derivative(x -> sum(1 .+ x .* (0:0.1:1)), 1) == 5.5
 end
 
+@testset "gamma_inc" begin
+    # Accurate derivatives for large `a` require SpecialFunctions >= 2.10
+    has_gamma_inc_dx = isdefined(SpecialFunctions, :gamma_inc_dx)
+    # ∂/∂x gamma_inc(a, x)[1] = x^(a - 1) e^(-x) / Γ(a)
+    ∂p(a, x) = exp((big(a) - 1) * log(big(x)) - big(x)) / gamma(big(a))
+
+    for V in (Float32, Float64), (a, x) in ((2.5, 1.0), (150, 150), (200, 180), (1e6, 1e6)), ind in 0:2
+        dp = ForwardDiff.derivative(x -> gamma_inc(V(a), x, ind)[1], V(x))
+        dq = ForwardDiff.derivative(x -> gamma_inc(V(a), x, ind)[2], V(x))
+        @test dp isa V
+        @test dp ≈ ∂p(a, x) rtol = 4 * eps(V) broken = !has_gamma_inc_dx && a > 100
+        @test isequal(dq, -dp)
+    end
+
+    d2p(a, x) = ForwardDiff.derivative(x -> ForwardDiff.derivative(x -> gamma_inc(a, x, 0)[1], x), x)
+    d3p(a, x) = ForwardDiff.derivative(x -> d2p(a, x), x)
+    for (a, x) in ((150.0, 150.0), (1e6, 1e6), (1e6, 999_000.0), (3.0, 1e-160))
+        @test @inferred(d2p(a, x)) ≈ ∂p(a, x) * (big(a) - 1 - big(x)) / big(x) rtol = 8 * eps() broken = !has_gamma_inc_dx && a > 100
+    end
+    @test d2p(2.0, 0.0) == 1
+    @test d3p(3.0, 0.0) == 1
+
+    # Infinite derivative at zero
+    for f in (
+            x -> gamma_inc(0.5, zero(x), 0)[1],
+            x -> gamma_inc(0.5, zero(x), 0)[2],
+            y -> ForwardDiff.derivative(x -> gamma_inc(0.5, zero(x), 0)[1], y),
+            x -> logabsgamma(zero(x))[1],
+        )
+        df = ForwardDiff.derivative(f, 1.0)
+        @test ForwardDiff.NANSAFE_MODE_ENABLED ? iszero(df) : isnan(df)
+    end
+
+    # Duals with zero partials are constants
+    a = Dual{TestTag}(2.0, 0.0)
+    x = Dual{TestTag}(1.5, 1.0)
+    @test gamma_inc(a, 1.5, 0) === gamma_inc(2.0, 1.5, 0)
+    @test gamma_inc(a, x, 0) === gamma_inc(2.0, x, 0)
+    @test gamma_inc(Dual{OuterTestTag}(a, zero(a)), x, 0) === gamma_inc(2.0, x, 0)
+    msg = "ArgumentError: derivatives with respect to the first argument `a` are not supported"
+    @test_throws msg ForwardDiff.derivative(a -> gamma_inc(a, 1.5, 0)[1], 2.0)
+    @test_throws msg ForwardDiff.derivative(a -> ForwardDiff.derivative(x -> gamma_inc(a, x, 0)[1], 1.5), 2.0)
+end
+
+@testset "gamma_inc_dx" begin
+    if isdefined(SpecialFunctions, :gamma_inc_dx)
+        # The x-derivative of `gamma_inc` is `gamma_inc_dx`
+        for (a, x) in ((2.5, 1.0), (150.0, 150.0))
+            @test ForwardDiff.derivative(x -> gamma_inc(a, x, 0)[1], x) === SpecialFunctions.gamma_inc_dx(a, x)
+        end
+
+        # f = x^(a - 1) e^(-x) / Γ(a), ∂f/∂a = f * (log(x) - ψ(a)), ∂f/∂x = f * (a - 1 - x) / x
+        function ∇f(a, x)
+            a, x = big(a), big(x)
+            e = exp((a - 1) * log(x) - x)
+            # At the poles of ψ(a), f = 0 and ∂f/∂a = (-1)^a Γ(1 - a) x^(a - 1) e^(-x)
+            isinteger(a) && a <= 0 && return [cospi(a) * e * gamma(1 - a), zero(a)]
+            # 1 / Γ(a) = sin(πa) Γ(1 - a) / π
+            f = a > 0 ? e / gamma(a) : e * sinpi(a) * gamma(1 - a) / big(π)
+            return [f * (log(x) - digamma(a)), f * (a - 1 - x) / x]
+        end
+        function ∇²f(a, x)
+            setprecision(BigFloat, 512) do
+                h = big(1e-40)
+                return hcat((∇f(a + h, x) - ∇f(a - h, x)) / 2h, (∇f(a, x + h) - ∇f(a, x - h)) / 2h)
+            end
+        end
+
+        for V in (Float32, Float64), (a, x) in ((2.5, 1.0), (0.3, 2.0), (-2.0, 1.5), (150.0, 150.0), (150.0, 149.5), (1e6, 1e6), (1e10, 1e10))
+            ∂a, ∂x = setprecision(() -> V.(∇f(V(a), V(x))), BigFloat, 512)
+            dfda = ForwardDiff.derivative(a -> SpecialFunctions.gamma_inc_dx(a, V(x)), V(a))
+            dfdx = ForwardDiff.derivative(x -> SpecialFunctions.gamma_inc_dx(V(a), x), V(x))
+            @test dfda isa V
+            @test dfda ≈ ∂a rtol = 8 * eps(V)
+            @test dfdx isa V
+            @test dfdx ≈ ∂x rtol = 8 * eps(V)
+            @test ForwardDiff.gradient(v -> SpecialFunctions.gamma_inc_dx(v[1], v[2]), [V(a), V(x)]) == [dfda, dfdx]
+        end
+
+        for (a, x) in ((2.5, 1.0), (0.3, 2.0), (-2.0, 1.5), (150.0, 150.0), (1e6, 1e6))
+            H = Float64.(∇²f(a, x))
+            @test ForwardDiff.hessian(v -> SpecialFunctions.gamma_inc_dx(v[1], v[2]), [a, x]) ≈ H rtol = 1e-14
+            # `a` and `x` with different tags
+            d2fdadx(a, x) = ForwardDiff.derivative(a -> ForwardDiff.derivative(x -> SpecialFunctions.gamma_inc_dx(a, x), x), a)
+            @test @inferred(d2fdadx(a, x)) ≈ H[1, 2] rtol = 1e-14
+            @test ForwardDiff.derivative(x -> ForwardDiff.derivative(a -> SpecialFunctions.gamma_inc_dx(a, x), a), x) ≈ H[2, 1] rtol = 1e-14
+        end
+    else
+        # The x-derivative of `gamma_inc` falls back to the closed form
+        for (a, x) in ((2.5, 1.0), (30.0, 25.0))
+            @test ForwardDiff.derivative(x -> gamma_inc(a, x, 0)[1], x) === exp(-x) * x^(a - 1) / gamma(a)
+        end
+    end
+end
+
 @testset "Givens rotations: consistency with `LinearAlgebra.givensAlgorithm` for zero partials (no duals)" begin
     # Test different branches in `LinearAlgebra.givensAlgorithm`
     for f in [randexp(), -randexp()], g in [0.0, f / 2, 2f, -f / 2, -2f]
