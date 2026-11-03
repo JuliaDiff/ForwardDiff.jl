@@ -25,6 +25,9 @@ end
 ##########
 Base.ArithmeticStyle(::Type{<:Dual{T,V}}) where {T,V} = Base.ArithmeticStyle(V)
 
+unwrap_dual(::Type{Dual{T,V,N}}) where {T,V,N} = unwrap_dual(V)
+unwrap_dual(::Type{V}) where V = V
+
 ##############
 # Exceptions #
 ##############
