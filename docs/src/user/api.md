@@ -9,6 +9,8 @@ CurrentModule = ForwardDiff
 ```@docs
 ForwardDiff.derivative
 ForwardDiff.derivative!
+ForwardDiff.value_and_derivative
+ForwardDiff.value_and_derivatives
 ```
 
 ## Gradients of `f(x::AbstractArray)::Real`
