@@ -917,7 +917,11 @@ if isdefined(SpecialFunctions, :gamma_inc_dx)
         end,
     )
 else
-    _gamma_inc_dx(a, x) = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a)
+    function _gamma_inc_dx(a, x)
+        f = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a)
+        # avoid overflow for large `a`
+        return isfinite(f) || iszero(x) ? f : exp((a - 1) * log(x) - x - SpecialFunctions.loggamma(a))
+    end
 end
 
 ###################

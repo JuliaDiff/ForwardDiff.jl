@@ -827,6 +827,7 @@ end
         for (a, x) in ((2.5, 1.0), (30.0, 25.0))
             @test ForwardDiff.derivative(x -> gamma_inc(a, x, 0)[1], x) === exp(-x) * x^(a - 1) / gamma(a)
         end
+        @test ForwardDiff.derivative(x -> gamma_inc(150.0, x, 0)[1], 150.0) ≈ exp(149 * log(big(150)) - 150) / gamma(big(150)) rtol = 1e-12
     end
 end
 
