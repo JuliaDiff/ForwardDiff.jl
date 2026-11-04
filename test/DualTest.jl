@@ -775,4 +775,51 @@ end
     end
 end
 
+@testset "hypot" begin
+    @testset "zero" begin
+        x = Dual{TestTag}(0.0, 1.0, -2.0)
+        y = Dual{TestTag}(-0.0, 3.0, 0.5)
+        for h in (
+            hypot(x, y), hypot(x, 0.0), hypot(0.0, y), hypot(x, y, x), hypot(x, 0.0, y), abs(complex(x, y)),
+            hypot(x, y, x, y), hypot(0.0, x, 0, y), hypot(complex(x, y), x, y), hypot(complex(x, y), 0.0, x, 0),
+        )
+            @test h == Dual{TestTag}(0.0, 0.0, 0.0)
+        end
+    end
+
+    @testset "infinite" begin
+        x = Dual{TestTag}(Inf, 0.0)
+        y = Dual{TestTag}(1.0, 1.0)
+        for h in (hypot(x, y), hypot(x, y, y), hypot(x, y, y, y))
+            if ForwardDiff.NANSAFE_MODE_ENABLED
+                @test h === Dual{TestTag}(Inf, 0.0)
+            else
+                @test isequal(h, Dual{TestTag}(Inf, NaN))
+            end
+        end
+    end
+
+    @testset "nested differentiation" begin
+        a, b = 3.0, 4.0
+        # Mixed tags: the outer variable `a` and the inner variable `b`
+        for (f, g) in (
+            ((a, b) -> hypot(a, b), (a, b) -> sqrt(a^2 + b^2)),
+            ((a, b) -> hypot(a, a, b), (a, b) -> sqrt(2a^2 + b^2)),
+            ((a, b) -> hypot(a, b, a), (a, b) -> sqrt(2a^2 + b^2)),
+            ((a, b) -> hypot(b, a, a), (a, b) -> sqrt(2a^2 + b^2)),
+            ((a, b) -> hypot(a, b, b), (a, b) -> sqrt(a^2 + 2b^2)),
+            ((a, b) -> hypot(b, a, b), (a, b) -> sqrt(a^2 + 2b^2)),
+            ((a, b) -> hypot(b, b, a), (a, b) -> sqrt(a^2 + 2b^2)),
+            ((a, b) -> hypot(a, 2.0, b), (a, b) -> sqrt(a^2 + 4 + b^2)),
+            ((a, b) -> hypot(a, b, a, 2.0), (a, b) -> sqrt(2a^2 + b^2 + 4)),
+            ((a, b) -> hypot(b, 2.0, a, b, a), (a, b) -> sqrt(2a^2 + 2b^2 + 4)),
+            ((a, b) -> hypot(complex(a, b), a, b), (a, b) -> sqrt(2a^2 + 2b^2)),
+        )
+            df = ForwardDiff.derivative(a -> ForwardDiff.derivative(b -> f(a, b), b), a)
+            dg = ForwardDiff.derivative(a -> ForwardDiff.derivative(b -> g(a, b), b), a)
+            @test df ≈ dg
+        end
+    end
+end
+
 end # module
