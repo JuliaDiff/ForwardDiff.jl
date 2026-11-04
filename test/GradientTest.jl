@@ -350,13 +350,38 @@ end
 
 @testset "norm" begin
     # issues #243 and #794
-    for x in ([0.0, 0.0], SVector(0.0, 0.0)), p in (2, 3, 1.5, Inf)
+    for x in ([0.0, 0.0], SVector(0.0, 0.0)), p in (2, 3, 1.5, 1, 0, Inf, -Inf)
         @test ForwardDiff.gradient(x -> norm(x, p), x) == [0.0, 0.0]
         @test ForwardDiff.gradient(x -> norm(x, p)^2, x) == [0.0, 0.0]
+        @test ForwardDiff.gradient(x -> norm(Tuple(x), p), x) == [0.0, 0.0]
     end
     @test norm([Dual(0.0, 1.0), Dual(0.0, 1.0)]) === Dual(0.0, 0.0)
     @test norm(SVector(Dual(0.0, 1.0), Dual(0.0, 1.0), Dual(0.0, 1.0))) === Dual(0.0, 0.0)
+    @test norm((Dual(0.0, 1.0), Dual(0.0, 1.0))) === Dual(0.0, 0.0)
+    @test norm((Dual(0.0, 1.0), complex(Dual(0.0, 1.0), Dual(0.0, 1.0))), 3) === Dual(0.0, 0.0)
+    @test norm(ForwardDiff.partials(Dual(Dual(1.0, 0.0), Dual(0.0, 1.0), Dual(0.0, 1.0)))) === Dual(0.0, 0.0)
     @test norm([Dual(1e-200, 1e-100), Dual(0.0, 0.0)]) === Dual(1e-200, 1e-100)
+    for x in ([Dual(0.0, 1.0), Dual(1.0, 0.0)], SVector(Dual(0.0, 1.0), Dual(1.0, 0.0)), (Dual(0.0, 1.0), Dual(1.0, 0.0)))
+        @test norm(x, 0) === Dual(1.0, 0.0)
+    end
+
+    # Infinite entries yield `NaN` partials, unless NaN-safe mode is enabled
+    for x in ([Dual(Inf, 0.0), Dual(1.0, 1.0)], (Dual(Inf, 0.0), Dual(1.0, 1.0))), p in (2, 3, Inf)
+        if ForwardDiff.NANSAFE_MODE_ENABLED
+            @test norm(x, p) === Dual(Inf, 0.0)
+        else
+            @test isequal(norm(x, p), Dual(Inf, NaN))
+        end
+    end
+
+    # Same precision as the primal norm
+    for x in ([Dual(1f0, 1f0), Dual(-2f0, 0f0)], SVector(Dual(1f0, 1f0), Dual(-2f0, 0f0)), (Dual(1f0, 1f0), Dual(-2f0, 0f0))), p in (2, 3, 2.5, Inf)
+        y = norm(map(ForwardDiff.value, x), p)
+        @test norm(x, p) isa Dual{Nothing,typeof(y),1}
+        if !(x isa StaticArray)
+            @test @inferred(norm(x, p)) isa Dual{Nothing,Float32,1}
+        end
+    end
     for s in (1e-200, 1e200)
         @test ForwardDiff.gradient(norm, [s, s]) ≈ [√0.5, √0.5]
         @test ForwardDiff.gradient(norm, SVector(s, s)) ≈ [√0.5, √0.5]
@@ -372,18 +397,34 @@ end
         @test ForwardDiff.derivative(p -> norm(SVector{3}(x), p), p) ≈ dref
         @test ForwardDiff.derivative(p -> norm(x', p), p) ≈ dref
         @test ForwardDiff.derivative(p -> norm(sparse(x), p), p) ≈ dref
+        @test ForwardDiff.derivative(p -> norm(sparse(reshape(x, 3, 1)), p), p) ≈ dref
+        @test ForwardDiff.derivative(p -> norm(Tuple(x), p), p) ≈ dref
         @test ForwardDiff.derivative(p -> norm(complex.(x, x), p), p) ≈ ForwardDiff.derivative(p -> ref(complex.(x, x), p), p)
-        @test ForwardDiff.gradient(v -> norm(v[1:3], v[4]), [x; p]) ≈ ForwardDiff.gradient(v -> ref(v[1:3], v[4]), [x; p])
+        ∇ref = ForwardDiff.gradient(v -> ref(v[1:3], v[4]), [x; p])
+        @test ForwardDiff.gradient(v -> norm(v[1:3], v[4]), [x; p]) ≈ ∇ref
+        @test ForwardDiff.gradient(v -> norm(SVector{3}(v[1], v[2], v[3]), v[4]), [x; p]) ≈ ∇ref
+        @test ForwardDiff.gradient(v -> norm(v[1:3]', v[4]), [x; p]) ≈ ∇ref
+        @test ForwardDiff.gradient(v -> norm(sparse(v[1:3]), v[4]), [x; p]) ≈ ∇ref
+        @test ForwardDiff.gradient(v -> norm(sparse(reshape(v[1:3], 3, 1)), v[4]), [x; p]) ≈ ∇ref
+        @test ForwardDiff.gradient(v -> norm((v[1], v[2], v[3]), v[4]), [x; p]) ≈ ∇ref
         @test ForwardDiff.derivative(p -> ForwardDiff.gradient(x -> norm(x, p), x), p) ≈
             ForwardDiff.derivative(p -> ForwardDiff.gradient(x -> ref(x, p), x), p)
         @test ForwardDiff.gradient(x -> ForwardDiff.derivative(p -> norm(x, p), p), x) ≈
             ForwardDiff.gradient(x -> ForwardDiff.derivative(p -> ref(x, p), p), x)
     end
+    for p in (1.0, 2.0, 3.0)
+        Href = ForwardDiff.hessian(v -> ref(v[1:3], v[4]), [x; p])
+        @test ForwardDiff.hessian(v -> norm(v[1:3], v[4]), [x; p]) ≈ Href
+        @test ForwardDiff.hessian(v -> norm(v[SOneTo(3)], v[4]), SVector{4}([x; p])) ≈ Href
+        @test ForwardDiff.hessian(v -> norm((v[1], v[2], v[3]), v[4]), [x; p]) ≈ Href
+    end
+    @test ForwardDiff.derivative(p -> ForwardDiff.gradient(x -> norm(x, p), x), Inf) == zeros(3)
     @test ForwardDiff.derivative(p -> norm([0.0, 0.0], p), 3.0) == 0
     @test ForwardDiff.derivative(p -> norm([1e200, 1e200], p), 3.0) ≈ 1e200 * ForwardDiff.derivative(p -> ref([1.0, 1.0], p), 3.0)
 
     x = [1.0, -2.0, 0.0, 3.0]
-    for p in (2, 3, 1.5, 1, Inf)
+    z = v -> complex.(v[1:2], v[3:4])
+    for p in (2, 3, 1.5, Inf)
         f = x -> norm(x, p)
         g = p == Inf ? (x -> maximum(abs, x)) : (x -> sum(t -> abs(t)^p, x)^(1 / p))
         ∇g = ForwardDiff.gradient(g, x)
@@ -391,10 +432,14 @@ end
             @test ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())) ≈ ∇g
         end
         @test ForwardDiff.gradient(f, SVector{4}(x)) ≈ ∇g
-
-        z = v -> complex.(v[1:2], v[3:4])
+        @test ForwardDiff.gradient(f ∘ Tuple, x) ≈ ∇g
         @test ForwardDiff.gradient(f ∘ z, x) ≈ ForwardDiff.gradient(g ∘ z, x)
     end
+    # Subgradient zero for zero entries, as for other `p`
+    @test ForwardDiff.gradient(x -> norm(x, 1), x) == sign.(x)
+    @test ForwardDiff.gradient(x -> norm(x, 1), SVector{4}(x)) == sign.(x)
+    @test ForwardDiff.gradient(x -> norm(z(x), 1), x) ≈ ForwardDiff.gradient(x -> sum(abs, z(x)), x)
+    @test ForwardDiff.gradient(x -> norm(x, -Inf), [3.0, -1.0, 2.0]) == [0.0, -1.0, 0.0]
 
     u = x / norm(x)
     @test ForwardDiff.hessian(norm, x) ≈ (I - u * u') / norm(x)
@@ -408,6 +453,7 @@ end
         @test norm(transpose(d), p) === y
         @test norm(sparse(d), p) === y
         @test norm(sparse(reshape(d, 2, 1)), p) === y
+        @test norm(Tuple(d), p) === y
     end
 end
 

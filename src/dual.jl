@@ -604,6 +604,10 @@ _iszero_primal(x::Dual) = _iszero_primal(x.value)
 _iszero_primal(x) = iszero(x)
 _div_or_zero(v, h) = _iszero_primal(h) ? zero(v / oneunit(h)) : v / h
 
+const DualNTupleRealComplex{T,V,N} = Union{
+    Tuple{Dual{T,V,N},Vararg{Dual{T,V,N}}},Tuple{Complex{Dual{T,V,N}},Vararg{Complex{Dual{T,V,N}}}}
+}
+
 # Arguments that are not Duals of the result tag are constants and are passed through unchanged
 @define_binary_dual_op(
     Base.hypot,
@@ -654,6 +658,12 @@ _div_or_zero(v, h) = _iszero_primal(h) ? zero(v / oneunit(h)) : v / h
     end,
 )
 
+# For four or more arguments, Base promotes the arguments and calls `_hypot` with a tuple
+function Base.Math._hypot(x::DualNTupleRealComplex)
+    vx = _norm_primals(x)
+    return _norm_dual_x(x, vx, hypot(vx...), 2)
+end
+
 # LinearAlgebra.norm #
 #--------------------#
 
@@ -662,6 +672,14 @@ const DualArrayRealComplex{T,V,N} = Union{AbstractArray{Dual{T,V,N}},AbstractArr
 LinearAlgebra.norm(x::DualArrayRealComplex, p::Real=2) = _norm_dual_x(x, p)
 LinearAlgebra.norm(x::AbstractArray{<:Number}, p::Dual) = _norm_dual_p(x, p)
 LinearAlgebra.norm(x::DualArrayRealComplex, p::Dual) = _norm_dual_xp(x, p)
+
+# Tuples are promoted to a common element type
+const DualTuple = Tuple{Union{Dual,Complex{<:Dual}},Vararg{Union{Dual,Complex{<:Dual}}}}
+LinearAlgebra.norm(x::DualTuple, p::Real=2) = _norm_dual_x(promote(x...), p)
+LinearAlgebra.norm(x::Tuple{Number,Vararg{Number}}, p::Dual) = _norm_dual_p(x, p)
+LinearAlgebra.norm(x::DualTuple, p::Dual) = _norm_dual_xp(promote(x...), p)
+
+const DualContainerRealComplex{T,V,N} = Union{DualArrayRealComplex{T,V,N},DualNTupleRealComplex{T,V,N}}
 
 # Resolve method ambiguities
 const AdjOrTransDualRealComplex{T,V,N} = Union{
@@ -676,51 +694,62 @@ function LinearAlgebra.norm(x::Union{Adjoint{<:Number},Transpose{<:Number}}, p::
     return invoke(norm, Tuple{Union{Adjoint,Transpose},Real}, x, p)
 end
 
-function _norm_dual_xp(x::DualArrayRealComplex{T}, p::Dual{T}) where {T}
-    y = norm(x, p.value)
-    ∂p = _norm_deriv_p(map(_norm_primal, x), y.value, p.value)
+function _norm_dual_xp(x::DualContainerRealComplex{T}, p::Dual{T}) where {T}
+    vx = _norm_primals(x)
+    # Not `norm(x, p.value)`: it would confuse `p.value` with `p` if it is a Dual with tag `T` as well (#845)
+    y = _norm_dual_x(x, vx, norm(vx, p.value), p.value)
+    ∂p = _norm_deriv_p(vx, y.value, p.value)
     return Dual{T}(y.value, y.partials + ∂p * p.partials)
 end
 # Arguments that are not Duals of the result tag are constants
-function _norm_dual_xp(x::DualArrayRealComplex{Tx}, p::Dual{Tp}) where {Tx,Tp}
+function _norm_dual_xp(x::DualContainerRealComplex{Tx}, p::Dual{Tp}) where {Tx,Tp}
     return Tp ≺ Tx ? _norm_dual_x(x, p) : _norm_dual_p(x, p)
 end
 
-function _norm_dual_p(x::AbstractArray{<:Number}, p::Dual{T}) where {T}
+function _norm_dual_p(x::Union{AbstractArray{<:Number},Tuple{Number,Vararg{Number}}}, p::Dual{T}) where {T}
     y = norm(x, p.value)
     return Dual{T}(y, _norm_deriv_p(x, y, p.value) * p.partials)
 end
 
 # Uses `sum(u.^p) == 1` for `u = abs.(x) ./ norm(x, p)`
 function _norm_deriv_p(x, y, p)
-    (_iszero_primal(p) || isinf(p) || _iszero_primal(y)) && return zero(y / p)
+    if _iszero_primal(p) || isinf(p) || _iszero_primal(y)
+        return zero(y)
+    end
     s = sum(x) do xi
         u = abs(xi) / y
         return _iszero_primal(u) ? zero(u) : u^p * log(u)
     end
-    return y * s / p
+    return oftype(y, y * s / p)
 end
 
-function _norm_dual_x(x::DualArrayRealComplex{T,V,N}, p::Real) where {T,V,N}
-    # These cases are not affected by the scaling issues
-    (p == 0 || p == 1 || p == -Inf) && return invoke(norm, Tuple{Any,Real}, x, p)
-    isempty(x) && return float(norm(zero(eltype(x))))
-    vx = map(_norm_primal, x)
-    y = norm(vx, p)
-    ∂y = zero(Partials{N,typeof(y)})
-    _iszero_primal(y) && return Dual{T}(y, ∂y)
-    if p == 2
-        for (xi, vxi) in zip(x, vx)
-            ∂y += _norm_partials(vxi / y, xi)
-        end
-    elseif p == Inf
-        _, i = findmax(abs, vx)
-        ∂y = _norm_partials(vx[i] / y, x[i])
+function _norm_dual_x(x::DualContainerRealComplex, p::Real)
+    # As in LinearAlgebra; also avoids relying on `map` inferring the element type for empty arrays
+    if isempty(x)
+        return float(norm(zero(eltype(x))))
+    end
+    vx = _norm_primals(x)
+    return _norm_dual_x(x, vx, norm(vx, p), p)
+end
+# `Partials` are `AbstractVector`s, but we work with their tuple of values
+_norm_dual_x(x::Partials{N}, p::Real) where {N} = N == 0 ? float(norm(zero(eltype(x)))) : _norm_dual_x(x.values, p)
+
+# Partials of `y = norm(x, p)`, given the primal values `vx` of `x`
+function _norm_dual_x(x::DualContainerRealComplex{T,V,N}, vx, y, p::Real) where {T,V,N}
+    if _iszero_primal(p) || _iszero_primal(y)
+        return Dual{T}(y, zero(Partials{N,typeof(y)}))
+    end
+    ∂y = if p == 2
+        _sum_map((xi, vxi) -> _norm_partials(vxi / y, xi), x, vx)
+    elseif isinf(p)
+        # First element with absolute value `y` (faster than `findmax`/`findmin`)
+        i = p > 0 ? findfirst(v -> !(abs(v) < y), vx) : findfirst(v -> !(abs(v) > y), vx)
+        _norm_partials(vx[i] / y, x[i])
     else
-        for (xi, vxi) in zip(x, vx)
+        _sum_map(x, vx) do xi, vxi
             r = vxi / y
-            w = _iszero_primal(r) ? zero(r) : abs(r)^(p - 1) * sign(r)
-            ∂y += _norm_partials(w, xi)
+            w = _iszero_primal(r) ? zero(r) : oftype(r, abs(r)^(p - 1) * sign(r))
+            return _norm_partials(w, xi)
         end
     end
     return Dual{T}(y, ∂y)
@@ -729,9 +758,26 @@ end
 _norm_primal(x::Dual) = x.value
 _norm_primal(z::Complex{<:Dual}) = complex(real(z).value, imag(z).value)
 
+# Primal values; dense arrays of real Duals are reinterpreted without copying (strided, e.g., for BLAS)
+_norm_primals(x) = map(_norm_primal, x)
+function _norm_primals(x::DenseArray{Dual{T,V,N}}) where {T,V,N}
+    if !isbitstype(V)
+        return map(_norm_primal, x)
+    elseif N == 0
+        # `reinterpret(reshape, V, x)` has the same size as `x`
+        return reinterpret(V, x)
+    else
+        return selectdim(reinterpret(reshape, V, x), 1, 1)
+    end
+end
+
 # Partials of `real(conj(w) * x)`
 _norm_partials(w::Real, x::Dual) = w * x.partials
 _norm_partials(w::Complex, x::Complex{<:Dual}) = _mul_partials(real(x).partials, imag(x).partials, real(w), imag(w))
+
+# `sum(map(f, x, vx))` without allocating
+_sum_map(f::F, x::Tuple, vx::Tuple) where {F} = sum(map(f, x, vx))
+_sum_map(f::F, x::AbstractArray, vx::AbstractArray) where {F} = sum(Broadcast.instantiate(Broadcast.broadcasted(f, x, vx)))
 
 # fma #
 #-----#

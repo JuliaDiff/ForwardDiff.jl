@@ -46,6 +46,8 @@ const StaticDualArrayRealComplex{T,V,N} = Union{StaticArray{<:Tuple,Dual{T,V,N}}
 LinearAlgebra.norm(x::StaticDualArrayRealComplex, p::Real=2) = ForwardDiff._norm_dual_x(x, p)
 LinearAlgebra.norm(x::StaticArray{<:Tuple,<:Number}, p::Dual) = ForwardDiff._norm_dual_p(x, p)
 LinearAlgebra.norm(x::StaticDualArrayRealComplex, p::Dual) = ForwardDiff._norm_dual_xp(x, p)
+# Faster than broadcasting
+ForwardDiff._sum_map(f::F, x::StaticArray, vx::StaticArray) where {F} = ForwardDiff._sum_map(f, Tuple(x), Tuple(vx))
 
 # For `MMatrix` we can use the in-place method
 ForwardDiff._lyap_div_zero_diag!!(A::StaticArrays.MMatrix, λ::AbstractVector) = ForwardDiff._lyap_div_zero_diag!(A, λ)
