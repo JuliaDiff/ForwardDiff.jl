@@ -474,7 +474,7 @@ Base.float(d::Dual) = convert(float(typeof(d)), d)
 ###################################
 
 for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
-    if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos))
+    if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos), (:Base, :hypot))
         continue  # Skip methods which we define elsewhere.
     elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
         continue  # Skip rules for methods not defined in the current scope
@@ -599,25 +599,139 @@ end
 # hypot #
 #-------#
 
-@inline function calc_hypot(x, y, z, ::Type{T}) where T
-    vx = value(x)
-    vy = value(y)
-    vz = value(z)
-    h = hypot(vx, vy, vz)
-    p = (vx / h) * partials(x) + (vy / h) * partials(y) + (vz / h) * partials(z)
-    return Dual{T}(h, p)
-end
+# `hypot` and `norm` are not differentiable at zero; we use the subgradient zero there
+_iszero_primal(x::Dual) = _iszero_primal(x.value)
+_iszero_primal(x) = iszero(x)
+_div_or_zero(v, h) = _iszero_primal(h) ? zero(v / oneunit(h)) : v / h
+
+# Arguments that are not Duals of the result tag are constants and are passed through unchanged
+@define_binary_dual_op(
+    Base.hypot,
+    begin
+        h = hypot(x.value, y.value)
+        dual_definition_retval(Val{Txy}(), h, _div_or_zero(x.value, h), x.partials, _div_or_zero(y.value, h), y.partials)
+    end,
+    begin
+        h = hypot(x.value, y)
+        dual_definition_retval(Val{Tx}(), h, _div_or_zero(x.value, h), x.partials)
+    end,
+    begin
+        h = hypot(x, y.value)
+        dual_definition_retval(Val{Ty}(), h, _div_or_zero(y.value, h), y.partials)
+    end,
+)
 
 @define_ternary_dual_op(
     Base.hypot,
-    calc_hypot(x, y, z, Txyz),
-    calc_hypot(x, y, z, Txy),
-    calc_hypot(x, y, z, Txz),
-    calc_hypot(x, y, z, Tyz),
-    calc_hypot(x, y, z, Tx),
-    calc_hypot(x, y, z, Ty),
-    calc_hypot(x, y, z, Tz),
+    begin
+        h = hypot(x.value, y.value, z.value)
+        p = _div_or_zero(x.value, h) * x.partials + _div_or_zero(y.value, h) * y.partials + _div_or_zero(z.value, h) * z.partials
+        Dual{Txyz}(h, p)
+    end,
+    begin
+        h = hypot(x.value, y.value, z)
+        dual_definition_retval(Val{Txy}(), h, _div_or_zero(x.value, h), x.partials, _div_or_zero(y.value, h), y.partials)
+    end,
+    begin
+        h = hypot(x.value, y, z.value)
+        dual_definition_retval(Val{Txz}(), h, _div_or_zero(x.value, h), x.partials, _div_or_zero(z.value, h), z.partials)
+    end,
+    begin
+        h = hypot(x, y.value, z.value)
+        dual_definition_retval(Val{Tyz}(), h, _div_or_zero(y.value, h), y.partials, _div_or_zero(z.value, h), z.partials)
+    end,
+    begin
+        h = hypot(x.value, y, z)
+        dual_definition_retval(Val{Tx}(), h, _div_or_zero(x.value, h), x.partials)
+    end,
+    begin
+        h = hypot(x, y.value, z)
+        dual_definition_retval(Val{Ty}(), h, _div_or_zero(y.value, h), y.partials)
+    end,
+    begin
+        h = hypot(x, y, z.value)
+        dual_definition_retval(Val{Tz}(), h, _div_or_zero(z.value, h), z.partials)
+    end,
 )
+
+# LinearAlgebra.norm #
+#--------------------#
+
+# The generic rescaling branches incorrectly for Duals, so we differentiate the primal norm directly
+const DualArrayRealComplex{T,V,N} = Union{AbstractArray{Dual{T,V,N}},AbstractArray{Complex{Dual{T,V,N}}}}
+LinearAlgebra.norm(x::DualArrayRealComplex, p::Real=2) = _norm_dual_x(x, p)
+LinearAlgebra.norm(x::AbstractArray{<:Number}, p::Dual) = _norm_dual_p(x, p)
+LinearAlgebra.norm(x::DualArrayRealComplex, p::Dual) = _norm_dual_xp(x, p)
+
+# Resolve method ambiguities
+const AdjOrTransDualRealComplex{T,V,N} = Union{
+    Adjoint{Dual{T,V,N}},Adjoint{Complex{Dual{T,V,N}}},Transpose{Dual{T,V,N}},Transpose{Complex{Dual{T,V,N}}}
+}
+for P in (:Real, :Dual)
+    @eval function LinearAlgebra.norm(x::AdjOrTransDualRealComplex, p::$P)
+        return invoke(norm, Tuple{Union{Adjoint,Transpose},Real}, x, p)
+    end
+end
+function LinearAlgebra.norm(x::Union{Adjoint{<:Number},Transpose{<:Number}}, p::Dual)
+    return invoke(norm, Tuple{Union{Adjoint,Transpose},Real}, x, p)
+end
+
+function _norm_dual_xp(x::DualArrayRealComplex{T}, p::Dual{T}) where {T}
+    y = norm(x, p.value)
+    ∂p = _norm_deriv_p(map(_norm_primal, x), y.value, p.value)
+    return Dual{T}(y.value, y.partials + ∂p * p.partials)
+end
+# Arguments that are not Duals of the result tag are constants
+function _norm_dual_xp(x::DualArrayRealComplex{Tx}, p::Dual{Tp}) where {Tx,Tp}
+    return Tp ≺ Tx ? _norm_dual_x(x, p) : _norm_dual_p(x, p)
+end
+
+function _norm_dual_p(x::AbstractArray{<:Number}, p::Dual{T}) where {T}
+    y = norm(x, p.value)
+    return Dual{T}(y, _norm_deriv_p(x, y, p.value) * p.partials)
+end
+
+# Uses `sum(u.^p) == 1` for `u = abs.(x) ./ norm(x, p)`
+function _norm_deriv_p(x, y, p)
+    (_iszero_primal(p) || isinf(p) || _iszero_primal(y)) && return zero(y / p)
+    s = sum(x) do xi
+        u = abs(xi) / y
+        return _iszero_primal(u) ? zero(u) : u^p * log(u)
+    end
+    return y * s / p
+end
+
+function _norm_dual_x(x::DualArrayRealComplex{T,V,N}, p::Real) where {T,V,N}
+    # These cases are not affected by the scaling issues
+    (p == 0 || p == 1 || p == -Inf) && return invoke(norm, Tuple{Any,Real}, x, p)
+    isempty(x) && return float(norm(zero(eltype(x))))
+    vx = map(_norm_primal, x)
+    y = norm(vx, p)
+    ∂y = zero(Partials{N,typeof(y)})
+    _iszero_primal(y) && return Dual{T}(y, ∂y)
+    if p == 2
+        for (xi, vxi) in zip(x, vx)
+            ∂y += _norm_partials(vxi / y, xi)
+        end
+    elseif p == Inf
+        _, i = findmax(abs, vx)
+        ∂y = _norm_partials(vx[i] / y, x[i])
+    else
+        for (xi, vxi) in zip(x, vx)
+            r = vxi / y
+            w = _iszero_primal(r) ? zero(r) : abs(r)^(p - 1) * sign(r)
+            ∂y += _norm_partials(w, xi)
+        end
+    end
+    return Dual{T}(y, ∂y)
+end
+
+_norm_primal(x::Dual) = x.value
+_norm_primal(z::Complex{<:Dual}) = complex(real(z).value, imag(z).value)
+
+# Partials of `real(conj(w) * x)`
+_norm_partials(w::Real, x::Dual) = w * x.partials
+_norm_partials(w::Complex, x::Complex{<:Dual}) = _mul_partials(real(x).partials, imag(x).partials, real(w), imag(w))
 
 # fma #
 #-----#

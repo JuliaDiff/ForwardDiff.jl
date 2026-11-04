@@ -9,6 +9,7 @@ using LinearAlgebra
 using ForwardDiff
 using ForwardDiff: Dual, Tag
 using StaticArrays
+using SparseArrays: sparse
 using DiffTests
 
 include(joinpath(dirname(@__FILE__), "utils.jl"))
@@ -344,6 +345,69 @@ end
         grad = ForwardDiff.gradient(x -> LinearAlgebra.givensAlgorithm(x[1], x[2])[i], [f, g])
         @test grad == [dydf, dydg]
         @test grad ≈ Calculus.gradient(x -> LinearAlgebra.givensAlgorithm(x[1], x[2])[i], [f, g])
+    end
+end
+
+@testset "norm" begin
+    # issues #243 and #794
+    for x in ([0.0, 0.0], SVector(0.0, 0.0)), p in (2, 3, 1.5, Inf)
+        @test ForwardDiff.gradient(x -> norm(x, p), x) == [0.0, 0.0]
+        @test ForwardDiff.gradient(x -> norm(x, p)^2, x) == [0.0, 0.0]
+    end
+    @test norm([Dual(0.0, 1.0), Dual(0.0, 1.0)]) === Dual(0.0, 0.0)
+    @test norm(SVector(Dual(0.0, 1.0), Dual(0.0, 1.0), Dual(0.0, 1.0))) === Dual(0.0, 0.0)
+    @test norm([Dual(1e-200, 1e-100), Dual(0.0, 0.0)]) === Dual(1e-200, 1e-100)
+    for s in (1e-200, 1e200)
+        @test ForwardDiff.gradient(norm, [s, s]) ≈ [√0.5, √0.5]
+        @test ForwardDiff.gradient(norm, SVector(s, s)) ≈ [√0.5, √0.5]
+    end
+    @test ForwardDiff.gradient(x -> norm(x, 1.01), [5e-324, 1.0]) ≈ [5e-324^0.01, 1.0]
+
+    # `p` is a `Dual`
+    ref = (x, p) -> sum(t -> abs(t)^p, x)^(1 / p)
+    x = [3.0, -4.0, 0.5]
+    for p in (3.0, 1.5, 0.5)
+        dref = ForwardDiff.derivative(p -> ref(x, p), p)
+        @test ForwardDiff.derivative(p -> norm(x, p), p) ≈ dref
+        @test ForwardDiff.derivative(p -> norm(SVector{3}(x), p), p) ≈ dref
+        @test ForwardDiff.derivative(p -> norm(x', p), p) ≈ dref
+        @test ForwardDiff.derivative(p -> norm(sparse(x), p), p) ≈ dref
+        @test ForwardDiff.derivative(p -> norm(complex.(x, x), p), p) ≈ ForwardDiff.derivative(p -> ref(complex.(x, x), p), p)
+        @test ForwardDiff.gradient(v -> norm(v[1:3], v[4]), [x; p]) ≈ ForwardDiff.gradient(v -> ref(v[1:3], v[4]), [x; p])
+        @test ForwardDiff.derivative(p -> ForwardDiff.gradient(x -> norm(x, p), x), p) ≈
+            ForwardDiff.derivative(p -> ForwardDiff.gradient(x -> ref(x, p), x), p)
+        @test ForwardDiff.gradient(x -> ForwardDiff.derivative(p -> norm(x, p), p), x) ≈
+            ForwardDiff.gradient(x -> ForwardDiff.derivative(p -> ref(x, p), p), x)
+    end
+    @test ForwardDiff.derivative(p -> norm([0.0, 0.0], p), 3.0) == 0
+    @test ForwardDiff.derivative(p -> norm([1e200, 1e200], p), 3.0) ≈ 1e200 * ForwardDiff.derivative(p -> ref([1.0, 1.0], p), 3.0)
+
+    x = [1.0, -2.0, 0.0, 3.0]
+    for p in (2, 3, 1.5, 1, Inf)
+        f = x -> norm(x, p)
+        g = p == Inf ? (x -> maximum(abs, x)) : (x -> sum(t -> abs(t)^p, x)^(1 / p))
+        ∇g = ForwardDiff.gradient(g, x)
+        for c in (1, 4)
+            @test ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{c}())) ≈ ∇g
+        end
+        @test ForwardDiff.gradient(f, SVector{4}(x)) ≈ ∇g
+
+        z = v -> complex.(v[1:2], v[3:4])
+        @test ForwardDiff.gradient(f ∘ z, x) ≈ ForwardDiff.gradient(g ∘ z, x)
+    end
+
+    u = x / norm(x)
+    @test ForwardDiff.hessian(norm, x) ≈ (I - u * u') / norm(x)
+    @test ForwardDiff.hessian(norm, SVector{4}(x)) ≈ (I - u * u') / norm(x)
+    @test ForwardDiff.hessian(x -> norm(x, 3), x) ≈ ForwardDiff.hessian(x -> cbrt(sum(t -> abs(t)^3, x)), x)
+
+    d = [Dual(3.0, 1.0), Dual(-4.0, 2.0)]
+    for p in (2, 3, 1, Inf)
+        y = norm(d, p)
+        @test norm(d', p) === y
+        @test norm(transpose(d), p) === y
+        @test norm(sparse(d), p) === y
+        @test norm(sparse(reshape(d, 2, 1)), p) === y
     end
 end
 
