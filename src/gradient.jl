@@ -13,7 +13,9 @@ This method assumes that `isa(f(x), Real)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
-function gradient(f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {F, T, CHK}
+gradient(f::F, x::AbstractArray) where {F} = with_default_chunk(c -> gradient(f, x, GradientConfig(f, x, c)), x)
+
+function gradient(f::F, x::AbstractArray, cfg::GradientConfig{T}, ::Val{CHK}=Val{true}()) where {F, T, CHK}
     require_one_based_indexing(x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == structural_length(x)
@@ -32,7 +34,10 @@ Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f
 This method assumes that `isa(f(x), Real)`.
 
 """
-function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
+gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray) where {F} =
+    with_default_chunk(c -> gradient!(result, f, x, GradientConfig(f, x, c)), x)
+
+function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T}, ::Val{CHK}=Val{true}()) where {T, CHK, F}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     if chunksize(cfg) == structural_length(x)

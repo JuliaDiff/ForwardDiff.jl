@@ -108,6 +108,11 @@ ForwardDiff.gradient(rosenbrock, x)::Vector{Float64}
 ForwardDiff.gradient!(out, rosenbrock, x)
 ```
 
+Alternatively, setting the `static_default_chunk` preference to true makes calls without
+a config type-stable, at the cost of compiling the computation for every chunk size the
+heuristic can pick on the first call. Statically compiled programs (`juliac --trim`) that
+call ForwardDiff without a config, directly or through other packages, require it.
+
 One final question remains: How should you select a chunk size? The answer is essentially
 "perform your own benchmarks and see what works best for your use case." As stated before,
 the optimal chunk size is heavily dependent on the target function and length of the input

@@ -473,11 +473,25 @@ Base.float(d::Dual) = convert(float(typeof(d)), d)
 # General Mathematical Operations #
 ###################################
 
+mentions(ex::Expr, s::Symbol) = any(a -> mentions(a, s), ex.args)
+mentions(ex::Tuple, s::Symbol) = any(a -> mentions(a, s), ex)
+mentions(ex, s::Symbol) = ex === s
+
+# Rules for SpecialFunctions, and rules of other modules whose derivative calls it
+# (e.g. `NaNMath.lgamma`), are defined in ForwardDiffSpecialFunctionsExt.
+function uses_specialfunctions(M, f, arity)
+    M === :SpecialFunctions && return true
+    args = ntuple(i -> Symbol(:x, i), arity)
+    return mentions(DiffRules.diffrule(M, f, args...), :SpecialFunctions)
+end
+
 for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
     if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos))
         continue  # Skip methods which we define elsewhere.
     elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
         continue  # Skip rules for methods not defined in the current scope
+    elseif uses_specialfunctions(M, f, arity)
+        continue
     end
     if arity == 1
         eval(unary_dual_definition(M, f))
@@ -862,24 +876,6 @@ function _eigen_hermitian(A::DualMatrixRealComplex{T,<:Real,N}) where {T,N}
     λ_partials = map(real ∘ diag, Qt_∂A_Q)
     Q_partials = map(Qt_∂Aj_Q -> Q*_lyap_div_zero_diag!!(Qt_∂Aj_Q, λ), Qt_∂A_Q)
     return Eigen(_to_duals(Val(T), λ, λ_partials), _to_duals(Val(T), Q, Q_partials))
-end
-
-# Functions in SpecialFunctions which return tuples #
-# Their derivatives are not defined in DiffRules    #
-#---------------------------------------------------#
-
-function SpecialFunctions.logabsgamma(d::Dual{T,<:Real}) where {T}
-    x = value(d)
-    y, s = SpecialFunctions.logabsgamma(x)
-    return (Dual{T}(y, SpecialFunctions.digamma(x) * partials(d)), s)
-end
-
-# Derivatives wrt to first parameter and precision setting are not supported
-function SpecialFunctions.gamma_inc(a::Real, d::Dual{T,<:Real}, ind::Integer) where {T}
-    x = value(d)
-    p, q = SpecialFunctions.gamma_inc(a, x, ind)
-    ∂p = exp(-x) * x^(a - 1) / SpecialFunctions.gamma(a) * partials(d)
-    return (Dual{T}(p, ∂p), Dual{T}(q, -∂p))
 end
 
 ###################

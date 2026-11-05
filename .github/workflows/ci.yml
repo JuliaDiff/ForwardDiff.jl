@@ -52,6 +52,17 @@ jobs:
           files: lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+  trim:
+    name: juliac --trim=safe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - run: julia --color=yes --project=test/trim -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --color=yes --project=test/trim test/trim/build_and_run.jl
   docs:
     name: Documentation
     runs-on: ubuntu-latest
