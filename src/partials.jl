@@ -134,9 +134,19 @@ if !UNSAFE_MODE_ENABLED
     @inline function _div_is_strong(::Type{V}, x::Real) where {V}
         return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _is_strong_divisor(x)
     end
+    @inline function _fma_partial(x::Real, partial::Real, acc::Real)
+        y = fma(x, partial, acc)
+        return iszero(partial) ? oftype(y, acc) : y
+    end
+    @inline function _muladd_partial(x::Real, partial::Real, acc::Real)
+        y = muladd(x, partial, acc)
+        return iszero(partial) ? oftype(y, acc) : y
+    end
 else
     @inline _mul_is_strong(::Type, ::Real) = true
     @inline _div_is_strong(::Type, ::Real) = true
+    @inline _fma_partial(x::Real, partial::Real, acc::Real) = fma(x, partial, acc)
+    @inline _muladd_partial(x::Real, partial::Real, acc::Real) = muladd(x, partial, acc)
 end
 
 # Types whose zeros stay zero when multiplied by finite values of such types

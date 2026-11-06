@@ -132,13 +132,16 @@ samerng() = MersenneTwister(1)
         # The following properties should always be satisfied, regardless of whether NaN-safe mode is enabled or disabled
         # We use `isequal` for comparisons in the presence of `NaN`s
         for p1 in (PARTIALS, ALLZERO, FIRSTZERO), p2 in (PARTIALS2, ALLZERO, FIRSTZERO), v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
-            @test isequal(ForwardDiff._div_partials(p1, p2, v1, v2), (p1 - (v1 / v2) * p2) / v2)
             @test isequal(ForwardDiff._mul_partials(p1, p2, v1, v2), v1 * p1 + v2 * p2)
         end
         for v1 in (X, NaN, Inf), v2 in (Y, NaN, Inf)
             @test isequal(ForwardDiff._mul_partials(ZERO_PARTIALS, PARTIALS, v1, v2), v2 * PARTIALS)
             @test isequal(ForwardDiff._mul_partials(PARTIALS, ZERO_PARTIALS, v1, v2), v1 * PARTIALS)
+            @test isequal(ForwardDiff._div_partials(ZERO_PARTIALS, PARTIALS, v1, v2), -(v1 / v2) * PARTIALS / v2)
+            @test isequal(ForwardDiff._div_partials(PARTIALS, ZERO_PARTIALS, v1, v2), PARTIALS / v2)
         end
+        # x / x has zero derivative
+        @test iszero(ForwardDiff._div_partials(PARTIALS, PARTIALS, X, X))
 
         if !ForwardDiff.UNSAFE_MODE_ENABLED
             for f in ((p -> NaN * p), (p -> Inf * p), (p -> -Inf * p), (p -> big(Inf) * p), (p -> NaN32 * p), (p -> p / 0), (p -> p / NaN), (p -> p / Inf), (p -> p / -Inf), (p -> p / big(0.0)))

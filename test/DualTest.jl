@@ -761,4 +761,18 @@ end
     end
 end
 
+@testset "fma and muladd: consistency with `x * y + z`" begin # issue #860
+    for f in (fma, muladd)
+        for (x, y, z) in (
+            (Dual{TestTag}(Inf, 0.0), Dual{TestTag}(2.0, 0.0), Dual{TestTag}(0.0, 1.0)),
+            (Dual{TestTag}(1.0, 0.0), Inf, Dual{TestTag}(0.0, 1.0)),
+            (Inf, Dual{TestTag}(1.0, 0.0), Dual{TestTag}(0.0, 1.0)),
+        )
+            d = f(x, y, z)
+            @test value(d) === Inf
+            @test isequal(d, x * y + z)
+        end
+    end
+end
+
 end # module
