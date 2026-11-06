@@ -117,41 +117,36 @@ Note that it is usually best to pick a chunk size which divides evenly into the 
 dimension. Otherwise, ForwardDiff has to construct and utilize an extra "remainder" chunk to
 complete the calculation.
 
-## Fixing NaN/Inf Issues
+## NaN-Safe Mode
 
-ForwardDiff's default behavior is to return `NaN` for undefined derivatives (or otherwise
-mirror the behavior of the function in `Base`, if it would return an error). This is
-usually the correct thing to do, but in some cases can erroneously "poison" values which
-aren't sensitive to the input and thus cause ForwardDiff to incorrectly return `NaN` or
-`Inf` derivatives. For example:
+A dual number whose perturbation component is zero is unperturbed: it must not propagate
+derivative information, regardless of the derivative of the function it is passed to.
+Naively propagating derivatives by multiplying them with the perturbation component
+violates this property whenever the derivative is not finite, since `0.0 * Inf` and
+`0.0 * NaN` are `NaN`. ForwardDiff therefore checks whether each perturbation component is
+zero before propagating derivative information ("`NaN`-safe mode"):
 
 ```julia-repl
-# the dual number's perturbation component is zero, so this
-# variable should not propagate derivative information
 julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
-Dual{:tag}(-Inf,NaN) # oops, this NaN should be 0.0
+Dual{:tag}(-Inf,0.0)
+
+julia> ForwardDiff.gradient(v -> sqrt(v[1]) + v[2], [0.0, 1.0])
+2-element Vector{Float64}:
+ Inf
+  1.0
 ```
 
-Here, ForwardDiff computes the derivative of `log(0.0)` as `NaN` and then propagates
-this derivative by multiplying it by the perturbation component. Usually, ForwardDiff can
-rely on the identity `x * 0.0 == 0.0` to prevent the derivatives from propagating when
-the perturbation component is `0.0`. However, this identity doesn't hold if `isnan(y)`
-or `isinf(y)`, in which case a `NaN` derivative will be propagated instead.
-
-It is possible to fix this behavior by checking that the perturbation component is zero
-before attempting to propagate derivative information, but this check can noticeably
-decrease performance (~5%-10% on our benchmarks).
-
-In order to preserve performance in the majority of use cases, ForwardDiff disables this
-check by default. If your code is affected by this `NaN` behavior, you can enable
-ForwardDiff's `NaN`-safe mode by using the
+Similar to `@fastmath`, you can trade correctness for performance by disabling `NaN`-safe
+mode: derivatives may then be `NaN` even though they are well-defined (see the example
+below). Unsafe mode can make code faster, in particular code that is dominated by cheap
+arithmetic operations. To enable it, use the
 [Preferences.jl](https://github.com/JuliaPackaging/Preferences.jl) API to set
-the `nansafe_mode` preference to true, for example via:
+the `unsafe_mode` preference to true, for example via:
 
 ```julia-repl
 julia> using ForwardDiff, Preferences
 
-julia> set_preferences!(ForwardDiff, "nansafe_mode" => true)
+julia> set_preferences!(ForwardDiff, "unsafe_mode" => true)
 ```
 
 Note that Julia has to be restarted and ForwardDiff has to be reloaded after changing
@@ -162,16 +157,27 @@ Alternatively, you can set the preference before loading ForwardDiff, for exampl
 ```julia-repl
 julia> using Preferences, UUIDs
 
-julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "nansafe_mode" => true)
+julia> set_preferences!(UUID("f6369f11-7733-5829-9624-2563aa707210"), "unsafe_mode" => true)
 
 julia> using ForwardDiff
 
 julia> log(ForwardDiff.Dual{:tag}(0.0, 0.0))
-Dual{:tag}(-Inf,0.0)
+Dual{:tag}(-Inf,NaN)
+
+julia> ForwardDiff.gradient(v -> sqrt(v[1]) + v[2], [0.0, 1.0])
+2-element Vector{Float64}:
+  Inf
+ NaN
 ```
 
+!!! compat "ForwardDiff 1.5"
+    Before ForwardDiff 1.5.0, `NaN`-safe mode was disabled by default and could be enabled by
+    setting the `nansafe_mode` preference to true. The `nansafe_mode` preference is
+    deprecated: setting it emits a warning, and `nansafe_mode = false` disables `NaN`-safe
+    mode only if the `unsafe_mode` preference is not set.
+
 In the future, we plan on allowing users and downstream library authors to dynamically
-enable [`NaN`-safe mode via the `AbstractConfig`
+toggle [`NaN`-safe mode via the `AbstractConfig`
 API](https://github.com/JuliaDiff/ForwardDiff.jl/issues/181).
 
 ## Hessian of a vector-valued function
