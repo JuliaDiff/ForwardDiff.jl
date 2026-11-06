@@ -166,6 +166,9 @@ end
 struct FiniteNaN <: Real end
 Base.isfinite(::FiniteNaN) = true
 Base.:*(x::Float64, ::FiniteNaN) = x * NaN
+Base.:*(::FiniteNaN, x::Float64) = NaN * x
+Base.fma(x::FiniteNaN, y::Float64, z::Float64) = x * y + z
+Base.muladd(x::FiniteNaN, y::Float64, z::Float64) = x * y + z
 
 @testset "strong zeros" begin
     z = ForwardDiff.UNSAFE_MODE_ENABLED ? NaN : 0.0
@@ -185,6 +188,12 @@ Base.:*(x::Float64, ::FiniteNaN) = x * NaN
     @test isequal(ForwardDiff._mul_partials(Partials((0.0, 1.0)), Partials((1.0, 0.0)), ForwardDiff.Dual(1.0, Inf), 2.0), Partials((ForwardDiff.Dual(2.0, z), ForwardDiff.Dual(1.0, Inf))))
     @test Partials((0.0, 1.0)) * π === Partials((0.0, Float64(π)))
     @test Partials((0.0, 1.0)) / π === Partials((0.0, 1 / π))
+    a, b, c = Partials((0.0, 1.0)), Partials((1.0, 0.0)), Partials((1.0, 2.0))
+    for f in (fma, muladd), x in (2.0, Inf, NaN, ForwardDiff.Dual(1.0, Inf), FiniteNaN())
+        @test isequal(ForwardDiff._muladd_partials(f, a, c, x), x * a + c)
+        @test isequal(ForwardDiff._muladd_partials(f, a, b, c, x, 2.0), x * a + 2.0 * b + c)
+        @test isequal(ForwardDiff._muladd_partials(f, b, a, c, 2.0, x), 2.0 * b + x * a + c)
+    end
 end
 
 io = IOBuffer()

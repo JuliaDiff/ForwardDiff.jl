@@ -108,6 +108,22 @@ end
     end
 end
 
+# `x_a * a + c` and `x_a * a + x_b * b + c` with `f = fma` or `f = muladd`
+@inline function _muladd_partials(f::F, a::Partials{N,A}, c::Partials{N}, x_a) where {F,N,A}
+    if _mul_is_strong(A, x_a)
+        return Partials(muladd_tuples(f, a.values, c.values, x_a))
+    else
+        return Partials(muladd_tuples((x, p, acc) -> _strong_muladd(f, x, p, acc), a.values, c.values, x_a))
+    end
+end
+@inline function _muladd_partials(f::F, a::Partials{N,A}, b::Partials{N,B}, c::Partials{N}, x_a, x_b) where {F,N,A,B}
+    if _mul_is_strong(A, x_a) & _mul_is_strong(B, x_b)
+        return Partials(muladd_tuples(f, a.values, b.values, c.values, x_a, x_b))
+    else
+        return Partials(muladd_tuples((x, p, acc) -> _strong_muladd(f, x, p, acc), a.values, b.values, c.values, x_a, x_b))
+    end
+end
+
 # Divide by `bval` instead of multiplying by `inv(bval)` or dividing by `bval^2`, which may overflow or underflow
 @inline function _div_partials(a::Partials, b::Partials, aval, bval)
     return (a - (aval / bval) * b) / bval
@@ -125,6 +141,10 @@ end
     y = partial / x
     return iszero(partial) ? zero(y) : y
 end
+@inline function _strong_muladd(f::F, x::Real, partial::Real, acc::Real) where {F}
+    y = f(x, partial, acc)
+    return iszero(partial) ? oftype(y, acc) : y
+end
 
 # Whether plain `*`/`/` already treat zero partials of type `V` as strong zeros
 if !UNSAFE_MODE_ENABLED
@@ -134,19 +154,9 @@ if !UNSAFE_MODE_ENABLED
     @inline function _div_is_strong(::Type{V}, x::Real) where {V}
         return _is_strong_zero_type(V) && _is_strong_zero_type(typeof(x)) && _is_strong_divisor(x)
     end
-    @inline function _fma_partial(x::Real, partial::Real, acc::Real)
-        y = fma(x, partial, acc)
-        return iszero(partial) ? oftype(y, acc) : y
-    end
-    @inline function _muladd_partial(x::Real, partial::Real, acc::Real)
-        y = muladd(x, partial, acc)
-        return iszero(partial) ? oftype(y, acc) : y
-    end
 else
     @inline _mul_is_strong(::Type, ::Real) = true
     @inline _div_is_strong(::Type, ::Real) = true
-    @inline _fma_partial(x::Real, partial::Real, acc::Real) = fma(x, partial, acc)
-    @inline _muladd_partial(x::Real, partial::Real, acc::Real) = muladd(x, partial, acc)
 end
 
 # Types whose zeros stay zero when multiplied by finite values of such types
@@ -179,6 +189,9 @@ end
 @inline _mul_partials(a::Partials{0,A}, b::Partials{0,B}, afactor, bfactor) where {A,B} = Partials{0,promote_type(A,B)}(tuple())
 @inline _mul_partials(a::Partials{0,A}, b::Partials{N,B}, afactor, bfactor) where {N,A,B} = bfactor * b
 @inline _mul_partials(a::Partials{N,A}, b::Partials{0,B}, afactor, bfactor) where {N,A,B} = afactor * a
+
+@inline _muladd_partials(f::F, a::Partials{0,A}, c::Partials{0,C}, x_a) where {F,A,C} = Partials{0,promote_type(A,C)}(tuple())
+@inline _muladd_partials(f::F, a::Partials{0,A}, b::Partials{0,B}, c::Partials{0,C}, x_a, x_b) where {F,A,B,C} = Partials{0,promote_type(A,B,C)}(tuple())
 
 ##################################
 # Generated Functions on NTuples #
@@ -254,6 +267,14 @@ end
 
 @generated function mul_tuples(f::F, a::NTuple{N}, b::NTuple{N}, afactor, bfactor) where {F,N}
     return tupexpr(i -> :(f(a[$i], afactor) + f(b[$i], bfactor)), N)
+end
+
+@generated function muladd_tuples(f::F, a::NTuple{N}, c::NTuple{N}, x_a) where {F,N}
+    return tupexpr(i -> :(f(x_a, a[$i], c[$i])), N)
+end
+
+@generated function muladd_tuples(f::F, a::NTuple{N}, b::NTuple{N}, c::NTuple{N}, x_a, x_b) where {F,N}
+    return tupexpr(i -> :(f(x_a, a[$i], f(x_b, b[$i], c[$i]))), N)
 end
 
 ###################
