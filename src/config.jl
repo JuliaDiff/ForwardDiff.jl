@@ -14,7 +14,9 @@ const TAGCOUNT = Threads.Atomic{UInt}(0)
 end
 
 function Tag(f::F, ::Type{V}) where {F,V}
-    tagcount(Tag{F,V}) # trigger generated function
+    count = tagcount(Tag{F,V}) # trigger generated function
+    # make sure inner derivatives have a higher count even if this Tag instantiation was precompiled; fixes #714
+    Threads.atomic_max!(TAGCOUNT, count+1)
     Tag{F,V}()
 end
 
