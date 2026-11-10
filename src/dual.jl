@@ -474,7 +474,7 @@ Base.float(d::Dual) = convert(float(typeof(d)), d)
 ###################################
 
 for (M, f, arity) in DiffRules.diffrules(filter_modules = nothing)
-    if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos))
+    if (M, f) in ((:Base, :^), (:NaNMath, :pow), (:Base, :/), (:Base, :+), (:Base, :-), (:Base, :sin), (:Base, :cos), (:Base, :tanh))
         continue  # Skip methods which we define elsewhere.
     elseif !(isdefined(@__MODULE__, M) && isdefined(getfield(@__MODULE__, M), f))
         continue  # Skip rules for methods not defined in the current scope
@@ -719,6 +719,18 @@ end
 @inline function Base.sincos(d::Dual{T}) where T
     sd, cd = sincos(value(d))
     return (Dual{T}(sd, cd * partials(d)), Dual{T}(cd, -sd * partials(d)))
+end
+
+# tanh #
+#------#
+
+# `1 - tanh(x)^2` reuses the primal value but suffers from catastrophic cancellation for
+# large `|x|` (JuliaDiff/DiffRules.jl#102), so use `sech(x)^2` there
+@inline function Base.tanh(d::Dual{T}) where T
+    x = value(d)
+    val = tanh(x)
+    deriv = abs(x) < 1 ? 1 - val^2 : sech(x)^2
+    return Dual{T}(val, deriv * partials(d))
 end
 
 # sincospi #
