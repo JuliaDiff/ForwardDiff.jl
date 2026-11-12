@@ -543,13 +543,6 @@ end
     end
 )
 
-# min/max #
-#---------#
-
-# Consistent with `isless` (also on ties in value), and propagate NaN like `min`/`max` on floats; see issue #868
-@inline Base.min(x::D, y::D) where {D<:Dual} = ifelse(isnan(x) | (!isnan(y) & !isless(y, x)), x, y)
-@inline Base.max(x::D, y::D) where {D<:Dual} = ifelse(isnan(x) | (!isnan(y) & !isless(x, y)), x, y)
-
 # exponentiation #
 #----------------#
 
