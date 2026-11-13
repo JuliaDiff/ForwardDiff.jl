@@ -559,7 +559,12 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
                     if actualval isa Real
                         @test dx isa Dual{TestTag}
                         @test value(dx) == actualval
-                        @test partials(dx, 1) == $deriv
+                        if $(M === :Base && f === :tanh)
+                            # defined by hand with an equivalent formula that is faster for |x| < 1
+                            @test partials(dx, 1) ≈ $deriv
+                        else
+                            @test partials(dx, 1) == $deriv
+                        end
                     else
                         @test dx isa Complex{<:Dual{TestTag}}
                         @test value(real(dx)) == real(actualval)
@@ -823,6 +828,21 @@ end
             @test value(d) === Inf
             @test isequal(d, x * y + z)
         end
+    end
+end
+
+@testset "tanh: no catastrophic cancellation for large |x|" begin # JuliaDiff/DiffRules.jl#102
+    for T in (Float32, Float64), x in (0.5, -0.99, 1.0, -5.0, 10.0, -20.0, 30.0, 300.0)
+        x = T(x)
+        expected = T(setprecision(() -> sech(big(x))^2, BigFloat, 256))
+        d = tanh(Dual{TestTag}(x, one(x)))
+        @test value(d) === tanh(x)
+        @test partials(d, 1) isa T
+        @test partials(d, 1) ≈ expected rtol = 4 * eps(T)
+        # nested duals take the same branch
+        dd = tanh(Dual{TestTag}(Dual{TestTag}(x, one(x)), one(x)))
+        @test value(value(dd)) === tanh(x)
+        @test value(partials(dd, 1)) ≈ expected rtol = 4 * eps(T)
     end
 end
 
