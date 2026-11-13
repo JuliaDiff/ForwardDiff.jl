@@ -727,10 +727,10 @@ end
 # `1 - tanh(x)^2` reuses the primal value but suffers from catastrophic cancellation for
 # large `|x|` (JuliaDiff/DiffRules.jl#102), so use `sech(x)^2` there
 @inline function Base.tanh(d::Dual{T}) where T
-    x = value(d)
+    x = d.value
     val = tanh(x)
     deriv = abs(x) < 1 ? 1 - val^2 : sech(x)^2
-    return Dual{T}(val, deriv * partials(d))
+    return Dual{T}(val, deriv * d.partials)
 end
 
 # sincospi #
