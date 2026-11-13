@@ -47,3 +47,6 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Calculus", "DiffTests", "IrrationalConstants", "JET", "SparseArrays", "StaticArrays", "Test", "InteractiveUtils"]
+
+[workspace]
+projects = ["docs"]
