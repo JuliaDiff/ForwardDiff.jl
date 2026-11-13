@@ -93,6 +93,11 @@ end
     @test (x -> ForwardDiff.derivative(y -> x^y,  0.0))(0.0) === -Inf
     @test (x -> ForwardDiff.derivative(y -> x^y,  0.5))(0.0) === 0.0
     @test (x -> ForwardDiff.derivative(y -> x^y,  1.5))(0.0) === 0.0
+
+    # base is a `Dual` with zero partials
+    for f in (^, NaNMath.pow), y in (0.5, 1.5)
+        @test ForwardDiff.derivative(y -> f(0 * y, y), y) === 0.0
+    end
 end
 
 @testset "exponentiation with NaNMath" begin
