@@ -547,7 +547,7 @@ ForwardDiff.:≺(::Type{OuterTestTag}, ::Type{TestTag}) = false
                 deriv = DiffRules.diffrule(M, f, :x)
                 modifier = if in(f, (:asec, :acsc, :asecd, :acscd, :acosh, :acoth))
                     one(V)
-                elseif in(f, (:log1mexp, :log2mexp))
+                elseif in(f, (:log1mexp, :log2mexp, :logitexp, :logit1mexp))
                     -one(V)
                 else
                     zero(V)
