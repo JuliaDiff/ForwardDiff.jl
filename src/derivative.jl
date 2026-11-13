@@ -75,6 +75,32 @@ end
 derivative(f, x::AbstractArray) = throw(DimensionMismatch("derivative(f, x) expects that x is a real number. Perhaps you meant gradient(f, x)?"))
 derivative(f, x::Complex) = throw(DimensionMismatch("derivative(f, x) expects that x is a real number (does not support Wirtinger derivatives). Separate real and imaginary parts of the input."))
 
+"""
+    ForwardDiff.value_and_derivative(f, x::Real)
+
+Return `f(x)` and `df/dx` evaluated at `x` in a single pass, assuming `f` is called as `f(x)`.
+
+This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
+"""
+@inline function value_and_derivative(f::F, x::R) where {F,R<:Real}
+    T = typeof(Tag(f, R))
+    ydual = f(Dual{T}(x, one(x)))
+    return value(T, ydual), extract_derivative(T, ydual)
+end
+
+"""
+    ForwardDiff.value_and_derivatives(f, x::Real)
+
+Return `f(x)` and its first and second derivatives evaluated at `x` in a single pass, assuming `f` is called as `f(x)`.
+
+This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
+"""
+@inline function value_and_derivatives(f::F, x::R) where {F,R<:Real}
+    T = typeof(Tag(f, typeof(x)))
+    ydual, ddual = value_and_derivative(f, Dual{T}(x, one(x)))
+    return value(T, ydual), value(T, ddual), extract_derivative(T, ddual)
+end
+
 #####################
 # result extraction #
 #####################
