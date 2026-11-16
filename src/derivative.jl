@@ -40,6 +40,9 @@ Compute `df/dx` evaluated at `x` and store the result(s) in `result`, assuming `
 as `f(x)`.
 
 This method assumes that `isa(f(x), Union{Real,AbstractArray})`.
+
+An immutable `DiffResult` is not updated in place: it is left unchanged and the updated
+result is returned instead, so use `result = ForwardDiff.derivative!(result, f, x)`.
 """
 @inline function derivative!(result::Union{AbstractArray,DiffResult},
                              f::F, x::R) where {F,R<:Real}
@@ -56,6 +59,9 @@ end
 
 Compute `df!/dx` evaluated at `x` and store the result(s) in `result`, assuming `f!` is
 called as `f!(y, x)` where the result is stored in `y`.
+
+An immutable `DiffResult` is not updated in place: it is left unchanged and the updated
+result is returned instead, so use `result = ForwardDiff.derivative!(result, f!, y, x)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """

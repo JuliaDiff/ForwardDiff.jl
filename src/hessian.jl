@@ -32,7 +32,7 @@ function hessian!(result::AbstractArray, f::F, x::AbstractArray, cfg::HessianCon
     require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
     ∇f = y -> gradient(f, y, cfg.gradient_config, Val{false}())
-    jacobian!(result, ∇f, x, cfg.jacobian_config, Val{false}())
+    result = jacobian!(result, ∇f, x, cfg.jacobian_config, Val{false}())
     return result
 end
 
@@ -47,10 +47,11 @@ mutable struct InnerGradientForHess{R,C,F}
     f::F
 end
 
-function (g::InnerGradientForHess)(y, z)
+function (g::InnerGradientForHess{R,<:HessianConfig{T}})(y, z) where {R,T}
     inner_result = DiffResult(zero(eltype(y)), y)
-    gradient!(inner_result, g.f, z, g.cfg.gradient_config, Val{false}())
-    g.result = DiffResults.value!(g.result, value(DiffResults.value(inner_result)))
+    inner_result = gradient!(inner_result, g.f, z, g.cfg.gradient_config, Val{false}())
+    copyto!(y, DiffResults.gradient(inner_result))
+    g.result = DiffResults.value!(g.result, value(T, DiffResults.value(inner_result)))
     return y
 end
 
@@ -60,6 +61,9 @@ end
 Exactly like `ForwardDiff.hessian!(result::AbstractArray, f, x::AbstractArray, cfg::HessianConfig)`, but
 because `isa(result, DiffResult)`, `cfg` is constructed as `HessianConfig(f, result, x)` instead of
 `HessianConfig(f, x)`.
+
+An immutable `DiffResult` is not updated in place: it is left unchanged and the updated
+result is returned instead, so use `result = ForwardDiff.hessian!(result, f, x)`.
 
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """

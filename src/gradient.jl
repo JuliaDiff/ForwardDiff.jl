@@ -31,11 +31,13 @@ Compute `∇f` evaluated at `x` and store the result(s) in `result`, assuming `f
 
 This method assumes that `isa(f(x), Real)`.
 
+An immutable `DiffResult` is not updated in place: it is left unchanged and the updated
+result is returned instead, so use `result = ForwardDiff.gradient!(result, f, x)`.
 """
 function gradient!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::GradientConfig{T} = GradientConfig(f, x), ::Val{CHK}=Val{true}()) where {T, CHK, F}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == structural_length(x)
+    result = if chunksize(cfg) == structural_length(x)
         vector_mode_gradient!(result, f, x, cfg)
     else
         chunk_mode_gradient!(result, f, x, cfg)
@@ -134,7 +136,7 @@ function chunk_mode_gradient_expr(result_definition::Expr)
         seed_zero_partials!(xdual, x, N + 1, xlen - N)
         ydual = f(xdual)
         $(result_definition)
-        extract_gradient_chunk!(T, result, ydual, 1, N)
+        result = extract_gradient_chunk!(T, result, ydual, 1, N)
         seed_zero_partials!(xdual, x, 1)
 
         # do middle chunks
@@ -142,17 +144,17 @@ function chunk_mode_gradient_expr(result_definition::Expr)
             i = ((c - 1) * N + 1)
             seed!(xdual, x, i, seeds)
             ydual = f(xdual)
-            extract_gradient_chunk!(T, result, ydual, i, N)
+            result = extract_gradient_chunk!(T, result, ydual, i, N)
             seed_zero_partials!(xdual, x, i)
         end
 
         # do final chunk
         seed!(xdual, x, lastchunkindex, seeds, lastchunksize)
         ydual = f(xdual)
-        extract_gradient_chunk!(T, result, ydual, lastchunkindex, lastchunksize)
+        result = extract_gradient_chunk!(T, result, ydual, lastchunkindex, lastchunksize)
 
         # get the value, this is a no-op unless result is a DiffResult
-        extract_value!(T, result, ydual)
+        result = extract_value!(T, result, ydual)
 
         return result
     end

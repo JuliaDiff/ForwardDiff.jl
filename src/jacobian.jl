@@ -52,12 +52,15 @@ as `f(x)`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 
+An immutable `DiffResult` is not updated in place: it is left unchanged and the updated
+result is returned instead, so use `result = ForwardDiff.jacobian!(result, f, x)`.
+
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian!(result::Union{AbstractArray,DiffResult}, f::F, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f, x), ::Val{CHK}=Val{true}()) where {F,T, CHK}
     result isa DiffResult ? require_one_based_indexing(x) : require_one_based_indexing(result, x)
     CHK && checktag(T, f, x)
-    if chunksize(cfg) == structural_length(x)
+    result = if chunksize(cfg) == structural_length(x)
         vector_mode_jacobian!(result, f, x, cfg)
     else
         chunk_mode_jacobian!(result, f, x, cfg)
@@ -73,12 +76,15 @@ called as `f!(y, x)` where the result is stored in `y`.
 
 This method assumes that `isa(f(x), AbstractArray)`.
 
+An immutable `DiffResult` is not updated in place: it is left unchanged and the updated
+result is returned instead, so use `result = ForwardDiff.jacobian!(result, f!, y, x)`.
+
 Set `check` to `Val{false}()` to disable tag checking. This can lead to perturbation confusion, so should be used with care.
 """
 function jacobian!(result::Union{AbstractArray,DiffResult}, f!::F, y::AbstractArray, x::AbstractArray, cfg::JacobianConfig{T} = JacobianConfig(f!, y, x), ::Val{CHK}=Val{true}()) where {F,T,CHK}
     result isa DiffResult ? require_one_based_indexing(y, x) : require_one_based_indexing(result, y, x)
     CHK && checktag(T, f!, x)
-    if chunksize(cfg) == structural_length(x)
+    result = if chunksize(cfg) == structural_length(x)
         vector_mode_jacobian!(result, f!, y, x, cfg)
     else
         chunk_mode_jacobian!(result, f!, y, x, cfg)
@@ -147,8 +153,8 @@ end
 function vector_mode_jacobian!(result, f::F, x, cfg::JacobianConfig{T}) where {F,T}
     N = chunksize(cfg)
     ydual = vector_mode_dual_eval!(f, cfg, x)
-    extract_jacobian!(T, result, ydual, N)
-    extract_value!(T, result, ydual)
+    result = extract_jacobian!(T, result, ydual, N)
+    result = extract_value!(T, result, ydual)
     return result
 end
 
@@ -156,8 +162,8 @@ function vector_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T}) wher
     N = chunksize(cfg)
     ydual = vector_mode_dual_eval!(f!, cfg, y, x)
     map!(d -> value(T,d), y, ydual)
-    extract_jacobian!(T, result, ydual, N)
-    extract_value!(T, result, y, ydual)
+    result = extract_jacobian!(T, result, ydual, N)
+    result = extract_value!(T, result, y, ydual)
     return result
 end
 
@@ -233,12 +239,12 @@ end
     $(jacobian_chunk_mode_expr(:(xdual = cfg.duals),
                                :(ydual = f(xdual)),
                                :(),
-                               :(extract_value!(T, result, ydual))))
+                               :(result = extract_value!(T, result, ydual))))
 end
 
 @eval function chunk_mode_jacobian!(result, f!::F, y, x, cfg::JacobianConfig{T,V,N}) where {F,T,V,N}
     $(jacobian_chunk_mode_expr(:((ydual, xdual) = cfg.duals),
                                :(f!(seed_zero_partials!(ydual, y), xdual)),
                                :(),
-                               :(extract_value!(T, result, y, ydual))))
+                               :(result = extract_value!(T, result, y, ydual))))
 end
