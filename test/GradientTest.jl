@@ -149,7 +149,7 @@ end
 end
 
 @testset "exponential function at base zero" begin
-    if ForwardDiff.NANSAFE_MODE_ENABLED
+    if !ForwardDiff.UNSAFE_MODE_ENABLED
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0, -0.5]), [-Inf, -Inf])
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.0]), [NaN, -Inf])
         @test isequal(ForwardDiff.gradient(t -> t[1]^t[2], [0.0,  0.5]), [Inf, 0.0])
@@ -214,7 +214,7 @@ end
 end
 
 @testset "gradient for exponential with NaNMath" begin
-    if ForwardDiff.NANSAFE_MODE_ENABLED
+    if !ForwardDiff.UNSAFE_MODE_ENABLED
         @test isequal(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[2]), [NaN, 1.0]), [1.0, NaN])
     else
         @test isequal(ForwardDiff.gradient(x -> NaNMath.pow(x[1],x[2]), [NaN, 1.0]), [NaN, NaN])
@@ -222,7 +222,7 @@ end
     @test ForwardDiff.gradient(x -> NaNMath.pow(x[1], x[2]), [1.0, 1.0]) == [1.0, 0.0]
     @test isnan(ForwardDiff.gradient((x) -> NaNMath.pow(x[1], x[2]), [-1.0, 0.5])[1])
 
-    if ForwardDiff.NANSAFE_MODE_ENABLED
+    if !ForwardDiff.UNSAFE_MODE_ENABLED
         @test isequal(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0]), [1.0, NaN])
     else
         @test isequal(ForwardDiff.gradient(x -> x[1]^x[2], [NaN, 1.0]), [NaN, NaN])
@@ -309,7 +309,7 @@ end
     y2 = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{1}()))
     y3 = ForwardDiff.gradient(f, x, ForwardDiff.GradientConfig(f, x, ForwardDiff.Chunk{2}()))
     for y in (y1, y2, y3)
-        if ForwardDiff.NANSAFE_MODE_ENABLED
+        if !ForwardDiff.UNSAFE_MODE_ENABLED
             @test y == [0.0, Inf]
         else
             @test isequal(y, [NaN, Inf])
@@ -323,7 +323,7 @@ end
     b2 = ForwardDiff.gradient(g, a, ForwardDiff.GradientConfig(g, a, ForwardDiff.Chunk{1}()))
     b3 = ForwardDiff.gradient(g, a, ForwardDiff.GradientConfig(g, a, ForwardDiff.Chunk{2}()))
     for b in (b1, b2, b3)
-        if ForwardDiff.NANSAFE_MODE_ENABLED
+        if !ForwardDiff.UNSAFE_MODE_ENABLED
             @test b == [Inf, -Inf]
         else
             @test isequal(b, [NaN, NaN])

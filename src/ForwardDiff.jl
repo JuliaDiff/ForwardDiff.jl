@@ -24,4 +24,18 @@ include("hessian.jl")
 
 export DiffResults
 
+function __init__()
+    if NANSAFE_MODE_PREFERENCE !== nothing
+        Base.depwarn(
+            "The `nansafe_mode` preference of ForwardDiff is deprecated. " *
+            "NaN-safe mode is enabled by default since ForwardDiff 1.5.0, and the preference to disable it is now called `unsafe_mode`. " *
+            "For now, `nansafe_mode = false` still disables NaN-safe mode unless `unsafe_mode` is set. " *
+            "Please remove the `nansafe_mode` preference with `Preferences.delete_preferences!(ForwardDiff, \"nansafe_mode\"; force = true)` and restart Julia.",
+            :__init__;
+            force = true,
+        )
+    end
+    return nothing
+end
+
 end # module

@@ -116,7 +116,7 @@ end
 
 @testset "NaN-safe mode" begin
     x = ForwardDiff.derivative(log ∘ zero, 1.0)
-    if ForwardDiff.NANSAFE_MODE_ENABLED
+    if !ForwardDiff.UNSAFE_MODE_ENABLED
         @test iszero(x)
     else
         @test isnan(x)
