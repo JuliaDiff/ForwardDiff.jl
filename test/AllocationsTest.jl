@@ -7,7 +7,7 @@ include(joinpath(dirname(@__FILE__), "utils.jl"))
 
 convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,Float64,8},4},2}, 1.3)
 
-@testset "Test seed!/seed_zero_partials! allocations" begin
+@testset "Test seeding allocations" begin
     x = rand(1000)
     cfg = ForwardDiff.GradientConfig(nothing, x)
     duals = cfg.duals
@@ -29,6 +29,27 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     allocs_szp!(duals, x, 1, 4)
     @test iszero(allocs_szp!(duals, x, 1, 4))
 
+    hcfg = ForwardDiff.HessianConfig(nothing, x)
+    hduals = hcfg.duals
+    iseeds = hcfg.iseeds
+    oseeds = hcfg.oseeds
+    hindices = ForwardDiff.structural_linearindices(hduals, x)
+    allocs_hseed!(args...) = @allocated ForwardDiff.seed_hessian_chunk!(args...)
+    for i in (iseeds, nothing), o in (oseeds, nothing)
+        allocs_hseed!(hduals, x, hindices, 1, i, o)
+        @test iszero(allocs_hseed!(hduals, x, hindices, 1, i, o))
+    end
+    allocs_hseed!(hduals, x, hindices, 1, nothing, nothing, 4)
+    @test iszero(allocs_hseed!(hduals, x, hindices, 1, nothing, nothing, 4))
+
+    # a zero is free for an isbits value type, so only a `BigFloat` catches one being built for a
+    # layer that was given seeds
+    bx = BigFloat.(x)
+    bcfg = ForwardDiff.HessianConfig(nothing, bx, ForwardDiff.Chunk{3}())
+    bindices = ForwardDiff.structural_linearindices(bcfg.duals, bx)
+    allocs_hseed!(bcfg.duals, bx, bindices, 1, bcfg.iseeds, bcfg.oseeds)
+    @test iszero(allocs_hseed!(bcfg.duals, bx, bindices, 1, bcfg.iseeds, bcfg.oseeds))
+
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()
     @test iszero(allocs_convert_test_574())
@@ -48,6 +69,21 @@ end
         return @allocated ForwardDiff.jacobian!(result, f!, y, x, cfg)
     end
     @test iszero(allocs_jacobian!())
+end
+
+@testset "Test hessian! allocations" begin
+    # the sweep is allocation-free only as long as the positions of a dense input stay a range:
+    # a `structural_linearindices` or `structural_chunk` returning an array would show up here
+    function allocs_hessian!(n, c)
+        f(z) = sum(abs2, z) + sum(z)^3
+        x = randn(n)
+        result = zeros(n, n)
+        cfg = ForwardDiff.HessianConfig(f, x, ForwardDiff.Chunk{c}())
+        ForwardDiff.hessian!(result, f, x, cfg)  # warmup
+        return @allocated ForwardDiff.hessian!(result, f, x, cfg)
+    end
+    @test iszero(allocs_hessian!(40, 6))   # seven blocks, the last one partial
+    @test iszero(allocs_hessian!(10, 10))  # a single block
 end
 
 @testset "allocation-free nested StaticArray jacobian" begin
