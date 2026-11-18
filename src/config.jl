@@ -228,6 +228,32 @@ function HessianConfig(f::F,
 end
 
 """
+    ForwardDiff.HessianConfig(f, y::AbstractArray, x::AbstractArray, chunk::Chunk = Chunk(x))
+
+Return a `HessianConfig` instance based on the type of `f` and the types/shapes of `y` 
+and the input vector `x`.
+
+The returned `HessianConfig` instance contains all the work buffers required by
+`ForwardDiff.hessian!`. The buffers are configured for the case where `y` argument is an 
+`AbstractArray`.
+
+If `f` is `nothing` instead of the actual target function, then the returned instance can
+be used with any target function. However, this will reduce ForwardDiff's ability to catch
+and prevent perturbation confusion (see https://github.com/JuliaDiff/ForwardDiff.jl/issues/83).
+
+This constructor does not store/modify `x`.
+"""
+function HessianConfig(f::F,
+                       y::AbstractArray{Y},
+                       x::AbstractArray{X},
+                       chunk::Chunk = Chunk(x),
+                       tag = Tag(f, X)) where {F,Y,X}
+    jacobian_config = JacobianConfig(f, y, x, chunk, tag)
+    gradient_config = GradientConfig(f, jacobian_config.duals[2], chunk, tag)
+    return HessianConfig(jacobian_config, gradient_config)
+end
+
+"""
     ForwardDiff.HessianConfig(f, result::DiffResult, x::AbstractArray, chunk::Chunk = Chunk(x))
 
 Return a `HessianConfig` instance based on the type of `f`, types/storage in `result`, and
