@@ -55,6 +55,8 @@ end
     cfg = ForwardDiff.DerivativeConfig(f!, y, x)
     d = ForwardDiff.derivative(f, x)
 
+    @test eltype(cfg) === ForwardDiff.Dual{ForwardDiff.Tag{typeof(f!),typeof(x)},eltype(y),1}
+
     fill!(y, 0.0)
     @test isapprox(ForwardDiff.derivative(f!, y, x), d)
     @test isapprox(v, y)
@@ -104,6 +106,36 @@ end
     @test isnan(ForwardDiff.derivative(x -> x^NaN, 2.0))
     @test ForwardDiff.derivative(x -> x^2.0,2.0) == 4.0
     @test_throws DomainError ForwardDiff.derivative(x -> x^0.5, -1.0)
+end
+
+# issue #842
+@testset "structured output buffer" begin
+    # A `DerivativeConfig` seeds the positions of its own output buffer, so it fits an output of the
+    # same structure and no other.
+    A = Float64[1 4 7; 2 5 8; 3 6 9]
+    outputs = (A, LinearAlgebra.LowerTriangular(A), LinearAlgebra.UpperTriangular(A),
+               LinearAlgebra.Diagonal(LinearAlgebra.diag(A)))
+    x = 2.0
+
+    @testset "$(nameof(typeof(Y)))" for Y in outputs
+        f! = (out, t) -> (out .= t .* Y)    # writes exactly the entries `out` stores
+        cfg = ForwardDiff.DerivativeConfig(f!, Y, x)
+
+        y = zero(Y)
+        @test ForwardDiff.derivative(f!, y, x, cfg) == Y
+        @test y == x .* Y
+        @test ForwardDiff.derivative!(zero(Y), f!, zero(Y), x, cfg) == Y
+
+        # each output has a different structure, so `Z === Y` is the one the config fits
+        for Z in outputs
+            Z === Y && continue
+            msg = "ArgumentError: the config was built for an array of type " *
+                  "$(nameof(typeof(Y))) and cannot be used with an array of type " *
+                  "$(nameof(typeof(Z)))"
+            @test_throws msg ForwardDiff.derivative(f!, zero(Z), x, cfg)
+            @test_throws msg ForwardDiff.derivative!(zero(Z), f!, zero(Z), x, cfg)
+        end
+    end
 end
 
 @testset "dimension error for derivative" begin

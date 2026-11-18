@@ -1,7 +1,7 @@
 module ForwardDiff
 
 using DiffRules, DiffResults
-using DiffResults: DiffResult, MutableDiffResult
+using DiffResults: DiffResult, ImmutableDiffResult, MutableDiffResult
 using Preferences
 using Random
 using LinearAlgebra
