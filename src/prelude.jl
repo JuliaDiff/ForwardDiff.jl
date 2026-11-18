@@ -67,3 +67,22 @@ function qualified_cse!(expr)
     end
     return cse_expr
 end
+
+#= 
+######
+# AbstractTag interface
+
+Required definitions: 
+- ≺ (between two AbstractTags of the same type)
+- maketag(f,::Type{V}) where {V <: Real}
+
+Optional definitions:
+- ≺ (between two AbstractTags of the of different type)
+- maketagtype(f,::Type{V}) where {V <: Real} (default: defined in terms of maketag)
+- checktag(tag::MyTagType,f,x)
+###### 
+=#
+abstract type AbstractTag{F,V} end
+
+maketag(::Nothing,::Type{V}) where {V} = nothing
+@inline maketagtype(f::F,::Type{V}) where {F,V} = typeof(maketag(f,V))
