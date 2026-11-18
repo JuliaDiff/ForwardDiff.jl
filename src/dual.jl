@@ -98,6 +98,10 @@ Dual{T,V,N}(x::Base.TwicePrecision) where {T,V,N} =
     end
 end
 
+# A complex value carries its dual information componentwise (see `buffer_element`).
+@inline value(z::Complex) = complex(value(real(z)), value(imag(z)))
+@inline value(::Type{T}, z::Complex) where {T} = complex(value(T, real(z)), value(T, imag(z)))
+
 @inline partials(x) = Partials{0,typeof(x)}(tuple())
 @inline partials(d::Dual) = d.partials
 @inline partials(x, i...) = zero(x)

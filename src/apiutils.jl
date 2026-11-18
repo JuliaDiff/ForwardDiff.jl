@@ -40,6 +40,16 @@ end
     return Expr(:tuple, [:(single_seed(Partials{N,V}, Val{$i}())) for i in 1:N]...)
 end
 
+# A buffer for a complex-valued output stores `Complex{Dual}`, not a dual over a complex value: real
+# and imaginary parts each carry their own partials, matching what `dual_definition_retval` returns
+# for complex-valued primitives. `V` is the underlying real scalar type in both cases.
+const DualBuffer{T,V,N} = Union{AbstractArray{Dual{T,V,N}},AbstractArray{Complex{Dual{T,V,N}}}}
+
+# Builds a buffer element carrying `v` as its value and `partials` on every real component.
+@inline buffer_element(::Type{D}, v, partials) where {D<:Dual} = D(v, partials)
+@inline buffer_element(::Type{Complex{D}}, v, partials) where {D<:Dual} =
+    Complex(D(real(v), partials), D(imag(v), partials))
+
 # Only seed indices that are structurally non-zero
 structural_eachindex(x::AbstractArray) = structural_eachindex(x, x)
 function structural_eachindex(x::AbstractArray, y::AbstractArray)
@@ -73,29 +83,30 @@ end
 # Copies the values of `x` into `duals` with zero partials. Used both to remove seeds `duals` is
 # currently carrying and to initialize a freshly allocated work buffer, whose elements must all be
 # written before the target function reads them.
-seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x) where {T,V,N} =
+seed_zero_partials!(duals::DualBuffer{T,V,N}, x) where {T,V,N} =
     _seed_zero_partials!(duals, x, structural_eachindex(duals, x))
 
 # Zeroes the partials of `count` elements starting at structural position `index`. Chunk mode only
 # needs to clear the chunk it just seeded, so writing through to the end of the array would be O(n)
 # redundant work per chunk, i.e. O(n^2/N) per sweep. `count` mirrors the `chunksize` argument of
 # `seed!(duals, x, index, seeds, chunksize)`.
-function seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, index,
+function seed_zero_partials!(duals::DualBuffer{T,V,N}, x, index,
                              count = N) where {T,V,N}
     idxs = Iterators.take(Iterators.drop(structural_eachindex(duals, x), index - 1), count)
     return _seed_zero_partials!(duals, x, idxs)
 end
 
-function _seed_zero_partials!(duals::AbstractArray{Dual{T,V,N}}, x, idxs) where {T,V,N}
+function _seed_zero_partials!(duals::DualBuffer{T,V,N}, x, idxs) where {T,V,N}
     seed = zero(Partials{N,V})
+    E = eltype(duals)
     if isbitstype(V)
         for idx in idxs
-            duals[idx] = Dual{T,V,N}(x[idx], seed)
+            duals[idx] = buffer_element(E, x[idx], seed)
         end
     else
         for idx in idxs
             if isassigned(x, idx)
-                duals[idx] = Dual{T,V,N}(x[idx], seed)
+                duals[idx] = buffer_element(E, x[idx], seed)
             else
                 Base._unsetindex!(duals, idx)
             end

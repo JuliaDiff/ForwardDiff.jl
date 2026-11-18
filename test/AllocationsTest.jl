@@ -32,6 +32,15 @@ convert_test_574() = convert(ForwardDiff.Dual{Nothing,ForwardDiff.Dual{Nothing,F
     allocs_convert_test_574() = @allocated convert_test_574()
     allocs_convert_test_574()
     @test iszero(allocs_convert_test_574())
+
+    # same, for a `Complex{Dual}` buffer: `_seed_zero_partials!` reads the element type off `duals`,
+    # which must constant-fold
+    yc = Vector{ComplexF64}(undef, 1000)
+    cduals = ForwardDiff.DerivativeConfig(nothing, yc, 0.0).duals
+    allocs_szp!(cduals, yc)
+    @test iszero(allocs_szp!(cduals, yc))
+    allocs_szp!(cduals, yc, 1, 1)
+    @test iszero(allocs_szp!(cduals, yc, 1, 1))
 end
 
 @testset "Test jacobian! allocations" begin
